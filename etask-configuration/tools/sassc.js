@@ -2,8 +2,10 @@
 const path = require('path'), fs = require('fs'), url = require('url');
 const {createRequire} = require('module');
 // Frontend repo root. Override when the repos move (e.g. into one monorepo):
+// Defaults to the sibling frontend in this repo. Override if it moves:
 //   FE_ROOT=C:/path/to/frontend node tools/sassc.js <entry.scss> [out.css]
-const ROOT = process.env.FE_ROOT || 'C:/Users/petro/WebstormProjects/etask-frontend-starter';
+const ROOT = process.env.FE_ROOT
+  || path.resolve(__dirname, '..', '..', 'etask-frontend-starter');
 const sass = createRequire(path.join(ROOT, 'package.json'))('sass');
 const entry = process.argv[2], out = process.argv[3];
 
