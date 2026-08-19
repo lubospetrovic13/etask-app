@@ -1,0 +1,24 @@
+<!--
+  Copy of @netgrif/components default-tabbed-task-view.component.html. The only change
+  is `maxHeaderColumns`, matching the length of ETASK_TASK_HEADERS. Class names are kept
+  as the library's on purpose - the density rules in src/styles/_overrides.scss key off
+  them, so this view stays in step with the case and workflow views.
+-->
+<div class="task-tab-background full-height min-height-task-custom">
+  <div fxLayout="column" fxLayoutAlign="start stretch" class="content-margin full-height">
+    <mat-card class="search-panel">
+      <nc-search class="search-width"></nc-search>
+    </mat-card>
+    <nc-header #header type="task" class="task-panel-padding-mini" [maxHeaderColumns]="headerColumns"></nc-header>
+    <!--
+      The library template has <nc-task-list> here, which renders <nc-task-panel> and
+      therefore the library's task content and field resolver - so our own field
+      components never appeared in an opened case. app-etask-task-list extends the same
+      TaskListComponent and takes the same inputs, but renders app-etask-task-panel,
+      which is where panelContentComponent points at EtaskTaskContentComponent.
+    -->
+    <app-etask-task-list [tasks$]="tasks$" [loading$]="loading$" [allowMultiOpen]="false"
+                         [selectedHeaders$]="selectedHeaders$" [textEllipsis]="true"
+                         fxFlex></app-etask-task-list>
+  </div>
+</div>

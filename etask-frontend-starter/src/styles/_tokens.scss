@@ -1,0 +1,128 @@
+// Application design tokens.
+//
+// Angular Material 13 is pre-MDC: its themes compile to static CSS, so runtime
+// theme switching needs two emitted theme blocks (see themes/custom-themes.scss).
+// Our own styles do not have that limitation - they read these custom properties,
+// which flip with the `.app-dark` class, so every rule below is written once.
+//
+// Light values live on :root, dark values override them under .app-dark.
+// Keep this file free of Sass dependencies so it can be imported anywhere.
+
+:root {
+  // Surfaces, from furthest back to closest to the user
+  --app-bg: #f8fafc; // page / content background
+  --app-rail: #eef2f7; // narrow icon rail on the far left
+  --app-drawer: #ffffff; // 300px navigation drawer
+  --app-surface: #ffffff; // cards, panels, task content
+  --app-surface-raised: #f1f5f9; // hover, selected rows, chips
+  --app-surface-rgb: 255, 255, 255; // same as --app-surface, for rgba() overlays
+  --app-surface-raised-rgb: 241, 245, 249; // same as --app-surface-raised
+  --app-border: #e2e8f0; // decorative hairlines: separators, card edges
+  --app-border-strong: #cbd5e1;
+  // The boundary of something you can type in or click. WCAG asks for 3:1 on UI component
+  // boundaries and Material's own outline measured 1.05:1 here, which is why the form read
+  // as having no fields at all. Picked by measuring: #8f96a3 came out at 2.97:1, this is
+  // 3.29:1 on --app-surface.
+  --app-border-interactive: #878e9b;
+
+  // Filled chrome bars: the case list column header and the panel footer.
+  // @netgrif/components fills these from the primary palette, which reads as brand
+  // chrome on a light page but turns into a neon slab once primary is a bright
+  // azure for dark mode. Giving them their own token keeps light mode as it was.
+  --app-chrome: #00245b;
+  --app-chrome-fg: #ffffff;
+
+  // Text
+  // Checked against --app-surface: fg 16.1:1, muted 5.7:1, disabled 12.6:1.
+  // `faint` is placeholder weight and is held to the 3:1 non-text bar (3.2:1) on
+  // purpose - do not use it for text the user has to read.
+  --app-fg: rgba(0, 0, 0, 0.87);
+  --app-fg-muted: rgba(0, 0, 0, 0.6);
+  --app-fg-faint: rgba(0, 0, 0, 0.45);
+  // In a Petriflow form "disabled" means a `visible` field, i.e. a computed value the
+  // user is meant to read - not a control that is unavailable. So it gets the same
+  // contrast as any other content; what marks it as read-only is losing the input box,
+  // not being greyed out.
+  --app-fg-disabled: rgba(0, 0, 0, 0.87);
+
+  // Accent used for interactive chrome (active tab underline, primary button).
+  // Light mode keeps the brand navy; dark mode needs a lighter tone to stay legible.
+  --app-accent: #00245b;
+  --app-accent-contrast: #ffffff;
+  --app-accent-secondary: #f15e6b; // Material "accent" - highlights, counts, badges
+
+  // Status colours. Darker than the dark-mode set: green and amber need it to
+  // clear 4.5:1 on white (#16a34a was 3.3:1, #d97706 was 3.2:1).
+  --app-success: #15803d;
+  --app-danger: #dc2626;
+  --app-warning: #b45309;
+  --app-info: #2563eb;
+
+  // The description popover. Follows the mode - a floating card, not a dark Material
+  // tooltip; the border and shadow are what make it read as being in front.
+  --app-tooltip: #ffffff;
+  --app-tooltip-fg: rgba(0, 0, 0, 0.87);
+
+  // Effects
+  --app-overlay: 0, 0, 0; // rgb triplet for hover/ripple overlays
+  --app-overlay-hover: 0.04;
+  --app-shadow-1: 0 1px 2px rgba(13, 45, 60, 0.08), 0 2px 6px rgba(84, 110, 122, 0.08);
+  --app-shadow-2: 0 2px 4px rgba(13, 45, 60, 0.16), 0 4px 8px rgba(84, 110, 122, 0.16);
+  --app-radius: 8px;
+
+  // How many lines of a data field description (<desc>) are shown before it is
+  // clipped with an ellipsis. Hovering reveals the rest. Mode-independent.
+  --app-hint-lines: 2;
+
+  // Scrollbars
+  --app-scrollbar-track: #ffffff;
+  --app-scrollbar-thumb: #82a5dd;
+
+  color-scheme: light;
+}
+
+.app-dark {
+  --app-bg: #16171a;
+  --app-rail: #0f1013;
+  --app-drawer: #131418;
+  --app-surface: #1c1d22;
+  --app-surface-raised: #22242a;
+  --app-surface-rgb: 28, 29, 34;
+  --app-surface-raised-rgb: 34, 36, 42;
+
+  --app-tooltip: #22242a;
+  --app-tooltip-fg: #e8eaed;
+  --app-border: #2a2c33;
+  --app-border-strong: #3a3d46;
+  --app-border-interactive: #666c78;
+
+  --app-chrome: #1f2229;
+  --app-chrome-fg: #e8eaed;
+
+  // Checked against --app-bg (#16171a): fg 14.9:1, muted 6.6:1, faint 4.6:1.
+  --app-fg: #e8eaed;
+  --app-fg-muted: #9aa0a6;
+  --app-fg-faint: #7e848a;
+  --app-fg-disabled: #e8eaed;
+
+  // One step up the azure ramp from the Material primary (#2e7df7, 4.3:1) so the
+  // accent clears 4.5:1 where it is used as text or a border rather than a fill.
+  --app-accent: #4a8ff9;
+  --app-accent-contrast: #ffffff;
+  --app-accent-secondary: #f47b86;
+
+  --app-success: #22c55e;
+  --app-danger: #f15555; // #ef4444 measured 4.47:1 on --app-surface
+  --app-warning: #f59e0b;
+  --app-info: #3b82f6;
+
+  --app-overlay: 255, 255, 255;
+  --app-overlay-hover: 0.08;
+  --app-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.32);
+  --app-shadow-2: 0 2px 4px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  --app-scrollbar-track: #16171a;
+  --app-scrollbar-thumb: #3a3d46;
+
+  color-scheme: dark;
+}

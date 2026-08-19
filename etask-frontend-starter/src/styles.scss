@@ -1,0 +1,52 @@
+// Global stylesheet. Import order matters:
+//   tokens        -> --app-* custom properties for light and dark
+//   custom-themes -> mat.core(), Material + netgrif themes for both modes
+//   overrides     -> library fixes, must come last to win on source order
+@import 'styles/tokens';
+@import 'styles/themes/custom-themes';
+@import 'styles/overrides';
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  background-color: var(--app-bg);
+  color: var(--app-fg);
+}
+
+.min-height-task-custom {
+  height: 100% !important;
+}
+
+// Shown by index.html until the application bootstraps, so it cannot rely on
+// tokens being applied yet - and it must not flash white on a dark desktop.
+.app-loading {
+  @keyframes fadeInFromNone {
+    0% {
+      display: none;
+      opacity: 0;
+    }
+
+    1% {
+      display: block;
+      opacity: 0;
+    }
+
+    100% {
+      display: block;
+      opacity: 1;
+    }
+  }
+
+  .logo {
+    width: 100px;
+    height: 100px;
+    animation: 1s ease-out 0s 1 fadeInFromNone;
+    // this way asset gets processed by webpack
+    background: url(./assets/logo.png) center center no-repeat;
+  }
+}

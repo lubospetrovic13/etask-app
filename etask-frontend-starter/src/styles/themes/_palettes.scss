@@ -1,0 +1,143 @@
+// Material palette maps for the light and dark themes.
+//
+// Note on tones 50 and 100 of the dark primary ramp: @netgrif/components'
+// `navigation-theme` mixin uses `get-color-from-palette($primary, 50)` for the icon
+// rail and `..., 100)` for the selected rail item - it treats those two tones as
+// surface colours, not as tints. So the dark ramp deliberately puts dark surfaces
+// there, while `define-palette(..., 500, 300, 700)` keeps Material's own
+// default/lighter/darker pointing at real blues.
+
+// Brand navy - light mode primary. Unchanged from the original theme.
+$etask-blue: (
+  50: #e0e5eb,
+  100: #b3bdce,
+  200: #8092ad,
+  300: #4d668c,
+  400: #264574,
+  500: #00245b,
+  600: #002053,
+  700: #001b49,
+  800: #001640,
+  900: #000d2f,
+  A100: #687fff,
+  A200: #3554ff,
+  A400: #0229ff,
+  A700: #0024e7,
+  contrast: (
+    50: rgba(black, 0.87),
+    100: rgba(black, 0.87),
+    200: rgba(black, 0.87),
+    300: white,
+    400: white,
+    500: white,
+    600: white,
+    700: white,
+    800: white,
+    900: white,
+    A100: rgba(black, 0.87),
+    A200: white,
+    A400: white,
+    A700: white,
+  )
+);
+
+$etask-pink: (
+  50: #fdeced,
+  100: #fbcfd3,
+  200: #f8afb5,
+  300: #f58e97,
+  400: #f37681,
+  500: #f15e6b,
+  600: #ef5663,
+  700: #ed4c58,
+  800: #eb424e,
+  900: #e7313c,
+  A100: #ffffff,
+  A200: #fff7f8,
+  A400: #ffc4c7,
+  A700: #ffabaf,
+  contrast: (
+    50: rgba(black, 0.87),
+    100: rgba(black, 0.87),
+    200: rgba(black, 0.87),
+    300: rgba(black, 0.87),
+    400: rgba(black, 0.87),
+    500: rgba(black, 0.87),
+    600: rgba(black, 0.87),
+    700: white,
+    800: white,
+    900: white,
+    A100: rgba(black, 0.87),
+    A200: rgba(black, 0.87),
+    A400: rgba(black, 0.87),
+    A700: rgba(black, 0.87),
+  )
+);
+
+// Azure - dark mode primary. 500 is the interactive accent; 50/100 are rail surfaces.
+$etask-azure-dark: (
+  50: #131418,
+  100: #22242a,
+  200: #17457f,
+  300: #1f5fbf,
+  400: #276fdb,
+  500: #2e7df7,
+  600: #4a8ff9,
+  700: #6ba4fa,
+  800: #8fbbfc,
+  900: #b8d4fd,
+  A100: #8fbbfc,
+  A200: #6ba4fa,
+  A400: #2e7df7,
+  A700: #1f5fbf,
+  contrast: (
+    50: #e8eaed,
+    100: #e8eaed,
+    200: white,
+    300: white,
+    400: white,
+    500: white,
+    600: rgba(black, 0.87),
+    700: rgba(black, 0.87),
+    800: rgba(black, 0.87),
+    900: rgba(black, 0.87),
+    A100: rgba(black, 0.87),
+    A200: rgba(black, 0.87),
+    A400: white,
+    A700: white,
+  )
+);
+
+// Coral - dark mode accent, lifted so it reads against a dark surface.
+$etask-coral-dark: (
+  50: #2a1b1d,
+  100: #3d2427,
+  200: #7a3b42,
+  300: #b0525c,
+  400: #d96b76,
+  500: #f47b86,
+  600: #f68f98,
+  700: #f8a4ac,
+  800: #fabcc2,
+  900: #fcd6da,
+  A100: #fabcc2,
+  A200: #f8a4ac,
+  A400: #f47b86,
+  A700: #d96b76,
+  contrast: (
+    50: #e8eaed,
+    100: #e8eaed,
+    200: white,
+    300: rgba(black, 0.87),
+    400: rgba(black, 0.87),
+    500: rgba(black, 0.87),
+    600: rgba(black, 0.87),
+    700: rgba(black, 0.87),
+    800: rgba(black, 0.87),
+    900: rgba(black, 0.87),
+    A100: rgba(black, 0.87),
+    A200: rgba(black, 0.87),
+    A400: rgba(black, 0.87),
+    A700: rgba(black, 0.87),
+  )
+);

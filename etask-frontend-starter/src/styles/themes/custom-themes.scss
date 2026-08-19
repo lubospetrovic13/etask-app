@@ -1,0 +1,124 @@
+@use '@angular/material' as mat;
+@use 'sass:map';
+
+@import 'palettes';
+@import 'node_modules/@netgrif/components/nae-theme';
+
+// ---------------------------------------------------------------------------
+// Typography and Material core. `mat.core()` must be emitted exactly once for
+// the whole application - it used to be emitted twice (once here, once as the
+// legacy `mat-core()` in styles.scss), which duplicated ~14kB of CSS.
+// ---------------------------------------------------------------------------
+
+$typography: mat.define-typography-config(
+  $font-family: 'Roboto, monospace',
+  $headline: mat.define-typography-level(32px, 48px, 700)
+);
+
+@include mat.core($typography);
+
+// ---------------------------------------------------------------------------
+// Themes
+// ---------------------------------------------------------------------------
+
+$etask-light-theme: mat.define-light-theme(
+  mat.define-palette($etask-blue),
+  mat.define-palette($etask-pink),
+  mat.define-palette(mat.$red-palette)
+);
+
+// Material's built-in dark palette paints surfaces in neutral grey (#303030 / #424242).
+// Repoint them at our tokens so dark mode reads blue-tinted instead of grey.
+//
+// `define-dark-theme` returns the surface maps twice: once at the top level and once
+// under `color`, and `all-component-colors` reads the `color` copy. Sass maps are
+// immutable values, so both copies have to be patched.
+@function app-surfaces($theme, $background-overrides, $foreground-overrides) {
+  $patch: (
+    background: map.merge(map.get($theme, background), $background-overrides),
+    foreground: map.merge(map.get($theme, foreground), $foreground-overrides),
+  );
+  $theme: map.merge($theme, $patch);
+  @return map.merge($theme, (color: map.merge(map.get($theme, color), $patch)));
+}
+
+$etask-dark-theme: app-surfaces(
+    mat.define-dark-theme(
+      mat.define-palette($etask-azure-dark, 500, 300, 700),
+      mat.define-palette($etask-coral-dark, 500, 300, 700),
+      mat.define-palette(mat.$red-palette, 400, 300, 700)
+    ),
+    (
+      background: #16171a,
+      card: #1c1d22,
+      dialog: #1c1d22,
+      app-bar: #131418,
+      status-bar: #0f1013,
+      hover: rgba(white, 0.06),
+      raised-button: #22242a,
+      selected-button: #2a2c33,
+      focused-button: rgba(white, 0.12),
+      unselected-chip: #22242a,
+      tooltip: #3a3d46,
+    ),
+    (
+      divider: #2a2c33,
+      dividers: #2a2c33,
+      text: #e8eaed,
+      // Material derives the form field label from secondary-text at 70% alpha.
+      // #9aa0a6 there measured 3.97:1 against #16171a - below WCAG AA - so these
+      // two are set from the composited contrast, not picked by eye:
+      // secondary-text gives ~4.9:1 for the label, hint-text ~6.6:1 for <desc>.
+      secondary-text: #b4bac0,
+      hint-text: #9aa0a6,
+      icon: #e8eaed,
+      icons: #e8eaed,
+    )
+);
+
+// The netgrif library theme, colours only. `nae-lib-theme` also emits typography,
+// which must not be repeated inside the dark scope, so the component mixins are
+// listed here individually. Mirrors `nae-lib-theme` in
+// node_modules/@netgrif/components/nae-theme.scss - re-check on library upgrade.
+@mixin nae-lib-colors($theme) {
+  @include panel-component($theme);
+  @include data-field-component($theme);
+  @include user-profile($theme);
+  @include navigation-theme($theme);
+  @include header-component($theme);
+  @include roles-assignment-theme($theme);
+  @include user-assign-item-component-theme($theme);
+  @include admin-impersonate-item-component-theme($theme);
+  @include view-theme($theme);
+  @include tabs-theme($theme);
+  @include search-predicate-theme($theme);
+  @include search-clause-theme($theme);
+  @include search-configuration-input-theme($theme);
+  @include side-menu-theme($theme);
+}
+
+// Light is the default, emitted unscoped.
+@include mat.all-component-themes($etask-light-theme);
+@include nae-typography($typography);
+@include nae-lib-colors($etask-light-theme);
+
+// Dark is scoped to a class toggled on <body> at runtime.
+// `all-component-colors` emits colour only - density and typography are already
+// covered by the unscoped light emit above.
+.app-dark {
+  @include mat.all-component-colors($etask-dark-theme);
+  @include nae-lib-colors($etask-dark-theme);
+}
+
+// ---------------------------------------------------------------------------
+// Helpers that used to live here, kept for backwards compatibility with markup
+// that references them. Now token-driven so they follow the active mode.
+// ---------------------------------------------------------------------------
+
+.card-icon {
+  color: var(--app-accent);
+}
+
+.accent-text-color {
+  color: var(--app-accent-secondary) !important;
+}

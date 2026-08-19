@@ -1,0 +1,505 @@
+// Overrides for @netgrif/components and Angular Material.
+//
+// Must be imported AFTER themes/custom-themes.scss - these rules win on source
+// order against the theme mixins at equal specificity.
+//
+// Anything that fights a *theme mixin* goes in `app-theme-overrides`, which is
+// included twice: once unscoped and once under `.app-dark`. The dark scope
+// re-emits every theme rule with a `.app-dark` prefix, so an unscoped override
+// alone would be outranked in dark mode (0,2,0 vs 0,3,0).
+//
+// Anything that fights a library *component* stylesheet (emulated encapsulation,
+// injected into <head> after this file) cannot be won on source order and
+// carries `!important` instead - noted at each site.
+
+@mixin app-theme-overrides {
+  // -------------------------------------------------------------------------
+  // Data field description (<desc> in Petriflow) renders on as many lines as
+  // it needs.
+  //
+  // Two causes, both handled here:
+  //   a) @netgrif/components' data-field.theme.scss:108 sets the hint to
+  //      `white-space: nowrap; text-overflow: ellipsis; overflow: hidden`.
+  //   b) Material parks the subscript wrapper in `position: absolute` with
+  //      `overflow: hidden`, inside a fixed slot reserved by
+  //      `.mat-form-field-wrapper { padding-bottom: 1.34375em }`.
+  //
+  // Taking the wrapper back into normal flow lets the field grow with its
+  // description. Fields without a description end up roughly their previous
+  // height, because the reserved padding goes away with it.
+  // -------------------------------------------------------------------------
+  .netgrif-input {
+    // Material puts hints inside a flex wrapper, which blockifies
+    // `display: -webkit-box` and would defeat the line clamp. A plain block keeps the
+    // clamp deterministic; the hint spacer that flex lays out only matters for
+    // `align="end"` hints, which no Petriflow field uses.
+    .mat-form-field-hint-wrapper {
+      display: block;
+    }
+
+    // Wrap instead of being cut off mid-sentence, but stop at --app-hint-lines so a
+    // long description cannot push the form apart. The clamp keeps the trailing
+    // ellipsis, which is the cue that there is more to read.
+    .mat-hint,
+    .mat-error {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: var(--app-hint-lines);
+      // Belt and braces: should the clamp ever be blockified away, the height is
+      // still bounded - just without the ellipsis. 18px is the line-height the
+      // netgrif theme pins with !important.
+      max-height: calc(var(--app-hint-lines) * 18px);
+      white-space: normal;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    // beats Material's `padding-bottom` from the typography emit
+    .mat-form-field-wrapper {
+      padding-bottom: 0;
+    }
+
+    // The subscript row joins the normal flow so the description contributes to the
+    // field height instead of being parked in a fixed-height slot. No height is
+    // reserved: a one-line description costs one line. `top: auto` cancels the theme's
+    // `top: calc(100% - 2.05em)`.
+    //
+    // Overrides Material's structural `position: absolute; overflow: hidden`.
+    .mat-form-field-subscript-wrapper {
+      position: static;
+      top: auto;
+      margin-top: 2px;
+      overflow: visible;
+    }
+
+    // The pointer over a clipped description means there is more to read. The class is
+    // added by EtaskTaskContentComponent, which is also what shows the popover - it can
+    // tell whether the text is actually clipped, which CSS cannot.
+    .mat-hint.app-desc-truncated {
+      cursor: help;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Read-only fields stay readable.
+  //
+  // Petriflow forms lean on disabled fields to present computed values, so
+  // Material's default disabled grey is too faint to be useful. These rules
+  // were already in styles.scss with a hardcoded `rgba(black, 0.8)`; tokenising
+  // them keeps dark mode from painting black text on a dark surface.
+  // -------------------------------------------------------------------------
+  .mat-select-disabled .mat-select-value,
+  .mat-input-element:disabled,
+  .mat-form-field-type-mat-native-select.mat-form-field-disabled .mat-form-field-infix::after {
+    color: var(--app-fg-disabled);
+  }
+
+  .mat-form-field-appearance-outline.mat-form-field-disabled .mat-form-field-label {
+    color: var(--app-fg-muted);
+  }
+
+  // -------------------------------------------------------------------------
+  // Telling an editable field from a read-only one.
+  //
+  // Measured before this: the editable outline was rgba(42,44,51,.3) = 1.05:1 against the
+  // panel and the read-only one 1.21:1. Neither was a visible boundary, and the two were
+  // indistinguishable - the form looked like text floating in space.
+  //
+  // The rule now is: a box means you can edit it. An editable field gets a boundary that
+  // actually clears 3:1; a read-only field loses the box entirely and reads as a labelled
+  // value. That is a far stronger signal than greying the text, and it lets the value keep
+  // full contrast, which is what it deserves - it is content.
+  // -------------------------------------------------------------------------
+
+  // 0,3,0 beats Material's own 0,2,0 idle outline.
+  .mat-form-field-appearance-outline .mat-form-field-outline {
+    color: var(--app-border-interactive);
+  }
+
+  // Pointer over an editable field: darken towards the text colour.
+  .mat-form-field-appearance-outline:not(.mat-form-field-disabled):not(.mat-focused):hover
+  .mat-form-field-outline-thick {
+    color: var(--app-fg-muted);
+  }
+
+  // 0,4,0 beats both of the above and Material's own disabled rule.
+  .mat-form-field-appearance-outline.mat-form-field-disabled .mat-form-field-outline {
+    color: transparent;
+  }
+
+  // With no box, the value carries the field, so it gets content contrast and a little
+  // more weight than an editable value - it is a statement, not an invitation.
+  .mat-form-field-disabled {
+    .mat-input-element:disabled,
+    .mat-select-disabled .mat-select-value,
+    .mat-select-disabled .mat-select-value-text {
+      color: var(--app-fg-disabled);
+      font-weight: 500;
+    }
+
+    // Nothing here responds to the pointer.
+    .mat-form-field-flex,
+    .mat-select-trigger {
+      cursor: default;
+    }
+
+    // The dropdown arrow on a read-only select promises a menu that will not open.
+    .mat-select-arrow-wrapper {
+      visibility: hidden;
+    }
+  }
+
+  // Keyboard focus has to be visible on every control, including our own. `:focus-visible`
+  // keeps it off mouse clicks, so it costs nothing visually for pointer users.
+  :focus-visible {
+    outline: 2px solid var(--app-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  // -------------------------------------------------------------------------
+  // Chrome that @netgrif/components paints with saturated primary.
+  //
+  // Four library rules fill large surfaces from the primary palette or from a
+  // literal `white`. With a navy light-mode primary that reads as brand chrome,
+  // but the dark theme's primary is a bright azure, so the same rules produce a
+  // white tab bar and neon slabs. All four are retargeted at tokens.
+  // -------------------------------------------------------------------------
+
+  // tabs.theme.scss: `.mat-tab-label-container { background: white }` - hardcoded,
+  // emitted into both scopes, which is why the tab strip stayed white in dark mode.
+  .mat-tab-label-container {
+    background: var(--app-surface);
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  // header.theme.scss `.header-color` (case list column header) and
+  // panel.theme.scss `.footer` - both `background: primary-500`.
+  .header-color,
+  .footer {
+    background: var(--app-chrome);
+    color: var(--app-chrome-fg);
+  }
+
+  .header-color {
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  .footer {
+    border-top: 1px solid var(--app-border);
+  }
+
+  .header-color-font,
+  .footer-font {
+    color: var(--app-chrome-fg);
+  }
+
+  // -------------------------------------------------------------------------
+  // Case colours from the process, and row hover.
+  //
+  // Petriflow sets them with `changeCaseProperty("color")` - in ai_config.xml the bare
+  // CSS keywords `red`, `green` and `orange` - and the library binds the value as an
+  // inline `background` on the row header (panel.component.html:6). A fully saturated
+  // row is the one thing the reference design never does, so a veil is painted over it:
+  // the leftmost 4px stay clear so the colour reads as an accent bar, and the rest
+  // composites it onto the surface at 12%. A stylesheet `!important` outranks a
+  // non-important inline style, which is what makes this reachable from CSS.
+  //
+  // The veil colour is a custom property so that hover can change it. That is also what
+  // fixes the flicker: panel.theme.scss's `.panel-color:hover { background: <primary>
+  // !important }` is a shorthand, so it also sets `background-image: none !important`.
+  // At 0,3,0 in the dark scope that used to outrank the veil and strip it on hover,
+  // while `background-color` was still transitioning - so the raw saturated colour
+  // flashed through for one frame. Restating the veil inside the hover rule means it can
+  // never be dropped, whatever the ordering.
+  //
+  // Hover cannot keep the accent bar coloured: the library forces `background-color`
+  // with `!important`, so the inline case colour is gone for as long as the row is
+  // hovered. It comes back on leave.
+  // -------------------------------------------------------------------------
+  .mat-expansion-panel-header.panel-color {
+    --app-row-veil: var(--app-surface-rgb);
+
+    background-image: linear-gradient(
+      to right,
+      transparent 0,
+      transparent 4px,
+      rgba(var(--app-row-veil), 0.88) 4px,
+      rgba(var(--app-row-veil), 0.88) 100%
+    ) !important;
+    color: var(--app-fg) !important;
+    transition: background-color 150ms ease;
+  }
+
+  .panel-color:hover {
+    --app-row-veil: var(--app-surface-raised-rgb);
+
+    background-color: var(--app-surface-raised) !important;
+    background-image: linear-gradient(
+      to right,
+      transparent 0,
+      transparent 4px,
+      rgba(var(--app-row-veil), 0.88) 4px,
+      rgba(var(--app-row-veil), 0.88) 100%
+    ) !important;
+    color: var(--app-fg) !important;
+  }
+
+  // panel.theme.scss: `.line-datagroup { background: primary !important }`. A 1px
+  // rule is a separator, so it takes the border colour rather than the brand one.
+  // (The i18n divider field keeps using the accent - that one is deliberate.)
+  .line-datagroup {
+    background: var(--app-border) !important;
+  }
+}
+
+@include app-theme-overrides;
+
+.app-dark {
+  @include app-theme-overrides;
+}
+
+// ---------------------------------------------------------------------------
+// The form's single description popover.
+//
+// Rendered into document.body by EtaskTaskContentComponent, because a field sits inside
+// `cdk-virtual-scroll-viewport` (`contain: strict`) and `mat-tab-body-content`
+// (`transform: translate(...)`): both clip an absolutely positioned child, and they make
+// `position: fixed` resolve against the tab instead of the viewport - a fixed probe inside
+// a field landed at -584,270 rather than 100,100. Living outside the form in the DOM is
+// what lets one popover behave identically for every field type.
+//
+// The file and i18n fields need no special case any more: their hints are <mat-hint>
+// elements too, so the clamp in app-theme-overrides and this popover already cover them.
+// ---------------------------------------------------------------------------
+
+.app-desc-popover {
+  position: fixed;
+  z-index: 1200;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 6px;
+  background: var(--app-tooltip);
+  color: var(--app-tooltip-fg);
+  box-shadow: var(--app-shadow-2);
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: normal;
+  pointer-events: none; // never stands between the pointer and the form
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 90ms ease;
+}
+
+.app-desc-popover-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+// ---------------------------------------------------------------------------
+// Library colours hardcoded for a light background.
+//
+// This is the complete list for @netgrif/components 6.3.1 - only two of its
+// components ship unencapsulated (i18n-text-field, search), the rest are
+// component-scoped, which is what the `!important` below is for: an encapsulated
+// component stylesheet is injected after this file and its attribute selector
+// already matches our specificity.
+// ---------------------------------------------------------------------------
+
+// navigation.theme.scss emits a literal `white` into both scopes
+.app-dark .active-rail {
+  background: var(--app-surface);
+  border-top-color: var(--app-border);
+  border-bottom-color: var(--app-border);
+}
+
+.app-dark {
+  // field-component-resolver - skeleton placeholder shown while a task loads
+  .phl-item {
+    background-color: var(--app-surface) !important;
+  }
+
+  .phl-col {
+    background-color: var(--app-surface-raised) !important;
+  }
+
+  // file-field / i18n-text-field bordered inputs
+  .form-input,
+  .form-input-interfield {
+    color: var(--app-fg) !important;
+    border-color: var(--app-border-strong) !important;
+  }
+
+  .form-input:hover,
+  .form-input-interfield:hover {
+    border-color: var(--app-fg-muted) !important;
+  }
+
+  .input-placeholder,
+  .placeholder,
+  .i18n-label {
+    color: var(--app-fg-faint) !important;
+  }
+
+  // task-panel footer separator is rgba(0, 0, 0, 0.03) - invisible on dark
+  .task-panel-footer {
+    border-top-color: var(--app-border) !important;
+  }
+
+  // user profile view
+  .tab-group {
+    background: var(--app-surface-raised) !important;
+  }
+
+  .div-background {
+    background: var(--app-border) !important;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Chrome. Softer corners and real 1px separators instead of shadow-only
+// definition - that is what carries the look in both modes.
+// ---------------------------------------------------------------------------
+
+.mat-expansion-panel,
+.mat-card {
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius) !important;
+  box-shadow: var(--app-shadow-1) !important;
+}
+
+.mat-drawer-container {
+  background-color: var(--app-bg);
+}
+
+// Tabs. Material ships `.mat-tab-label { height: 48px; min-width: 160px;
+// padding: 0 24px }`, so a two-tab strip eats 48px of height and 320px of width for
+// two short words. The descendant selector is needed because Material's own rule is
+// a component stylesheet injected after this file - at equal specificity it would win
+// on source order.
+.mat-tab-group .mat-tab-label {
+  height: 40px;
+  min-width: 0;
+  padding: 0 20px;
+}
+
+// ---------------------------------------------------------------------------
+// Panel footers (the ZRUŠIŤ / DOKONČIŤ / SKRYŤ row).
+//
+// Material's `.mat-action-row` is `padding: 16px 8px 16px 24px`, so three short actions
+// come to roughly 68px. Both the task panel and the workflow panel use it, hence a
+// global rule; the descendant selector is what outranks Material's own component
+// stylesheet, which is injected after this file.
+//
+// The row also gets a raised surface and the panel's bottom corners, so it reads as a
+// deliberate footer bar instead of leftover space.
+// ---------------------------------------------------------------------------
+
+.mat-expansion-panel .mat-action-row {
+  padding: 6px 10px;
+  min-height: 0;
+  border-top-color: var(--app-border);
+  background: var(--app-surface-raised);
+  border-bottom-left-radius: var(--app-radius);
+  border-bottom-right-radius: var(--app-radius);
+}
+
+// The buttons sit in per-template wrapper divs that stay in the DOM even when their
+// *ngIf is false, so spacing goes on the buttons themselves - a flex `gap` on the row
+// would also space the empty wrappers out.
+.mat-expansion-panel .mat-action-row .mat-button-base {
+  height: 32px;
+  min-width: 0;
+  padding: 0 14px;
+  margin-left: 8px;
+  font-size: 12px;
+  line-height: 30px; // Material: 34px for stroked, inside a 36px button
+  letter-spacing: 0.04em;
+  border-radius: 6px;
+}
+
+// ---------------------------------------------------------------------------
+// Density of the list views.
+//
+// Every @netgrif/components list view (cases, tasks, workflow, and the filter-field
+// variants) frames its search box and its column header with 16-20px paddings, plus
+// mat-card's own 16px, so roughly 90px of height goes on chrome before the first row.
+// These are component stylesheets injected after this file, hence `!important`.
+//
+// Kept here rather than in the individual view components so the numbers live in one
+// place and apply to the views we do not own.
+// ---------------------------------------------------------------------------
+
+// When the icon rail is collapsed, the floating menu button sits at the top-left corner
+// (y 8-48). Only the search block shares that band, so only the search block is inset.
+// Insetting the whole content column - which is what this used to do - cost every list
+// 48px of width all the way down, for one button at the top.
+.rail-collapsed {
+  .case-view-search-container,
+  .search-panel {
+    margin-left: 48px !important;
+  }
+}
+
+@media screen and (max-width: 959.99px) {
+  // Below md the floating control is hidden in favour of the toolbar's menu button.
+  .rail-collapsed {
+    .case-view-search-container,
+    .search-panel {
+      margin-left: 0 !important;
+    }
+  }
+}
+
+// Task views: default-tabbed, default-simple and filter-field-tabbed all share these
+// three class names and nothing else in the library uses them.
+.content-margin {
+  margin: 0 12px !important; // library: 0 20px
+}
+
+.search-panel {
+  margin-top: 8px !important; // library: 20px
+  padding: 4px 12px !important; // library: mat-card's own 16px
+}
+
+.task-panel-padding-mini {
+  padding: 6px 0 !important; // library: 20px 0
+}
+
+// Case views.
+.case-view-container {
+  margin: 8px !important; // library: 16px
+  height: calc(100% - 16px) !important; // must track the margin above
+}
+
+.case-view-search-container {
+  padding: 4px 12px !important; // library: 16px
+}
+
+// `.case-header-padding` is also used by the load-filter and user-impersonate side
+// menu panels with different values, so this one stays scoped to the case view.
+.case-view-container .case-header-padding {
+  padding: 6px 0 !important; // library: 20px 0
+}
+
+// Scrollbars follow the active mode.
+body {
+  ::-webkit-scrollbar-track {
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    background-color: var(--app-scrollbar-track);
+  }
+
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+    background-color: var(--app-scrollbar-track);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+    background-color: var(--app-scrollbar-thumb);
+  }
+}
