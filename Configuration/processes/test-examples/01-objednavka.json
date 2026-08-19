@@ -1,0 +1,13 @@
+{
+  "from": "obchod@stavmat-vychod.sk",
+  "to": "objednavky@nasafirma.sk",
+  "subject": "Objednávka - profily a spojovací materiál",
+  "date": "2026-03-04",
+  "body": "Dobrý deň,\n\nna základe cenovej ponuky CP-2026-118 zo 26.2. objednávame:\n\n- hliníkový profil 40x40, 60 ks, dĺžka 3 m\n- rohová spojka 40x40, 240 ks\n- skrutka M8x20 nerez, 500 ks\n\nDodanie prosíme na prevádzku Košice, Južná trieda 82, do 20.3.2026.\nFakturačné údaje ostávajú, IČO 36 214 578, DIČ 2020087412.\nPlatba prevodom, 30 dní.\n\nPotvrďte prosím termín dodania.\n\nS pozdravom\nMartin Sedlák\nvedúci nákupu, Stavmat Východ s.r.o.\ntel. +421 905 214 663",
+  "attachments": [
+    {
+      "name": "objednavka_OD-2026-0451.txt",
+      "text": "OBJEDNÁVKA č. OD-2026-0451\nOdberateľ: Stavmat Východ s.r.o., Južná trieda 82, 040 01 Košice, IČO 36214578\nDodávateľ: Naša firma a.s.\nOdkaz na ponuku: CP-2026-118\n\nPoz.  Položka                         Množstvo  Cena/ks   Celkom\n1     Profil ALU 40x40, 3 m           60 ks     18,40     1104,00\n2     Rohová spojka 40x40             240 ks     1,25      300,00\n3     Skrutka M8x20 nerez             500 ks     0,18       90,00\n\nCelkom bez DPH: 1494,00 EUR\nDPH 20 %:        298,80 EUR\nCelkom s DPH:   1792,80 EUR\n\nPožadovaný termín dodania: 20.03.2026\nSplatnosť: 30 dní"
+    }
+  ]
+}

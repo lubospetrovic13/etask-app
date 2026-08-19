@@ -1,0 +1,689 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>single_settings</id>
+	<version>1.0.0</version>
+	<initials>SST</initials>
+	<title>Single settings</title>
+	<icon>settings_applications</icon>
+	<defaultRole>true</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<function scope="process" name="net_prefix"><![CDATA[
+{ def caseObj ->
+    // Na single-tenant Netgrif Platforme premenna workspace neexistuje a
+    // processIdentifier je bez prefixu. Odvodime ho z vlastneho casu - funguje
+    // rovnako na single-tenante (prazdny prefix) aj na multi-tenant eTasku.
+    def pid = caseObj.processIdentifier
+    return pid.contains("/") ? pid.substring(0, pid.lastIndexOf("/") + 1) : ""
+}
+	]]></function>
+	<function scope="process" name="find_ai_config"><![CDATA[
+{ def caseObj ->
+    // Casov ai_config moze byt viac. Uprednostni ten s naplnenym ciselnikom,
+    // inak by sme citali prazdny a ponuka modelov by bola prazdna.
+    def cases = findCases { it.processIdentifier.eq(net_prefix(caseObj) + "ai_config") }
+    if (!cases) return null
+    def filled = cases.findAll { c -> ((c.dataSet["models_json"]?.value ?: "[]") as String).trim() != "[]" }
+    return filled ? filled[0] : cases[0]
+}
+	]]></function>
+	<function scope="process" name="model_slug"><![CDATA[
+{ def key ->
+    // Mongo nepovoluje bodku ani dolar v kluci mapy - options preto nesu slug.
+    return (key as String).replace(".", "__D__").replace('$', "__S__")
+}
+	]]></function>
+	<function scope="process" name="read_models"><![CDATA[
+{ def caseObj ->
+    def cfg = find_ai_config(caseObj)
+    def raw = cfg ? cfg.dataSet["models_json"]?.value : null
+    return raw ? new groovy.json.JsonSlurper().parseText(raw as String) : []
+}
+	]]></function>
+	<function scope="process" name="load_models"><![CDATA[
+{ origin, model, model_label, model_key, model_provider, models_status ->
+    def cases = findCases { it.processIdentifier.eq(net_prefix(useCase) + "ai_config") }
+    def cfg = find_ai_config(useCase)
+    def list = read_models(useCase)
+    def sel = list.findAll { m -> m.origin == origin.value }
+    change model options {
+        sel.collectEntries { m -> [(model_slug(m.key)): (m.provider ? (m.label + "  [" + m.provider + "]") : m.label) as String] }
+    }
+
+    if (!cases) {
+        change models_status value { "Nenasiel sa ziadny case AI konfiguracia - vytvor ho a naplni ciselnik" }
+    } else if (!cfg || !list) {
+        change models_status value { "Ciselnik je prazdny (najdenych casov ai_config: " + cases.size() + ")" }
+    } else {
+        change models_status value { "Modely pre " + origin.value + ": " + sel.size() + " z " + list.size() +
+                                     " (zdroj " + cfg.stringId + ", casov ai_config: " + cases.size() + ")" }
+    }
+
+    def hit = model.value ? sel.find { m -> model_slug(m.key) == model.value } : null
+    if (model.value && !hit) {
+        change model value { "" }
+        change model_label value { "" }
+        change model_key value { "" }
+        change model_provider value { "" }
+    } else if (hit) {
+        change model_label value { hit.label }
+        change model_key value { hit.key }
+        change model_provider value { hit.provider ?: "" }
+    }
+}
+	]]></function>
+	<function scope="process" name="mark_updated"><![CDATA[
+{ updated_at, updated_by ->
+    change updated_at value { java.time.LocalDateTime.now() }
+    change updated_by value { userService.loggedOrSystem.email }
+    def cfg = find_ai_config(useCase)
+    if (cfg) {
+        setData("t_config", cfg, ["stale_signal": ["value": useCase.stringId, "type": "text"]])
+    }
+}
+	]]></function>
+	<role>
+		<id>admin</id>
+		<title>Administrátor</title>
+	</role>
+	<role>
+		<id>system</id>
+		<title>Systém</title>
+	</role>
+
+	<data type="i18n">
+		<id>div_identity</id>
+		<title/>
+		<init>Identifikácia</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="i18n">
+		<id>div_model</id>
+		<title/>
+		<init>Model a limity</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="i18n">
+		<id>div_prompts</id>
+		<title/>
+		<init>Prompty</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="boolean" immediate="true">
+		<id>show_audit</id>
+		<title>Diagnostika</title>
+		<desc>Zbalí alebo rozbalí odvodené a auditné údaje.</desc>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">section</property>
+			</properties>
+		</component>
+		<init>false</init>
+		<event type="set">
+			<id>show_audit_set</id>
+			<actions phase="post">
+				<action id="9"><![CDATA[
+show_audit: f.show_audit, model_provider: f.model_provider, updated_at: f.updated_at, updated_by: f.updated_by, models_status: f.models_status, model_label: f.model_label, model_key: f.model_key;
+// Auditne polia su diagnostika, nie vstup - drzime ich zbalene, kym si ich niekto nevyziada.
+boolean showIt = show_audit.value == true
+make model_provider, visible on transitions when { showIt }
+make model_provider, hidden on transitions when { !showIt }
+make updated_at, visible on transitions when { showIt }
+make updated_at, hidden on transitions when { !showIt }
+make updated_by, visible on transitions when { showIt }
+make updated_by, hidden on transitions when { !showIt }
+make models_status, visible on transitions when { showIt }
+make models_status, hidden on transitions when { !showIt }
+make model_label, visible on transitions when { showIt }
+make model_label, hidden on transitions when { !showIt }
+make model_key, visible on transitions when { showIt }
+make model_key, hidden on transitions when { !showIt }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>settings_name</id>
+		<title>Názov konfigurácie</title>
+		<desc>Pod týmto názvom sa konfigurácia zobrazí v AI konfigurácii.</desc>
+		<placeholder>napr. Kategorizácia klientskej komunikácie</placeholder>
+		<init>Kategorizácia a vyťaženie komunikácie</init>
+		<event type="set">
+			<id>settings_name_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+settings_name: f.settings_name;
+changeCaseProperty("title").about { settings_name.value ?: "Nastavenie" }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>origin</id>
+		<title>Pôvod</title>
+		<desc>Filtruje ponuku modelov: lokálne bežiace u vás, alebo externé cez API.</desc>
+		<init>external</init>
+		<options>
+			<option key="local">Lokálny</option>
+			<option key="external">Externý</option>
+		</options>
+		<event type="set">
+			<id>origin_set</id>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+origin: f.origin, model: f.model, model_label: f.model_label, model_key: f.model_key,
+model_provider: f.model_provider, models_status: f.models_status;
+load_models(origin, model, model_label, model_key, model_provider, models_status)
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>model</id>
+		<title>Model</title>
+		<desc>Ponuka sa plní z číselníka v AI konfigurácii, filtrovaná podľa Pôvodu.</desc>
+		<event type="set">
+			<id>model_set</id>
+			<actions phase="post">
+				<action id="4"><![CDATA[
+model: f.model, model_label: f.model_label, model_key: f.model_key,
+model_provider: f.model_provider, updated_at: f.updated_at, updated_by: f.updated_by;
+
+if (model.value) {
+    def entry = read_models(useCase).find { m -> model_slug(m.key) == model.value }
+    change model_label value { entry ? entry.label : "" }
+    change model_key value { entry ? entry.key : "" }
+    change model_provider value { entry ? (entry.provider ?: "") : "" }
+    mark_updated(updated_at, updated_by)
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>model_label</id>
+		<title>Názov modelu</title>
+	</data>
+	<data type="text">
+		<id>model_key</id>
+		<title>Kľúč modelu pre API</title>
+	</data>
+	<data type="text">
+		<id>model_provider</id>
+		<title>Provider</title>
+		<desc>Protokol volania, prevzatý z číselníka.</desc>
+	</data>
+	<data type="text">
+		<id>models_status</id>
+		<title>Zdroj číselníka</title>
+		<desc>Diagnostika: odkiaľ sa ponuka načítala a koľko modelov obsahuje.</desc>
+	</data>
+	<data type="button">
+		<id>refresh</id>
+		<title/>
+		<desc>Znovu načíta ponuku modelov z číselníka. Klikni, ak si medzitým pridal nový model.</desc>
+		<placeholder>refresh</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>refresh_set</id>
+			<actions phase="post">
+				<action id="5"><![CDATA[
+origin: f.origin, model: f.model, model_label: f.model_label, model_key: f.model_key,
+model_provider: f.model_provider, models_status: f.models_status;
+load_models(origin, model, model_label, model_key, model_provider, models_status)
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="number">
+		<id>temperature</id>
+		<title>Temperature</title>
+		<desc>Miera náhodnosti. 0 = najstabilnejšie odpovede. Anthropic modely ju neprijímajú.</desc>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>max_tokens</id>
+		<title>Max tokens</title>
+		<desc>Strop dĺžky odpovede, nie vstupu. Musí sa doň zmestiť celý JSON.</desc>
+		<init>4096</init>
+	</data>
+	<data type="text">
+		<id>system_prompt</id>
+		<title>System prompt</title>
+		<desc>Trvalé inštrukcie pre model. Sem patrí zoznam kategórií a formát odpovede.</desc>
+		<placeholder>Markdown text - posiela sa do modelu bez úprav</placeholder>
+		<component>
+			<name>textarea</name>
+		</component>
+		<init>Si asistent na spracovanie prichádzajúcej klientskej komunikácie. Tvoja úloha je určiť kategóriu správy a vytiahnuť z nej štruktúrované údaje.
+
+Vracaj výhradne JSON podľa zadanej schémy, bez sprievodného textu a bez markdown blokov.
+
+KATEGÓRIE - vyber presne jednu
+  objednavka   nová objednávka alebo dopyt na dodanie
+  reklamacia   sťažnosť na kvalitu, poškodenie, chybné dodanie
+  faktura      faktúra, dobropis, platobné doklady
+  upomienka    urgencia platby alebo dodania
+  otazka       otázka na produkt, cenu, stav, dostupnosť
+  zmena        zmena údajov, adresy, kontaktu, objednávky
+  ine          nič z uvedeného
+
+PRAVIDLÁ
+- Ak údaj v komunikácii nie je, daj null. Nikdy si ho nedomýšľaj.
+- confidence je číslo 0 az 1 a vyjadruje, ako isto je kategória určená.
+- summary je jedna veta v jazyku komunikácie.
+- Do items dávaj len údaje, ktoré sú v texte naozaj uvedené.
+- Dátumy vo formáte YYYY-MM-DD, sumy ako číslo s desatinnou bodkou.
+- IČO, DIČ, čísla objednávok a faktúr vracaj ako text, aby sa nestratili úvodné nuly.</init>
+		<event type="set">
+			<id>system_prompt_set</id>
+			<actions phase="post">
+				<action id="6"><![CDATA[
+updated_at: f.updated_at, updated_by: f.updated_by;
+mark_updated(updated_at, updated_by)
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>user_prompt</id>
+		<title>User prompt</title>
+		<desc>Konkrétna úloha. Miesto, kam sa vloží obsah komunikácie, označ {{message}}.</desc>
+		<placeholder>Markdown text, zástupný text pre obsah komunikácie: {{message}}</placeholder>
+		<component>
+			<name>textarea</name>
+		</component>
+		<init>Urči kategóriu tejto komunikácie a vytiahni z nej údaje.
+
+Vráť JSON presne v tomto tvare:
+{
+  "category": "objednavka|reklamacia|faktura|upomienka|otazka|zmena|ine",
+  "confidence": 0.0,
+  "summary": "jedna veta o čom komunikácia je",
+  "language": "sk",
+  "urgency": "nizka|stredna|vysoka",
+  "requires_response": true,
+  "client": {
+    "name": null,
+    "email": null,
+    "phone": null,
+    "company": null,
+    "company_id": null
+  },
+  "references": {
+    "order_number": null,
+    "invoice_number": null,
+    "contract_number": null,
+    "variable_symbol": null
+  },
+  "amount": null,
+  "currency": null,
+  "due_date": null,
+  "items": [
+    { "label": "názov údaju", "value": "hodnota" }
+  ]
+}
+
+Komunikácia:
+{{message}}</init>
+		<event type="set">
+			<id>user_prompt_set</id>
+			<actions phase="post">
+				<action id="7"><![CDATA[
+updated_at: f.updated_at, updated_by: f.updated_by;
+mark_updated(updated_at, updated_by)
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="dateTime">
+		<id>updated_at</id>
+		<title>Upravené</title>
+		<desc>Kedy sa naposledy zmenil model alebo prompt.</desc>
+	</data>
+	<data type="text">
+		<id>updated_by</id>
+		<title>Upravil</title>
+	</data>
+
+	<transition>
+		<id>t_settings</id>
+		<x>304</x>
+		<y>208</y>
+		<label>Single settings</label>
+		<icon>settings_applications</icon>
+		<roleRef>
+			<id>admin</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_settings</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_identity</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>settings_name</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_model</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>origin</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>5</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>refresh</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>5</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>1</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>icon</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>model</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>temperature</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>1</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>max_tokens</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>5</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>1</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_prompts</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>system_prompt</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>4</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>textarea</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>user_prompt</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>10</y>
+					<rows>4</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>textarea</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>show_audit</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>14</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>model_provider</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>15</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>updated_at</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>15</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>updated_by</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>15</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>models_status</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>16</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>model_label</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>17</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>model_key</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>17</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_settings_assign</id>
+			<actions phase="pre">
+				<action id="8"><![CDATA[
+origin: f.origin, model: f.model, model_label: f.model_label, model_key: f.model_key,
+model_provider: f.model_provider, models_status: f.models_status;
+load_models(origin, model, model_label, model_key, model_provider, models_status)
+				]]></action>
+			</actions>
+		</event>
+		<priority>1</priority>
+	</transition>
+
+	<place>
+		<id>p_settings</id>
+		<x>112</x>
+		<y>208</y>
+		<label>Aktívny</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+
+	<arc>
+		<id>a_settings</id>
+		<type>read</type>
+		<sourceId>p_settings</sourceId>
+		<destinationId>t_settings</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

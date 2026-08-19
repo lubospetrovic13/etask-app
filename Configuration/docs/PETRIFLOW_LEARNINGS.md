@@ -1,0 +1,321 @@
+# Čo `petriflow_reference.md` nepokrýva alebo pokrýva nesprávne
+
+Zistené počas jedného POC na Netgrif Platform 6.3.1, single-tenant, lokálne nasadenie.
+Zdroje sú tri a je dobré ich odlíšiť:
+
+- **Za behu** — chyba alebo správanie, ktoré sme videli v aplikácii
+- **Z klientovho procesu** — prevzaté z `ticket_vacation.xml`, teda z kódu, ktorý beží
+  v produkcii, ale my sme to sami nepotvrdili
+- **Odvodené** — vysvetlenie, ktoré najlepšie zapadá do faktov, ale nie je dokázané
+
+---
+
+## A. Príručka to tvrdí nesprávne
+
+### A1. `workspace` neexistuje na single-tenant nasadení
+
+**Príručka, gotcha 34 a 21:** *„ALWAYS use `workspace + "process_id"` in `findCases`,
+`findTasks`, and `createCase`. Omitting it causes silent lookup failures."*
+
+**Realita:** na single-tenant Netgrif Platform premenná `workspace` neexistuje a
+`processIdentifier` je holý (`ai_config`, nie `ws/ai_config`). Dodržanie tejto rady
+spôsobí presne to, pred čím varuje — `findCases` nenájde nič, bez chyby.
+
+**Náhrada, ktorá funguje v oboch nasadeniach** — odvodenie z vlastného casu:
+
+```groovy
+{ def caseObj ->
+    def pid = caseObj.processIdentifier
+    return pid.contains("/") ? pid.substring(0, pid.lastIndexOf("/") + 1) : ""
+}
+```
+
+Single-tenant dá `""`, multi-tenant `"ws/"`. Príručka podobný trik uvádza v gotcha 39,
+ale len ako výnimku pre anonymný kontext — v skutočnosti je to lepší default vždy.
+
+*Zistené za behu: prázdna ponuka modelov, ktorá sa opravila po tejto zmene.*
+
+### A2. `button` nepotrebuje `<init>1</init>`
+
+**Príručka, gotcha 29 a 19:** *„`button` field: `<init>1</init>` required"*.
+
+**Realita:** v klientovom procese majú buttony `show`, `hide` a `share_btn` `<init>`
+úplne bez neho a fungujú.
+
+*Z klientovho procesu.*
+
+### A3. `<action>` bez atribútu `id` je platný
+
+**Príručka, CHECKLIST:** *„Action IDs globally unique sequential"*.
+
+**Realita:** `ticket_vacation.xml` riadok 558 má `<action>` bez `id` a proces beží.
+Unikátnosť je pravdepodobne požiadavka len keď id existuje; sekvenčnosť je štýl,
+nie pravidlo.
+
+*Z klientovho procesu.*
+
+### A4. `case.getFieldValue(id)` nie je bezpečná alternatíva
+
+**Príručka, gotcha 33:** *„`case.getFieldValue("id")` — alternative to
+`case.dataSet["id"]?.value`"*, prezentované ako rovnocenné.
+
+**Realita:** na poli, ktoré v danej verzii siete neexistuje, `getFieldValue` padá.
+`dataSet[id]?.value` vráti `null`. Nie sú rovnocenné, druhé je bezpečné.
+
+*Odvodené z pádu pri čítaní novopridaného poľa; `dataSet["x"].value` je zároveň idióm
+použitý v `EtaskActionDelegate` samotného projektu.*
+
+### A5. Process funkcie neberú len dátové polia
+
+**Príručka, Pattern 21:** *„Signature: `{ param1, param2 -> body }` — params are data
+field objects, same as `f.field_id` imports."*
+
+**Realita:** berú obyčajné `def` aj typované parametre, vracajú hodnoty, volajú sa
+navzájom a **dajú sa preťažovať podľa počtu argumentov** — `ticket_vacation.xml` má dve
+funkcie `addWorkflowEventToHistory` s rôznou aritou. Tiež funguje
+`change X options { }` vnútri funkcie, čo príručka neuvádza (ukazuje len `change ... value`).
+
+*Z klientovho procesu + overené za behu na `render_codebook`, `net_prefix`, `model_slug`.*
+
+---
+
+## B. Príručka to nepokrýva vôbec
+
+### B1. Mongo nepovoluje bodku ani dolár v kľúči mapy
+
+Options selektov a multichoice sa ukladajú ako dokument. Kľúč s bodkou zhodí uloženie:
+
+```
+Map key llama3.1:70b contains dots but no replacement was configured!
+```
+
+Týka sa to väčšiny lokálnych tagov (`llama3.1:70b`, `Qwen/Qwen2.5-32B`) aj niektorých
+externých ID (`gpt-4.1`). **Tichá mína pre každý dynamicky plnený číselník.**
+
+Riešenie: v options je slug (`.` → `__D__`, `$` → `__S__`), reálna hodnota zostáva
+v zdrojovom JSON-e a dohľadá sa cez slug. Vybraná hodnota enumu je potom slug, takže
+reálny kľúč treba držať v samostatnom poli.
+
+Vedľajšie zistenie: **bodka zmizne aj zo zobrazovaného textu** option (`Llama 3.1 70B`
+→ `Llama 31 70B`). Kozmetické, ale zavádzajúce.
+
+*Zistené za behu.*
+
+### B2. Button nevidí hodnotu textového poľa v tej istej požiadavke
+
+Najdrahšia lekcia vlákna. Textové polia a textarea posielajú hodnotu na server
+**až pri strate fokusu**, čo nastane v tom istom okamihu ako klik na tlačidlo. Obe
+zmeny idú v jednej `setData` požiadavke a **event tlačidla sa spracuje skôr**, než sa
+hodnota poľa aplikuje.
+
+Prejav: akcia vidí prázdne pole, a to isté kliknutie druhýkrát už funguje.
+
+`phase="post"` to **nerieši** — „post" je relatívne k vlastnému poľu tlačidla, nie
+k celej dávke.
+
+Ktoré typy sú bezpečné: **select, checkbox, boolean** posielajú hodnotu okamžite pri
+zmene, takže sú uložené ešte pred klikom. Nebezpečné sú len `text` a textarea.
+
+Dve funkčné riešenia:
+1. Spracovanie dať do `set` eventu **toho textového poľa**, nie tlačidla.
+2. Formulár usporiadať tak, aby **posledný vstup pred tlačidlom bol select** — kým naň
+   klikneš, textové polia už dávno stratili fokus.
+
+*Zistené za behu, potvrdené dvoma nezávislými prejavmi.*
+
+### B3. Pridanie dátového poľa sa nepropaguje do existujúcich casov
+
+Case si drží svoju verziu siete. Po uploade siete s novým poľom vráti `f.new_field`
+v existujúcom case `null` a akcia padne na:
+
+```
+Cannot set property 'value' on null object
+```
+
+Táto správa vždy znamená `change <null> value`, teda pole z import hlavičky, ktoré
+v tom case neexistuje. **Riešenie je nový case**, nie oprava kódu. Kód sa dá ošetriť
+`if (field != null)`, ale to len zamaskuje nekompletný case.
+
+*Odvodené — najlepšie vysvetlenie pádu, ktorý zmizol po založení nového casu. Priamo
+potvrdené nebolo.*
+
+### B4. `immediate="true"` na `<data>`
+
+Atribút na elemente `data`, v príručke nikde. V klientovom procese je na `date`
+a `enumeration_map`, teda na poliach, ktorých `set` event má reagovať promptne.
+
+Predpoklad: posiela hodnotu okamžite namiesto čakania na blur. Ak áno, je to
+**bezpečné na selektoch a na textových poliach bez `set` eventu**, ale **nebezpečné
+na textovom poli so `set` eventom** — akcia by sa spustila uprostred písania.
+
+*Z klientovho procesu, semantika neoverená.*
+
+### B5. `<desc>` na dátovom poli
+
+Popis pod poľom vo formulári. Príručka ho zmieňuje len v zákaze znakov (C6), ale
+neuvádza v poriadku elementov ani ako featuru.
+
+Pozícia: **hneď za `<title>`**. Poradie teda je
+`<id>` → `<title>` → `<desc>` → `<placeholder>` → `<component>` → `<init>` → `<options>`.
+
+Pozor: podľa konfigurácie frontendu sa `desc` môže zobraziť skrátené na jeden riadok,
+takže sa naň nedá spoliehať pri dlhšom vysvetlení.
+
+*Z klientovho procesu, zobrazenie overené za behu.*
+
+### B6. `make ... on transitions` — množné číslo
+
+Príručka ukazuje len `make <field>, <behaviour> on <transition_id>` s importom
+konkrétneho `t.t1`. Kľúčové slovo **`transitions`** (množné) platí na všetky tasky
+naraz a **netreba importovať žiadny task**:
+
+```groovy
+make help_models, visible on transitions when { showIt }
+```
+
+Zjednodušuje to prepínanie viditeľnosti v procesoch s viacerými taskami.
+
+*Z klientovho procesu, použité a funkčné.*
+
+### B7. Ikonu tlačidla sa z akcie zmeniť nedá
+
+`make` mení chovanie (`visible`, `hidden`, `editable`), nie `placeholder`. Rozbaľovacia
+sekcia s jedným tlačidlom preto nikdy neprepne strelku.
+
+Tri možnosti:
+
+| riešenie | polí na sekciu | stav vidno |
+|---|---|---|
+| dva buttony `show`/`hide` + dva dividery, prepínajú si viditeľnosť | 4 | áno, strelka sa mení |
+| jeden button + parita `value % 2` | 2 | **nie**, ikona zostáva |
+| **boolean pole** so `set` eventom | 1 | áno, prepínač je stav sám |
+
+Prvý variant je klientov. Tretí je najúspornejší a má vlastný popis, takže sa hodí
+tam, kde nejde o vzhľad strelky.
+
+Súvisiace: **hodnota buttonu sa pri každom kliku zvyšuje**, takže `value % 2 == 1` je
+funkčný prepínač — len bez vizuálnej zmeny.
+
+*Zistené za behu (ikona sa nemenila) + parita z klientovho procesu.*
+
+### B8. Jedno miesto `tokens=1` môže obsluhovať N trvale otvorených taskov
+
+Pattern 16b v príručke ukazuje jedno miesto → jeden task. Kontrolný zoznam zároveň
+žiada *„exactly one `tokens=1`"*.
+
+Obe sa dajú splniť naraz: jedno miesto s tokenom a **N read arcov do N transition**.
+Všetky tasky sú trvale otvorené, žiadny nemá výstupný arc.
+
+```
+[p_alive : tokens=1] ──read──► [t_codebook]
+                     ──read──► [t_config]
+                     ──read──► [t_test]
+```
+
+Varovanie o viacerých read arcoch (Pattern 16) sa týka **viacerých arcov do jednej
+transition**, nie jedného miesta do viacerých transition.
+
+*Overené za behu — tri tasky v jednom case.*
+
+### B9. `<properties>` v `<component>`
+
+Štýlovanie komponentu, v príručke nikde:
+
+```xml
+<component>
+    <name>divider</name>
+    <properties>
+        <property key="fontSize">20</property>
+    </properties>
+</component>
+```
+
+*Z klientovho procesu, vizuálny efekt neoverený.*
+
+### B10. Backendová logika patrí do metódy na `ActionDelegate`
+
+Príručka nerieši, ako z akcie zavolať vlastný Java/Groovy kód. Spoľahlivá cesta: metóda
+na vlastnej triede rozširujúcej `ActionDelegate` (v tomto projekte
+`EtaskActionDelegate`). Je z akcie volateľná **priamo menom, bez prefixu**:
+
+```groovy
+def res = callAIToolByConfig(params)
+```
+
+Odpadá tým otázka, či engine sprístupňuje Spring beany do Groovy bindingu podľa mena —
+čo sme neoverili a čo bolo jediné riziko pôvodného návrhu s `@Service("aiToolService")`.
+Delegát si službu autowiruje a zostane tenký.
+
+V metóde sú navyše rovno dostupné `workflowService`, `userService` a `log` z rodiča.
+
+*Odvodené zo štruktúry projektu; kompilácia a volanie overené, `MissingPropertyException`
+sme nikdy nevideli.*
+
+---
+
+## C. Mimo Petriflow, ale stálo to čas
+
+### C1. Groovy nekontroluje volania metód pri kompilácii
+
+`mvn compile` overí len importy a staticky typované deklarácie. Chybný názov metódy
+na cudzej knižnici prejde a padne za behu. Pri externých závislostiach sa vyplatí
+overiť podpisy cez `javap` proti stiahnutému jaru — trvá sekundy.
+
+Takto sa odhalilo, že `RefusalStopDetails.category()` vracia `Optional`, takže by sa
+do reportu vypísalo `Optional[cyber]`.
+
+### C2. Anthropic Java SDK je nekompatibilné s NAE 6.3.1
+
+SDK 2.34.0 je skompilované proti Kotlin stdlib 1.8+, Netgrif so Spring Bootom 2.x
+pinuje 1.6.21. Kompilácia prejde, request odíde, **deserializácia odpovede padne** na
+`NoClassDefFoundError kotlin/jvm/optionals/OptionalsKt`.
+
+Voľby: zdvihnúť `<kotlin.version>` na 1.9.x (stdlib je binárne spätne kompatibilný,
+ale mení sa pod celou platformou), alebo volať Messages API priamo cez HTTP. Zvolili
+sme druhé — jeden POST, žiadna nová závislosť.
+
+### C3. Maven si cachuje zlyhané stiahnutie
+
+Pri prerušovaných TLS chybách vytvorí `.lastUpdated` značky a pokus **neopakuje**, ani
+pri ďalšom builde. Vyzerá to ako trvalá chyba. Samotné `-U` nemusí stačiť:
+
+```bash
+find ~/.m2/repository -name "*.lastUpdated" -delete && mvn -U -DskipTests install
+```
+
+Pozor aj na scope: `runtime` závislosti `mvn compile` nepotrebuje, takže úspešná
+kompilácia nezaručí úspešný `install`.
+
+---
+
+## D. Doplnené do príručky — HOTOVO
+
+Týchto päť zistení už je v `petriflow_reference.md`:
+
+| zistenie | kde v príručke | forma |
+|---|---|---|
+| **B2** button nevidí textové pole | nové **C16** | nové kritické pravidlo s XML aj Groovy ukázkou |
+| **B1** bodka v kľúči mapy | nové **C17** | nové kritické pravidlo so slug riešením |
+| **B3** nové polia sa nepropagujú | nové **C18** | nové kritické pravidlo + výklad chybovej správy |
+| **A1** `workspace` na single-tenante | prepísaná **gotcha 34**, **gotcha 21** v druhej tabuľke, **gotcha 39**, riadok CHECKLIST/IPC | oprava nesprávneho tvrdenia |
+| **A4** `getFieldValue` padá | prepísaná **gotcha 33** | oprava nesprávneho tvrdenia |
+
+Prečo práve tieto: prvé tri sa **nedajú uhádnuť z kódu ani z chybovej správy** a každé
+stálo aspoň jedno kolo ladenia. Druhé dve príručka tvrdila nesprávne, takže jej dodržanie
+viedlo k chybe — to je horšie než chýbajúca informácia.
+
+Pri oprave gotcha 34 som zladil aj **gotcha 39**: pôvodne uvádzala odvodenie prefixu len
+ako výnimku pre anonymný kontext a používala odčítanie
+(`pid - pid.split("/").last()`), ktoré sa rozbije, ak sa id procesu v ceste vyskytne
+dvakrát. Teraz odkazuje na `lastIndexOf("/")` z gotcha 34.
+
+### Nedoplnené a prečo
+
+Zvyšné zistenia z častí A a B v príručke **nie sú** — dajú sa vyčítať z
+`ticket_vacation.xml` (`immediate`, `<desc>`, `<properties>`, `make ... on transitions`,
+preťažovanie funkcií) alebo sú len odvodené a neoverené. Doplniť ich do referenčnej
+príručky by znamenalo vydávať domnienky za pravidlá.
+
+Výnimka, ktorá by si doplnenie zaslúžila, keď sa overí: **B7** (ikonu buttonu sa z akcie
+zmeniť nedá, takže jednotlačidlový prepínač neprepne strelku) — to je reálne obmedzenie,
+len sme netestovali všetky tri varianty riešenia.

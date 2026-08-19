@@ -1,0 +1,1529 @@
+﻿<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>ai_config</id>
+	<version>1.0.0</version>
+	<initials>AIC</initials>
+	<title>AI konfigurácia</title>
+	<icon>settings_suggest</icon>
+	<defaultRole>true</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<caseEvents>
+		<event type="create">
+			<id>aic_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+config_status: f.config_status, config_message: f.config_message;
+def others = findCases { it.processIdentifier.eq(net_prefix(useCase) + "ai_config") }
+        .findAll { c -> c.stringId != useCase.stringId }
+if (others) {
+    change config_status value { "invalid" }
+    change config_message value { "Duplicitná konfigurácia - používaj pôvodný case" }
+    changeCaseProperty("color").about { "red" }
+} else {
+    change config_status value { "invalid" }
+    change config_message value { "Vyber konfiguráciu a klikni Aktivovať" }
+    changeCaseProperty("title").about { "AI konfigurácia" }
+}
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="net_prefix"><![CDATA[
+{ def caseObj ->
+    // Na single-tenant Netgrif Platforme premenna workspace neexistuje a
+    // processIdentifier je bez prefixu. Odvodime ho z vlastneho casu - funguje
+    // rovnako na single-tenante (prazdny prefix) aj na multi-tenant eTasku.
+    def pid = caseObj.processIdentifier
+    return pid.contains("/") ? pid.substring(0, pid.lastIndexOf("/") + 1) : ""
+}
+	]]></function>
+	<function scope="process" name="model_slug"><![CDATA[
+{ def key ->
+    // Mongo nepovoluje bodku ani dolar v kluci mapy - options preto nesu slug,
+    // realny API kluc zostava v models_json a dohladava sa cez slug.
+    return (key as String).replace(".", "__D__").replace('$', "__S__")
+}
+	]]></function>
+	<function scope="process" name="render_codebook"><![CDATA[
+{ models_json, models_local, models_external ->
+    def list = models_json.value ? new groovy.json.JsonSlurper().parseText(models_json.value) : []
+    def label = { m -> (m.provider ? (m.label + "  [" + m.provider + "]") : m.label) as String }
+    change models_local options {
+        list.findAll { m -> m.origin == "local" }.collectEntries { m -> [(model_slug(m.key)): label(m)] }
+    }
+    change models_external options {
+        list.findAll { m -> m.origin == "external" }.collectEntries { m -> [(model_slug(m.key)): label(m)] }
+    }
+}
+	]]></function>
+	<function scope="process" name="load_settings_options"><![CDATA[
+{ settings_selector ->
+    def prefix = net_prefix(useCase)
+    change settings_selector options {
+        findCases { it.processIdentifier.eq(prefix + "single_settings") }
+                .collectEntries { c -> [(c.stringId): (c.getFieldValue("settings_name") ?: c.stringId)] }
+    }
+}
+	]]></function>
+	<role>
+		<id>admin</id>
+		<title>Administrátor</title>
+	</role>
+	<role>
+		<id>system</id>
+		<title>Systém</title>
+	</role>
+
+	<!-- ============ ČÍSELNÍK MODELOV ============ -->
+	<data type="text">
+		<id>models_json</id>
+		<title>Číselník modelov (JSON)</title>
+		<desc>Zdroj pravdy číselníka. Needituje sa ručne.</desc>
+		<init>[{"key":"claude-opus-5","label":"Claude Opus 5","origin":"external","provider":"anthropic"},{"key":"claude-sonnet-5","label":"Claude Sonnet 5","origin":"external","provider":"anthropic"},{"key":"claude-haiku-4-5","label":"Claude Haiku 4.5","origin":"external","provider":"anthropic"},{"key":"claude-opus-4-8","label":"Claude Opus 4.8","origin":"external","provider":"anthropic"}]</init>
+	</data>
+	<data type="i18n">
+		<id>div_add</id>
+		<title/>
+		<init>Pridanie modelu</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="text" immediate="true">
+		<id>new_model_key</id>
+		<title>Kľúč modelu</title>
+		<desc>Identifikátor pre API, napr. claude-opus-5 alebo llama3.1:70b.</desc>
+		<placeholder>claude-opus-5</placeholder>
+	</data>
+	<data type="text" immediate="true">
+		<id>new_model_label</id>
+		<title>Zobrazovaný názov</title>
+		<desc>Nepovinné. Bez neho sa použije kľúč.</desc>
+		<placeholder>Claude Opus 5</placeholder>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>new_model_provider</id>
+		<title>Provider</title>
+		<desc>Protokol volania. Zaradí model medzi lokálne alebo externé.</desc>
+		<init>anthropic</init>
+		<options>
+			<option key="anthropic">Anthropic - Claude</option>
+			<option key="openai">OpenAI</option>
+			<option key="gemini">Google Gemini</option>
+			<option key="local">Lokálny server - Ollama, vLLM</option>
+			<option key="custom">Iný OpenAI kompatibilný</option>
+		</options>
+	</data>
+	<data type="button">
+		<id>btn_add_models</id>
+		<title/>
+		<desc>Pridá model do číselníka. Duplicitný kľúč preskočí.</desc>
+		<placeholder>Pridať model</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_add_models_set</id>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+new_model_key: f.new_model_key, new_model_label: f.new_model_label,
+new_model_provider: f.new_model_provider,
+models_json: f.models_json, codebook_message: f.codebook_message,
+models_local: f.models_local, models_external: f.models_external;
+
+def key = ((new_model_key.value ?: "") as String).trim()
+if (!key) {
+    change codebook_message value { "Vyplň kľúč modelu." }
+} else {
+    def list = models_json.value ? new groovy.json.JsonSlurper().parseText(models_json.value) : []
+    if (list.any { m -> m.key == key }) {
+        change codebook_message value { "Model " + key + " už v číselníku je." }
+    } else {
+        def prov = (new_model_provider.value ?: "custom") as String
+        def label = ((new_model_label.value ?: "") as String).trim() ?: key
+        list.add([key: key, label: label, origin: (prov == "local") ? "local" : "external", provider: prov])
+        change models_json value { groovy.json.JsonOutput.toJson(list) }
+        change codebook_message value { "Pridaný: " + label + "  [" + prov + "]" }
+        change new_model_key value { "" }
+        change new_model_label value { "" }
+        render_codebook(models_json, models_local, models_external)
+    }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>codebook_message</id>
+		<title>Stav číselníka</title>
+	</data>
+	<data type="i18n">
+		<id>div_list</id>
+		<title/>
+		<init>Existujúce modely</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>models_local</id>
+		<title>Lokálne modely</title>
+		<desc>Modely bežiace u vás. Zaškrtnutie slúži na odobratie.</desc>
+	</data>
+	<data type="multichoice_map">
+		<id>models_external</id>
+		<title>Externé modely</title>
+		<desc>Modely volané u poskytovateľa. Zaškrtnutie slúži na odobratie.</desc>
+	</data>
+	<data type="button">
+		<id>btn_remove_models</id>
+		<title/>
+		<desc>Odoberie z číselníka všetky zaškrtnuté modely v oboch zoznamoch naraz.</desc>
+		<placeholder>Odobrať vybrané</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_remove_models_set</id>
+			<actions phase="post">
+				<action id="4"><![CDATA[
+models_local: f.models_local, models_external: f.models_external,
+models_json: f.models_json, codebook_message: f.codebook_message;
+
+def list = models_json.value ? new groovy.json.JsonSlurper().parseText(models_json.value) : []
+def toRemove = (((models_local.value ?: []) as List) + ((models_external.value ?: []) as List)) as Set
+if (!toRemove) {
+    change codebook_message value { "Nič nie je zaškrtnuté." }
+} else {
+    def kept = list.findAll { m -> !(model_slug(m.key) in toRemove) }
+    change models_json value { groovy.json.JsonOutput.toJson(kept) }
+    change models_local value { [] }
+    change models_external value { [] }
+    change codebook_message value { "Odobraté: " + (list.size() - kept.size()) }
+    render_codebook(models_json, models_local, models_external)
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+
+	<!-- ============ VÝBER PLATNEJ KONFIGURÁCIE ============ -->
+	<data type="i18n">
+		<id>div_select</id>
+		<title/>
+		<init>Výber platnej konfigurácie</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>settings_selector</id>
+		<title>Konfigurácia</title>
+		<desc>Výber ju len otvorí v náhľade. Platnou sa stane až po Aktivovať.</desc>
+		<event type="set">
+			<id>settings_selector_set</id>
+			<actions phase="post">
+				<action id="6"><![CDATA[
+settings_selector: f.settings_selector, settings_preview: f.settings_preview,
+settings_case_id: f.settings_case_id;
+
+change settings_case_id value { settings_selector.value }
+if (settings_selector.value) {
+    def t = findTask { it.transitionId.eq("t_settings").and(it.caseId.eq(settings_selector.value)) }
+    if (t) {
+        def free = findTask {
+            it.transitionId.eq("t_settings")
+                    .and(it.caseId.eq(settings_selector.value))
+                    .and(it.userId.isNull())
+        }
+        if (free) assignTask(free)
+        change settings_preview value { [t.stringId] }
+    } else {
+        change settings_preview value { [] }
+    }
+} else {
+    change settings_preview value { [] }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="button">
+		<id>btn_refresh_settings</id>
+		<title/>
+		<desc>Znovu načíta zoznam konfigurácií. Klikni, ak si konfiguráciu vytvoril inde než tlačidlom Nová konfigurácia.</desc>
+		<placeholder>refresh</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_refresh_settings_set</id>
+			<actions phase="post">
+				<action id="7"><![CDATA[
+settings_selector: f.settings_selector;
+load_settings_options(settings_selector)
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="button">
+		<id>btn_new_settings</id>
+		<title/>
+		<desc>Založí novú konfiguráciu a hneď ju otvorí v náhľade. Case vznikne už pri kliknutí.</desc>
+		<placeholder>Nová konfigurácia</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_new_settings_set</id>
+			<actions phase="pre">
+				<action id="8"><![CDATA[
+settings_selector: f.settings_selector, settings_preview: f.settings_preview,
+settings_case_id: f.settings_case_id;
+
+def c = createCase(net_prefix(useCase) + "single_settings")
+def t = findTask { it.transitionId.eq("t_settings").and(it.caseId.eq(c.stringId)) }
+if (t) assignTask(t)
+load_settings_options(settings_selector)
+change settings_selector value { c.stringId }
+change settings_case_id value { c.stringId }
+change settings_preview value { t ? [t.stringId] : [] }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>settings_case_id</id>
+		<title>ID konfigurácie</title>
+	</data>
+	<data type="taskRef">
+		<id>settings_preview</id>
+		<title>Náhľad konfigurácie</title>
+		<desc>Formulár vybranej konfigurácie, editovateľný priamo tu.</desc>
+	</data>
+	<data type="button">
+		<id>btn_apply</id>
+		<title/>
+		<desc>Prevezme údaje z vybranej konfigurácie do snapshotu a overí ich. Až snapshot číta backend.</desc>
+		<placeholder>Aktivovať konfiguráciu</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_apply_set</id>
+			<actions phase="post">
+				<action id="9"><![CDATA[
+settings_selector: f.settings_selector, models_json: f.models_json,
+active_settings_name: f.active_settings_name, active_origin: f.active_origin,
+active_model_key: f.active_model_key, active_model_label: f.active_model_label,
+active_provider: f.active_provider,
+active_system_prompt: f.active_system_prompt, active_user_prompt: f.active_user_prompt,
+active_temperature: f.active_temperature, active_max_tokens: f.active_max_tokens,
+activated_at: f.activated_at, activated_by: f.activated_by,
+config_status: f.config_status, config_message: f.config_message;
+
+def sc = settings_selector.value ? findCase { it._id.eq(settings_selector.value) } : null
+if (!sc) {
+    change config_status value { "invalid" }
+    change config_message value { "Nie je vybraná konfigurácia" }
+    changeCaseProperty("color").about { "red" }
+} else {
+    // Bezpecne citanie z vybraneho casu. getFieldValue by na poli, ktore v starsej
+    // verzii siete neexistovalo, spadlo - dataSet[id]?.value vrati null.
+    def sv = { String id -> sc.dataSet[id]?.value }
+
+    def selModel = sv("model_key")
+    def selOrigin = sv("origin")
+
+    change active_settings_name value { sv("settings_name") }
+    change active_origin        value { selOrigin }
+    change active_model_key     value { selModel }
+    change active_model_label   value { sv("model_label") }
+    change active_system_prompt value { sv("system_prompt") }
+    change active_user_prompt   value { sv("user_prompt") }
+    change active_temperature   value { sv("temperature") }
+    change active_max_tokens    value { sv("max_tokens") }
+    // active_provider je novsie pole - v case zalozenom zo starsej verzie siete
+    // chyba a import by vratil null, co by zhodilo celu akciu.
+    if (active_provider != null) {
+        change active_provider value { sv("model_provider") }
+    }
+
+    def list = models_json.value ? new groovy.json.JsonSlurper().parseText(models_json.value) : []
+    def entry = list.find { m -> m.key == selModel }
+    def problems = []
+    if (!selModel) problems.add("nie je vybraný model")
+    if (selModel && !entry) problems.add("model nie je v číselníku")
+    if (entry && entry.origin != selOrigin) problems.add("model nepatrí k zvolenému pôvodu")
+    if (!sv("system_prompt")) problems.add("chýba system prompt")
+    if (!sv("user_prompt")) problems.add("chýba user prompt")
+
+    change config_status value { problems ? "invalid" : "ok" }
+    change config_message value { problems ? problems.join(", ") : "Konfigurácia je platná" }
+    change activated_at value { java.time.LocalDateTime.now() }
+    change activated_by value { userService.loggedOrSystem.email }
+    changeCaseProperty("color").about { problems ? "red" : "green" }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+
+	<!-- ============ SNAPSHOT PRE BACKEND ============ -->
+	<data type="boolean" immediate="true">
+		<id>show_active</id>
+		<title>Detail</title>
+		<desc>Zbalí alebo rozbalí detail aktívnej konfigurácie.</desc>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">section</property>
+			</properties>
+		</component>
+		<init>true</init>
+		<event type="set">
+			<id>show_active_set</id>
+			<actions phase="post">
+				<action id="10"><![CDATA[
+show_active: f.show_active,
+active_settings_name: f.active_settings_name, active_model_label: f.active_model_label,
+active_origin: f.active_origin, active_model_key: f.active_model_key,
+active_provider: f.active_provider,
+active_temperature: f.active_temperature, active_max_tokens: f.active_max_tokens,
+active_system_prompt: f.active_system_prompt, active_user_prompt: f.active_user_prompt,
+activated_at: f.activated_at, activated_by: f.activated_by;
+
+boolean showIt = show_active.value == true
+make active_settings_name, visible on transitions when { showIt }
+make active_settings_name, hidden  on transitions when { !showIt }
+make active_model_label,   visible on transitions when { showIt }
+make active_model_label,   hidden  on transitions when { !showIt }
+make active_origin,        visible on transitions when { showIt }
+make active_origin,        hidden  on transitions when { !showIt }
+make active_model_key,     visible on transitions when { showIt }
+make active_model_key,     hidden  on transitions when { !showIt }
+make active_provider,      visible on transitions when { showIt }
+make active_provider,      hidden  on transitions when { !showIt }
+make active_temperature,   visible on transitions when { showIt }
+make active_temperature,   hidden  on transitions when { !showIt }
+make active_max_tokens,    visible on transitions when { showIt }
+make active_max_tokens,    hidden  on transitions when { !showIt }
+make active_system_prompt, visible on transitions when { showIt }
+make active_system_prompt, hidden  on transitions when { !showIt }
+make active_user_prompt,   visible on transitions when { showIt }
+make active_user_prompt,   hidden  on transitions when { !showIt }
+make activated_at,         visible on transitions when { showIt }
+make activated_at,         hidden  on transitions when { !showIt }
+make activated_by,         visible on transitions when { showIt }
+make activated_by,         hidden  on transitions when { !showIt }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>active_settings_name</id>
+		<title>Názov konfigurácie</title>
+	</data>
+	<data type="text">
+		<id>active_model_label</id>
+		<title>Model</title>
+	</data>
+	<data type="text">
+		<id>active_origin</id>
+		<title>Pôvod</title>
+	</data>
+	<data type="text">
+		<id>active_model_key</id>
+		<title>Kľúč modelu</title>
+		<desc>Presný identifikátor, ktorý ide do API. Toto je hodnota, na ktorej záleží.</desc>
+	</data>
+	<data type="text">
+		<id>active_provider</id>
+		<title>Provider</title>
+		<desc>Protokol volania. Prázdne = backend ho odvodí z názvu modelu.</desc>
+	</data>
+	<data type="number">
+		<id>active_temperature</id>
+		<title>Temperature</title>
+	</data>
+	<data type="number">
+		<id>active_max_tokens</id>
+		<title>Max tokens</title>
+	</data>
+	<data type="text">
+		<id>active_system_prompt</id>
+		<title>System prompt</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>active_user_prompt</id>
+		<title>User prompt</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="dateTime">
+		<id>activated_at</id>
+		<title>Aktivované</title>
+	</data>
+	<data type="text">
+		<id>activated_by</id>
+		<title>Aktivoval</title>
+	</data>
+	<data type="enumeration_map">
+		<id>config_status</id>
+		<title>Stav</title>
+		<desc>Backend použije len konfiguráciu v stave Platná.</desc>
+		<init>invalid</init>
+		<options>
+			<option key="ok">Platná</option>
+			<option key="stale">Zmenená - treba znovu aktivovať</option>
+			<option key="invalid">Neplatná</option>
+		</options>
+	</data>
+	<data type="text">
+		<id>config_message</id>
+		<title>Poznámka</title>
+	</data>
+	<data type="text">
+		<id>stale_signal</id>
+		<title>Signál zmeny</title>
+		<event type="set">
+			<id>stale_signal_set</id>
+			<actions phase="post">
+				<action id="11"><![CDATA[
+stale_signal: f.stale_signal, settings_case_id: f.settings_case_id,
+config_status: f.config_status, config_message: f.config_message;
+
+if (stale_signal.value && stale_signal.value == settings_case_id.value && config_status.value == "ok") {
+    change config_status value { "stale" }
+    change config_message value { "Konfigurácia bola zmenená - treba znovu aktivovať" }
+    changeCaseProperty("color").about { "orange" }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+
+	<!-- ============ TEST VOLANIA ============ -->
+	<data type="i18n">
+		<id>div_test</id>
+		<title/>
+		<init>Test volania</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>test_input_mode</id>
+		<title>Zdroj dát</title>
+		<desc>Odkiaľ sa vezme obsah komunikácie. Podľa výberu sa zobrazia príslušné polia.</desc>
+		<init>form</init>
+		<options>
+			<option key="form">Vyplniť formulár</option>
+			<option key="zip">Nahrať ZIP</option>
+			<option key="json">Vložiť JSON</option>
+		</options>
+		<event type="set">
+			<id>test_input_mode_set</id>
+			<actions phase="post">
+				<action id="13"><![CDATA[
+test_input_mode: f.test_input_mode,
+mail_from: f.mail_from, mail_to: f.mail_to, mail_subject: f.mail_subject,
+mail_body: f.mail_body, mail_attachments: f.mail_attachments,
+test_zip: f.test_zip, test_json: f.test_json;
+
+boolean isForm = test_input_mode.value == "form"
+boolean isZip = test_input_mode.value == "zip"
+boolean isJson = test_input_mode.value == "json"
+
+make mail_from,        editable on transitions when { isForm }
+make mail_from,        hidden   on transitions when { !isForm }
+make mail_to,          editable on transitions when { isForm }
+make mail_to,          hidden   on transitions when { !isForm }
+make mail_subject,     editable on transitions when { isForm }
+make mail_subject,     hidden   on transitions when { !isForm }
+make mail_body,        editable on transitions when { isForm }
+make mail_body,        hidden   on transitions when { !isForm }
+make mail_attachments, editable on transitions when { isForm }
+make mail_attachments, hidden   on transitions when { !isForm }
+make test_zip,         editable on transitions when { isZip }
+make test_zip,         hidden   on transitions when { !isZip }
+make test_json,        editable on transitions when { isJson }
+make test_json,        hidden   on transitions when { !isJson }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>mail_from</id>
+		<title>Od</title>
+		<placeholder>klient@firma.sk</placeholder>
+	</data>
+	<data type="text">
+		<id>mail_to</id>
+		<title>Komu</title>
+		<placeholder>podpora@nasafirma.sk</placeholder>
+	</data>
+	<data type="text">
+		<id>mail_subject</id>
+		<title>Predmet</title>
+		<placeholder>Reklamácia objednávky 2026-0431</placeholder>
+	</data>
+	<data type="text">
+		<id>mail_body</id>
+		<title>Telo komunikácie</title>
+		<desc>Text tak, ako prišiel. Ak je podstata len v prílohe, môže zostať prázdny.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+		<init>Dobrý deň,
+
+k objednávke 2026-0431 z 3.2.2026 nám prišli 2 z 5 kusov poškodené.
+Prosím o výmenu alebo dobropis. Faktúra 2026001 je uhradená.
+
+S pozdravom
+Ján Novák
+Firma s.r.o., IČO 12345678
+tel. 0900 123 456</init>
+	</data>
+	<data type="text">
+		<id>mail_attachments</id>
+		<title>Prílohy - text</title>
+		<desc>Text príloh. Viac príloh oddeľ riadkom s troma spojovníkmi.</desc>
+		<placeholder>Text prvej prílohy ... potom riadok --- a text druhej</placeholder>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="file">
+		<id>test_zip</id>
+		<title>ZIP s dátami komunikácie</title>
+		<desc>Archív, v ktorom môže byť mail.json a textové prílohy. Oboje sa spojí.</desc>
+	</data>
+	<data type="text">
+		<id>test_json</id>
+		<title>JSON s dátami komunikácie</title>
+		<desc>Objekt s poľami from, to, subject, body a attachments.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+		<init>{
+  "from": "klient@firma.sk",
+  "to": "podpora@nasafirma.sk",
+  "subject": "Reklamácia objednávky 2026-0431",
+  "body": "Dobrý deň, k objednávke 2026-0431 nám prišli 2 z 5 kusov poškodené. Prosím o výmenu alebo dobropis.",
+  "attachments": [
+    { "name": "foto_popis.txt", "text": "Poškodené kusy: 2. Typ poškodenia: prasknutý obal." }
+  ]
+}</init>
+	</data>
+	<data type="button">
+		<id>btn_run_test</id>
+		<title/>
+		<desc>Zavolá metódu callAIToolByConfig v EtaskActionDelegate, ktorá spustí reálne volanie modelu podľa aktívnej konfigurácie.</desc>
+		<placeholder>Spustiť test</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_run_test_set</id>
+			<actions phase="post">
+				<action id="14"><![CDATA[
+test_input_mode: f.test_input_mode, test_result: f.test_result,
+mail_from: f.mail_from, mail_to: f.mail_to, mail_subject: f.mail_subject,
+mail_body: f.mail_body, mail_attachments: f.mail_attachments,
+test_zip: f.test_zip, test_json: f.test_json,
+config_status: f.config_status,
+active_model_key: f.active_model_key, active_origin: f.active_origin,
+active_provider: f.active_provider,
+active_system_prompt: f.active_system_prompt, active_user_prompt: f.active_user_prompt,
+active_temperature: f.active_temperature, active_max_tokens: f.active_max_tokens;
+
+def mode = (test_input_mode.value ?: "form") as String
+
+if (config_status.value != "ok") {
+    change test_result value { "Konfigurácia nie je platná. Najprv klikni Aktivovať konfiguráciu." }
+} else if (mode == "zip" && test_zip.value == null) {
+    change test_result value { "Nahraj ZIP a klikni znova." }
+} else if (mode == "json" && !((test_json.value ?: "") as String).trim()) {
+    change test_result value { "Vlož JSON a klikni znova." }
+} else {
+    def params = [
+            caseId         : useCase.stringId,
+            modelKey       : active_model_key.value,
+            provider       : active_provider.value,
+            origin         : active_origin.value,
+            systemPrompt   : active_system_prompt.value,
+            userPrompt     : active_user_prompt.value,
+            temperature    : active_temperature.value,
+            maxTokens      : active_max_tokens.value,
+            inputMode      : mode,
+            mailFrom       : mail_from.value,
+            mailTo         : mail_to.value,
+            mailSubject    : mail_subject.value,
+            mailBody       : mail_body.value,
+            mailAttachments: mail_attachments.value,
+            mailJson       : test_json.value,
+            zipFieldId     : "test_zip"
+    ]
+    try {
+        // callAIToolByConfig je metoda v EtaskActionDelegate, vola sa priamo.
+        def res = callAIToolByConfig(params)
+        change test_result value { res as String }
+    } catch (Exception e) {
+        def safe = new LinkedHashMap(params)
+        safe.remove("mailBody")
+        safe.remove("mailAttachments")
+        safe.remove("mailJson")
+        change test_result value {
+            "Volanie backendu zlyhalo: " + e.getClass().getSimpleName() + " - " + e.message +
+            "\n\nOdoslané parametre (bez obsahu komunikácie):\n" +
+            groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(safe))
+        }
+    }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>test_result</id>
+		<title>Výsledok testu</title>
+		<desc>Návratová hodnota z backendu, alebo popis chyby.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+
+	<!-- ============ TASK: ČÍSELNÍK ============ -->
+	<transition>
+		<id>t_codebook</id>
+		<x>304</x>
+		<y>80</y>
+		<label>Číselník modelov</label>
+		<icon>memory</icon>
+		<roleRef>
+			<id>admin</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_codebook</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_add</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>new_model_key</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>new_model_label</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>new_model_provider</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_add_models</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>codebook_message</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_list</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>models_local</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>2</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>list</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>models_external</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>4</y>
+					<rows>2</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>list</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>btn_remove_models</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>models_json</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_codebook_assign</id>
+			<actions phase="pre">
+				<action id="15"><![CDATA[
+models_json: f.models_json, models_local: f.models_local, models_external: f.models_external;
+render_codebook(models_json, models_local, models_external)
+				]]></action>
+			</actions>
+		</event>
+		<priority>2</priority>
+	</transition>
+
+	<!-- ============ TASK: PLATNÁ KONFIGURÁCIA ============ -->
+	<transition>
+		<id>t_config</id>
+		<x>304</x>
+		<y>208</y>
+		<label>Platná konfigurácia</label>
+		<icon>settings_suggest</icon>
+		<roleRef>
+			<id>admin</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_config</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_select</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>settings_selector</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_refresh_settings</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>1</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>icon</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>btn_new_settings</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>5</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>1</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>settings_preview</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_apply</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>config_status</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>config_message</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>show_active</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>active_settings_name</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>active_model_label</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>active_origin</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>active_model_key</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>active_provider</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>active_temperature</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>1</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>active_max_tokens</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>1</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>1</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>activated_at</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>activated_by</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>active_system_prompt</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>8</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>textarea</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>active_user_prompt</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>10</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>textarea</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>settings_case_id</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>12</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>stale_signal</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>12</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_config_assign</id>
+			<actions phase="pre">
+				<action id="16"><![CDATA[
+settings_selector: f.settings_selector;
+load_settings_options(settings_selector)
+				]]></action>
+			</actions>
+		</event>
+		<priority>1</priority>
+	</transition>
+
+	<!-- ============ TASK: TEST VOLANIA ============ -->
+	<transition>
+		<id>t_test</id>
+		<x>304</x>
+		<y>336</y>
+		<label>Test volania</label>
+		<icon>play_circle</icon>
+		<roleRef>
+			<id>admin</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_test</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_test</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>config_status</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>active_model_label</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>active_provider</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>test_input_mode</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>mail_from</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>mail_to</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>mail_subject</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>mail_body</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>5</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>textarea</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>mail_attachments</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>8</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>textarea</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>test_zip</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>10</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>test_json</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>11</y>
+					<rows>4</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>textarea</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>btn_run_test</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>15</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>test_result</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>16</y>
+					<rows>5</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>textarea</name>
+				</component>
+			</dataRef>
+		</dataGroup>
+		<priority>3</priority>
+	</transition>
+
+	<place>
+		<id>p_alive</id>
+		<x>112</x>
+		<y>208</y>
+		<label>Aktívny</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+
+	<arc>
+		<id>a_config</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_config</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_codebook</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_codebook</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_test</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_test</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>
