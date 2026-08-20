@@ -32,9 +32,9 @@ if (t) {
 // Viditelnost navigacie podla kroku. Bez tohto by Spat svietilo na prvom
 // kroku a Odoslat na kazdom.
 make btn_back, hidden on transitions when { return 1 <= 1 }
-make btn_back, editable on transitions when { return 1 > 1 && 1 < 5 }
-make btn_next, hidden on transitions when { return 1 >= 4 }
-make btn_next, editable on transitions when { return 1 < 4 }
+make btn_back, editable on transitions when { return 1 > 1 }
+make btn_next, hidden on transitions when { return 1 < 2 || 1 >= 4 }
+make btn_next, editable on transitions when { return 1 >= 2 && 1 < 4 }
 make btn_submit, hidden on transitions when { return 1 != 4 }
 make btn_submit, editable on transitions when { return 1 == 4 }
 				]]></action>
@@ -54,6 +54,18 @@ make btn_submit, editable on transitions when { return 1 == 4 }
 { def step ->
     def m = [1: "t_s_category", 2: "t_s_detail", 3: "t_s_contact", 4: "t_s_summary", 5: "t_s_receipt"]
     return m[(step as Number).intValue()] ?: "t_s_category"
+}
+	]]></function>
+	<function scope="process" name="sub_task_of"><![CDATA[
+{ def target, def caseObj ->
+    // Vrati task podformulara pre dany krok a priradi ho. Zamerne NEmeni ziadne
+    // pole: `change` volany vnutri procesovej funkcie sa zapise do databazy, ale
+    // engine ho neoznaci ako zmeneny v odpovedi, takze prehliadac o zmene nevie
+    // a vnoreny formular sa nepreklopi. Vsetky `change` preto zostavaju v akcii.
+    def t = findTask { it.transitionId.eq(sub_transition(target)).and(it.caseId.eq(caseObj.stringId)) }
+    if (!t) return null
+    assignTask(t)
+    return t.stringId
 }
 	]]></function>
 	<function scope="process" name="stepper_label"><![CDATA[
@@ -195,9 +207,9 @@ if (s > 1 && s < 5) {
 // Viditelnost navigacie podla kroku. Bez tohto by Spat svietilo na prvom
 // kroku a Odoslat na kazdom.
 make btn_back, hidden on transitions when { return target <= 1 }
-make btn_back, editable on transitions when { return target > 1 && target < 5 }
-make btn_next, hidden on transitions when { return target >= 4 }
-make btn_next, editable on transitions when { return target < 4 }
+make btn_back, editable on transitions when { return target > 1 }
+make btn_next, hidden on transitions when { return target < 2 || target >= 4 }
+make btn_next, editable on transitions when { return target >= 2 && target < 4 }
 make btn_submit, hidden on transitions when { return target != 4 }
 make btn_submit, editable on transitions when { return target == 4 }
     }
@@ -275,9 +287,9 @@ if (problem != null) {
 // Viditelnost navigacie podla kroku. Bez tohto by Spat svietilo na prvom
 // kroku a Odoslat na kazdom.
 make btn_back, hidden on transitions when { return target <= 1 }
-make btn_back, editable on transitions when { return target > 1 && target < 5 }
-make btn_next, hidden on transitions when { return target >= 4 }
-make btn_next, editable on transitions when { return target < 4 }
+make btn_back, editable on transitions when { return target > 1 }
+make btn_next, hidden on transitions when { return target < 2 || target >= 4 }
+make btn_next, editable on transitions when { return target >= 2 && target < 4 }
 make btn_submit, hidden on transitions when { return target != 4 }
 make btn_submit, editable on transitions when { return target == 4 }
         if (target == 4) {
@@ -419,10 +431,28 @@ if (s == 4) {
 			<id>card_incident_set</id>
 			<actions phase="post">
 				<action id="5"><![CDATA[
-req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error;
+req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error,
+wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
+wiz_hint: f.wiz_hint, inner: f.inner,
+btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
 change req_type value { "incident" }
 change card_chosen value { "Nahlásiť poruchu" }
-change wiz_error value { "" }
+
+// Vyber kategorie je sam rozhodnutim - netreba za nim klikat Pokracovat.
+def sub = sub_task_of(2, useCase)
+if (sub != null) {
+    change inner value { [sub] }
+    change wiz_step value { 2 }
+    change wiz_stepper value { stepper_label(2) }
+    change wiz_heading value { step_heading(2) }
+    change wiz_hint value { step_hint(2) }
+    change wiz_error value { "" }
+}
+make btn_back, hidden on transitions when { return false }
+make btn_back, editable on transitions when { return true }
+make btn_next, hidden on transitions when { return false }
+make btn_next, editable on transitions when { return true }
+make btn_submit, hidden on transitions when { return true }
 				]]></action>
 			</actions>
 		</event>
@@ -443,10 +473,28 @@ change wiz_error value { "" }
 			<id>card_service_set</id>
 			<actions phase="post">
 				<action id="6"><![CDATA[
-req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error;
+req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error,
+wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
+wiz_hint: f.wiz_hint, inner: f.inner,
+btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
 change req_type value { "service" }
 change card_chosen value { "Servisný zásah" }
-change wiz_error value { "" }
+
+// Vyber kategorie je sam rozhodnutim - netreba za nim klikat Pokracovat.
+def sub = sub_task_of(2, useCase)
+if (sub != null) {
+    change inner value { [sub] }
+    change wiz_step value { 2 }
+    change wiz_stepper value { stepper_label(2) }
+    change wiz_heading value { step_heading(2) }
+    change wiz_hint value { step_hint(2) }
+    change wiz_error value { "" }
+}
+make btn_back, hidden on transitions when { return false }
+make btn_back, editable on transitions when { return true }
+make btn_next, hidden on transitions when { return false }
+make btn_next, editable on transitions when { return true }
+make btn_submit, hidden on transitions when { return true }
 				]]></action>
 			</actions>
 		</event>
@@ -467,10 +515,28 @@ change wiz_error value { "" }
 			<id>card_change_set</id>
 			<actions phase="post">
 				<action id="7"><![CDATA[
-req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error;
+req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error,
+wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
+wiz_hint: f.wiz_hint, inner: f.inner,
+btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
 change req_type value { "change" }
 change card_chosen value { "Žiadosť o zmenu" }
-change wiz_error value { "" }
+
+// Vyber kategorie je sam rozhodnutim - netreba za nim klikat Pokracovat.
+def sub = sub_task_of(2, useCase)
+if (sub != null) {
+    change inner value { [sub] }
+    change wiz_step value { 2 }
+    change wiz_stepper value { stepper_label(2) }
+    change wiz_heading value { step_heading(2) }
+    change wiz_hint value { step_hint(2) }
+    change wiz_error value { "" }
+}
+make btn_back, hidden on transitions when { return false }
+make btn_back, editable on transitions when { return true }
+make btn_next, hidden on transitions when { return false }
+make btn_next, editable on transitions when { return true }
+make btn_submit, hidden on transitions when { return true }
 				]]></action>
 			</actions>
 		</event>
@@ -491,10 +557,28 @@ change wiz_error value { "" }
 			<id>card_access_set</id>
 			<actions phase="post">
 				<action id="8"><![CDATA[
-req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error;
+req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error,
+wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
+wiz_hint: f.wiz_hint, inner: f.inner,
+btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
 change req_type value { "access" }
 change card_chosen value { "Prístup do systému" }
-change wiz_error value { "" }
+
+// Vyber kategorie je sam rozhodnutim - netreba za nim klikat Pokracovat.
+def sub = sub_task_of(2, useCase)
+if (sub != null) {
+    change inner value { [sub] }
+    change wiz_step value { 2 }
+    change wiz_stepper value { stepper_label(2) }
+    change wiz_heading value { step_heading(2) }
+    change wiz_hint value { step_hint(2) }
+    change wiz_error value { "" }
+}
+make btn_back, hidden on transitions when { return false }
+make btn_back, editable on transitions when { return true }
+make btn_next, hidden on transitions when { return false }
+make btn_next, editable on transitions when { return true }
+make btn_submit, hidden on transitions when { return true }
 				]]></action>
 			</actions>
 		</event>
@@ -515,10 +599,28 @@ change wiz_error value { "" }
 			<id>card_question_set</id>
 			<actions phase="post">
 				<action id="9"><![CDATA[
-req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error;
+req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error,
+wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
+wiz_hint: f.wiz_hint, inner: f.inner,
+btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
 change req_type value { "question" }
 change card_chosen value { "Otázka" }
-change wiz_error value { "" }
+
+// Vyber kategorie je sam rozhodnutim - netreba za nim klikat Pokracovat.
+def sub = sub_task_of(2, useCase)
+if (sub != null) {
+    change inner value { [sub] }
+    change wiz_step value { 2 }
+    change wiz_stepper value { stepper_label(2) }
+    change wiz_heading value { step_heading(2) }
+    change wiz_hint value { step_hint(2) }
+    change wiz_error value { "" }
+}
+make btn_back, hidden on transitions when { return false }
+make btn_back, editable on transitions when { return true }
+make btn_next, hidden on transitions when { return false }
+make btn_next, editable on transitions when { return true }
+make btn_submit, hidden on transitions when { return true }
 				]]></action>
 			</actions>
 		</event>
