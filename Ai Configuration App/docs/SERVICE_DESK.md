@@ -146,3 +146,71 @@ dopočítavajú, takže zmena politiky ani priority nevyžaduje migráciu dát.
 - **Viditeľnosť po organizáciách** — zákazník teraz nevidí ani svoj ticket.
 - **Príloha z formulára** sa neprenáša do ticketu, iba text.
 - **Rate limiting a captcha** na verejnom formulári.
+
+---
+
+## sd_intake — jeden task, vnorené formuláre, stepper
+
+Novšia verzia vstupu. Rieši výčitku, že v `sd_request` musel užívateľ klikať
+DOKONČIŤ, aby sa dostal na ďalší krok — tam bol totiž každý krok samostatná
+transition, takže posun vpred bol dokončenie tasku.
+
+```
+p_alive (tokens=1)
+  ──read──► t_form         plášť: stepper, taskRef, Späť / Pokračovať / Odoslať
+  ──read──► t_s_category   karty kategórií
+  ──read──► t_s_detail     popis
+  ──read──► t_s_contact    kontakt
+  ──read──► t_s_summary    súhrn, read-only
+  ──read──► t_s_receipt    potvrdenie s číslom ticketu
+```
+
+**Užívateľ vidí jediný task.** Podformuláre majú `system` roleRef, takže
+sa v zozname taskov anonymovi nezobrazia — ale cez `taskRef` sa vykreslia
+a **sú editovateľné**. To bolo hlavné neznáme miesto návrhu a je overené:
+anonym do vnoreného poľa napíše a hodnota sa uloží.
+
+**Prepínanie krokov je zmena hodnoty `taskRef`**, nie pohyb tokenu. Akcia
+tlačidla nájde task ďalšieho kroku, priradí ho a zapíše jeho id do `inner`.
+Žiadne DOKONČIŤ, a Späť funguje rovnako v druhom smere.
+
+Prečo to nepotrebuje kopírovanie dát: **všetky tasky jedného casu zdieľajú
+dataSet**, takže podformuláre sú len rôzne pohľady na tie isté polia. Preto
+sa pri kroku späť nič nestratí.
+
+### Čo si to vynútilo
+
+**Validácia musí byť v akcii.** Keď zmizne DOKONČIŤ, engine prestane
+vynucovať `required` — nič ho nespúšťa. Kontrola je preto v akcii tlačidla
+Pokračovať a pri chybe zapíše text do `wiz_error` a krok nezvýši.
+
+**Textové polia potrebujú `immediate="true"`.** Inak posielajú hodnotu až pri
+strate fokusu, čo je ten istý okamih ako klik na Pokračovať, a validácia by
+čítala prázdno. S `immediate` je hodnota na serveri už počas písania. Je to
+tá istá pasca ako B2 v `PETRIFLOW_LEARNINGS`, len z druhej strany.
+
+**Viditeľnosť navigácie treba prepínať pri každom kroku.** Bez toho svieti
+Späť na prvom kroku a Odoslať na každom:
+
+```groovy
+make btn_back, hidden on transitions when { return target <= 1 }
+make btn_next, hidden on transitions when { return target >= 4 }
+make btn_submit, editable on transitions when { return target == 4 }
+```
+
+**`system` sa musí deklarovať ako `<role>`**, na rozdiel od `anonymous`
+a `default`, ktoré sú vstavané. Bez deklarácie padne import na
+`IllegalArgumentException: Role system not found`.
+
+**Karty sú buttony.** `stroked` s `stretch=true`, názov karty v `<title>`
+a text tlačidla v `<placeholder>`. Typ `icon` sa nedá použiť — vtedy
+knižnica text tlačidla skryje a nechá len glyf.
+
+### Známy nedostatok
+
+Knižničný footer panelu stále ukazuje **ZRUŠIŤ a DOKONČIŤ**. Kliknutie na
+DOKONČIŤ je neškodné — `t_form` visí na read arcu, takže sa token nekonzumuje
+a task sa hneď znovu otvorí — ale je to zmätočné. Odstránenie je zmena vo
+frontende (footer panelu), nie v sieti.
+
+Verejný odkaz je `printf 'sd_intake' | base64` → `/process/c2RfaW50YWtl`.

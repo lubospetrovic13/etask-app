@@ -1,0 +1,1323 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>sd_intake</id>
+	<version>1.0.0</version>
+	<initials>SDI</initials>
+	<title>Podanie požiadavky</title>
+	<icon>support_agent</icon>
+	<defaultRole>true</defaultRole>
+	<anonymousRole>true</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<caseEvents>
+		<event type="create">
+			<id>sdi_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
+wiz_hint: f.wiz_hint, wiz_error: f.wiz_error, inner: f.inner,
+btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
+
+changeCaseProperty("title").about { "Nová požiadavka" }
+
+change wiz_step value { 1 }
+change wiz_stepper value { stepper_label(1) }
+change wiz_heading value { step_heading(1) }
+change wiz_hint value { step_hint(1) }
+change wiz_error value { "" }
+
+def t = findTask { it.transitionId.eq("t_s_category").and(it.caseId.eq(useCase.stringId)) }
+if (t) {
+    assignTask(t)
+    change inner value { [t.stringId] }
+}
+// Viditelnost navigacie podla kroku. Bez tohto by Spat svietilo na prvom
+// kroku a Odoslat na kazdom.
+make btn_back, hidden on transitions when { return 1 <= 1 }
+make btn_back, editable on transitions when { return 1 > 1 && 1 < 5 }
+make btn_next, hidden on transitions when { return 1 >= 4 }
+make btn_next, editable on transitions when { return 1 < 4 }
+make btn_submit, hidden on transitions when { return 1 != 4 }
+make btn_submit, editable on transitions when { return 1 == 4 }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="net_prefix"><![CDATA[
+{ def caseObj ->
+    // Na single-tenant nasadeni premenna workspace neexistuje a processIdentifier
+    // je bez prefixu. Odvodime ho z vlastneho casu - jedina cesta, ktora funguje
+    // aj v anonymnom kontexte.
+    def pid = caseObj.processIdentifier
+    return pid.contains("/") ? pid.substring(0, pid.lastIndexOf("/") + 1) : ""
+}
+	]]></function>
+	<function scope="process" name="sub_transition"><![CDATA[
+{ def step ->
+    def m = [1: "t_s_category", 2: "t_s_detail", 3: "t_s_contact", 4: "t_s_summary", 5: "t_s_receipt"]
+    return m[(step as Number).intValue()] ?: "t_s_category"
+}
+	]]></function>
+	<function scope="process" name="stepper_label"><![CDATA[
+{ def step ->
+    // Textovy stepper. Vyplneny kruzok = hotovy krok, polovicny = aktualny.
+    int s = (step as Number).intValue()
+    def names = ["Kategória", "Popis", "Kontakt", "Súhrn"]
+    def parts = []
+    for (int i = 1; i <= 4; i++) {
+        def mark = (i < s) ? "●" : (i == s ? "◉" : "○")
+        parts.add(mark + " " + i + ". " + names[i - 1])
+    }
+    return parts.join("      →      ")
+}
+	]]></function>
+	<function scope="process" name="step_heading"><![CDATA[
+{ def step ->
+    def m = [1: "S čím vám môžeme pomôcť?",
+             2: "Povedzte nám, čo sa deje",
+             3: "Kam sa vám máme ozvať",
+             4: "Skontrolujte a odošlite",
+             5: "Požiadavka je podaná"]
+    return m[(step as Number).intValue()] ?: ""
+}
+	]]></function>
+	<function scope="process" name="step_hint"><![CDATA[
+{ def step ->
+    def m = [1: "Vyberte jednu z možností. Podľa nej sa požiadavka dostane k správnemu tímu.",
+             2: "Čím konkrétnejšie to opíšete, tým rýchlejšie vieme pomôcť.",
+             3: "Na e-mail vám pošleme číslo požiadavky a všetky ďalšie správy.",
+             4: "Ak treba niečo upraviť, vráťte sa tlačidlom Späť. Nič sa nestratí.",
+             5: "Číslo požiadavky si odložte."]
+    return m[(step as Number).intValue()] ?: ""
+}
+	]]></function>
+	<function scope="process" name="type_label"><![CDATA[
+{ def code ->
+    def m = ["incident": "Nahlásiť poruchu", "service": "Servisný zásah",
+             "change": "Žiadosť o zmenu", "access": "Prístup do systému",
+             "question": "Otázka"]
+    return m[code as String] ?: ""
+}
+	]]></function>
+	<function scope="process" name="service_label"><![CDATA[
+{ def code ->
+    def m = ["portal": "Zákaznícky portál", "core": "Hlavná aplikácia",
+             "integration": "Integrácia s iným systémom", "reports": "Reporty a exporty",
+             "account": "Účet a prihlásenie", "unknown": "Neviem určiť"]
+    return m[code as String] ?: ""
+}
+	]]></function>
+	<function scope="process" name="severity_label"><![CDATA[
+{ def code ->
+    def m = ["A": "A - blokuje to prácu", "B": "B - obmedzuje, ale dá sa pokračovať",
+             "C": "C - počká"]
+    return m[code as String] ?: ""
+}
+	]]></function>
+	<roleRef>
+		<id>anonymous</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>agent</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>agent</id>
+		<title>Operátor podpory</title>
+	</role>
+	<role>
+		<id>system</id>
+		<title>Systém</title>
+	</role>
+	<data type="number">
+		<id>wiz_step</id>
+		<title>Krok</title>
+		<init>1</init>
+	</data>
+	<data type="text">
+		<id>wiz_stepper</id>
+		<title/>
+	</data>
+	<data type="text">
+		<id>wiz_heading</id>
+		<title/>
+	</data>
+	<data type="text">
+		<id>wiz_hint</id>
+		<title/>
+	</data>
+	<data type="text">
+		<id>wiz_error</id>
+		<title/>
+	</data>
+	<data type="taskRef">
+		<id>inner</id>
+		<title/>
+	</data>
+	<data type="button">
+		<id>btn_back</id>
+		<title/>
+		<placeholder>Späť</placeholder>
+		<component>
+			<name>stroked</name>
+			<properties>
+				<property key="align">start</property>
+			</properties>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>btn_back_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
+wiz_hint: f.wiz_hint, wiz_error: f.wiz_error, inner: f.inner,
+btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
+
+int s = ((wiz_step.value ?: 1) as Number).intValue()
+if (s > 1 && s < 5) {
+    int target = s - 1
+    def t = findTask { it.transitionId.eq(sub_transition(target)).and(it.caseId.eq(useCase.stringId)) }
+    if (t) {
+        assignTask(t)
+        change inner value { [t.stringId] }
+        change wiz_step value { target }
+        change wiz_stepper value { stepper_label(target) }
+        change wiz_heading value { step_heading(target) }
+        change wiz_hint value { step_hint(target) }
+        change wiz_error value { "" }
+
+// Viditelnost navigacie podla kroku. Bez tohto by Spat svietilo na prvom
+// kroku a Odoslat na kazdom.
+make btn_back, hidden on transitions when { return target <= 1 }
+make btn_back, editable on transitions when { return target > 1 && target < 5 }
+make btn_next, hidden on transitions when { return target >= 4 }
+make btn_next, editable on transitions when { return target < 4 }
+make btn_submit, hidden on transitions when { return target != 4 }
+make btn_submit, editable on transitions when { return target == 4 }
+    }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="button">
+		<id>btn_next</id>
+		<title/>
+		<placeholder>Pokračovať</placeholder>
+		<component>
+			<name>raised</name>
+			<properties>
+				<property key="align">end</property>
+			</properties>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>btn_next_set</id>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
+wiz_hint: f.wiz_hint, wiz_error: f.wiz_error, inner: f.inner, sum_text: f.sum_text,
+btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit,
+req_type: f.req_type, req_service: f.req_service, req_title: f.req_title,
+req_description: f.req_description, req_severity: f.req_severity,
+req_name: f.req_name, req_email: f.req_email, req_org: f.req_org,
+req_consent: f.req_consent;
+
+int s = ((wiz_step.value ?: 1) as Number).intValue()
+
+// Bez tlacidla Dokoncit engine required nevynucuje, takze validujeme tu.
+// Textove polia maju immediate="true", takze ich hodnota je na serveri uz
+// pocas pisania a nie az po strate fokusu - inak by button citil prazdno.
+def problem = null
+if (s == 1) {
+    if (!((req_type.value ?: "") as String).trim()) {
+        problem = "Vyberte prosím jednu z možností."
+    }
+} else if (s == 2) {
+    if (!((req_title.value ?: "") as String).trim()) {
+        problem = "Doplňte krátky názov."
+    } else if (((req_description.value ?: "") as String).trim().length() < 15) {
+        problem = "Popíšte prosím situáciu aspoň jednou vetou."
+    }
+} else if (s == 3) {
+    def mail = ((req_email.value ?: "") as String).trim()
+    if (!((req_name.value ?: "") as String).trim()) {
+        problem = "Doplňte meno."
+    } else if (!mail.contains("@") || !mail.contains(".")) {
+        problem = "Skontrolujte e-mail, na tento vám nedokážeme odpovedať."
+    } else if (!((req_org.value ?: "") as String).trim()) {
+        problem = "Doplňte organizáciu."
+    } else if (req_consent.value != true) {
+        problem = "Bez súhlasu so spracovaním údajov požiadavku spracovať nemôžeme."
+    }
+}
+
+if (problem != null) {
+    change wiz_error value { problem }
+} else if (s < 4) {
+    int target = s + 1
+    def t = findTask { it.transitionId.eq(sub_transition(target)).and(it.caseId.eq(useCase.stringId)) }
+    if (t) {
+        assignTask(t)
+        change inner value { [t.stringId] }
+        change wiz_step value { target }
+        change wiz_stepper value { stepper_label(target) }
+        change wiz_heading value { step_heading(target) }
+        change wiz_hint value { step_hint(target) }
+        change wiz_error value { "" }
+
+// Viditelnost navigacie podla kroku. Bez tohto by Spat svietilo na prvom
+// kroku a Odoslat na kazdom.
+make btn_back, hidden on transitions when { return target <= 1 }
+make btn_back, editable on transitions when { return target > 1 && target < 5 }
+make btn_next, hidden on transitions when { return target >= 4 }
+make btn_next, editable on transitions when { return target < 4 }
+make btn_submit, hidden on transitions when { return target != 4 }
+make btn_submit, editable on transitions when { return target == 4 }
+        if (target == 4) {
+            change sum_text value {
+                "TYP POŽIADAVKY\n" + type_label(req_type.value) +
+                "\n\nSLUŽBA\n" + service_label(req_service.value) +
+                "\n\nNÁZOV\n" + ((req_title.value ?: "") as String) +
+                "\n\nSÚRNOSŤ\n" + severity_label(req_severity.value) +
+                "\n\nPOPIS\n" + ((req_description.value ?: "") as String) +
+                "\n\nKONTAKT\n" + ((req_name.value ?: "") as String) +
+                "  ·  " + ((req_email.value ?: "") as String) +
+                "\n" + ((req_org.value ?: "") as String)
+            }
+        }
+    }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="button">
+		<id>btn_submit</id>
+		<title/>
+		<placeholder>Odoslať požiadavku</placeholder>
+		<component>
+			<name>raised</name>
+			<properties>
+				<property key="align">end</property>
+			</properties>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>btn_submit_set</id>
+			<actions phase="post">
+				<action id="4"><![CDATA[
+wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
+wiz_hint: f.wiz_hint, wiz_error: f.wiz_error, inner: f.inner,
+btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit,
+req_type: f.req_type, req_service: f.req_service, req_title: f.req_title,
+req_description: f.req_description, req_severity: f.req_severity,
+req_steps: f.req_steps, req_workaround: f.req_workaround, req_started: f.req_started,
+req_affects_more: f.req_affects_more,
+req_name: f.req_name, req_email: f.req_email, req_phone: f.req_phone, req_org: f.req_org,
+ticket_number: f.ticket_number, ticket_case_id: f.ticket_case_id,
+submitted_ok: f.submitted_ok, receipt_note: f.receipt_note;
+
+int s = ((wiz_step.value ?: 1) as Number).intValue()
+if (s == 4) {
+    def payload = [
+        "src_type"        : ["value": req_type.value, "type": "enumeration_map"],
+        "src_service"     : ["value": req_service.value, "type": "enumeration_map"],
+        "src_title"       : ["value": req_title.value, "type": "text"],
+        "src_description" : ["value": req_description.value, "type": "text"],
+        "src_severity"    : ["value": req_severity.value, "type": "enumeration_map"],
+        "src_steps"       : ["value": req_steps.value, "type": "text"],
+        "src_workaround"  : ["value": req_workaround.value, "type": "text"],
+        "src_name"        : ["value": req_name.value, "type": "text"],
+        "src_email"       : ["value": req_email.value, "type": "text"],
+        "src_phone"       : ["value": req_phone.value, "type": "text"],
+        "src_org"         : ["value": req_org.value, "type": "text"],
+        "src_affects_more": ["value": req_affects_more.value, "type": "boolean"],
+        "src_request_id"  : ["value": useCase.stringId, "type": "text"],
+        "tk_priority"     : ["value": req_severity.value, "type": "enumeration_map"],
+        "tk_type"         : ["value": req_type.value, "type": "enumeration_map"]
+    ]
+    if (req_started.value != null) {
+        payload["src_started"] = ["value": req_started.value, "type": "dateTime"]
+    }
+
+    try {
+        def ticket = createCase(net_prefix(useCase) + "sd_ticket")
+        change ticket_case_id value { ticket.stringId }
+        change ticket_number value { ticket.visualId ?: ticket.stringId }
+        change submitted_ok value { true }
+        change receipt_note value {
+            "Požiadavku sme prijali. Potvrdenie posielame na " +
+            ((req_email.value ?: "") as String) +
+            ". Operátor podpory ju prevezme a ozve sa vám."
+        }
+        async.run {
+            setData("t_triage", ticket, payload)
+        }
+
+        def t = findTask { it.transitionId.eq("t_s_receipt").and(it.caseId.eq(useCase.stringId)) }
+        if (t) {
+            assignTask(t)
+            change inner value { [t.stringId] }
+        }
+        change wiz_step value { 5 }
+        change wiz_stepper value { "● 1. Kategória      →      ● 2. Popis      →      ● 3. Kontakt      →      ● 4. Súhrn" }
+        change wiz_heading value { step_heading(5) }
+        change wiz_hint value { step_hint(5) }
+        change wiz_error value { "" }
+        changeCaseProperty("title").about { "Podané: " + ((req_title.value ?: "") as String) }
+
+        make btn_back, hidden on transitions when { true }
+        make btn_next, hidden on transitions when { true }
+        make btn_submit, hidden on transitions when { true }
+    } catch (Exception e) {
+        change submitted_ok value { false }
+        change wiz_error value {
+            "Požiadavku sa nepodarilo odoslať. Skúste to prosím znova, alebo nám zavolajte a uveďte kód " +
+            useCase.stringId + " (detail: " + e.message + ")"
+        }
+    }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="enumeration_map">
+		<id>req_type</id>
+		<title>Typ požiadavky</title>
+		<options>
+			<option key="incident">Nahlásiť poruchu</option>
+			<option key="service">Servisný zásah</option>
+			<option key="change">Žiadosť o zmenu</option>
+			<option key="access">Prístup do systému</option>
+			<option key="question">Otázka</option>
+		</options>
+	</data>
+	<data type="text">
+		<id>card_chosen</id>
+		<title>Vybrali ste</title>
+	</data>
+	<data type="button">
+		<id>card_incident</id>
+		<title>Niečo nefunguje</title>
+		<placeholder>Nahlásiť poruchu</placeholder>
+		<desc>Aplikácia hlási chybu, nedá sa dokončiť úkon, niečo sa zaseklo.</desc>
+		<component>
+			<name>stroked</name>
+			<properties>
+				<property key="stretch">true</property>
+			</properties>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>card_incident_set</id>
+			<actions phase="post">
+				<action id="5"><![CDATA[
+req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error;
+change req_type value { "incident" }
+change card_chosen value { "Nahlásiť poruchu" }
+change wiz_error value { "" }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="button">
+		<id>card_service</id>
+		<title>Treba niečo nastaviť</title>
+		<placeholder>Servisný zásah</placeholder>
+		<desc>Zmena nastavenia, obnova dát, jednorazový zásah bez zmeny v aplikácii.</desc>
+		<component>
+			<name>stroked</name>
+			<properties>
+				<property key="stretch">true</property>
+			</properties>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>card_service_set</id>
+			<actions phase="post">
+				<action id="6"><![CDATA[
+req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error;
+change req_type value { "service" }
+change card_chosen value { "Servisný zásah" }
+change wiz_error value { "" }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="button">
+		<id>card_change</id>
+		<title>Chcem niečo nové alebo inak</title>
+		<placeholder>Žiadosť o zmenu</placeholder>
+		<desc>Nová funkcia alebo úprava existujúcej. Odhaduje sa samostatne.</desc>
+		<component>
+			<name>stroked</name>
+			<properties>
+				<property key="stretch">true</property>
+			</properties>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>card_change_set</id>
+			<actions phase="post">
+				<action id="7"><![CDATA[
+req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error;
+change req_type value { "change" }
+change card_chosen value { "Žiadosť o zmenu" }
+change wiz_error value { "" }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="button">
+		<id>card_access</id>
+		<title>Potrebujem prístup</title>
+		<placeholder>Prístup do systému</placeholder>
+		<desc>Nový účet, zmena práv, odomknutie prihlásenia.</desc>
+		<component>
+			<name>stroked</name>
+			<properties>
+				<property key="stretch">true</property>
+			</properties>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>card_access_set</id>
+			<actions phase="post">
+				<action id="8"><![CDATA[
+req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error;
+change req_type value { "access" }
+change card_chosen value { "Prístup do systému" }
+change wiz_error value { "" }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="button">
+		<id>card_question</id>
+		<title>Len sa chcem spýtať</title>
+		<placeholder>Otázka</placeholder>
+		<desc>Neviete, ako niečo urobiť, alebo si chcete overiť postup.</desc>
+		<component>
+			<name>stroked</name>
+			<properties>
+				<property key="stretch">true</property>
+			</properties>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>card_question_set</id>
+			<actions phase="post">
+				<action id="9"><![CDATA[
+req_type: f.req_type, card_chosen: f.card_chosen, wiz_error: f.wiz_error;
+change req_type value { "question" }
+change card_chosen value { "Otázka" }
+change wiz_error value { "" }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>req_service</id>
+		<title>Ktorej služby sa to týka</title>
+		<desc>Ak si nie ste istí, nechajte Neviem určiť. Operátor to doplní.</desc>
+		<init>unknown</init>
+		<options>
+			<option key="portal">Zákaznícky portál</option>
+			<option key="core">Hlavná aplikácia</option>
+			<option key="integration">Integrácia s iným systémom</option>
+			<option key="reports">Reporty a exporty</option>
+			<option key="account">Účet a prihlásenie</option>
+			<option key="unknown">Neviem určiť</option>
+		</options>
+	</data>
+	<data type="text" immediate="true">
+		<id>req_title</id>
+		<title>Krátky názov</title>
+		<desc>Jedna veta. Napríklad: Nedá sa vygenerovať mesačný report.</desc>
+	</data>
+	<data type="text" immediate="true">
+		<id>req_description</id>
+		<title>Popíšte, čo sa deje</title>
+		<desc>Čo ste robili, čo ste očakávali a čo sa stalo namiesto toho.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>req_severity</id>
+		<title>Ako je to súrne</title>
+		<desc>Toto je váš návrh. Operátor ho môže upraviť a napíše vám prečo.</desc>
+		<init>B</init>
+		<options>
+			<option key="A">A — nedá sa pracovať, blokuje to všetkých</option>
+			<option key="B">B — obmedzuje ma to, ale viem pokračovať</option>
+			<option key="C">C — počká, hlásim to pre poriadok</option>
+		</options>
+	</data>
+	<data type="boolean" immediate="true">
+		<id>req_affects_more</id>
+		<title>Koho sa to týka</title>
+		<desc>Zapnuté znamená, že problém má viac ľudí, nie len vy.</desc>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">segmented</property>
+			</properties>
+		</component>
+		<init>false</init>
+	</data>
+	<data type="dateTime">
+		<id>req_started</id>
+		<title>Odkedy to trvá</title>
+		<desc>Nepovinné. Pomôže nám spojiť viac hlásení dokopy.</desc>
+	</data>
+	<data type="file">
+		<id>req_attachment</id>
+		<title>Príloha</title>
+		<desc>Screenshot, export, log. Nepovinné, ale zvyčajne pomôže najviac.</desc>
+	</data>
+	<data type="boolean" immediate="true">
+		<id>req_more</id>
+		<title>Doplňujúce údaje</title>
+		<desc>Nepovinné. Rozbalí polia pre postup a dočasné riešenie.</desc>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">section</property>
+			</properties>
+		</component>
+		<init>false</init>
+		<event type="set">
+			<id>req_more_set</id>
+			<actions phase="post">
+				<action id="10"><![CDATA[
+req_more: f.req_more;
+
+boolean showIt = req_more.value == true
+make req_steps, editable on transitions when { return showIt }
+make req_workaround, editable on transitions when { return showIt }
+make req_steps, hidden on transitions when { return !showIt }
+make req_workaround, hidden on transitions when { return !showIt }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text" immediate="true">
+		<id>req_steps</id>
+		<title>Ako sa to dá zopakovať</title>
+		<desc>Kroky, po ktorých to nastane. Aj neúplné pomôže.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text" immediate="true">
+		<id>req_workaround</id>
+		<title>Skúsili ste niečo obísť</title>
+		<desc>Ak ste našli dočasné riešenie, napíšte ho.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text" immediate="true">
+		<id>req_name</id>
+		<title>Meno a priezvisko</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>req_email</id>
+		<title>E-mail</title>
+		<desc>Sem pošleme číslo požiadavky a všetky ďalšie správy.</desc>
+	</data>
+	<data type="text" immediate="true">
+		<id>req_phone</id>
+		<title>Telefón</title>
+		<desc>Nepovinné. Použijeme ho, len ak bude treba doplniť niečo rýchlo.</desc>
+	</data>
+	<data type="text" immediate="true">
+		<id>req_org</id>
+		<title>Organizácia</title>
+		<desc>Firma alebo oddelenie, za ktoré požiadavku podávate.</desc>
+	</data>
+	<data type="boolean" immediate="true">
+		<id>req_consent</id>
+		<title>Súhlasím so spracovaním uvedených údajov na vyriešenie tejto požiadavky</title>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">checkbox</property>
+			</properties>
+		</component>
+		<init>false</init>
+	</data>
+	<data type="text">
+		<id>sum_text</id>
+		<title/>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="boolean">
+		<id>submitted_ok</id>
+		<title>Stav</title>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">chip</property>
+				<property key="chipTrue">success</property>
+				<property key="chipFalse">warning</property>
+			</properties>
+		</component>
+		<init>false</init>
+	</data>
+	<data type="text">
+		<id>ticket_number</id>
+		<title>Číslo požiadavky</title>
+		<desc>Uveďte ho, keď sa budete na požiadavku odvolávať.</desc>
+	</data>
+	<data type="text">
+		<id>ticket_case_id</id>
+		<title>Interné ID ticketu</title>
+	</data>
+	<data type="text">
+		<id>receipt_note</id>
+		<title/>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<transition>
+		<id>t_form</id>
+		<x>112</x>
+		<y>80</y>
+		<label>Podanie požiadavky</label>
+		<icon>support_agent</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>anonymous</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>agent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_wizard</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>wiz_stepper</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wiz_heading</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wiz_hint</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>inner</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>9</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wiz_error</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>12</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_back</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>13</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_next</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>13</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_submit</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>13</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<transition>
+		<id>t_s_category</id>
+		<x>304</x>
+		<y>80</y>
+		<label>Kategória</label>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_cards</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>card_incident</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>card_service</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>card_change</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>card_access</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>card_question</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>card_chosen</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<transition>
+		<id>t_s_detail</id>
+		<x>304</x>
+		<y>208</y>
+		<label>Popis</label>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_detail</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>req_title</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_description</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_service</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_severity</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_affects_more</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_started</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_attachment</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_more</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_steps</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>7</y>
+					<rows>2</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_workaround</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>7</y>
+					<rows>2</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<transition>
+		<id>t_s_contact</id>
+		<x>304</x>
+		<y>336</y>
+		<label>Kontakt</label>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_contact</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>req_name</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_email</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_org</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_phone</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>req_consent</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<transition>
+		<id>t_s_summary</id>
+		<x>304</x>
+		<y>464</y>
+		<label>Súhrn</label>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_summary</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>sum_text</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>7</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<transition>
+		<id>t_s_receipt</id>
+		<x>304</x>
+		<y>592</y>
+		<label>Potvrdenie</label>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_receipt</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>submitted_ok</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>ticket_number</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>receipt_note</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Otvorené</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_form</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_form</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_s_category</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_s_category</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_s_detail</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_s_detail</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_s_contact</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_s_contact</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_s_summary</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_s_summary</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_s_receipt</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_s_receipt</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>
