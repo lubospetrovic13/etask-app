@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>sd_ticket</id>
+	<id>service_desk/sd_ticket</id>
 	<version>1.0.0</version>
 	<initials>SDT</initials>
 	<title>Požiadavka podpory</title>

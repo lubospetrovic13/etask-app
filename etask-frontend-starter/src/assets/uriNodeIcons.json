@@ -1,6 +1,7 @@
 {
   "_comment": "Ikona pre uzol lavého menu a pre kartu na dashboarde. Kľúč sa porovnáva bez ohľadu na veľkosť písmen, podčiarkovníky a diakritiku (viď DashboardComponent.getNodeIcon), takže 'AI konfigurácia', 'ai_konfiguracia' aj 'AI_KONFIGURACIA' trafia ten istý záznam. Uzol bez záznamu dostane 'folder'.",
   "general": "widgets",
+  "service desk": "support_agent",
   "ai konfiguracia": "smart_toy",
   "konfiguracia": "tune",
   "nastavenia": "settings",

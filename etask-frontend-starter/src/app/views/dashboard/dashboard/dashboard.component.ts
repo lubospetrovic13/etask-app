@@ -96,10 +96,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return icons[DashboardComponent.iconKey(node?.name)] ?? 'folder';
   }
 
-  /** Human-readable node title: underscores out, first letter up. */
+  /**
+   * Human-readable node title: underscores out, every word capitalised.
+   *
+   * Each word, not just the first: a URI node comes from the process
+   * identifier, so `service_desk` has to read as "Service Desk" - which is also
+   * how the drawer renders it. Capitalising only the first letter left the
+   * dashboard saying "Service desk" while the menu right next to it said
+   * "Service Desk".
+   */
   public getNodeTitle(node: ETaskUriNodeResource): string {
-    const name = (node?.name ?? '').replace(/_/g, ' ').trim();
-    return name ? name.charAt(0).toLocaleUpperCase() + name.slice(1) : '';
+    return (node?.name ?? '')
+      .replace(/_/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter(word => word.length > 0)
+      .map(word => word.charAt(0).toLocaleUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   private static iconKey(name: string): string {
