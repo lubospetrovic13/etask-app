@@ -1,13 +1,18 @@
 import {Component, ElementRef, HostListener, Inject, OnDestroy, Optional} from '@angular/core';
 import {
   AbstractTaskContentComponent,
+  AfterAction,
+  ChangedFieldsService,
   FieldConverterService,
   LoggerService,
   NAE_ASYNC_RENDERING_CONFIGURATION,
   PaperViewService,
   TaskContentService,
+  TaskDataService,
   TaskEventService,
+  TaskRefField,
 } from '@netgrif/components-core';
+import {Subscription} from 'rxjs';
 
 /**
  * Application copy of @netgrif/components' TaskContentComponent, differing in the
@@ -51,17 +56,88 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
   private anchor: HTMLElement | null = null;
   private readonly hideOnScroll = () => this.hide();
 
+  private changedFieldsSub: Subscription | null = null;
+  private reloading = false;
+
   constructor(fieldConverter: FieldConverterService,
               public taskContentService: TaskContentService,
               paperView: PaperViewService,
               logger: LoggerService,
               protected _elementRef: ElementRef<HTMLElement>,
               @Optional() taskEventService: TaskEventService,
-              @Optional() @Inject(NAE_ASYNC_RENDERING_CONFIGURATION) config) {
+              @Optional() @Inject(NAE_ASYNC_RENDERING_CONFIGURATION) config,
+              @Optional() private _taskDataService: TaskDataService,
+              @Optional() private _changedFieldsService: ChangedFieldsService) {
     super(fieldConverter, taskContentService, paperView, logger, taskEventService, config);
     // Capture, because the scrolling happens on inner elements that do not bubble scroll.
     document.addEventListener('scroll', this.hideOnScroll, true);
     window.addEventListener('resize', this.hideOnScroll);
+    this.reloadOnTaskRefChange();
+  }
+
+  /**
+   * Re-fetches the task when one of its task reference fields is pointed at a
+   * different task.
+   *
+   * A task reference is expanded on the server: GET /task/{id}/data returns the
+   * referenced task's data groups inline, and the frontend then splits them out
+   * around the reference (see AbstractTaskContentComponent.rearrangeDataGroups).
+   * A setData response, by contrast, carries only changed field values, so
+   * changing a reference's value updates the value and nothing else - the newly
+   * referenced form has no data groups anywhere in the response and the old ones
+   * are still on screen. The swap only appeared after a reload.
+   *
+   * Forcing a data reload gives the server a chance to expand the new reference.
+   * `force` matters: without it the request is skipped when the task is already
+   * loaded, which it always is here.
+   *
+   * Nested task content components are instances of this same class, so the
+   * check that the changed task is this component's own task is what keeps
+   * exactly one of them reacting.
+   */
+  private reloadOnTaskRefChange(): void {
+    if (!this._changedFieldsService || !this._taskDataService) {
+      return;
+    }
+    this.changedFieldsSub = this._changedFieldsService.changedFields$.subscribe(changedFields => {
+      if (this.reloading || !this.becameTaskRefChange(changedFields)) {
+        return;
+      }
+      this.reloading = true;
+      // AfterAction is a Subject that resolves once the request settles, so the
+      // flag is cleared whether the reload succeeded or not.
+      const done = new AfterAction();
+      done.subscribe(() => this.reloading = false);
+      this._taskDataService.initializeTaskDataFields(done, true);
+    });
+  }
+
+  /** True when the change touches the value of a task reference on this task. */
+  private becameTaskRefChange(changedFields: object): boolean {
+    const taskId = this.taskContentService?.task?.stringId;
+    const fieldsOfThisTask = this.taskContentService?.taskFieldsIndex?.[taskId]?.fields;
+    if (!taskId || !fieldsOfThisTask || !changedFields) {
+      return false;
+    }
+
+    // The map arrives keyed by case and task in some paths and flat in others,
+    // so rather than assume a depth, walk it and test every key that names a
+    // field of this task.
+    const seen = new Set<object>();
+    const walk = (node: unknown): boolean => {
+      if (!node || typeof node !== 'object' || seen.has(node as object)) {
+        return false;
+      }
+      seen.add(node as object);
+      return Object.entries(node).some(([key, child]) => {
+        const field = fieldsOfThisTask[key];
+        if (field instanceof TaskRefField && child && typeof child === 'object' && 'value' in child) {
+          return true;
+        }
+        return walk(child);
+      });
+    };
+    return walk(changedFields);
   }
 
   @HostListener('mouseover', ['$event'])
@@ -92,6 +168,7 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
   }
 
   ngOnDestroy(): void {
+    this.changedFieldsSub?.unsubscribe();
     document.removeEventListener('scroll', this.hideOnScroll, true);
     window.removeEventListener('resize', this.hideOnScroll);
     this.destroyPopover();
