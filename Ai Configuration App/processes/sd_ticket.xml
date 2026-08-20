@@ -1,0 +1,1443 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>sd_ticket</id>
+	<version>1.0.0</version>
+	<initials>SDT</initials>
+	<title>Požiadavka podpory</title>
+	<icon>confirmation_number</icon>
+	<defaultRole>true</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<caseEvents>
+		<event type="create">
+			<id>sdt_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+tk_state: f.tk_state, sla_created_at: f.sla_created_at, sla_note: f.sla_note,
+sla_ok: f.sla_ok;
+
+change tk_state value { "new" }
+change sla_created_at value { java.time.LocalDateTime.now() }
+change sla_ok value { true }
+change sla_note value { "Čaká na prevzatie. Lehota sa doplní po triáži." }
+changeCaseProperty("title").about { "Nová požiadavka" }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="sla_hours"><![CDATA[
+{ def priority ->
+    // Lehota odozvy v pracovnych hodinach. Pre prvu fazu je matica tu;
+    // v dalsej faze patri do samostatnej siete sla_policy, aby sa dala
+    // menit bez nasadzovania novej verzie tejto siete.
+    def m = ["A": 2, "B": 4, "C": 8]
+    return (m[priority as String] ?: 8) as int
+}
+	]]></function>
+	<function scope="process" name="business_deadline"><![CDATA[
+{ def start, def hours ->
+    // Pracovny cas Po-Pi 08:00-16:00. Sviatky tato verzia neriesi - patria
+    // do kalendara v backendovej sluzbe, nie do Groovy akcie.
+    if (start == null) return null
+    def cur = start
+    int remaining = ((hours as int) * 60)
+    int guard = 0
+    while (remaining > 0 && guard < 1000) {
+        guard++
+        if (cur.dayOfWeek.value >= 6) {
+            cur = cur.plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0)
+            continue
+        }
+        if (cur.hour < 8) {
+            cur = cur.withHour(8).withMinute(0).withSecond(0).withNano(0)
+            continue
+        }
+        if (cur.hour >= 16) {
+            cur = cur.plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0)
+            continue
+        }
+        def endOfDay = cur.withHour(16).withMinute(0).withSecond(0).withNano(0)
+        long avail = java.time.temporal.ChronoUnit.MINUTES.between(cur, endOfDay)
+        if (avail >= remaining) return cur.plusMinutes(remaining)
+        remaining -= (avail as int)
+        cur = cur.plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0)
+    }
+    return cur
+}
+	]]></function>
+	<function scope="process" name="priority_color"><![CDATA[
+{ def priority ->
+    def m = ["A": "red", "B": "orange", "C": "green"]
+    return m[priority as String] ?: "default"
+}
+	]]></function>
+	<function scope="process" name="type_label"><![CDATA[
+{ def code ->
+    def m = ["incident": "Porucha", "service": "Servisný zásah",
+             "change": "Žiadosť o zmenu", "access": "Prístup", "question": "Otázka"]
+    return m[code as String] ?: "Požiadavka"
+}
+	]]></function>
+	<roleRef>
+		<id>anonymous</id>
+		<caseLogic>
+			<create>true</create>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>agent</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>specialist</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>manager</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>agent</id>
+		<title>Operátor podpory</title>
+	</role>
+	<role>
+		<id>specialist</id>
+		<title>Špecialista</title>
+	</role>
+	<role>
+		<id>manager</id>
+		<title>Vedúci podpory</title>
+	</role>
+	<data type="i18n">
+		<id>div_submitted</id>
+		<title/>
+		<init>Podanie zákazníka</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="i18n">
+		<id>div_sla</id>
+		<title/>
+		<init>Lehoty</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="i18n">
+		<id>div_triage</id>
+		<title/>
+		<init>Triáž — zaradenie a prevzatie</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="i18n">
+		<id>div_work</id>
+		<title/>
+		<init>Postup riešenia</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>src_type</id>
+		<title>Typ podľa zákazníka</title>
+		<options>
+			<option key="incident">Nahlásiť poruchu</option>
+			<option key="service">Servisný zásah</option>
+			<option key="change">Žiadosť o zmenu</option>
+			<option key="access">Prístup do systému</option>
+			<option key="question">Otázka</option>
+		</options>
+	</data>
+	<data type="enumeration_map">
+		<id>src_service</id>
+		<title>Služba</title>
+		<options>
+			<option key="portal">Zákaznícky portál</option>
+			<option key="core">Hlavná aplikácia</option>
+			<option key="integration">Integrácia s iným systémom</option>
+			<option key="reports">Reporty a exporty</option>
+			<option key="account">Účet a prihlásenie</option>
+			<option key="unknown">Neviem určiť</option>
+		</options>
+	</data>
+	<data type="text">
+		<id>src_title</id>
+		<title>Názov od zákazníka</title>
+	</data>
+	<data type="text">
+		<id>src_description</id>
+		<title>Popis od zákazníka</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>src_severity</id>
+		<title>Súrnosť podľa zákazníka</title>
+		<options>
+			<option key="A">A — blokuje to všetkých</option>
+			<option key="B">B — obmedzuje, ale dá sa pokračovať</option>
+			<option key="C">C — počká</option>
+		</options>
+	</data>
+	<data type="text">
+		<id>src_steps</id>
+		<title>Ako sa to dá zopakovať</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>src_workaround</id>
+		<title>Dočasné riešenie zákazníka</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>src_name</id>
+		<title>Nahlasovateľ</title>
+	</data>
+	<data type="text">
+		<id>src_email</id>
+		<title>E-mail</title>
+	</data>
+	<data type="text">
+		<id>src_phone</id>
+		<title>Telefón</title>
+	</data>
+	<data type="text">
+		<id>src_org</id>
+		<title>Organizácia</title>
+	</data>
+	<data type="boolean">
+		<id>src_affects_more</id>
+		<title>Týka sa viacerých ľudí</title>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">chip</property>
+				<property key="chipTrue">danger</property>
+				<property key="chipFalse">muted</property>
+			</properties>
+		</component>
+		<init>false</init>
+	</data>
+	<data type="dateTime">
+		<id>src_started</id>
+		<title>Odkedy to trvá</title>
+	</data>
+	<data type="text">
+		<id>src_request_id</id>
+		<title>ID podania</title>
+		<desc>Case verejného formulára, z ktorého požiadavka prišla.</desc>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>tk_type</id>
+		<title>Zaradenie</title>
+		<desc>Typ, pod ktorým sa požiadavka rieši. Môže sa líšiť od toho, čo zvolil zákazník.</desc>
+		<init>incident</init>
+		<options>
+			<option key="incident">Porucha</option>
+			<option key="service">Servisný zásah</option>
+			<option key="change">Žiadosť o zmenu</option>
+			<option key="access">Prístup</option>
+			<option key="question">Otázka</option>
+		</options>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>tk_priority</id>
+		<title>Priorita</title>
+		<desc>Určuje lehotu odozvy: A do 2, B do 4 a C do 8 pracovných hodín.</desc>
+		<init>B</init>
+		<options>
+			<option key="A">A — kritická</option>
+			<option key="B">B — nekritická</option>
+			<option key="C">C — nízka</option>
+		</options>
+		<event type="set">
+			<id>tk_priority_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+tk_priority: f.tk_priority, src_severity: f.src_severity,
+tk_priority_changed: f.tk_priority_changed, tk_priority_reason: f.tk_priority_reason;
+
+// Zmena priority oproti navrhu zakaznika je auditovana udalost a zmluvne
+// zavazuje informovat nahlasovatela. Preto sa zapne pole na doduvodnenie
+// a stane sa povinnym.
+boolean changed = (tk_priority.value as String) != (src_severity.value as String)
+change tk_priority_changed value { changed }
+make tk_priority_reason, editable on transitions when { return changed }
+make tk_priority_reason, required on transitions when { return changed }
+make tk_priority_reason, hidden on transitions when { return !changed }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="boolean">
+		<id>tk_priority_changed</id>
+		<title>Priorita zmenená oproti podaniu</title>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">chip</property>
+				<property key="chipTrue">warning</property>
+				<property key="chipFalse">muted</property>
+			</properties>
+		</component>
+		<init>false</init>
+	</data>
+	<data type="text">
+		<id>tk_priority_reason</id>
+		<title>Prečo ste prioritu zmenili</title>
+		<desc>Pošle sa nahlasovateľovi. Bez toho sa zmena nedá uložiť.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>tk_state</id>
+		<title>Stav</title>
+		<init>new</init>
+		<options>
+			<option key="new">Nová</option>
+			<option key="accepted">Prevzatá</option>
+			<option key="pending">Čaká na zákazníka</option>
+			<option key="working">V riešení</option>
+			<option key="resolved">Vyriešená</option>
+		</options>
+	</data>
+	<data type="text">
+		<id>tk_note</id>
+		<title>Interná poznámka</title>
+		<desc>Zákazník ju nevidí.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>tk_worklog</id>
+		<title>Záznam postupu</title>
+		<desc>Pripisuje sa, nemaže. Slúži ako história riešenia.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>tk_pending_reason</id>
+		<title>Čo od zákazníka potrebujete</title>
+		<desc>Pošle sa mu e-mailom. Kým nedoplní, lehoty sa nepočítajú.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>tk_resolution</id>
+		<title>Ako sa to vyriešilo</title>
+		<desc>Text, ktorý dostane zákazník. Píšte tak, aby to pochopil aj bez kontextu.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="dateTime">
+		<id>sla_created_at</id>
+		<title>Podané</title>
+	</data>
+	<data type="dateTime">
+		<id>sla_accepted_at</id>
+		<title>Prevzaté</title>
+	</data>
+	<data type="dateTime">
+		<id>sla_response_due</id>
+		<title>Odozva najneskôr do</title>
+		<desc>Počítané v pracovnom čase Po-Pi 08:00-16:00.</desc>
+	</data>
+	<data type="boolean">
+		<id>sla_ok</id>
+		<title>Lehota odozvy</title>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">chip</property>
+				<property key="chipTrue">success</property>
+				<property key="chipFalse">danger</property>
+			</properties>
+		</component>
+		<init>true</init>
+	</data>
+	<data type="text">
+		<id>sla_note</id>
+		<title/>
+	</data>
+	<data type="dateTime">
+		<id>sla_pause_from</id>
+		<title>Pauza od</title>
+	</data>
+	<data type="number">
+		<id>sla_pause_minutes</id>
+		<title>Napauzované pracovné minúty</title>
+		<desc>Súčet času, počas ktorého sa čakalo na zákazníka.</desc>
+		<init>0</init>
+	</data>
+	<data type="boolean" immediate="true">
+		<id>show_submitted</id>
+		<title>Podanie zákazníka</title>
+		<desc>Zbalí alebo rozbalí to, čo prišlo z formulára.</desc>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">section</property>
+			</properties>
+		</component>
+		<init>true</init>
+		<event type="set">
+			<id>show_submitted_set</id>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+show_submitted: f.show_submitted;
+
+boolean showIt = show_submitted.value == true
+make src_title, visible on transitions when { return showIt }
+make src_description, visible on transitions when { return showIt }
+make src_service, visible on transitions when { return showIt }
+make src_severity, visible on transitions when { return showIt }
+make src_affects_more, visible on transitions when { return showIt }
+make src_steps, visible on transitions when { return showIt }
+make src_workaround, visible on transitions when { return showIt }
+make src_name, visible on transitions when { return showIt }
+make src_email, visible on transitions when { return showIt }
+make src_org, visible on transitions when { return showIt }
+make src_title, hidden on transitions when { return !showIt }
+make src_description, hidden on transitions when { return !showIt }
+make src_service, hidden on transitions when { return !showIt }
+make src_severity, hidden on transitions when { return !showIt }
+make src_affects_more, hidden on transitions when { return !showIt }
+make src_steps, hidden on transitions when { return !showIt }
+make src_workaround, hidden on transitions when { return !showIt }
+make src_name, hidden on transitions when { return !showIt }
+make src_email, hidden on transitions when { return !showIt }
+make src_org, hidden on transitions when { return !showIt }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<transition>
+		<id>t_detail</id>
+		<x>112</x>
+		<y>240</y>
+		<label>Prehľad požiadavky</label>
+		<icon>fact_check</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>agent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>specialist</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>manager</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_detail_sla</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_sla</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>sla_ok</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_state</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_priority</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_created_at</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_response_due</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_accepted_at</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_note</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_priority_changed</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_pause_minutes</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_request_id</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+		<dataGroup>
+			<id>g_detail_src</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>show_submitted</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_title</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_description</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_service</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_severity</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_affects_more</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_steps</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>2</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_workaround</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>6</y>
+					<rows>2</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_name</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>8</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_email</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>8</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_org</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>8</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_worklog</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>9</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<transition>
+		<id>t_triage</id>
+		<x>112</x>
+		<y>80</y>
+		<label>Triáž a prevzatie</label>
+		<icon>rule</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>agent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>manager</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_triage</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_triage</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>tk_type</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_priority</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_priority_reason</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_note</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_submitted</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>src_title</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_description</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>8</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_severity</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>11</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_affects_more</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>11</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_org</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>11</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_triage_finish</id>
+			<actions phase="post">
+				<action id="4"><![CDATA[
+tk_type: f.tk_type, tk_priority: f.tk_priority, tk_priority_reason: f.tk_priority_reason,
+tk_priority_changed: f.tk_priority_changed, tk_state: f.tk_state,
+src_title: f.src_title, src_email: f.src_email, src_name: f.src_name,
+sla_created_at: f.sla_created_at, sla_accepted_at: f.sla_accepted_at,
+sla_response_due: f.sla_response_due, sla_ok: f.sla_ok, sla_note: f.sla_note,
+tk_worklog: f.tk_worklog;
+
+def now = java.time.LocalDateTime.now()
+def created = sla_created_at.value ?: now
+def due = business_deadline(created, sla_hours(tk_priority.value))
+
+change sla_accepted_at value { now }
+change sla_response_due value { due }
+change tk_state value { "accepted" }
+
+boolean inTime = due == null || !now.isAfter(due)
+change sla_ok value { inTime }
+change sla_note value {
+    inTime ? "Prevzaté v lehote odozvy." : "Lehota odozvy bola prekročená pri prevzatí."
+}
+
+changeCaseProperty("title").about {
+    type_label(tk_type.value) + " — " + ((src_title.value ?: "bez názvu") as String)
+}
+changeCaseProperty("color").about { priority_color(tk_priority.value) }
+
+def log = (tk_worklog.value ?: "") as String
+def entry = now.toString() + "  triáž: zaradené ako " + type_label(tk_type.value) +
+            ", priorita " + (tk_priority.value as String)
+if (tk_priority_changed.value == true) {
+    entry = entry + " (zmenená, dôvod: " + ((tk_priority_reason.value ?: "") as String) + ")"
+}
+change tk_worklog value { log ? log + "\n" + entry : entry }
+
+// Informovanie nahlasovatela. Ak mail nie je nakonfigurovany, nesmie to
+// zhodit triaz - ticket uz je prevzaty a to je dolezitejsie.
+def mail = ((src_email.value ?: "") as String).trim()
+if (mail) {
+    try {
+        def body = "Dobrý deň,\n\nvašu požiadavku sme prevzali.\n" +
+                   "Zaradenie: " + type_label(tk_type.value) + "\n" +
+                   "Priorita: " + (tk_priority.value as String) + "\n"
+        if (tk_priority_changed.value == true) {
+            body = body + "Prioritu sme upravili. Dôvod: " +
+                   ((tk_priority_reason.value ?: "") as String) + "\n"
+        }
+        body = body + "\nOzveme sa vám s ďalším postupom."
+        sendEmail([mail], "Požiadavka prevzatá", body)
+    } catch (Exception e) {
+        // Log v akcii nie je zarucene dostupny, takze zlyhanie zapiseme tam,
+        // kde ho operator uvidi.
+        change tk_worklog value {
+            ((tk_worklog.value ?: "") as String) +
+            "\nPOZOR: notifikáciu o prevzatí sa nepodarilo poslať (" + e.message + ")"
+        }
+    }
+}
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_work</id>
+		<x>304</x>
+		<y>80</y>
+		<label>Zaznamenať postup</label>
+		<icon>build</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>agent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>specialist</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_work</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_work</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>tk_note</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_worklog</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_work_finish</id>
+			<actions phase="post">
+				<action id="5"><![CDATA[
+tk_note: f.tk_note, tk_worklog: f.tk_worklog, tk_state: f.tk_state,
+sla_pause_from: f.sla_pause_from, sla_pause_minutes: f.sla_pause_minutes;
+
+def now = java.time.LocalDateTime.now()
+
+// Ak sa ticket vracia z cakania na zakaznika, uzavrieme pauzu.
+if (sla_pause_from.value != null) {
+    long mins = java.time.temporal.ChronoUnit.MINUTES.between(sla_pause_from.value, now)
+    change sla_pause_minutes value { ((sla_pause_minutes.value ?: 0) as long) + mins }
+    change sla_pause_from value { null }
+}
+
+change tk_state value { "working" }
+
+def log = (tk_worklog.value ?: "") as String
+def entry = now.toString() + "  postup: " + ((tk_note.value ?: "") as String)
+change tk_worklog value { log ? log + "\n" + entry : entry }
+change tk_note value { "" }
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_pending</id>
+		<x>304</x>
+		<y>240</y>
+		<label>Vyžiadať doplnenie</label>
+		<icon>hourglass_empty</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>agent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>specialist</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_pending</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_pending_reason</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_pause_minutes</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>src_email</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_pending_finish</id>
+			<actions phase="post">
+				<action id="6"><![CDATA[
+tk_pending_reason: f.tk_pending_reason, tk_state: f.tk_state,
+tk_worklog: f.tk_worklog, sla_pause_from: f.sla_pause_from,
+sla_note: f.sla_note, src_email: f.src_email;
+
+def now = java.time.LocalDateTime.now()
+
+change tk_state value { "pending" }
+change sla_pause_from value { now }
+change sla_note value { "Čaká sa na doplnenie od zákazníka. Lehoty sa nepočítajú." }
+
+def log = (tk_worklog.value ?: "") as String
+def entry = now.toString() + "  čaká na zákazníka: " + ((tk_pending_reason.value ?: "") as String)
+change tk_worklog value { log ? log + "\n" + entry : entry }
+
+def mail = ((src_email.value ?: "") as String).trim()
+if (mail) {
+    try {
+        sendEmail([mail], "Potrebujeme od vás doplnenie",
+            "Dobrý deň,\n\nk vašej požiadavke potrebujeme doplniť:\n\n" +
+            ((tk_pending_reason.value ?: "") as String) +
+            "\n\nKým nám odpoviete, riešenie je pozastavené.")
+    } catch (Exception e) {
+        change tk_worklog value {
+            ((tk_worklog.value ?: "") as String) +
+            "\nPOZOR: výzvu na doplnenie sa nepodarilo poslať (" + e.message + ")"
+        }
+    }
+}
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_resolve</id>
+		<x>496</x>
+		<y>80</y>
+		<label>Vyriešiť</label>
+		<icon>task_alt</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>agent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>specialist</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_resolve</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_resolution</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_worklog</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_resolve_finish</id>
+			<actions phase="post">
+				<action id="7"><![CDATA[
+tk_resolution: f.tk_resolution, tk_state: f.tk_state, tk_worklog: f.tk_worklog,
+sla_note: f.sla_note, src_email: f.src_email, src_title: f.src_title;
+
+def now = java.time.LocalDateTime.now()
+
+change tk_state value { "resolved" }
+change sla_note value { "Vyriešené " + now.toString() + "." }
+
+def log = (tk_worklog.value ?: "") as String
+def entry = now.toString() + "  vyriešené: " + ((tk_resolution.value ?: "") as String)
+change tk_worklog value { log ? log + "\n" + entry : entry }
+
+changeCaseProperty("color").about { "green" }
+
+def mail = ((src_email.value ?: "") as String).trim()
+if (mail) {
+    try {
+        sendEmail([mail], "Požiadavka vyriešená: " + ((src_title.value ?: "") as String),
+            "Dobrý deň,\n\nvašu požiadavku sme vyriešili.\n\n" +
+            ((tk_resolution.value ?: "") as String) +
+            "\n\nAk problém pretrváva, odpovedzte na tento e-mail.")
+    } catch (Exception e) {
+        change tk_worklog value {
+            ((tk_worklog.value ?: "") as String) +
+            "\nPOZOR: notifikáciu o vyriešení sa nepodarilo poslať (" + e.message + ")"
+        }
+    }
+}
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>240</y>
+		<label>Trvale otvorené</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_new</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Nová</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_open</id>
+		<x>208</x>
+		<y>80</y>
+		<label>Otvorená</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_closed</id>
+		<x>592</x>
+		<y>80</y>
+		<label>Uzavretá</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_alive_detail</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_detail</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_new_triage</id>
+		<type>regular</type>
+		<sourceId>p_new</sourceId>
+		<destinationId>t_triage</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_triage_open</id>
+		<type>regular</type>
+		<sourceId>t_triage</sourceId>
+		<destinationId>p_open</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_open_work</id>
+		<type>regular</type>
+		<sourceId>p_open</sourceId>
+		<destinationId>t_work</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_work_open</id>
+		<type>regular</type>
+		<sourceId>t_work</sourceId>
+		<destinationId>p_open</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_open_pending</id>
+		<type>regular</type>
+		<sourceId>p_open</sourceId>
+		<destinationId>t_pending</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_pending_open</id>
+		<type>regular</type>
+		<sourceId>t_pending</sourceId>
+		<destinationId>p_open</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_open_resolve</id>
+		<type>regular</type>
+		<sourceId>p_open</sourceId>
+		<destinationId>t_resolve</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_resolve_closed</id>
+		<type>regular</type>
+		<sourceId>t_resolve</sourceId>
+		<destinationId>p_closed</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>
