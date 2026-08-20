@@ -1,0 +1,7 @@
+# Používa sa len s profilom "edge". Caddy si vyrieši Let's Encrypt certifikát
+# sám, stačí aby DOMAIN smerovala na tento server a porty 80/443 boli otvorené.
+
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy frontend:80
+}

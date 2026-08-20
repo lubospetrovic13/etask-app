@@ -1,0 +1,164 @@
+# Produkčný compose pre eTask. Nasadzuje sa na server do priečinka
+# uvedeného v DEPLOY_PATH; obrazy sa ťahajú z GHCR, nebuildujú sa tu.
+#
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Reverzná proxy je vo voliteľnom profile "edge". Ak už TLS a domény riešiš
+# vlastným nginxom alebo traefikom, profil nezapínaj a napoj sa na port,
+# ktorý exponuje služba `frontend` (FRONTEND_PORT).
+#
+#   bez TLS v compose:  docker compose -f docker-compose.prod.yml up -d
+#   s Caddy a TLS:      docker compose -f docker-compose.prod.yml --profile edge up -d
+
+name: etask
+
+services:
+
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    command: ["--wiredTigerCacheSizeGB", "1.5"]
+    environment:
+      MONGO_INITDB_DATABASE: ${DATABASE_NAME:-etask}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  elastic:
+    image: elasticsearch:7.17.4
+    restart: unless-stopped
+    environment:
+      - cluster.name=elasticsearch
+      - discovery.type=single-node
+      - http.host=0.0.0.0
+      - transport.host=0.0.0.0
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    volumes:
+      - elastic-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  redis:
+    image: redis:6
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${BACKEND_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+      elastic:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # UTF-8 je v obraze, ale nechávam to aj tu - keby niekto obraz vymenil
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+
+      MONGO_URI: mongodb://mongo:27017
+      DATABASE_NAME: ${DATABASE_NAME:-etask}
+      ELASTIC_URL: elastic
+      ELASTIC_PORT: 9300
+
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+
+      NAE_SERVER_URL: ${PUBLIC_URL}
+      NAE_MAIL_FROM: ${MAIL_FROM:-}
+
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ETASK_TEST_PASSWORD: ${ETASK_TEST_PASSWORD:-}
+
+      JAVA_TOOL_OPTIONS: ${BACKEND_JAVA_OPTS:--Xms512m -Xmx2g}
+    volumes:
+      - backend-storage:/storage
+    healthcheck:
+      # /api/auth/login odpovedá 401 bez prihlásenia - to je zdravý stav.
+      # Testujeme, že servlet vôbec odpovedá, nie že sme prihlásení.
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/auth/login | grep -qE '401|405|200'"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      LOG_LEVEL: ${FRONTEND_LOG_LEVEL:-error}
+      # MUSÍ byť "true". Vtedy si frontend odvodí adresu backendu zo svojho
+      # originu a ide na /api, ktoré nginx proxuje. Pozor: hodnota sa do
+      # konfigurácie dostáva ako STRING, takže "false" je v JS truthy a
+      # chová sa ako true. Ak chceš auto-resolve naozaj vypnúť, nastav
+      # prázdnu hodnotu - vtedy sa použije nae.json.
+      AUTO_RESOLVE_URL: "true"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${FRONTEND_PORT:-8081}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  # ---- voliteľná reverzná proxy s automatickým TLS -------------------------
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["edge"]
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+
+volumes:
+  mongo-data:
+  elastic-data:
+  redis-data:
+  backend-storage:
+  caddy-data:
+  caddy-config:

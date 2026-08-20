@@ -1,0 +1,287 @@
+name: Deploy
+
+# Spúšťa sa ručne - z webu GitHubu, z CLI, alebo z Claude Code session.
+# Nie na každý push: nasadenie na produkciu má byť rozhodnutie, nie následok.
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_tag:
+        description: "Nasadiť existujúci tag obrazov namiesto nového buildu (rollback). Prázdne = zbuildovať z tejto vetvy."
+        required: false
+        type: string
+      skip_smoke:
+        description: "Preskočiť smoke test po nasadení"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE_NAME: ${{ github.repository_owner }}/etask-backend
+  FRONTEND_IMAGE_NAME: ${{ github.repository_owner }}/etask-frontend
+
+jobs:
+
+  # --------------------------------------------------------------------------
+  # Rozhodne, aký tag sa nasadzuje, a či treba buildovať.
+  # --------------------------------------------------------------------------
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.decide.outputs.tag }}
+      build: ${{ steps.decide.outputs.build }}
+    steps:
+      - id: decide
+        run: |
+          if [ -n "${{ inputs.deploy_tag }}" ]; then
+            echo "tag=${{ inputs.deploy_tag }}" >> "$GITHUB_OUTPUT"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "Nasadzujem existujúci tag ${{ inputs.deploy_tag }}, build preskakujem."
+          else
+            echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "Buildujem nový tag ${GITHUB_SHA::12} z ${GITHUB_REF_NAME}."
+          fi
+
+  # --------------------------------------------------------------------------
+  # Backend a frontend sa buildujú paralelne. Build context je root repozitára
+  # - backend Dockerfile potrebuje aj deploy/vendor-deps.sh.
+  # --------------------------------------------------------------------------
+  build-backend:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build a push backendu
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: etask-backend-starter/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ needs.plan.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      - name: Overiť, že v obraze je spustiteľný jar
+        run: |
+          IMG="${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ needs.plan.outputs.tag }}"
+          START=$(docker run --rm --entrypoint sh "$IMG" -c \
+            "unzip -p /app.jar META-INF/MANIFEST.MF | tr -d '\r' | grep '^Start-Class:' || true")
+          echo "$START"
+          # app-exec.jar má Start-Class: ...JarLauncher a pri štarte skončí
+          # na StackOverflowError. Ak sa to sem niekedy vráti, nech to padne
+          # tu, a nie na produkcii.
+          echo "$START" | grep -q "com.netgrif.etask.EtaskApplication" \
+            || { echo "CHYBA: /app.jar nemá Start-Class aplikácie."; exit 1; }
+
+  build-frontend:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build a push frontendu
+        uses: docker/build-push-action@v6
+        with:
+          context: etask-frontend-starter
+          file: etask-frontend-starter/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ needs.plan.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+  # --------------------------------------------------------------------------
+  # Nasadenie po SSH. Súkromný kľúč aj host key sú v secrets, na runneri žijú
+  # len počas jobu. Prihlásenie do GHCR na serveri používa krátkodobý
+  # GITHUB_TOKEN, takže na serveri nezostáva žiadny trvalý prístup do registra.
+  # --------------------------------------------------------------------------
+  deploy:
+    needs: [plan, build-backend, build-frontend]
+    # Beží aj keď sa build preskočil (rollback na existujúci tag).
+    if: always() && needs.plan.result == 'success' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pripraviť SSH
+        env:
+          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Host key je pinnutý zo secrets. Bez toho by bol deploy
+          # zraniteľný na man-in-the-middle.
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Skopírovať compose konfiguráciu na server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/etask' }}
+        run: |
+          scp -i ~/.ssh/deploy_key -P "$SSH_PORT" \
+            deploy/docker-compose.prod.yml \
+            deploy/nginx.conf \
+            deploy/Caddyfile \
+            "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+
+      - name: Nasadiť
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/etask' }}
+          COMPOSE_PROFILES: ${{ vars.COMPOSE_PROFILES || '' }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
+          FRONTEND_IMAGE: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            TAG="$TAG" \
+            DEPLOY_PATH="$DEPLOY_PATH" \
+            COMPOSE_PROFILES="$COMPOSE_PROFILES" \
+            GHCR_USER="$GHCR_USER" \
+            GHCR_TOKEN="$GHCR_TOKEN" \
+            BACKEND_IMAGE="$BACKEND_IMAGE" \
+            FRONTEND_IMAGE="$FRONTEND_IMAGE" \
+            'bash -seuo pipefail' <<'REMOTE'
+            cd "$DEPLOY_PATH"
+
+            if [ ! -f .env ]; then
+              echo "CHYBA: $DEPLOY_PATH/.env neexistuje. Skopíruj deploy/.env.example a vyplň ho."
+              exit 1
+            fi
+
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+            # Predchádzajúci tag si odložíme, aby bolo na čo sa vrátiť.
+            if [ -f .deployed_tag ]; then
+              cp .deployed_tag .previous_tag
+            fi
+
+            # Konkrétny tag prepíšeme do .env, aby bol server po reboote
+            # deterministický a nezobral si "latest", ktoré sa medzitým zmenilo.
+            sed -i "\|^BACKEND_IMAGE=|d;\|^FRONTEND_IMAGE=|d" .env
+            printf 'BACKEND_IMAGE=%s:%s\n'  "$BACKEND_IMAGE"  "$TAG" >> .env
+            printf 'FRONTEND_IMAGE=%s:%s\n' "$FRONTEND_IMAGE" "$TAG" >> .env
+
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            echo "$TAG" > .deployed_tag
+            docker logout ghcr.io
+            docker image prune -f --filter "until=168h"
+
+            echo "--- stav služieb ---"
+            docker compose -f docker-compose.prod.yml ps
+          REMOTE
+
+      - name: Smoke test - beží appka a funguje prihlásenie
+        if: inputs.skip_smoke != true
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/etask' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            DEPLOY_PATH="$DEPLOY_PATH" 'bash -seuo pipefail' <<'REMOTE'
+            cd "$DEPLOY_PATH"
+            set -a; . ./.env; set +a
+
+            PORT="${FRONTEND_PORT:-8081}"
+
+            echo "Čakám, kým frontend odpovie na porte $PORT..."
+            for i in $(seq 1 40); do
+              if curl -sf -o /dev/null "http://127.0.0.1:${PORT}/"; then break; fi
+              [ "$i" = 40 ] && { echo "CHYBA: frontend neodpovedal do 200 s"; exit 1; }
+              sleep 5
+            done
+            echo "  frontend OK"
+
+            echo "Kontrolujem, že /api prechádza na backend..."
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${PORT}/api/auth/login")
+            case "$CODE" in
+              401|405|200) echo "  /api proxy OK (HTTP $CODE)";;
+              *) echo "CHYBA: /api vrátilo $CODE - nginx proxy alebo backend nefunguje"; exit 1;;
+            esac
+
+            if [ -z "${SMOKE_USER:-}" ] || [ -z "${SMOKE_PASSWORD:-}" ]; then
+              echo "  SMOKE_USER/SMOKE_PASSWORD nie sú v .env - test prihlásenia PRESKOČENÝ."
+              echo "  Pozor: appka môže bežať a login pritom padať na 500, ak zlyhal"
+              echo "  import procesu a nechal po sebe osirelé procesné role."
+              exit 0
+            fi
+
+            echo "Overujem, že prihlásenie vráti token..."
+            HDRS=$(curl -s -D- -o /dev/null -u "${SMOKE_USER}:${SMOKE_PASSWORD}" \
+              "http://127.0.0.1:${PORT}/api/auth/login")
+            if printf '%s' "$HDRS" | grep -qi '^x-auth-token:'; then
+              echo "  prihlásenie OK, token vydaný"
+            else
+              echo "CHYBA: prihlásenie nevydalo X-Auth-Token. Hlavičky:"
+              printf '%s\n' "$HDRS" | head -20
+              exit 1
+            fi
+          REMOTE
+
+      - name: Zhrnutie
+        if: always()
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
+        run: |
+          {
+            echo "### Deploy"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Tag | \`$TAG\` |"
+            echo "| Vetva | \`${GITHUB_REF_NAME}\` |"
+            echo "| Build | ${{ needs.plan.outputs.build }} |"
+            echo "| Výsledok | ${{ job.status }} |"
+            echo ""
+            echo "Rollback: spusti tento workflow znova s \`deploy_tag\` nastaveným na predchádzajúci tag."
+          } >> "$GITHUB_STEP_SUMMARY"
