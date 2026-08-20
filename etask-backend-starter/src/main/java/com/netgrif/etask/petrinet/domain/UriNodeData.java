@@ -28,6 +28,23 @@ public class UriNodeData {
     private Set<String> processRolesIds;
     private List<String> menuItemIdentifiers;
 
+    /**
+     * Authority names, e.g. ROLE_ADMIN. When non-empty, only a user holding at
+     * least one of them sees the node.
+     */
+    private Set<String> requiredAuthorities;
+
+    /**
+     * Process role import ids, e.g. agent. When non-empty, only a user holding
+     * at least one process role with a matching import id sees the node.
+     *
+     * Import ids rather than role string ids on purpose: a role's string id is
+     * minted per net version, so every re-import of a process would mint new
+     * ones and silently invalidate the list. The import id is the id written in
+     * the Petriflow XML and survives re-imports.
+     */
+    private Set<String> requiredProcessRoles;
+
     public UriNodeData(String uriNodeId, String section, String icon, boolean isIconSvg, boolean isHidden, Set<String> processRolesIds, List<String> menuItemIdentifiers) {
         this.uriNodeId = uriNodeId;
         this.icon = icon;

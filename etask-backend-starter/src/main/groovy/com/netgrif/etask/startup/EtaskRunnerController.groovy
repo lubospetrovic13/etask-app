@@ -33,6 +33,9 @@ class EtaskRunnerController extends RunnerController {
             // ADDITIONAL CUSTOM RUNNERS
             EtaskRunner,
             EtaskUserCreator,
+            // Must run after NetRunner: uri nodes only exist once the processes
+            // whose identifiers carry their path have been imported.
+            UriNodeDataRunner,
             // END OF ADDITIONAL CUSTOM RUNNERS
             FinisherRunnerSuperCreator,
             FinisherRunner,
