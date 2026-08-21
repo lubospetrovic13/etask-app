@@ -77,6 +77,18 @@ if [ ${#LOG_ARG[@]} -gt 0 ]; then
       ok "pfcheck odmietol $f.xml"
     fi
   done
+
+  # pfseed: po aplikovani musi druhy beh nahlasit nulu zmien. Neidempotentny
+  # seed je horsi nez zadny - agent by po kazdom behu videl iny stav.
+  if python3 tools/pfseed.py >/dev/null 2>&1; then
+    if python3 tools/pfseed.py --dry-run 2>&1 | grep -q "zmien 0"; then
+      ok "pfseed je idempotentny"
+    else
+      bad "pfseed nie je idempotentny - druhy beh hlasi zmeny"
+    fi
+  else
+    bad "pfseed zlyhal (osirele role? spusti tools/pfseed.py --repair)"
+  fi
 else
   echo "pftest: pfcheck preskoceny (bez --log)"
 fi

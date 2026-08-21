@@ -7,6 +7,8 @@ k najspoľahlivejšiemu:
 pflint.py     XML: štruktúra, odkazy, tiché pasce      ~0,3 s   bez závislostí
 pfgroovy.py   Groovy v akciách: syntax                  ~3 s    JDK + groovy jar
 pfcheck.sh    import do bežiaceho enginu = ground truth ~5 s    bežiaci engine
+pfseed.py     procesné role do deklarovaného stavu     ~5 s    bežiaci engine
+pfapi.py      inventár extension pointov (generátor)   ~2 s    jar enginu
 pftest.sh     regresia nástrojov samotných
 ```
 
@@ -157,3 +159,63 @@ tools/pftest.sh --log /cesta/backend.log # aj pfcheck
 Sedem testov nad `tools/fixtures/`: každý nástroj musí na rozbitej sieti zlyhať
 a na platných sieťach v `processes/` prejsť. Druhá polovica je dôležitejšia —
 falošný pozitív naučí agenta ignorovať výstup.
+
+---
+
+## pfseed.py — procesné role do deklarovaného stavu
+
+```bash
+python3 tools/pfseed.py              # aplikuj seed.json
+python3 tools/pfseed.py --dry-run    # ukáž, čo by sa zmenilo
+python3 tools/pfseed.py --repair     # vyčisti osirelé role (DB, nie REST)
+```
+
+Rola má `stringId` razené **per verziu siete**. Po každom re-importe užívateľ na
+casoch novej verzie prístup stratí, aj keď „tú rolu má". Za jednu session bola
+sieť importovaná 12-krát a po každom importe bolo treba role prideliť znova.
+
+Pre človeka je to otrava, pre agenta horšie: po tretej iterácii testuje na
+rozbitom stave a nevie o tom. Cieľový stav sa preto deklaruje raz v `seed.json`
+pomocou **importId** (nie stringId) a `pfseed` ho dopočíta na všetkých verziách
+sietí v `netScope`.
+
+Tri pasce, ktoré rieši za teba:
+
+**1. `role/assign` role prepisuje, nepridáva** — a berie čisté pole id, nie
+`{"roleIds": [...]}`. Nekompletný zoznam znamená, že užívateľ stratí systémovú
+rolu `default` a zmiznú mu všetky zobrazenia. `pfseed` preto role mimo `netScope`
+zachová.
+
+**2. REST nikde nevracia `importId` rolí siete**, len lokalizovaný názov.
+Mapovanie `importId → názov` sa preto číta z lokálneho XML v `processes/`
+a `názov → stringId` z `/api/petrinet/{id}/roles`. Pri nejednoznačnom názve to
+povie.
+
+**3. Zlyhaný import nechá osirelé role — a to sa cez API opraviť nedá.**
+Import role vytvorí, priradí užívateľovi a sieť nechá neexistovať. Taký užívateľ
+sa potom **nedá prečítať cez REST vôbec**: `/api/user/search` aj `/api/user/me`
+na ňom vracajú 500, lebo serializácia rolí spadne na chýbajúcej sieti. `pfseed`
+to rozpozná a pomenuje; `--repair` to opraví priamo v databáze, pretože iná
+cesta neexistuje.
+
+Overené: po zlyhanom importe (diakritika v názve procesu) mal `super` 6 osirelých
+rolí a bol cez REST nečitateľný; `--repair` ho vrátil na 200.
+
+Idempotencia je invariant, nie sľub — `pftest.sh` ju testuje: po aplikovaní musí
+druhý beh nahlásiť `zmien 0`.
+
+Pozor: `pfseed` do instancie **zapisuje**. Nepúšťaj ho na produkciu.
+
+---
+
+## pfapi.py — inventár extension pointov
+
+```bash
+python3 tools/pfapi.py > reference/action-api.md
+python3 tools/pfapi.py --check    # neaktuálny výstup vráti 1
+```
+
+Generuje `reference/action-api.md` z jaru enginu (`javap`) a zo zdrojáku
+`EtaskActionDelegate`. Generované zámerne: `ActionDelegate` má 169 unikátnych
+metód v 407 pretaženiach, ručný zoznam by driftoval s verziou enginu, a nesprávny
+zoznam je horší než žiadny. `--check` je preto súčasťou `pftest.sh`.

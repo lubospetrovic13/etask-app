@@ -1,0 +1,16 @@
+{
+  "_comment": [
+    "Deklaratívny cieľový stav procesných rolí. Spúšťa sa tools/pfseed.py.",
+    "roles sú importId (z <role><id> v sieti), nie stringId - stringId sa razí",
+    "per verziu siete, takže po re-importe by zoznam bol okamžite neplatný.",
+    "pfseed pridelí každú uvedenú rolu na VŠETKÝCH verziách sietí v netScope."
+  ],
+  "netScope": ["service_desk/*"],
+  "users": [
+    { "email": "super@netgrif.com",     "roles": ["manager", "agent"] },
+    { "email": "admin@test.local",      "roles": ["agent"] },
+    { "email": "operator@test.local",   "roles": ["specialist"] },
+    { "email": "druhy@test.local",      "roles": ["specialist"] },
+    { "email": "viewer@test.local",     "roles": [] }
+  ]
+}

@@ -62,6 +62,17 @@ tools/pfcheck.sh --log <backend.log> processes/   # ground truth import
 v nástroji — nie v sieti. Stalo sa to dvakrát pri stavbe `pfgroovy`. Detaily
 v `tools/README-petriflow-tools.md`.
 
+**Po re-importe siete prideľ role znova:**
+
+```bash
+python3 tools/pfseed.py          # cieľový stav je v seed.json
+```
+
+Rola má `stringId` per verziu siete, takže po re-importe užívateľ na casoch novej
+verzie prístup stratí. Bez tohto kroku testuješ na rozbitom stave a nevieš o tom.
+Keď `pfseed` ohlási užívateľa ako nečitateľného (500 z `/api/user/search`), sú to
+osirelé role po zlyhanom importe — `python3 tools/pfseed.py --repair`.
+
 Nikdy neoznačuj sieť za hotovú bez `pfcheck`. Import endpoint pri chybe vracia
 holé `{"status":500}` **bez dôvodu** — príčina je len v logu servera, a `pfcheck`
 ju z neho vytiahne.

@@ -310,6 +310,7 @@ Hotové:
 * `tools/pftest.sh` + `tools/fixtures/` — regresia nástrojov, 7 testov
 * `tools/pfapi.py` + `reference/action-api.md` — generovaný inventár extension pointov
 * `.claude/skills/petriflow/SKILL.md` + `CLAUDE.md` — instruction layer
+* `tools/pfseed.py` + `seed.json` — idempotentné prideľovanie rolí, oprava osirelých
 * `tools/README-petriflow-tools.md` — kedy ktorý a prečo tri
 * `reference/petriflow.schema.v1.1.0.xsd` — oficiálna schéma offline
 * oprava `wi_result` v `sd_work_item.xml`
@@ -322,8 +323,14 @@ Hotové:
    pravidlo v `CLAUDE.md`. Generované zámerne: ručný zoznam by driftoval
    s verziou enginu a nesprávny zoznam je horší než žiadny, preto je kontrola
    aktuálnosti (`pfapi --check`) súčasťou `pftest.sh`.
-2. **Idempotentný re-seed** rolí a demo dát. Bez toho agent po tretej iterácii
-   testuje na rozbitom stave (časť 2.4).
+2. ~~Idempotentný re-seed rolí.~~ **Hotové** — `tools/pfseed.py` + `seed.json`,
+   deklaratívny cieľový stav podľa `importId`, idempotencia testovaná v `pftest.sh`.
+   Vedľajší nález: zlyhaný import nechá osirelé role a taký užívateľ sa **nedá
+   prečítať cez REST vôbec** (`/api/user/search` aj `/api/user/me` vracajú 500).
+   Cez API sa to opraviť nedá, preto `--repair` ide priamo do databázy. Overené
+   na `super`, ktorý mal 6 osirelých rolí po importe spadnutom na diakritike.
+   Seedovanie demo casov (zákazníci) zostáva — je to ale SD-špecifické, nie
+   infrastruktúra.
 3. **Skladateľná podmienka oprávnenia** — prvé skutočne chýbajúce primitívum
    (časť 2.3).
 4. Zjednotiť `processRolesIds` a `requiredProcessRoles` — dlh, ktorý som vyrobil.

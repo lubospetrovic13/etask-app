@@ -41,6 +41,7 @@ cd etask-configuration
 python3 tools/pflint.py processes/                 # 0,3 s
 python3 tools/pfgroovy.py processes/              # 3 s
 tools/pfcheck.sh --log <backend.log> processes/   # ground truth
+python3 tools/pfseed.py                           # role po re-importe
 ```
 
 **Ground truth je bežiaci engine.** Import endpoint pri chybe vracia holé
