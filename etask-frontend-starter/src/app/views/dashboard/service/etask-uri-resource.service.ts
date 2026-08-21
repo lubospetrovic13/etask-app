@@ -45,7 +45,6 @@ declare interface Counter {
 }
 
 export declare interface ETaskUriNodeResource extends UriNodeResource {
-  roleIds?: Array<string>;
   menuItemIdentifiers?: Array<string>;
   icon: string;
   section: string;

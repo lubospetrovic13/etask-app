@@ -6,6 +6,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.util.List;
 import java.util.Set;
@@ -25,8 +26,20 @@ public class UriNodeData {
     private String section;
     private boolean isIconSvg = false;
     private boolean isHidden = false;
-    private Set<String> processRolesIds;
     private List<String> menuItemIdentifiers;
+
+    /**
+     * Legacy: role string ids, kept only so UriNodeDataRunner can migrate them
+     * to {@link #requiredProcessRoles} and clear them.
+     *
+     * <p>It never worked reliably. A role's string id is minted per net version,
+     * so the list went stale on every re-import - and the only consumer was a
+     * client-side filter over a list the server had already filtered. Do not
+     * write to it.
+     */
+    @Deprecated
+    @Field("processRolesIds")
+    private Set<String> legacyProcessRolesIds;
 
     /**
      * Authority names, e.g. ROLE_ADMIN. When non-empty, only a user holding at
@@ -45,13 +58,18 @@ public class UriNodeData {
      */
     private Set<String> requiredProcessRoles;
 
-    public UriNodeData(String uriNodeId, String section, String icon, boolean isIconSvg, boolean isHidden, Set<String> processRolesIds, List<String> menuItemIdentifiers) {
+    /**
+     * @param requiredProcessRoles process role <em>import ids</em>, not string ids.
+     */
+    public UriNodeData(String uriNodeId, String section, String icon, boolean isIconSvg,
+                       boolean isHidden, Set<String> requiredProcessRoles,
+                       List<String> menuItemIdentifiers) {
         this.uriNodeId = uriNodeId;
         this.icon = icon;
         this.section = section;
         this.isIconSvg = isIconSvg;
         this.isHidden = isHidden;
-        this.processRolesIds = processRolesIds;
+        this.requiredProcessRoles = requiredProcessRoles;
         this.menuItemIdentifiers = menuItemIdentifiers;
     }
 }

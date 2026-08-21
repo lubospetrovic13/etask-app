@@ -22,7 +22,6 @@ import {map} from 'rxjs/operators';
 import icons from '../../../../assets/uriNodeIcons.json';
 import {ETaskUriNodeResource} from '../../dashboard/service/etask-uri-resource.service';
 import {ThemeService} from '../../../theme.service';
-import {EtaskUriService} from '../../dashboard/service/etask-uri.service';
 
 @Component({
   selector: 'app-e-task-double-drawer',
@@ -82,7 +81,6 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
               uriService: UriService,
               impersonationUserSelect: ImpersonationUserSelectService,
               impersonation: ImpersonationService,
-              private _customUri: EtaskUriService,
               public themeService: ThemeService,
               dynamicRouteProviderService: DynamicNavigationRouteProviderService) {
     super(router, activatedRoute, breakpoint, languageService, userService, accessService, log, config, uriService,
@@ -105,7 +103,8 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
     }
     this.leftLoading$.on();
     this._leftNodesSubscription = this._uriService.getSiblingsOfNode(this.currentNode).subscribe(nodes => {
-      const allNodes = this._customUri.filterUriNodesByRoles(nodes instanceof Array ? nodes : []);
+      // Uzly su uz prefiltrovane serverom, druhy filter tu nema co robit.
+      const allNodes = (nodes instanceof Array ? nodes : []) as Array<ETaskUriNodeResource>;
       this.leftNodes = [];
       allNodes.forEach(node => {
         if (node.hidden) return;
@@ -133,8 +132,7 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
           map(p => p.content),
         ),
       }).subscribe(result => {
-        const allNodes = this._customUri
-          .filterUriNodesByRoles(result.folders instanceof Array ? result.folders : [])
+        const allNodes = ((result.folders instanceof Array ? result.folders : []) as Array<ETaskUriNodeResource>)
           .sort((a, b) => this.compareStrings(a.name, b.name));
         this.rightNodes = [];
         this.views = [];

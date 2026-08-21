@@ -32,23 +32,6 @@ changeCaseProperty("title").about { "Nová požiadavka" }
     return pid.contains("/") ? pid.substring(0, pid.lastIndexOf("/") + 1) : ""
 }
 	]]></function>
-	<function scope="process" name="user_ids"><![CDATA[
-{ def raw ->
-    // Hodnota userList pola je UserListFieldValue s userValues, nie zoznam id.
-    // Pozor na `u?._id` - `?.` chrani pred null, nie pred chybajucou property,
-    // takze na UserFieldValue by to vyhodilo MissingPropertyException a zhodilo
-    // celu akciu.
-    if (raw == null) return []
-    def users = raw.hasProperty("userValues") ? raw.userValues : (raw instanceof List ? raw : null)
-    if (!users) return []
-    return users.collect { u ->
-        if (u == null) return null
-        if (u instanceof String) return u
-        if (u instanceof Map) return (u["_id"] ?: u["id"])
-        return u.hasProperty("id") ? u.id : null
-    }.findAll { it != null }.collect { it as String }
-}
-	]]></function>
 	<function scope="process" name="org_keys"><![CDATA[
 { def customerCase ->
     // Nazov aj vsetky aliasy, normalizovane, aby "Netgrif s.r.o." a "netgrif
@@ -97,8 +80,12 @@ changeCaseProperty("title").about { "Nová požiadavka" }
         return false
     }
 
-    def agents = user_ids(customer.dataSet["c_agents"]?.value)
-    def specialists = user_ids(customer.dataSet["c_specialists"]?.value)
+    // Prienik, nie kopia. `roleRef` a `userRef` sa v Petriflow zjednocuju, takze
+    // "rola agent a zaroven v tyme tohto zakaznika" sa deklarativne napisat neda.
+    // usersWithRole() z EtaskActionDelegate to vyrata: rola zostava autoritativna,
+    // takze koho veduci prida do tymu omylom a rolu nema, pristup nedostane.
+    def agents = usersWithRole(customer.dataSet["c_agents"]?.value, "agent")
+    def specialists = usersWithRole(customer.dataSet["c_specialists"]?.value, "specialist")
     def name = ((customer.dataSet["c_name"]?.value ?: "") as String)
 
     change tk_agents value { agents }

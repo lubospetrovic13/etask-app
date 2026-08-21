@@ -5,7 +5,6 @@ import {
   LoggerService,
   UriNodeResource,
   UriService,
-  UserService,
 } from '@netgrif/components-core';
 import {Observable, Subject} from 'rxjs';
 import {ETaskUriNodeResource, EtaskUriResourceService} from './etask-uri-resource.service';
@@ -17,27 +16,13 @@ export class EtaskUriService extends UriService {
 
   protected _counters: Map<string, number>;
 
-  constructor(protected userService: UserService,
-              _logger: LoggerService,
+  constructor(_logger: LoggerService,
               _resourceService: EtaskUriResourceService,
               _caseResourceService: CaseResourceService,
               _activeGroupService: ActiveGroupService) {
     // TODO load page size from injection token
     super(_logger, _resourceService, _caseResourceService, _activeGroupService, 100);
     this._counters = new Map<string, number>();
-  }
-
-  public filterUriNodesByRoles(nodes: Array<UriNodeResource>) {
-    return this.filterCustomUriNodesByRoles(nodes as Array<ETaskUriNodeResource>);
-  }
-
-  public filterCustomUriNodesByRoles(nodes: Array<ETaskUriNodeResource>) {
-    return nodes.filter(node => {
-      if (node.roleIds === undefined) {
-        return true;
-      }
-      return node.roleIds.some(roleId => this.userService.hasRoleById(roleId));
-    });
   }
 
   public getCountForNodes(nodes: Array<UriNodeResource>): Observable<boolean> {

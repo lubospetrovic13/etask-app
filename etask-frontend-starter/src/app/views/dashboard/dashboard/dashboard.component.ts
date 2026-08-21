@@ -52,7 +52,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this._sub = this._uri.rootLoaded$.subscribe(() => {
       if (this._uri.root) {
         this._uri.root.children.forEach(c => this.nodes.push(c as ETaskUriNodeResource));
-        this.nodes = this._uri.filterCustomUriNodesByRoles(this.nodes).filter(n => !n.section);
+        // Bez filtrovania podľa rolí: uzly prichádzajú už prefiltrované zo
+        // servera (EtaskUriController). Druhý filter v prehliadači vedel len
+        // ubrať uzly, na ktoré užívateľ právo má — porovnával totiž stringId
+        // rolí, ktoré sa razia per verziu siete a po re-importe boli neplatné.
+        this.nodes = this.nodes.filter(n => !n.section);
         this.nodes.sort((a, b) => a.name.localeCompare(b.name));
         this._loading.on();
         this._uri.getCountForNodes(this.nodes).subscribe(() => {

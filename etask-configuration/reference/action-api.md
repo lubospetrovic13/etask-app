@@ -44,6 +44,15 @@ set custom uri node data
 
 ### `canUserAccessMenuItem(Case menuItem, IUser user)`
 
+### `userIdsOf(Object value)`
+Vytiahne id uzivatelov z hodnoty userList pola.
+
+### `hasProcessRole(IUser user, String roleImportId, String netIdentifier = null)`
+Ci uzivatel drzi procesnu rolu s danym importId.
+
+### `usersWithRole(Object source, String roleImportId, String netIdentifier = null)`
+Prienik: z uzivatelov v `source` vrati tych, ktori drzia rolu `roleImportId`.
+
 ### `createNewUser(String name, String surname, String email, String password)`
 
 ### `callAIToolByConfig(Map params)`

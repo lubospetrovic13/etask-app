@@ -141,6 +141,10 @@ validácia sa ako gate použiť nedá.
 
 ### 2.3 Algebra oprávnení nevie vyjadriť prienik
 
+> **Doplnené:** primitív `usersWithRole()` z toho medzitým urobil jednoriadkovú
+> záležitosť. Nerieši to podstatu — engine stále nepozná prienik — ale prestalo
+> to byť bespoke kód v každej sieti.
+
 `roleRef` a `userRef` sa **zjednocujú, nie prienikajú**. „Agent a zároveň
 pridelený tomuto zákazníkovi" sa deklaratívne napísať nedá. V Service Desku som
 to musel obísť tak, že som rolu presunul do dát (zákazník má dva zoznamy ľudí a
@@ -331,7 +335,18 @@ Hotové:
    na `super`, ktorý mal 6 osirelých rolí po importe spadnutom na diakritike.
    Seedovanie demo casov (zákazníci) zostáva — je to ale SD-špecifické, nie
    infrastruktúra.
-3. **Skladateľná podmienka oprávnenia** — prvé skutočne chýbajúce primitívum
-   (časť 2.3).
-4. Zjednotiť `processRolesIds` a `requiredProcessRoles` — dlh, ktorý som vyrobil.
+3. ~~Skladateľná podmienka oprávnenia.~~ **Hotové** — `usersWithRole()`,
+   `hasProcessRole()`, `userIdsOf()` v `EtaskActionDelegate`. Engine sa zmeniť
+   nedá, takže prienik sa počíta do userList poľa a `userRef` naň odkazuje;
+   nové je to, že je to jeden volateľný primitív a nie bespoke kód v každej
+   sieti. `sd_ticket` ho už používa. Overené: človek v tíme zákazníka bez
+   príslušnej roly prístup nedostane.
+4. ~~Zjednotiť `processRolesIds` a `requiredProcessRoles`.~~ **Hotové** — ale inak,
+   než som plánoval. `processRolesIds` mal jediného čitateľa: serializáciu pre
+   klientský filter nad zoznamom, ktorý server už prefiltroval. Správne
+   zjednotenie preto nebolo zladiť dve polia, ale **zrušiť to klientské
+   filtrovanie** — porovnávalo stringId rolí, ktoré sa razia per verziu siete,
+   takže po každom re-importe vedelo len ubrať uzly, na ktoré užívateľ právo má.
+   Zostalo jedno pole (`requiredProcessRoles`, importId) a jedno miesto, kde sa
+   rozhoduje (`UriNodeVisibilityService`).
 5. Odčlenenie do samostatného repozitára: blokery v časti 8.

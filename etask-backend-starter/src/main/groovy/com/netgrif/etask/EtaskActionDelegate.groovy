@@ -201,6 +201,91 @@ class EtaskActionDelegate extends ActionDelegate {
         return [(split[0]): split[1]]
     }
 
+    // ==================================================================
+    // Opravnenia: prienik roly a prislusnosti
+    //
+    // Petriflow `roleRef` a `userRef` sa ZJEDNOCUJU, nie prienikaju. "Rola X
+    // a zaroven v zozname Y" sa deklarativne napisat neda, a to je pri
+    // multi-tenant aplikacii zakladna poziadavka: operator zakaznika A nema
+    // vidiet tikety zakaznika B, aj keby rolu operatora mal.
+    //
+    // Obchadza sa to tak, ze sa prienik vypocita do datoveho pola typu
+    // userList a transition potom pouzije `userRef` na to pole. Fungovalo to
+    // uz predtym, ale kazdy pripad si to pisal sam - vratane extrakcie id
+    // z UserListFieldValue, kde `u?._id` vyhodi MissingPropertyException
+    // a zhodi celu akciu. Toto z toho robi jeden volatelny primitiv.
+    // ==================================================================
+
+    /**
+     * Vytiahne id uzivatelov z hodnoty userList pola.
+     *
+     * Hodnota je UserListFieldValue s userValues, nie zoznam id. Pozor:
+     * `u?._id` NEFUNGUJE - Groovy `?.` chrani pred null, nie pred chybajucou
+     * property, takze na UserFieldValue vyhodi MissingPropertyException
+     * a zhodi celu akciu v strede.
+     *
+     * @param value hodnota userList pola, alebo zoznam id
+     * @return zoznam id, nikdy null
+     */
+    List<String> userIdsOf(Object value) {
+        if (value == null) {
+            return []
+        }
+        def users = value.hasProperty("userValues") ? value.userValues
+                : (value instanceof List ? value : null)
+        if (!users) {
+            return []
+        }
+        return users.collect { u ->
+            if (u == null) return null
+            if (u instanceof String) return u
+            if (u instanceof Map) return (u["_id"] ?: u["id"])
+            return u.hasProperty("id") ? u.id : null
+        }.findAll { it != null }.collect { it as String }
+    }
+
+    /**
+     * Ci uzivatel drzi procesnu rolu s danym importId.
+     *
+     * @param netIdentifier ak nie je null, rola musi byt z tejto siete
+     */
+    boolean hasProcessRole(IUser user, String roleImportId, String netIdentifier = null) {
+        if (user == null || !roleImportId) {
+            return false
+        }
+        return (user.processRoles ?: []).any { ProcessRole role ->
+            if (role.importId != roleImportId) {
+                return false
+            }
+            if (!netIdentifier) {
+                return true
+            }
+            // Rola sa razi per verziu siete, takze porovnavame netId roly
+            // s KTOROUKOLVEK verziou daneho identifikatora, nie len najnovsou -
+            // inak by po re-importe prestal prienik platit pre stare casy.
+            return petriNetService.getByIdentifier(netIdentifier)
+                    .any { it.stringId == role.netId }
+        }
+    }
+
+    /**
+     * Prienik: z uzivatelov v `source` vrati tych, ktori drzia rolu `roleImportId`.
+     *
+     * Presne to, co `roleRef` a `userRef` spolu vyjadrit nevedia. Rola zostava
+     * autoritativna - ked niekoho niekto do zoznamu prida omylom a rolu nema,
+     * pristup nedostane.
+     *
+     * @param source hodnota userList pola (napr. tym zakaznika)
+     * @param roleImportId importId roly, napr. "agent"
+     * @param netIdentifier volitelne zuzenie na konkretnu siet
+     * @return zoznam id vhodny priamo pre `change <pole> value { ... }`
+     */
+    List<String> usersWithRole(Object source, String roleImportId, String netIdentifier = null) {
+        return userIdsOf(source).findAll { String id ->
+            hasProcessRole(findUserById(id), roleImportId, netIdentifier)
+        }
+    }
+
     def createNewUser(String name, String surname, String email, String password) {
         if (userService.findByEmail(email, true) != null) {
             throw new IllegalArgumentException("Používateľ s rovnakým emailom už bol vytvorený")

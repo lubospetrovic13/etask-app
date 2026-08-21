@@ -57,6 +57,7 @@ class UriNodeDataRunner extends AbstractOrderedCommandLineRunner {
     @Override
     void run(String... args) throws Exception {
         log.info("Calling uri node data runner")
+        migrateLegacyRoleIds()
         NODES.each { String uriPath, Map config ->
             UriNode node = uriService.findByUri(uriPath)
             if (node == null) {
@@ -66,6 +67,29 @@ class UriNodeDataRunner extends AbstractOrderedCommandLineRunner {
                 return
             }
             applyTo(node, uriPath, config)
+        }
+    }
+
+    /**
+     * Zahodi stare pole processRolesIds.
+     *
+     * Drzalo stringId roli, ktore sa razia per verziu siete, takze po kazdom
+     * re-importe bolo neplatne - a jediny konzument bol klientsky filter nad
+     * zoznamom, ktory server uz prefiltroval. Prevod na importId sa tu nedela
+     * zamerne: zo stringId neexistujuceho (pretoceneho) roleu sa importId
+     * spolahlivo odvodit neda, a hadat ho by znamenalo tichu zmenu opravneni.
+     * Cielovy stav uzlov je deklarovany v NODES nizsie a runner ho aj tak nastavi.
+     */
+    private void migrateLegacyRoleIds() {
+        def stale = repository.findAll().findAll { it.legacyProcessRolesIds }
+        if (!stale) {
+            return
+        }
+        stale.each { data ->
+            log.info("Uri node data ${data.uriNodeId}: zahadzujem stare processRolesIds " +
+                    "(${data.legacyProcessRolesIds.size()} stringId roli)")
+            data.legacyProcessRolesIds = null
+            repository.save(data)
         }
     }
 

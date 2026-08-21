@@ -132,10 +132,16 @@ public class EtaskUriController {
         return customUriNode;
     }
 
+    /**
+     * Roles are deliberately not sent to the client any more. The list this
+     * controller returns is already filtered server-side, so a second filter in
+     * the browser could only ever remove nodes the user is allowed to see - and
+     * it did, because it compared role string ids, which are minted per net
+     * version and went stale on every re-import.
+     */
     protected EtaskUriNode loadUriNode(UriNode node) {
         EtaskUriNode customUriNode = new EtaskUriNode(node);
         repository.findByUriNodeId(node.getId()).ifPresent(data -> {
-            customUriNode.setRoleIds(data.getProcessRolesIds());
             customUriNode.setMenuItemIdentifiers(data.getMenuItemIdentifiers());
             customUriNode.setIcon(data.getIcon());
             customUriNode.setIconSvg(data.isIconSvg());

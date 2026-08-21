@@ -5,13 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
-import java.util.Set;
 
 public class EtaskUriNode extends UriNode {
-
-    @Getter
-    @Setter
-    protected Set<String> roleIds;
 
     @Getter
     @Setter

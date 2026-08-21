@@ -95,8 +95,16 @@ poznaj ich aj tak — plný zoznam je v `docs/PETRIFLOW_LEARNINGS.md`.
   sú jedna požiadavka. Editovateľné textové pole, ktoré akcia buttonu číta, musí
   mať `immediate="true"`.
 * **`roleRef` a `userRef` sa zjednocujú, nie prienikajú.** „Rola X a zároveň
-  pridelený Y" sa deklaratívne napísať nedá. Rieši sa presunom roly do dát —
-  vzor je v `sd_customer` + `sd_ticket`.
+  pridelený Y" sa deklaratívne napísať nedá. Na to je primitív v delegáte:
+
+  ```groovy
+  def agents = usersWithRole(customer.dataSet["c_agents"]?.value, "agent")
+  change tk_agents value { agents }
+  ```
+
+  Rola zostáva autoritatívna — koho niekto pridá do zoznamu omylom a rolu nemá,
+  prístup nedostane. Vzor je v `sd_ticket` (`apply_customer`). Id z userList
+  poľa nikdy neťahaj ručne, na to je `userIdsOf()` — `u?._id` zhodí celú akciu.
 * **Rola má stringId per verziu siete.** Po re-importe treba role prideliť znova.
   Oprávnenie cez `userRef` re-import prežije, cez `roleRef` nie.
 * **Nové dátové pole sa nepropaguje do existujúcich casov.** Case si drží verziu.
