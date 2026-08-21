@@ -93,6 +93,16 @@ jobs:
           echo "$START" | grep -q "com.netgrif.etask.EtaskApplication" \
             || { echo "CHYBA: /app.jar nemá Start-Class aplikácie."; exit 1; }
 
+          # Siete Service Desku sa berú z etask-configuration/processes cez
+          # <resources> v pom.xml. Chýbajúci resource directory Maven mlčky
+          # preskočí - exit 0, žiadny warning - takže preklep v tej ceste by
+          # dal jar bez sietí a prázdny Service Desk. Nech to padne tu.
+          NETS=$(docker run --rm --entrypoint sh "$IMG" -c \
+            "unzip -l /app.jar | grep -c 'BOOT-INF/classes/petriNets/sd_' || true")
+          echo "sietí Service Desku v jare: $NETS"
+          [ "$NETS" -ge 5 ] \
+            || { echo "CHYBA: v jare chýbajú siete Service Desku (čakám 5, mám $NETS)."; exit 1; }
+
   build-frontend:
     needs: plan
     if: needs.plan.outputs.build == 'true'

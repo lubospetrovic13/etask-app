@@ -18,7 +18,7 @@ COPY etask-backend-starter/src /app/src
 # Siete Service Desku sa do jaru beru priamo z modelovacieho priecinka (viď
 # <resources> v pom.xml), takze musia byt na tej istej relativnej ceste ako v
 # repozitari - inak by ich Maven mlcky preskocil a jar by sa zbalil bez nich.
-COPY ["Ai Configuration App/processes", "/Ai Configuration App/processes"]
+COPY etask-configuration/processes /etask-configuration/processes
 
 RUN mvn -B -DskipTests=true -f /app/pom.xml clean package \
  && test -f /app/target/classes/petriNets/sd_ticket.xml \

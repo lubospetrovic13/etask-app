@@ -4,7 +4,8 @@
 Postavené preto, že pri práci s cudzou knižnicou sa **kaskáda ani kontrast nedajú odhadnúť** —
 a `ng build` je na spätnú väzbu príliš pomalý.
 
-Cesta k frontendu je v `sassc.js` prepínateľná. Po zlúčení repozitárov:
+`sassc.js` si frontend nájde sám ako súrodenca (`../../etask-frontend-starter`).
+Prepnúť sa dá, ak sa presunie:
 
 ```bash
 FE_ROOT=C:/path/to/frontend node tools/sassc.js ...

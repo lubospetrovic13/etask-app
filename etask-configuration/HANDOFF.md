@@ -12,19 +12,21 @@ viď kap. 2 a 8.
 
 ## 0. Kde čo je
 
-Tri repozitáre, ktoré sa v ďalšom vlákne **zlučujú do jedného priečinka**:
+Všetko je v jednom repozitári `IdeaProjects/etask-app` (branch `main`, remote `origin`):
 
-| repo | čo |
+| priečinok | čo |
 |---|---|
-| `Desktop/Configuration` | tento priečinok — procesy, dokumentácia, nástroje |
-| `IdeaProjects/etask-backend-starter` | backend (Java/Groovy), branch `dev` |
-| `WebstormProjects/etask-frontend-starter` | frontend (Angular 13) |
+| `etask-configuration/` | tento priečinok — procesy, dokumentácia, nástroje |
+| `etask-backend-starter/` | backend (Java/Groovy) |
+| `etask-frontend-starter/` | frontend (Angular 13) |
 
-Po zlúčení treba prepnúť `FE_ROOT` v `tools/sassc.js` (je to premenná prostredia, viď
-`tools/README.md`) a cesty v tomto dokumente.
+Podpriečinky si nesú vlastné `.gitignore` z pôvodných repozitárov, takže `node_modules`
+a `target` sa nesledujú — v roote žiadny `.gitignore` netreba.
+
+`tools/sassc.js` si frontend nájde sám ako súrodenca; `FE_ROOT` treba len ak sa presunie.
 
 ```
-Configuration/
+etask-configuration/
 ├── HANDOFF.md                        ← si tu
 ├── processes/
 │   ├── ai_config.xml                 hlavný proces, singleton case, 3 trvalé tasky
@@ -50,27 +52,25 @@ https://claude.ai/code/artifact/84d93bbf-0a75-43ac-97e9-d103705b6b5c
 **Kľúč treba rotovať.** Vypadol do výstupu predchádzajúceho sessionu (moja chyba pri
 redigovaní) a navyše je v lokálnom git commite.
 
-Presné zistenie, aby sa to nemuselo znovu overovať:
+**Git je vyriešený, kľúč nie.**
 
-```
-commit ccc819d ("-init") obsahuje sk-ant-api03   → 1× potvrdené
-git branch -r --contains ccc819d                 → nič
-origin/master / origin/HEAD                      → 3a8cca2 (rodič ccc819d)
-```
+Čo sa stalo a čo je hotové:
 
-Takže commit **nie je na GitHube** (`netgrif/etask-backend-starter`). Expozícia je zatiaľ
-lokálna + transcript.
+- Kľúč bol v jednom nepushnutom commite pôvodného backendového repa. Ten commit bol
+  spolu s nasledujúcim squashnutý do jedného (`git reset --soft` na posledný pushnutý
+  commit + nový commit), takže v dosiahnutej histórii kľúč nebol. Overené prehľadaním
+  všetkých dosiahnuteľných commitov; obsah zostal bit za bitom rovnaký.
+- Do tohto monorepa sa backend kopíroval **bez `.git`**, takže sa neprenieslo ani
+  reflogové bremeno. Overené: v histórii `etask-app` nie je žiadny výskyt kľúča.
+- `application.properties` má `ai.anthropic.api-key=${ANTHROPIC_API_KEY:}`. Bez tej
+  premennej AI volanie nepobeží a vyhodí „Nie je nastavený ANTHROPIC_API_KEY" — zámer.
 
-Čo urobiť:
+Čo **zostáva**: **rotovať kľúč**. Prešiel výstupom jedného sessionu, takže ho treba
+považovať za kompromitovaný nezávisle od gitu.
 
-1. **Rotovať kľúč** v Anthropic konzole
-2. **Nepushovať `dev`** v súčasnom stave — `ccc819d` je nepushnutý, takže sa dá prepísať
-   bez zásahu do zdieľanej histórie
-3. `application.properties` **už je opravený** na `ai.anthropic.api-key=${ANTHROPIC_API_KEY:}`
-   podľa pôvodnej kap. 2. Backend teda bez tej premennej AI volanie nespustí a vyhodí
-   „Nie je nastavený ANTHROPIC_API_KEY" — to je zámer
-
-Git históriu som **nepísal** — nezvratná operácia na cudzom repozitári.
+Vedľajšia poznámka: jediná literálna hodnota medzi properties, ktoré vyzerajú ako
+tajomstvo, je `etask.users.technical.password` (8 znakov). Nie je z tejto práce, je to
+lokálny technický účet — ale ak sa repo zdieľa, je to smell.
 
 > Toto **opravuje** `docs/archive/handoff-01-backend-poc.md` kap. 2, ktorá tvrdí, že kľúč
 > v histórii nie je (*„overené `git log -S`"*). To už neplatí.

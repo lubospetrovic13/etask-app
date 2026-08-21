@@ -147,13 +147,19 @@
                 </excludes>
             </resource>
             <!--
-                Service Desk siete su modelovane v "Ai Configuration App/processes"
+                Service Desk siete su modelovane v etask-configuration/processes
                 a NetRunner ich importuje pri starte. Beru sa priamo odtial, aby
                 nebolo treba drzat druhu kopiu v resources - dve kopie toho isteho
                 XML sa nevyhnutne rozidu a potom nie je jasne, ktora plati.
+
+                POZOR: Maven chybajuci resource directory mlcky preskoci - exit 0,
+                ziadny warning - takze preklep v tejto ceste sa neprejavi chybou
+                buildu, ale jarom bez sieti a prazdnym Service Deskom. Kontrola,
+                ze siete v jare naozaj su, je preto v Dockerfile a v kroku
+                "verify jar" v .github/workflows/deploy.yml.
             -->
             <resource>
-                <directory>${project.basedir}/../Ai Configuration App/processes</directory>
+                <directory>${project.basedir}/../etask-configuration/processes</directory>
                 <targetPath>petriNets</targetPath>
                 <includes>
                     <include>sd_customer.xml</include>
