@@ -684,7 +684,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</layout>
 			</dataRef>
 			<dataRef>
-				<id>wi_ticket_no</id>
+				<id>wi_ticket_title</id>
 				<logic>
 					<behavior>visible</behavior>
 				</logic>
@@ -692,27 +692,13 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 					<x>0</x>
 					<y>2</y>
 					<rows>1</rows>
-					<cols>2</cols>
+					<cols>4</cols>
 					<template>material</template>
 					<appearance>outline</appearance>
 				</layout>
 			</dataRef>
 			<dataRef>
-				<id>wi_type</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>2</x>
-					<y>2</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>wi_due</id>
+				<id>wi_org</id>
 				<logic>
 					<behavior>visible</behavior>
 				</logic>
@@ -726,13 +712,55 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</layout>
 			</dataRef>
 			<dataRef>
-				<id>wi_note</id>
+				<id>wi_ticket_no</id>
 				<logic>
 					<behavior>visible</behavior>
 				</logic>
 				<layout>
 					<x>0</x>
 					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_type</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_due</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_note</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
 					<rows>2</rows>
 					<cols>6</cols>
 					<template>material</template>
@@ -746,7 +774,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</logic>
 				<layout>
 					<x>0</x>
-					<y>5</y>
+					<y>6</y>
 					<rows>1</rows>
 					<cols>6</cols>
 					<template>material</template>
@@ -763,7 +791,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</logic>
 				<layout>
 					<x>0</x>
-					<y>6</y>
+					<y>7</y>
 					<rows>1</rows>
 					<cols>2</cols>
 					<template>material</template>
@@ -777,7 +805,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</logic>
 				<layout>
 					<x>2</x>
-					<y>6</y>
+					<y>7</y>
 					<rows>1</rows>
 					<cols>2</cols>
 					<template>material</template>
@@ -791,7 +819,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</logic>
 				<layout>
 					<x>4</x>
-					<y>6</y>
+					<y>7</y>
 					<rows>1</rows>
 					<cols>2</cols>
 					<template>material</template>
@@ -805,7 +833,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</logic>
 				<layout>
 					<x>0</x>
-					<y>7</y>
+					<y>8</y>
 					<rows>2</rows>
 					<cols>6</cols>
 					<template>material</template>
@@ -819,7 +847,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</logic>
 				<layout>
 					<x>0</x>
-					<y>9</y>
+					<y>10</y>
 					<rows>1</rows>
 					<cols>6</cols>
 					<template>material</template>
@@ -833,7 +861,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</logic>
 				<layout>
 					<x>0</x>
-					<y>10</y>
+					<y>11</y>
 					<rows>1</rows>
 					<cols>2</cols>
 					<template>material</template>
@@ -847,7 +875,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</logic>
 				<layout>
 					<x>2</x>
-					<y>10</y>
+					<y>11</y>
 					<rows>1</rows>
 					<cols>2</cols>
 					<template>material</template>
@@ -861,7 +889,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 				</logic>
 				<layout>
 					<x>4</x>
-					<y>10</y>
+					<y>11</y>
 					<rows>1</rows>
 					<cols>2</cols>
 					<template>material</template>

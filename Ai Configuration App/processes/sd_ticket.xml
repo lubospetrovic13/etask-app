@@ -75,7 +75,7 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 	]]></function>
 	<function scope="process" name="apply_customer"><![CDATA[
 { def caseObj, def orgName, def tk_agents, def tk_specialists, def tk_org_match,
-  def tk_customer_id, def tk_worklog ->
+  def tk_customer_id, def tk_org_name, def tk_worklog ->
     // Toto je miesto, kde sa z textu z eformu stane opravnenie. Kym tu nic
     // nepribehne, tiket vidi iba veduci - to je zamer, nie chyba: tiket od
     // neznamej organizacie nema komu patrit.
@@ -86,6 +86,7 @@ changeCaseProperty("title").about { "Nová požiadavka" }
         change tk_agents value { [] }
         change tk_specialists value { [] }
         change tk_customer_id value { "" }
+        change tk_org_name value { org }
         change tk_org_match value {
             org ? ("Organizácia \"" + org + "\" nie je v registri zákazníkov – tiket vidí iba vedúci.")
                 : "Organizácia nie je vyplnená – tiket vidí iba vedúci."
@@ -103,6 +104,7 @@ changeCaseProperty("title").about { "Nová požiadavka" }
     change tk_agents value { agents }
     change tk_specialists value { specialists }
     change tk_customer_id value { customer.stringId }
+    change tk_org_name value { name }
     change tk_org_match value {
         (agents || specialists)
                 ? (name + " – " + (agents.size() + specialists.size()) + " ľudí")
@@ -378,12 +380,12 @@ if (t) {
 				<action id="41"><![CDATA[
 src_org: f.src_org, tk_org_override: f.tk_org_override, tk_agents: f.tk_agents,
 tk_specialists: f.tk_specialists, tk_org_match: f.tk_org_match,
-tk_customer_id: f.tk_customer_id, tk_worklog: f.tk_worklog;
+tk_customer_id: f.tk_customer_id, tk_org_name: f.tk_org_name, tk_worklog: f.tk_worklog;
 
 // Prichadza z eformu cez setData, takze prave tu tiket prvykrat vie, komu
 // patri - a az tu dostane niekto ine ako veduci pravo ho vidiet.
 apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
-        tk_specialists, tk_org_match, tk_customer_id, tk_worklog)
+        tk_specialists, tk_org_match, tk_customer_id, tk_org_name, tk_worklog)
 				]]></action>
 			</actions>
 		</event>
@@ -407,6 +409,11 @@ apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
 		<title>ID zákazníka</title>
 	</data>
 	<data type="text">
+		<id>tk_org_name</id>
+		<title>Zákazník</title>
+		<desc>Oficiálny názov z registra. Zákazník do formulára píše čokoľvek, tu je to, na čo sa to spárovalo.</desc>
+	</data>
+	<data type="text">
 		<id>tk_org_override</id>
 		<title>Opraviť organizáciu</title>
 		<desc>Keď zákazník napíše názov inak, než je v registri. Po zápise sa tiket priradí znova.</desc>
@@ -416,10 +423,10 @@ apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
 				<action id="40"><![CDATA[
 tk_org_override: f.tk_org_override, src_org: f.src_org, tk_agents: f.tk_agents,
 tk_specialists: f.tk_specialists, tk_org_match: f.tk_org_match,
-tk_customer_id: f.tk_customer_id, tk_worklog: f.tk_worklog;
+tk_customer_id: f.tk_customer_id, tk_org_name: f.tk_org_name, tk_worklog: f.tk_worklog;
 
 apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
-        tk_specialists, tk_org_match, tk_customer_id, tk_worklog)
+        tk_specialists, tk_org_match, tk_customer_id, tk_org_name, tk_worklog)
 				]]></action>
 			</actions>
 		</event>
@@ -687,7 +694,8 @@ make src_org, hidden on transitions when { return !showIt }
 new_wi_title: f.new_wi_title, new_wi_type: f.new_wi_type,
 new_wi_assignee: f.new_wi_assignee, new_wi_estimate: f.new_wi_estimate,
 wi_message: f.wi_message, wi_list: f.wi_list, wi_open: f.wi_open, wi_refs: f.wi_refs,
-src_org: f.src_org, src_title: f.src_title, tk_worklog: f.tk_worklog;
+src_org: f.src_org, src_title: f.src_title, tk_org_name: f.tk_org_name,
+tk_worklog: f.tk_worklog;
 
 def title = ((new_wi_title.value ?: "") as String).trim()
 
@@ -725,7 +733,7 @@ if (!title) {
             "wi_ticket_id"   : ["value": useCase.stringId, "type": "text"],
             "wi_ticket_no"   : ["value": (useCase.visualId ?: useCase.stringId), "type": "text"],
             "wi_ticket_title": ["value": (src_title.value ?: ""), "type": "text"],
-            "wi_org"         : ["value": (src_org.value ?: ""), "type": "text"],
+            "wi_org"         : ["value": (tk_org_name.value ?: src_org.value ?: ""), "type": "text"],
             "wi_type"        : ["value": new_wi_type.value, "type": "enumeration_map"],
             "wi_estimate"    : ["value": new_wi_estimate.value, "type": "number"],
             "wi_title"       : ["value": title, "type": "text"],
@@ -1384,6 +1392,20 @@ if (!title) {
 				<layout>
 					<x>3</x>
 					<y>14</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_org_name</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>15</y>
 					<rows>1</rows>
 					<cols>3</cols>
 					<template>material</template>
