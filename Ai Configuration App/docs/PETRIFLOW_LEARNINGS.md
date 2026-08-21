@@ -251,6 +251,75 @@ V metóde sú navyše rovno dostupné `workflowService`, `userService` a `log` z
 *Odvodené zo štruktúry projektu; kompilácia a volanie overené, `MissingPropertyException`
 sme nikdy nevideli.*
 
+### B11. `u?._id` na `UserFieldValue` vyhodí výnimku a zhodí celú akciu
+
+Groovy `?.` chráni pred `null`, **nie** pred chýbajúcou property. `UserFieldValue` má
+`id`, nemá `_id`, takže `u?._id` skončí `MissingPropertyException` — a tá zhodí celú
+akciu, nielen ten jeden výraz.
+
+Prejaví sa to zákerne: ak výnimka padne v strede akcie, časť zmien už je zapísaná a
+zvyšok nie. Nás to stálo hodiny s diagnózou „`setData` aplikuje len prvé dva záznamy
+mapy" — pritom `setData` bol nevinný, akcia sa nikdy nedostala až k nemu. Ak sa dáta
+záhadne „stratia od N-tého poľa", nehľadajte chybu v `setData`, ale výnimku pred ním.
+
+```groovy
+// PADNE
+assigneeIds = users.collect { u -> u instanceof String ? u : (u?._id ?: u?.id) }
+
+// FUNGUJE
+assigneeIds = users.collect { u ->
+    if (u == null) return null
+    if (u instanceof String) return u
+    if (u instanceof Map) return (u["_id"] ?: u["id"])   // z mongo mapy
+    return u.hasProperty("id") ? u.id : null             // z UserFieldValue
+}.findAll { it != null }.collect { it as String }
+```
+
+`hasProperty` je jediný bezpečný test — `?.` ho nenahradí.
+
+### B12. `async.run { }` výnimku spolkne
+
+Čokoľvek v `async.run` beží mimo request thread, takže výnimka sa nedostane ani do
+odpovede, ani do `wiz_error`. Kým sme `setData` v `sd_intake` presunuli do
+synchrónneho `try/catch`, zlé pole sa prejavovalo len tak, že tiket vznikol prázdny.
+
+Pravidlo: `async.run` používajte len na to, čoho zlyhanie *smie* zostať nepovšimnuté.
+Prenos dát medzi casmi to nie je.
+
+### B13. `findCase { it.stringId.eq(id) }` vráti `null`, aj keď case existuje
+
+`Case` **v mongo dokumente nemá pole `stringId`** — je to len Java getter nad `_id`.
+Query sa preloží na neexistujúce pole a mlčky nenájde nič. V logu je to vidieť len ako
+INFO, nie ako chybu:
+
+```
+QueryMapper : Could not map 'Case.stringId'. Maybe a fragment in 'String' is
+              considered a simple type. Mapper continues with stringId.
+```
+
+Dve funkčné cesty:
+
+```groovy
+def c = findCase { it._id.eq(new org.bson.types.ObjectId(id)) }        // priamo
+def t = findTask { it.caseId.eq(id).and(it.transitionId.eq("t_plan")) } // Task caseId je String a existuje
+```
+
+Druhá je často lepšia: `setData(task, map)` aj tak potrebuje task, nie case.
+
+`processIdentifier` a `visualId` na case sú naopak reálne polia a v `findCases` fungujú.
+
+### B14. `roleRef` a `userRef` sa **zjednocujú**, nie prienikajú
+
+Ak transition má `roleRef agent` aj `userRef tk_agents`, môže ju vykonať každý agent
+**alebo** každý z `tk_agents`. Prienik („agent a zároveň pridelený tomuto zákazníkovi")
+sa deklaratívne vyjadriť nedá.
+
+Riešenie je dostať rolu do dát: zákazník má dva zoznamy (`c_agents`, `c_specialists`),
+tiket si ich skopíruje ako `tk_agents` / `tk_specialists` a transition-y odkazujú len na
+ne. Rola potom hovorí, *v ktorom* zozname človek je, zákazník *ktorý* zoznam to je — a
+tým sú rola aj organizácia v jednom modeli. Rola v `roleRef` zostane len tam, kde
+naozaj platí globálne (u nás `manager`).
+
 ---
 
 ## C. Mimo Petriflow, ale stálo to čas
@@ -285,6 +354,26 @@ find ~/.m2/repository -name "*.lastUpdated" -delete && mvn -U -DskipTests instal
 
 Pozor aj na scope: `runtime` závislosti `mvn compile` nepotrebuje, takže úspešná
 kompilácia nezaručí úspešný `install`.
+
+### C4. Telo `POST /api/task/{id}/data` je zanorené pod id tasku
+
+Nie `{"pole": {...}}`, ale `{"<taskId>": {"pole": {...}}}`. Ploché telo vráti
+`Could not find task with id [pole]` — endpoint prvý kľúč zoberie ako id tasku.
+
+Import siete berie `releaseType` ako **form field**, nie ako JSON `meta`:
+
+```bash
+curl -X POST .../api/petrinet/import -H "X-Auth-Token: $T" \
+  -F "file=@net.xml" -F 'releaseType=major'
+```
+
+`-F 'meta={"releaseType":"major"};type=application/json'` skončí na
+`No enum constant VersionType.{"RELEASETYPE":"MAJOR"}`.
+
+`POST /api/user/{id}/role/assign` berie **čisté pole** id (`["a","b"]`), nie
+`{"roleIds":[...]}` — a **prepisuje** celý zoznam, nepridáva. Pri re-importe siete sa
+razia nové id rolí, takže po každom importe treba role prideliť znova; v produkcii to
+problém nie je, tam sa sieť neimportuje 11-krát za hodinu.
 
 ---
 

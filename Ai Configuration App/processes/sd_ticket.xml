@@ -24,13 +24,116 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 			</actions>
 		</event>
 	</caseEvents>
+	<function scope="process" name="net_prefix"><![CDATA[
+{ def caseObj ->
+    // Bez tohto by createCase pre sesterskou siet nenasiel - identifikator
+    // nesie URI cestu (service_desk/...), takze prefix treba odvodit.
+    def pid = caseObj.processIdentifier
+    return pid.contains("/") ? pid.substring(0, pid.lastIndexOf("/") + 1) : ""
+}
+	]]></function>
+	<function scope="process" name="user_ids"><![CDATA[
+{ def raw ->
+    // Hodnota userList pola je UserListFieldValue s userValues, nie zoznam id.
+    // Pozor na `u?._id` - `?.` chrani pred null, nie pred chybajucou property,
+    // takze na UserFieldValue by to vyhodilo MissingPropertyException a zhodilo
+    // celu akciu.
+    if (raw == null) return []
+    def users = raw.hasProperty("userValues") ? raw.userValues : (raw instanceof List ? raw : null)
+    if (!users) return []
+    return users.collect { u ->
+        if (u == null) return null
+        if (u instanceof String) return u
+        if (u instanceof Map) return (u["_id"] ?: u["id"])
+        return u.hasProperty("id") ? u.id : null
+    }.findAll { it != null }.collect { it as String }
+}
+	]]></function>
+	<function scope="process" name="org_keys"><![CDATA[
+{ def customerCase ->
+    // Nazov aj vsetky aliasy, normalizovane, aby "Netgrif s.r.o." a "netgrif
+    // s.r.o." boli ten isty zakaznik.
+    def keys = []
+    def name = ((customerCase.dataSet["c_name"]?.value ?: "") as String)
+    if (name) keys << name
+    def alias = ((customerCase.dataSet["c_alias"]?.value ?: "") as String)
+    alias.split("\n").each { line -> if (line?.trim()) keys << line }
+    return keys.collect { (it as String).trim().toLowerCase() }.findAll { it }
+}
+	]]></function>
+	<function scope="process" name="match_customer"><![CDATA[
+{ def caseObj, def orgName ->
+    def needle = ((orgName ?: "") as String).trim().toLowerCase()
+    if (!needle) return null
+    def customers = findCases { it.processIdentifier.eq(net_prefix(caseObj) + "sd_customer") }
+    if (!customers) return null
+    // Neaktivna zmluva sa neparuje - tiket od byvaleho zakaznika ma skoncit u
+    // veduceho, nie u tymu, ktory ho uz neobsluhuje.
+    def active = customers.findAll { ((it.dataSet["c_active"]?.value ?: false) as Boolean) }
+    return active.find { org_keys(it).contains(needle) }
+}
+	]]></function>
+	<function scope="process" name="apply_customer"><![CDATA[
+{ def caseObj, def orgName, def tk_agents, def tk_specialists, def tk_org_match,
+  def tk_customer_id, def tk_worklog ->
+    // Toto je miesto, kde sa z textu z eformu stane opravnenie. Kym tu nic
+    // nepribehne, tiket vidi iba veduci - to je zamer, nie chyba: tiket od
+    // neznamej organizacie nema komu patrit.
+    def org = ((orgName ?: "") as String).trim()
+    def customer = match_customer(caseObj, org)
+
+    if (!customer) {
+        change tk_agents value { [] }
+        change tk_specialists value { [] }
+        change tk_customer_id value { "" }
+        change tk_org_match value {
+            org ? ("Organizácia \"" + org + "\" nie je v registri zákazníkov – tiket vidí iba vedúci.")
+                : "Organizácia nie je vyplnená – tiket vidí iba vedúci."
+        }
+        def log0 = (tk_worklog.value ?: "") as String
+        def e0 = java.time.LocalDateTime.now().toString() + "  bez priradenia: " + (org ?: "prázdna organizácia")
+        change tk_worklog value { log0 ? log0 + "\n" + e0 : e0 }
+        return false
+    }
+
+    def agents = user_ids(customer.dataSet["c_agents"]?.value)
+    def specialists = user_ids(customer.dataSet["c_specialists"]?.value)
+    def name = ((customer.dataSet["c_name"]?.value ?: "") as String)
+
+    change tk_agents value { agents }
+    change tk_specialists value { specialists }
+    change tk_customer_id value { customer.stringId }
+    change tk_org_match value {
+        (agents || specialists)
+                ? (name + " – " + (agents.size() + specialists.size()) + " ľudí")
+                : (name + " – v registri nemá pridelených ľudí, tiket vidí iba vedúci.")
+    }
+    def log = (tk_worklog.value ?: "") as String
+    def e = java.time.LocalDateTime.now().toString() + "  priradené zákazníkovi: " + name
+    change tk_worklog value { log ? log + "\n" + e : e }
+    return true
+}
+	]]></function>
 	<function scope="process" name="sla_hours"><![CDATA[
 { def priority ->
-    // Lehota odozvy v pracovnych hodinach. Pre prvu fazu je matica tu;
-    // v dalsej faze patri do samostatnej siete sla_policy, aby sa dala
-    // menit bez nasadzovania novej verzie tejto siete.
+    // Standard, ked zakaznik nema dohodnute vlastne hodiny.
     def m = ["A": 2, "B": 4, "C": 8]
     return (m[priority as String] ?: 8) as int
+}
+	]]></function>
+	<function scope="process" name="contract_sla_hours"><![CDATA[
+{ def customerId, def priority ->
+    // Hodiny odozvy zo zmluvy zakaznika. SLA appka bez tohto nema zmysel -
+    // kazdy zakaznik ma dohodnute ine lehoty, nie jednu maticu pre vsetkych.
+    def id = ((customerId ?: "") as String).trim()
+    def p = ((priority ?: "") as String).trim().toUpperCase()
+    if (!id || !(p in ["A", "B", "C"])) return sla_hours(priority)
+    def customer = findCase { it._id.eq(new org.bson.types.ObjectId(id)) }
+    if (!customer) return sla_hours(priority)
+    def agreed = customer.dataSet["c_sla_" + p.toLowerCase()]?.value
+    if (agreed == null) return sla_hours(priority)
+    int hours = (agreed as Number).intValue()
+    return hours > 0 ? hours : sla_hours(priority)
 }
 	]]></function>
 	<function scope="process" name="business_deadline"><![CDATA[
@@ -77,25 +180,48 @@ changeCaseProperty("title").about { "Nová požiadavka" }
     return m[code as String] ?: "Požiadavka"
 }
 	]]></function>
+	<function scope="process" name="wi_type_label"><![CDATA[
+{ def code ->
+    def m = ["analysis": "Analýza", "fix": "Oprava", "test": "Test",
+             "deploy": "Nasadenie", "other": "Iné"]
+    return m[code as String] ?: "Práca"
+}
+	]]></function>
 	<roleRef>
 		<id>anonymous</id>
 		<caseLogic>
 			<create>true</create>
 		</caseLogic>
 	</roleRef>
+	<!--
+		Rola uz sama nedava pravo vidiet tiket. Rola hovori, co clovek smie
+		robit; ci to smie robit na TOMTO tikete, hovori tk_agents /
+		tk_specialists - zoznamy, ktore tiket dostal z registra zakaznika.
+		Priesecnik roly a organizacie sa v Petriflow inak vyjadrit neda:
+		roleRef a userRef sa scitavaju, nie prienikaju, takze rola je zapecena
+		do toho, v ktorom zo dvoch zoznamov clovek u zakaznika je.
+
+		Veduci vidi vsetko - inak by tiket od neznamej organizacie nemal komu
+		patrit a nikto by ho uz nenasiel.
+	-->
 	<roleRef>
 		<id>agent</id>
 		<caseLogic>
 			<create>true</create>
-			<view>true</view>
 		</caseLogic>
 	</roleRef>
-	<roleRef>
-		<id>specialist</id>
+	<userRef>
+		<id>tk_agents</id>
 		<caseLogic>
 			<view>true</view>
 		</caseLogic>
-	</roleRef>
+	</userRef>
+	<userRef>
+		<id>tk_specialists</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</userRef>
 	<roleRef>
 		<id>manager</id>
 		<caseLogic>
@@ -186,6 +312,20 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 	<data type="text">
 		<id>src_title</id>
 		<title>Názov od zákazníka</title>
+		<event type="set">
+			<id>src_title_set</id>
+			<actions phase="post">
+				<action id="42"><![CDATA[
+src_title: f.src_title;
+
+// Bez tohto sa kazdy tiket v zoznamoch vola "Nová požiadavka" az do triaze.
+def t = ((src_title.value ?: "") as String).trim()
+if (t) {
+    changeCaseProperty("title").about { t }
+}
+				]]></action>
+			</actions>
+		</event>
 	</data>
 	<data type="text">
 		<id>src_description</id>
@@ -232,6 +372,57 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 	<data type="text">
 		<id>src_org</id>
 		<title>Organizácia</title>
+		<event type="set">
+			<id>src_org_set</id>
+			<actions phase="post">
+				<action id="41"><![CDATA[
+src_org: f.src_org, tk_org_override: f.tk_org_override, tk_agents: f.tk_agents,
+tk_specialists: f.tk_specialists, tk_org_match: f.tk_org_match,
+tk_customer_id: f.tk_customer_id, tk_worklog: f.tk_worklog;
+
+// Prichadza z eformu cez setData, takze prave tu tiket prvykrat vie, komu
+// patri - a az tu dostane niekto ine ako veduci pravo ho vidiet.
+apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
+        tk_specialists, tk_org_match, tk_customer_id, tk_worklog)
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="userList">
+		<id>tk_agents</id>
+		<title>Operátori zákazníka</title>
+		<desc>Skopírované z registra zákazníkov. Iba títo ľudia (a vedúci) tento tiket vidia.</desc>
+	</data>
+	<data type="userList">
+		<id>tk_specialists</id>
+		<title>Riešitelia zákazníka</title>
+		<desc>Skopírované z registra zákazníkov.</desc>
+	</data>
+	<data type="text">
+		<id>tk_org_match</id>
+		<title>Priradenie k zákazníkovi</title>
+	</data>
+	<data type="text">
+		<id>tk_customer_id</id>
+		<title>ID zákazníka</title>
+	</data>
+	<data type="text">
+		<id>tk_org_override</id>
+		<title>Opraviť organizáciu</title>
+		<desc>Keď zákazník napíše názov inak, než je v registri. Po zápise sa tiket priradí znova.</desc>
+		<event type="set">
+			<id>tk_org_override_set</id>
+			<actions phase="post">
+				<action id="40"><![CDATA[
+tk_org_override: f.tk_org_override, src_org: f.src_org, tk_agents: f.tk_agents,
+tk_specialists: f.tk_specialists, tk_org_match: f.tk_org_match,
+tk_customer_id: f.tk_customer_id, tk_worklog: f.tk_worklog;
+
+apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
+        tk_specialists, tk_org_match, tk_customer_id, tk_worklog)
+				]]></action>
+			</actions>
+		</event>
 	</data>
 	<data type="boolean">
 		<id>src_affects_more</id>
@@ -444,6 +635,158 @@ make src_org, hidden on transitions when { return !showIt }
 			</actions>
 		</event>
 	</data>
+	<data type="i18n">
+		<id>div_plan</id>
+		<title/>
+		<init>Pracovné úlohy</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="text" immediate="true">
+		<id>new_wi_title</id>
+		<title>Čo treba urobiť</title>
+		<desc>Toto uvidí riešiteľ v zozname svojich úloh.</desc>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>new_wi_type</id>
+		<title>Druh práce</title>
+		<init>analysis</init>
+		<options>
+			<option key="analysis">Analýza</option>
+			<option key="fix">Oprava</option>
+			<option key="test">Test</option>
+			<option key="deploy">Nasadenie</option>
+			<option key="other">Iné</option>
+		</options>
+	</data>
+	<data type="userList">
+		<id>new_wi_assignee</id>
+		<title>Komu</title>
+		<desc>Úlohu uvidí a bude na nej pracovať iba táto osoba.</desc>
+	</data>
+	<data type="number" immediate="true">
+		<id>new_wi_estimate</id>
+		<title>Odhad v hodinách</title>
+	</data>
+	<data type="button">
+		<id>btn_add_wi</id>
+		<title/>
+		<placeholder>Zadať úlohu</placeholder>
+		<component>
+			<name>raised</name>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>btn_add_wi_set</id>
+			<actions phase="post">
+				<action id="8"><![CDATA[
+new_wi_title: f.new_wi_title, new_wi_type: f.new_wi_type,
+new_wi_assignee: f.new_wi_assignee, new_wi_estimate: f.new_wi_estimate,
+wi_message: f.wi_message, wi_list: f.wi_list, wi_open: f.wi_open, wi_refs: f.wi_refs,
+src_org: f.src_org, src_title: f.src_title, tk_worklog: f.tk_worklog;
+
+def title = ((new_wi_title.value ?: "") as String).trim()
+
+// Hodnota userList polia je UserListFieldValue s userValues, nie zoznam id.
+// setData aj `change ... value` ale chcu zoznam id - Pattern 20 pouziva
+// [loggedUser().id] - takze si ich vytiahneme.
+def raw = new_wi_assignee.value
+def assigneeIds = []
+if (raw != null) {
+    def users = raw.hasProperty("userValues") ? raw.userValues : (raw instanceof List ? raw : null)
+    if (users) {
+        // Pozor: `u?._id` na UserFieldValue vyhodi MissingPropertyException -
+        // `?.` chrani pred null, nie pred chybajucou property.
+        assigneeIds = users.collect { u ->
+            if (u == null) return null
+            if (u instanceof String) return u
+            if (u instanceof Map) return (u["_id"] ?: u["id"])
+            return u.hasProperty("id") ? u.id : null
+        }.findAll { it != null }.collect { it as String }
+    }
+}
+
+if (!title) {
+    change wi_message value { "Napíšte, čo treba urobiť." }
+} else if (!assigneeIds) {
+    change wi_message value { "Vyberte, komu úlohu zadávate." }
+} else {
+    def child = createCase(net_prefix(useCase) + "sd_work_item")
+    def childTask = findTask { it.transitionId.eq("t_define").and(it.caseId.eq(child.stringId)) }
+
+    // Poradie nie je kozmetika: setData spusta set eventy postupne, takze
+    // kontext tiketu musi byt zapisany skor, nez wi_title prepise nazov casu,
+    // a wi_assignee_id (ktore naplni userList) az uplne nakoniec.
+    setData("t_define", child, [
+            "wi_ticket_id"   : ["value": useCase.stringId, "type": "text"],
+            "wi_ticket_no"   : ["value": (useCase.visualId ?: useCase.stringId), "type": "text"],
+            "wi_ticket_title": ["value": (src_title.value ?: ""), "type": "text"],
+            "wi_org"         : ["value": (src_org.value ?: ""), "type": "text"],
+            "wi_type"        : ["value": new_wi_type.value, "type": "enumeration_map"],
+            "wi_estimate"    : ["value": new_wi_estimate.value, "type": "number"],
+            "wi_title"       : ["value": title, "type": "text"],
+            "wi_assignee_id" : ["value": assigneeIds[0], "type": "text"]
+    ])
+
+
+    def refs = (wi_refs.value ?: []) as List
+    if (childTask) {
+        refs = refs + [childTask.stringId]
+        change wi_refs value { refs }
+    }
+
+    int open = ((wi_open.value ?: 0) as Number).intValue() + 1
+    change wi_open value { open }
+
+    def list = (wi_list.value ?: "") as String
+    def line = "• " + title + "  (" + wi_type_label(new_wi_type.value) + ")"
+    change wi_list value { list ? list + "\n" + line : line }
+
+    def log = (tk_worklog.value ?: "") as String
+    def entry = java.time.LocalDateTime.now().toString() + "  zadaná úloha: " + title
+    change tk_worklog value { log ? log + "\n" + entry : entry }
+
+    change new_wi_title value { "" }
+    change new_wi_estimate value { null }
+    change wi_message value { "Úloha zadaná: " + title }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>wi_message</id>
+		<title/>
+	</data>
+	<data type="text">
+		<id>wi_list</id>
+		<title>Zadané úlohy</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>wi_report</id>
+		<title>Hlásenia od riešiteľov</title>
+		<desc>Píše to sem samotná úloha, keď ju riešiteľ dokončí alebo zruší. Ručne to netreba upravovať.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="number">
+		<id>wi_open</id>
+		<title>Otvorených úloh</title>
+		<init>0</init>
+	</data>
+	<data type="taskRef">
+		<id>wi_refs</id>
+		<title>Detail úloh</title>
+		<desc>Formuláre zadaných úloh, editovateľné priamo tu.</desc>
+	</data>
 	<transition>
 		<id>t_detail</id>
 		<x>112</x>
@@ -452,23 +795,23 @@ make src_org, hidden on transitions when { return !showIt }
 		<icon>fact_check</icon>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
-			<id>agent</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<roleRef>
-			<id>specialist</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<roleRef>
 			<id>manager</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
 		</roleRef>
+		<userRef>
+			<id>tk_agents</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<userRef>
+			<id>tk_specialists</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
 		<dataGroup>
 			<id>g_detail_sla</id>
 			<cols>6</cols>
@@ -813,17 +1156,17 @@ make src_org, hidden on transitions when { return !showIt }
 		<icon>rule</icon>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
-			<id>agent</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<roleRef>
 			<id>manager</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
 		</roleRef>
+		<userRef>
+			<id>tk_agents</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
 		<dataGroup>
 			<id>g_triage</id>
 			<cols>6</cols>
@@ -991,6 +1334,62 @@ make src_org, hidden on transitions when { return !showIt }
 					<appearance>outline</appearance>
 				</layout>
 			</dataRef>
+			<dataRef>
+				<id>tk_org_match</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>12</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_org_override</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>13</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_agents</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>14</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_specialists</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>14</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
 		</dataGroup>
 		<event type="finish">
 			<id>t_triage_finish</id>
@@ -1001,11 +1400,11 @@ tk_priority_changed: f.tk_priority_changed, tk_state: f.tk_state,
 src_title: f.src_title, src_email: f.src_email, src_name: f.src_name,
 sla_created_at: f.sla_created_at, sla_accepted_at: f.sla_accepted_at,
 sla_response_due: f.sla_response_due, sla_ok: f.sla_ok, sla_note: f.sla_note,
-tk_worklog: f.tk_worklog;
+tk_customer_id: f.tk_customer_id, tk_worklog: f.tk_worklog;
 
 def now = java.time.LocalDateTime.now()
 def created = sla_created_at.value ?: now
-def due = business_deadline(created, sla_hours(tk_priority.value))
+def due = business_deadline(created, contract_sla_hours(tk_customer_id.value, tk_priority.value))
 
 change sla_accepted_at value { now }
 change sla_response_due value { due }
@@ -1064,14 +1463,20 @@ if (mail) {
 		<label>Zaznamenať postup</label>
 		<icon>build</icon>
 		<assignPolicy>auto</assignPolicy>
-		<roleRef>
-			<id>agent</id>
+		<userRef>
+			<id>tk_agents</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
-		</roleRef>
+		</userRef>
+		<userRef>
+			<id>tk_specialists</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
 		<roleRef>
-			<id>specialist</id>
+			<id>manager</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
@@ -1160,14 +1565,20 @@ change tk_note value { "" }
 		<label>Vyžiadať doplnenie</label>
 		<icon>hourglass_empty</icon>
 		<assignPolicy>auto</assignPolicy>
-		<roleRef>
-			<id>agent</id>
+		<userRef>
+			<id>tk_agents</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
-		</roleRef>
+		</userRef>
+		<userRef>
+			<id>tk_specialists</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
 		<roleRef>
-			<id>specialist</id>
+			<id>manager</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
@@ -1263,14 +1674,20 @@ if (mail) {
 		<label>Vyriešiť</label>
 		<icon>task_alt</icon>
 		<assignPolicy>auto</assignPolicy>
-		<roleRef>
-			<id>agent</id>
+		<userRef>
+			<id>tk_agents</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
-		</roleRef>
+		</userRef>
+		<userRef>
+			<id>tk_specialists</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
 		<roleRef>
-			<id>specialist</id>
+			<id>manager</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
@@ -1295,7 +1712,7 @@ if (mail) {
 				</layout>
 			</dataRef>
 			<dataRef>
-				<id>tk_worklog</id>
+				<id>wi_report</id>
 				<logic>
 					<behavior>visible</behavior>
 				</logic>
@@ -1308,15 +1725,39 @@ if (mail) {
 					<appearance>outline</appearance>
 				</layout>
 			</dataRef>
+			<dataRef>
+				<id>tk_worklog</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
 		</dataGroup>
 		<event type="finish">
 			<id>t_resolve_finish</id>
 			<actions phase="post">
 				<action id="7"><![CDATA[
 tk_resolution: f.tk_resolution, tk_state: f.tk_state, tk_worklog: f.tk_worklog,
-sla_note: f.sla_note, src_email: f.src_email, src_title: f.src_title;
+sla_note: f.sla_note, src_email: f.src_email, src_title: f.src_title,
+wi_open: f.wi_open;
 
 def now = java.time.LocalDateTime.now()
+
+// Ticket sa da vyriesit aj s otvorenymi ulohami - token uz sa pohol a
+// finish sa odtialto nezastavi - ale nech to nezostane neviditelne.
+int stillOpen = ((wi_open.value ?: 0) as Number).intValue()
+if (stillOpen > 0) {
+    def warn = now.toString() + "  POZOR: vyriešené, hoci " + stillOpen + " úloh je otvorených."
+    def wlog = (tk_worklog.value ?: "") as String
+    change tk_worklog value { wlog ? wlog + "\n" + warn : warn }
+}
 
 change tk_state value { "resolved" }
 change sla_note value { "Vyriešené " + now.toString() + "." }
@@ -1344,6 +1785,188 @@ if (mail) {
 				]]></action>
 			</actions>
 		</event>
+	</transition>
+	<transition>
+		<id>t_plan</id>
+		<x>496</x>
+		<y>208</y>
+		<label>Zadanie úloh</label>
+		<icon>assignment_ind</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>manager</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<userRef>
+			<id>tk_agents</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_plan</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_plan</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>new_wi_title</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>new_wi_assignee</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>new_wi_type</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>new_wi_estimate</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_add_wi</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_message</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_open</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_list</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>4</y>
+					<rows>2</rows>
+					<cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_report</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_refs</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>9</y>
+					<rows>4</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
 	</transition>
 	<place>
 		<id>p_alive</id>
@@ -1438,6 +2061,13 @@ if (mail) {
 		<type>regular</type>
 		<sourceId>t_resolve</sourceId>
 		<destinationId>p_closed</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_plan</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_plan</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 </document>

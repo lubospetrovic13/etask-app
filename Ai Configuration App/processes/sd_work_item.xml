@@ -1,0 +1,895 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>service_desk/sd_work_item</id>
+	<version>1.0.0</version>
+	<initials>SDW</initials>
+	<title>Pracovná úloha</title>
+	<icon>assignment_ind</icon>
+	<defaultRole>true</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<caseEvents>
+		<event type="create">
+			<id>sdw_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+wi_state: f.wi_state, wi_state_label: f.wi_state_label, wi_done: f.wi_done,
+wi_created_by: f.wi_created_by;
+
+change wi_state value { "new" }
+change wi_state_label value { "Nová" }
+change wi_done value { false }
+change wi_created_by value { loggedUser().email }
+changeCaseProperty("title").about { "Nová úloha" }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="state_label"><![CDATA[
+{ def code ->
+    def m = ["new": "Nová", "progress": "Prebieha", "done": "Hotová", "cancelled": "Zrušená"]
+    return m[code as String] ?: (code as String)
+}
+	]]></function>
+	<function scope="process" name="type_label"><![CDATA[
+{ def code ->
+    def m = ["analysis": "Analýza", "fix": "Oprava", "test": "Test",
+             "deploy" : "Nasadenie", "other": "Iné"]
+    return m[code as String] ?: (code as String)
+}
+	]]></function>
+	<function scope="process" name="report_to_ticket"><![CDATA[
+{ def ticketId, def kind, def wiTitle, def spent, def result ->
+    // Uzavretie kruhu: bez toho by tiket navzdy videl wi_open > 0 a t_resolve
+    // by odmietal uzavriet poziadavku, aj keby bola vsetka praca hotova.
+    def id = ((ticketId ?: "") as String).trim()
+    if (!id) return false
+    // Nie `findCase { it.stringId.eq(id) }` - Case nema pole stringId, mongo to
+    // nezmapuje a query vrati null. Task caseId ale existuje, a setData aj tak
+    // potrebuje task tiketu.
+    def planTask = findTask { it.caseId.eq(id).and(it.transitionId.eq("t_plan")) }
+    if (!planTask) return false
+    def ticket = findCase { it._id.eq(new org.bson.types.ObjectId(id)) }
+    if (!ticket) return false
+
+    int open = ((ticket.dataSet["wi_open"]?.value ?: 0) as Number).intValue() - 1
+    if (open < 0) open = 0
+
+    def label = ((wiTitle ?: "") as String).trim()
+    def line
+    if (kind == "done") {
+        def hours = ((spent ?: 0) as Number)
+        line = "✓ " + label + "  (" + hours + " h)"
+        def note = ((result ?: "") as String).trim()
+        if (note) line = line + "\n    " + note
+    } else {
+        line = "✕ " + label + "  (zrušená)"
+    }
+
+    def prev = ((ticket.dataSet["wi_report"]?.value ?: "") as String)
+    setData(planTask, [
+            "wi_open"  : ["value": open, "type": "number"],
+            "wi_report": ["value": (prev ? prev + "\n" + line : line), "type": "text"]
+    ])
+    return true
+}
+	]]></function>
+	<roleRef>
+		<id>agent</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>manager</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<!--
+		Zamerne tu NIE JE roleRef specialist s view. Rola specialist by dala
+		vidiet vsetky ulohy vsetkym riesitelom; userRef nizsie ich obmedzi na
+		tie, ktore ma clovek priradene. Rola je pristup k procesu, userRef je
+		pristup k instancii - to je ten rozdiel, ktory robi "moje ulohy"
+		mojimi.
+	-->
+	<userRef>
+		<id>wi_assignee</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</userRef>
+	<role>
+		<id>agent</id>
+		<title>Operátor podpory</title>
+	</role>
+	<role>
+		<id>specialist</id>
+		<title>Riešiteľ</title>
+	</role>
+	<role>
+		<id>manager</id>
+		<title>Vedúci podpory</title>
+	</role>
+	<data type="i18n">
+		<id>div_context</id>
+		<title/>
+		<init>Z ktorej požiadavky</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="i18n">
+		<id>div_assign</id>
+		<title/>
+		<init>Zadanie</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="i18n">
+		<id>div_progress</id>
+		<title/>
+		<init>Priebeh</init>
+		<component>
+			<name>divider</name>
+			<properties>
+				<property key="fontSize">20</property>
+			</properties>
+		</component>
+	</data>
+	<data type="text">
+		<id>wi_ticket_id</id>
+		<title>ID ticketu</title>
+	</data>
+	<data type="text">
+		<id>wi_ticket_no</id>
+		<title>Číslo požiadavky</title>
+	</data>
+	<data type="text">
+		<id>wi_ticket_title</id>
+		<title>Požiadavka</title>
+	</data>
+	<data type="text">
+		<id>wi_org</id>
+		<title>Organizácia</title>
+	</data>
+	<data type="text">
+		<id>wi_title</id>
+		<title>Čo treba urobiť</title>
+		<desc>Jedna veta. Toto vidí riešiteľ v zozname svojich úloh.</desc>
+		<event type="set">
+			<id>wi_title_set</id>
+			<actions phase="post">
+				<action id="30"><![CDATA[
+wi_title: f.wi_title, wi_ticket_no: f.wi_ticket_no;
+
+// Nazov casu, aby bola uloha citatelna v zoznamoch a v "moje ulohy".
+def t = ((wi_title.value ?: "") as String).trim()
+if (t) {
+    def no = ((wi_ticket_no.value ?: "") as String).trim()
+    changeCaseProperty("title").about { no ? no + " · " + t : t }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>wi_type</id>
+		<title>Druh práce</title>
+		<init>analysis</init>
+		<options>
+			<option key="analysis">Analýza</option>
+			<option key="fix">Oprava</option>
+			<option key="test">Test</option>
+			<option key="deploy">Nasadenie</option>
+			<option key="other">Iné</option>
+		</options>
+	</data>
+	<data type="text" immediate="true">
+		<id>wi_assignee_id</id>
+		<title>ID riešiteľa</title>
+		<desc>Technické pole. Ticket doň zapíše id človeka a úloha si z neho naplní pole Riešiteľ.</desc>
+		<event type="set">
+			<id>wi_assignee_id_set</id>
+			<actions phase="post">
+				<action id="5"><![CDATA[
+wi_assignee_id: f.wi_assignee_id, wi_assignee: f.wi_assignee;
+
+// setData z ineho casu ocakava zoznam id, ale hodnota userList pola je
+// UserListFieldValue - takze ticket posle id ako text a userList si naplni
+// tento event cez `change ... value { [id] }` (Pattern 20) uz vo vlastnom case.
+def id = ((wi_assignee_id.value ?: "") as String).trim()
+if (id) {
+    change wi_assignee value { [id] }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="userList">
+		<id>wi_assignee</id>
+		<title>Riešiteľ</title>
+		<desc>Kto úlohu vykoná. Iba táto osoba ju uvidí a môže na nej pracovať.</desc>
+	</data>
+	<data type="number">
+		<id>wi_estimate</id>
+		<title>Odhad v hodinách</title>
+		<desc>Interné plánovanie. So SLA to nemá nič.</desc>
+	</data>
+	<data type="date">
+		<id>wi_due</id>
+		<title>Termín</title>
+		<desc>Interný termín úlohy, nezávislý od SLA ticketu.</desc>
+	</data>
+	<data type="text">
+		<id>wi_note</id>
+		<title>Zadanie podrobne</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>wi_state</id>
+		<title>Kód stavu</title>
+	</data>
+	<data type="text">
+		<id>wi_state_label</id>
+		<title>Stav</title>
+	</data>
+	<data type="boolean">
+		<id>wi_done</id>
+		<title>Hotová</title>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="variant">chip</property>
+				<property key="chipTrue">success</property>
+				<property key="chipFalse">warning</property>
+			</properties>
+		</component>
+		<init>false</init>
+	</data>
+	<data type="dateTime">
+		<id>wi_started_at</id>
+		<title>Začaté</title>
+	</data>
+	<data type="dateTime">
+		<id>wi_finished_at</id>
+		<title>Dokončené</title>
+	</data>
+	<data type="number">
+		<id>wi_spent</id>
+		<title>Odpracované hodiny</title>
+		<desc>Vyplní riešiteľ pri dokončení.</desc>
+	</data>
+	<data type="text">
+		<id>wi_result</id>
+		<title>Čo sa urobilo</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>wi_created_by</id>
+		<title>Zadal</title>
+	</data>
+	<data type="button">
+		<id>btn_start</id>
+		<title/>
+		<placeholder>Začať pracovať</placeholder>
+		<component>
+			<name>raised</name>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>btn_start_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+wi_state: f.wi_state, wi_state_label: f.wi_state_label, wi_started_at: f.wi_started_at,
+btn_start: f.btn_start, btn_done: f.btn_done;
+
+change wi_state value { "progress" }
+change wi_state_label value { state_label("progress") }
+change wi_started_at value { new Date() }
+make btn_start, hidden on transitions when { return true }
+make btn_done, editable on transitions when { return true }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="button">
+		<id>btn_done</id>
+		<title/>
+		<placeholder>Označiť ako hotové</placeholder>
+		<component>
+			<name>raised</name>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>btn_done_set</id>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+wi_state: f.wi_state, wi_state_label: f.wi_state_label, wi_done: f.wi_done,
+wi_finished_at: f.wi_finished_at, wi_result: f.wi_result, wi_message: f.wi_message,
+wi_ticket_id: f.wi_ticket_id, wi_title: f.wi_title, wi_spent: f.wi_spent,
+btn_start: f.btn_start, btn_done: f.btn_done, btn_cancel: f.btn_cancel;
+
+// Posledny vstup pred tlacidlom je textarea, takze hodnotu citame az tu a
+// nie v akcii tlacidla - inak by button videl prazdno (blur a klik v jednej
+// poziadavke, event tlacidla sa spracuje skor).
+def result = ((wi_result.value ?: "") as String).trim()
+if (result.length() < 3) {
+    change wi_message value { "Napíšte prosím krátko, čo sa urobilo." }
+} else {
+    change wi_state value { "done" }
+    change wi_state_label value { state_label("done") }
+    change wi_done value { true }
+    change wi_finished_at value { new Date() }
+    change wi_message value { "" }
+    make btn_done, hidden on transitions when { return true }
+    make btn_cancel, hidden on transitions when { return true }
+    report_to_ticket(wi_ticket_id.value, "done", wi_title.value, wi_spent.value, result)
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="button">
+		<id>btn_cancel</id>
+		<title/>
+		<placeholder>Zrušiť úlohu</placeholder>
+		<component>
+			<name>stroked</name>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>btn_cancel_set</id>
+			<actions phase="post">
+				<action id="4"><![CDATA[
+wi_state: f.wi_state, wi_state_label: f.wi_state_label, wi_finished_at: f.wi_finished_at,
+wi_ticket_id: f.wi_ticket_id, wi_title: f.wi_title,
+btn_start: f.btn_start, btn_done: f.btn_done, btn_cancel: f.btn_cancel;
+
+change wi_state value { "cancelled" }
+change wi_state_label value { state_label("cancelled") }
+change wi_finished_at value { new Date() }
+make btn_start, hidden on transitions when { return true }
+make btn_done, hidden on transitions when { return true }
+make btn_cancel, hidden on transitions when { return true }
+report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>wi_message</id>
+		<title/>
+	</data>
+	<transition>
+		<id>t_define</id>
+		<x>112</x>
+		<y>80</y>
+		<label>Zadanie úlohy</label>
+		<icon>edit_note</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>agent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>manager</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_define</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_context</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>wi_ticket_no</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_ticket_title</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_org</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_assign</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>wi_title</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_assignee</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_type</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_estimate</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_due</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_note</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_state_label</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>8</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_done</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>8</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_created_by</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>8</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_assignee_id</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>9</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_ticket_id</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>9</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<transition>
+		<id>t_work</id>
+		<x>304</x>
+		<y>80</y>
+		<label>Moja úloha</label>
+		<icon>build</icon>
+		<assignPolicy>auto</assignPolicy>
+		<!--
+			Iba priradeny clovek. Toto je to, co robi zoznam "moje ulohy"
+			mojim - rola specialist by dala pristup ku vsetkym.
+		-->
+		<userRef>
+			<id>wi_assignee</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_work</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_context</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>wi_title</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_ticket_no</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_type</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_due</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_note</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_progress</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>wi_done</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_state_label</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_spent</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_result</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>7</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>wi_message</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>9</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_start</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>10</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_done</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>10</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_cancel</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>10</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Živá</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_define</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_define</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_work</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_work</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

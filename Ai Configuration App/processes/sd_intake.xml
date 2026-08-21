@@ -369,9 +369,10 @@ if (s == 4) {
             ((req_email.value ?: "") as String) +
             ". Operátor podpory ju prevezme a ozve sa vám."
         }
-        async.run {
-            setData("t_triage", ticket, payload)
-        }
+        // Synchronne a v tom istom try: `async.run` vynimku spolkne, takze
+        // zle prenesene pole by sa prejavilo ako prazdny tiket bez akejkolvek
+        // stopy. Takto to zakaznik uvidi v chybovej sprave a operator v logu.
+        setData("t_triage", ticket, payload)
 
         def t = findTask { it.transitionId.eq("t_s_receipt").and(it.caseId.eq(useCase.stringId)) }
         if (t) {

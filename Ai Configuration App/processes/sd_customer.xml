@@ -1,0 +1,546 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>service_desk/sd_customer</id>
+	<version>1.0.0</version>
+	<initials>SDC</initials>
+	<title>Zákazník</title>
+	<icon>domains</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Register zakaznikov. Je to nositel dvoch veci, ktore SLA appka bez
+		zakaznika nema kde drzat:
+
+		  1. kto danu organizaciu obsluhuje - c_agents a c_specialists. Tiket si
+		     tieto zoznamy prekopiruje do tk_agents / tk_specialists a prave ne
+		     mu daju viditelnost. Rola urcuje, v ktorom zozname clovek je
+		     (co smie robit), zakaznik urcuje, ktory zoznam to je (ciu robotu
+		     smie vidiet). Tym su rola aj organizacia v jednom modeli.
+
+		  2. SLA per zakaznik - c_sla_a/b/c. Bez toho by kazdy zakaznik dostal
+		     tie iste hodiny odozvy, co je pri SLA zmluvach nezmysel.
+
+		Zaznam sa paruje s tiketom podla nazvu organizacie z eformu (src_org),
+		takze c_name musi sedet s tym, co zakaznik do formulara napise; c_alias
+		je na varianty toho isteho nazvu.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>customer_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+c_active: f.c_active;
+
+change c_active value { true }
+changeCaseProperty("title").about { "Nový zákazník" }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<roleRef>
+		<id>manager</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>agent</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>specialist</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>agent</id>
+		<title>Operátor podpory</title>
+	</role>
+	<role>
+		<id>specialist</id>
+		<title>Riešiteľ</title>
+	</role>
+	<role>
+		<id>manager</id>
+		<title>Vedúci podpory</title>
+	</role>
+	<data type="i18n">
+		<id>div_identity</id>
+		<title/>
+		<init>Organizácia</init>
+	</data>
+	<data type="i18n">
+		<id>div_team</id>
+		<title/>
+		<init>Kto ju obsluhuje</init>
+	</data>
+	<data type="i18n">
+		<id>div_sla</id>
+		<title/>
+		<init>Dohodnuté hodiny odozvy</init>
+	</data>
+	<data type="text">
+		<id>c_name</id>
+		<title>Názov organizácie</title>
+		<desc>Musí sedieť s tým, čo zákazník napíše do formulára. Podľa toho sa tiket priradí.</desc>
+		<event type="set">
+			<id>c_name_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+c_name: f.c_name;
+
+def n = ((c_name.value ?: "") as String).trim()
+if (n) {
+    changeCaseProperty("title").about { n }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>c_alias</id>
+		<title>Ďalšie názvy</title>
+		<desc>Varianty toho istého názvu, každý na vlastný riadok. Ľudia píšu "Netgrif", "Netgrif s.r.o." aj "netgrif".</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>c_code</id>
+		<title>Kód</title>
+		<desc>Krátky kód pre výkazy, napríklad NGF.</desc>
+	</data>
+	<data type="text">
+		<id>c_contact</id>
+		<title>Kontakt u zákazníka</title>
+	</data>
+	<data type="boolean">
+		<id>c_active</id>
+		<title>Aktívna zmluva</title>
+		<desc>Neaktívny zákazník sa na tikety neparuje.</desc>
+		<init>true</init>
+	</data>
+	<data type="userList">
+		<id>c_agents</id>
+		<title>Operátori pre tohto zákazníka</title>
+		<desc>Preberajú a triedia jeho tikety. Do zoznamu patria ľudia s rolou Operátor podpory.</desc>
+	</data>
+	<data type="userList">
+		<id>c_specialists</id>
+		<title>Riešitelia pre tohto zákazníka</title>
+		<desc>Riešia jeho tikety. Do zoznamu patria ľudia s rolou Riešiteľ.</desc>
+	</data>
+	<data type="number">
+		<id>c_sla_a</id>
+		<title>Priorita A – hodiny</title>
+		<desc>Nechajte prázdne, ak platí štandard z procesu tiketu.</desc>
+	</data>
+	<data type="number">
+		<id>c_sla_b</id>
+		<title>Priorita B – hodiny</title>
+	</data>
+	<data type="number">
+		<id>c_sla_c</id>
+		<title>Priorita C – hodiny</title>
+	</data>
+	<data type="text">
+		<id>c_note</id>
+		<title>Poznámka k zmluve</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<transition>
+		<id>t_customer</id>
+		<x>112</x>
+		<y>80</y>
+		<label>Zákazník</label>
+		<icon>domain</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>manager</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_identity</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_identity</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>c_name</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_code</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_alias</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>2</rows>
+					<cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_contact</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_active</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_team</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>c_agents</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_specialists</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>5</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_sla</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>c_sla_a</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_sla_b</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_sla_c</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_note</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>8</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<transition>
+		<id>t_customer_read</id>
+		<x>304</x>
+		<y>80</y>
+		<label>Zákazník – prehľad</label>
+		<icon>visibility</icon>
+		<assignPolicy>auto</assignPolicy>
+		<!--
+			Operator a riesitel maju vediet, s kym maju u zakaznika hovorit a
+			ake ma dohodnute hodiny, ale nemaju mu prepisovat zmluvu.
+		-->
+		<roleRef>
+			<id>agent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>specialist</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_read</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>c_name</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_code</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_contact</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_active</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_sla_a</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_sla_b</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_sla_c</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>c_note</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Živý</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_customer</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_customer</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_customer_read</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_customer_read</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>
