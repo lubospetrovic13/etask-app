@@ -1,0 +1,69 @@
+# eTask — pravidlá pre AI agenta
+
+Petriflow-first aplikačný stack. **Aplikačná logika patrí do Petriflow sietí, nie
+do Javy a nie do Angularu.** Framework je ~5 500 riadkov, siete ~7 500 — ten
+pomer je zámer.
+
+## Než začneš čokoľvek meniť
+
+Ak sa úloha týka Petriflow sietí, procesov, akcií, oprávnení alebo formulárov,
+**načítaj skill `petriflow`**. Je v `.claude/skills/petriflow/SKILL.md` a obsahuje
+rozhodovací postup, tiché pasce a odkaz na inventár extension pointov.
+
+## Tri vrstvy
+
+```
+1. Petriflow XML          ← default. Stav, prechody, dáta, oprávnenia case-u.
+2. Custom action delegate ← I/O, cudzie API, výpočet nevyjadriteľný v akcii.
+3. Framework/runtime kód  ← len render, HTTP layer, a čo engine neposkytuje.
+```
+
+**Nikdy nezačínaj na vrstve 3.** Prechod nižšie musí byť odôvodnený vetou, ktorá
+povie, ktoré primitívum na vyššej vrstve chýba. Ak ju nedokážeš napísať, problém
+patrí vyššie.
+
+## Pred písaním novej metódy
+
+Otvor `etask-configuration/reference/action-api.md` — generovaný inventár 169
+metód enginu plus vlastných metód projektu, volateľných z akcie menom.
+
+Existujúcu metódu nepíš znova. Delegát je dynamický, takže preklep prejde
+parserom aj importom a spadne až za behu; tento zoznam je jediná obrana. Vznikol
+preto, že bez neho bola postavená horšia verzia už existujúceho extension pointu
+— podrobne v `etask-configuration/docs/AI_STARTER_ANALYSIS.md`, časť 0.
+
+## Overovanie
+
+Po zmene siete, v tomto poradí:
+
+```bash
+cd etask-configuration
+python3 tools/pflint.py processes/                 # 0,3 s
+python3 tools/pfgroovy.py processes/              # 3 s
+tools/pfcheck.sh --log <backend.log> processes/   # ground truth
+```
+
+**Ground truth je bežiaci engine.** Import endpoint pri chybe vracia holé
+`{"status":500}` bez dôvodu — príčina je len v logu servera. Bez `pfcheck` sieť
+nie je overená.
+
+Keď si offline nástroj a engine odporujú, **chyba je v nástroji**. Oprav nástroj
+a spusti `tools/pftest.sh`.
+
+## Čo nerobiť
+
+* Nepridávať Angular komponent na to, čo sa dá vyjadriť v sieti.
+* Nepísať Java servis skôr, než je overené, že delegát to nevie.
+* Nedôverovať schéme z hlavičky siete — runtime sa od nej odlišuje.
+* Nekontrolovať poradie podelementov `<data>` v nástrojoch (tri zdroje pravdy si
+  odporujú, siete porušujú schému a importujú sa).
+* Nespúšťať `pfcheck` na produkciu — importuje novú verziu siete.
+
+## Prostredie
+
+* Java **11** (nie 17, nie 21 — Groovy 3 na JDK 21 padne).
+* `LANG=C.UTF-8` je povinné, inak import procesu s diakritikou v názve zhodí
+  `InvalidPathException`.
+* `certificates/private.der` je gitignored. Bez neho engine nepodpíše anonymnú
+  session a **verejné formuláre vrátia 401** — po čerstvom checkoute ho treba
+  vygenerovať (postup v `etask-configuration/docs/SERVICE_DESK.md`).

@@ -1,0 +1,265 @@
+# Extension pointy volateľné z Petriflow akcie
+
+> **Generované — needituj ručne.** `python3 tools/pfapi.py > reference/action-api.md`
+> Zdroj: `application-engine-6.3.1.jar` + `EtaskActionDelegate.groovy`.
+
+Všetko nižšie sa dá zavolať priamo z `<action>` alebo `<function>` menom,
+bez importov. Delegát je dynamický, takže preklep prejde parserom aj
+importom a spadne až za behu — o to viac sa vyplatí pozrieť sem.
+
+## Pravidlo: najprv tento zoznam, potom nový kód
+
+Metóda, ktorá tu je, sa nemá písať znova. Nie je to štýlová poznámka —
+stálo to hodiny dekompilovania bajtkódu a technický dlh v `UriNodeData`,
+kde sú dnes dve polia pre to isté, lebo som nevedel o existujúcom
+`setUriNodeData(..., roleIds)`.
+
+## Vlastné metódy tohto projektu — pozri sem PRVÉ
+
+`EtaskActionDelegate` dedí engine a pridáva toto. Sú prispôsobené tomuto
+stacku, takže bývajú správnejšie než ekvivalent v enginu.
+
+### `createOrUpdateMenuItem(String id, String uri, String type, String query, String icon, String title, List<String> allowedNets, Map<String, String> roles = [:], Map<String, String> bannedRoles = [:])`
+create or update menu item of specified type
+
+### `updateMenuItemSection(String id, String section = "settings")`
+update menu item property
+
+### `updateMenuItemSection(Case menuItem, String section = "settings")`
+
+### `setUriNodeDataRolesByPaths(String uri, List<String> uriPaths)`
+set roles to uri node based on uriPaths
+
+### `setUriNodeDataRoles(String uri, Map<String, List<String>> netRoles)`
+set roles to uri node
+
+### `setUriNodeDataFilters(String uri, List<String> menuItemIdentifiers)`
+set filters to uri node
+
+### `setUriNodeDataRoles(String uri, List<String> roleIds)`
+set roles to uri node for counters
+
+### `setUriNodeData(String uri, String title, String section, String icon, boolean isSvgIcon = false, boolean isHidden = false, List<String> roleIds = null)`
+set custom uri node data
+
+### `canUserAccessMenuItem(Case menuItem, IUser user)`
+
+### `createNewUser(String name, String surname, String email, String password)`
+
+### `callAIToolByConfig(Map params)`
+Zavolá LLM podľa aktívnej AI konfigurácie a vráti čitateľný report.
+
+> **Pozor na `createOrUpdateMenuItem`.** Existuje dvakrát: tu (7–9 argumentov,
+> funkčná update cesta cez `changeFilter`/`changeMenuItem`) a v enginu
+> (11 argumentov, na update volá neexistujúce `updateFilter` a **padne**).
+> Rozlišujú sa len aritou. Použi tú s 7 argumentmi. Funkčný príklad je
+> v `etask-backend-starter/src/main/resources/petriNets/configuration_tiles.xml`.
+
+## Engine `ActionDelegate`
+
+169 unikátnych metód. Pretaženia sú zlúčené: uvedená je
+**najdlhšia** varianta, počet ostatných je v zátvorke. Kratšie varianty
+majú spravidla defaulty — presnú signatúru si over v jare.
+
+### Case: zakladanie a hladanie
+
+- `createCase(PetriNet, String, String, IUser, Locale)` → `Case`  _(+9 variantov)_
+- `createCaseFilter(Object, String, List<String>, String, String, Object)` → `Case`  _(+4 varianty)_
+- `findCase(Closure<Predicate>)` → `Case`
+- `findCaseElastic(String)` → `Case`
+- `findCases(Closure<Predicate>, Pageable)` → `List<Case>`  _(+1 varianta)_
+- `findCasesElastic(String, Pageable)` → `List<Case>`
+
+### Case: vlastnosti a data
+
+- `change(Field)` → `Object`
+- `changeCaseProperty(String)` → `Object`
+- `changeFieldValidations(Field, Object)` → `void`
+- `changeFieldValue(Field, Object)` → `void`
+- `changeFilter(Case)` → `Object`
+- `changeMenuItem(Case)` → `Object`
+- `changeUser(String, String, Object)` → `Object`  _(+3 varianty)_
+- `changeUserByEmail(String, String, Object)` → `Object`  _(+1 varianta)_
+- `copyBehavior(Field, Transition)` → `Object`
+- `makeDataSetIntoChangedFields(Map<String, Map<String, String>>, Case, Task)` → `Map<String, ChangedField>`
+- `setData(String, Case, Map)` → `SetDataEventOutcome`  _(+3 varianty)_
+- `setDataWithPropagation(String, Case, Map)` → `SetDataEventOutcome`  _(+2 varianty)_
+
+### Task: priradenie a vykonanie
+
+- `assignTask(String, Case, IUser)` → `Task`  _(+4 varianty)_
+- `assignTasks(List<Task>, IUser)` → `void`  _(+1 varianta)_
+- `cancelTask(String, Case, IUser)` → `Task`  _(+4 varianty)_
+- `cancelTasks(List<Task>, IUser)` → `void`  _(+1 varianta)_
+- `execute(String)` → `Object`  _(+1 varianta)_
+- `executeTask(String, Map)` → `void`
+- `executeTasks(Map, String, Closure<Predicate>)` → `void`
+- `findTask(Closure<Predicate>)` → `Task`  _(+1 varianta)_
+- `findTasks(Closure<Predicate>, Pageable)` → `List<Task>`  _(+1 varianta)_
+- `finishTask(String, Case, IUser)` → `void`  _(+4 varianty)_
+- `finishTasks(List<Task>, IUser)` → `void`  _(+1 varianta)_
+- `getTaskId(String, Case)` → `String`  _(+1 varianta)_
+
+### Uzivatelia a role
+
+- `assignRole(String, String, Version, IUser)` → `IUser`  _(+7 variantov)_
+- `deleteUser(String)` → `void`  _(+1 varianta)_
+- `findUserByEmail(String)` → `IUser`
+- `findUserById(String)` → `IUser`
+- `inviteUser(NewUserRequest)` → `MessageResource`  _(+1 varianta)_
+- `loggedUser()` → `IUser`
+- `removeRole(String, String, Version, IUser)` → `IUser`  _(+7 variantov)_
+
+### Filtre a menu
+
+- `createFilter(Object, String, String, List<String>, String, String, Object)` → `Case`  _(+1 varianta)_
+- `createFilterInMenu(String, String, Object, String, String, List<String>, String, Map<String, String>, Map<String, String>, List<String>, String, String)` → `Case`  _(+11 variantov)_
+- `createMenuItem(String, String, String, String, String, List<String>, Map<String, String>, Map<String, String>, Case, List<String>)` → `Case`  _(+17 variantov)_
+- `createOrUpdateCaseMenuItem(String, String, String, String, String, List<String>, Map<String, String>, Map<String, String>, Case, List<String>)` → `Case`  _(+4 varianty)_
+- `createOrUpdateMenuItem(String, String, String, String, String, String, List<String>, Map<String, String>, Map<String, String>, Case, List<String>)` → `Case`  _(+4 varianty)_ ⚠️ **prekryté v projekte**
+- `createOrUpdateTaskMenuItem(String, String, String, String, String, List<String>, Map<String, String>, Map<String, String>, Case, List<String>)` → `Case`  _(+4 varianty)_
+- `createTaskFilter(Object, String, List<String>, String, String, Object)` → `Case`  _(+4 varianty)_
+- `createTaskMenuItem(String, String, String, String, String, List<String>, Map<String, String>, Case, List<String>)` → `Map<String, Case>`  _(+2 varianty)_
+- `deleteFilter(Case)` → `Object`
+- `deleteMenuItem(Case)` → `Object`
+- `exportCases(List<CaseSearchRequest>, File, ExportDataConfig, LoggedUser, int, Locale, Boolean)` → `OutputStream`  _(+8 variantov)_
+- `exportCasesToFile(List<CaseSearchRequest>, String, ExportDataConfig, LoggedUser, int, Locale, Boolean)` → `File`  _(+8 variantov)_
+- `exportFilters(Collection<String>)` → `FileFieldValue`
+- `exportTasks(List<ElasticTaskSearchRequest>, File, ExportDataConfig, LoggedUser, int, Locale, Boolean)` → `OutputStream`  _(+8 variantov)_
+- `exportTasksToFile(List<ElasticTaskSearchRequest>, String, ExportDataConfig, LoggedUser, int, Locale, Boolean)` → `File`  _(+7 variantov)_
+- `findAllFilters()` → `List<Case>`
+- `findDefaultFilters()` → `List<Case>`
+- `findFilter(String)` → `Case`
+- `findFilters(String)` → `List<Case>`
+- `findMenuItem(String, String, String)` → `Case`  _(+2 varianty)_
+- `findMenuItemInGroup(String, String, Case)` → `Case`
+- `getFilterFromMenuItem(Case)` → `Case`
+- `importFilters()` → `List<String>`
+
+### URI uzly (bocne menu)
+
+- `createUri(String, UriContentType)` → `Object`
+- `getUri(String)` → `Object`
+- `moveUri(String, String)` → `Object`
+
+### Subory a dokumenty
+
+- `generate(String, Closure)` → `Object`
+- `generatePDF(Transition, FileField, Case, Case, Transition, String, List<String>, Locale, ZoneId, Integer, Integer)` → `void`  _(+20 variantov)_
+- `generatePdf(Transition, FileField, Case, Case, Transition, String, List<String>, Locale, ZoneId, Integer, Integer)` → `void`  _(+25 variantov)_
+- `generatePdfWithLocale(String, String, Locale, Case, Case)` → `void`  _(+2 varianty)_
+- `generatePdfWithTemplate(String, String, String, Case, Case)` → `void`  _(+2 varianty)_
+- `generatePdfWithZoneId(String, String, ZoneId, Case, Case)` → `void`  _(+3 varianty)_
+- `saveChangedAllowedNets(CaseField)` → `Object`
+- `saveChangedChoices(ChoiceField)` → `Object`
+- `saveChangedOptions(MapOptionsField)` → `Object`
+- `saveChangedValidation(Field)` → `Object`
+- `saveChangedValue(Field)` → `Object`
+- `saveFieldBehavior(Field, Transition, Set<FieldBehavior>)` → `Object`
+- `saveFileToField(Case, String, String, String, String)` → `void`  _(+1 varianta)_
+
+### Mail a notifikacie
+
+- `sendEmail(List<String>, String, String, Map<String, File>)` → `void`  _(+1 varianta)_
+- `sendMail(MailDraft)` → `void`
+
+### Validacie
+
+- `dynamicValidation(String, I18nString)` → `DynamicValidation`
+- `validation(String, I18nString)` → `Validation`
+
+### Cache
+
+- `cache(String, Object)` → `Object`  _(+1 varianta)_
+- `cacheFree(String)` → `Object`
+
+### Ostatne
+
+- `get(String)` → `Object`
+- `getALWAYS_GENERATE()` → `String`
+- `getAction()` → `Action`
+- `getActionsRunner()` → `FieldActionsRunner`
+- `getAlways()` → `Object`
+- `getAsync()` → `AsyncRunner`
+- `getByCity()` → `Object`
+- `getByCode()` → `Object`
+- `getByIco()` → `Object`
+- `getClose()` → `Object`
+- `getConfigurableMenuService()` → `IConfigurableMenuService`
+- `getData(String, Case)` → `Map<String, Field>`  _(+3 varianty)_
+- `getEditable()` → `Object`
+- `getExportConfiguration()` → `ExportConfiguration`
+- `getExportService()` → `IExportService`
+- `getFileFieldStream(Case, Task, FileField, boolean)` → `FileFieldInputStream`  _(+1 varianta)_
+- `getForbidden()` → `Object`
+- `getHidden()` → `Object`
+- `getHistoryService()` → `IHistoryService`
+- `getImpersonationService()` → `IImpersonationService`
+- `getInit()` → `Object`
+- `getInitValueExpressionEvaluator()` → `IInitValueExpressionEvaluator`
+- `getInitValueOfField()` → `Object`
+- `getInitial()` → `Object`
+- `getLog()` → `Logger`
+- `getMap()` → `Object`
+- `getMenuImportExportService()` → `IMenuImportExportService`
+- `getONCE_GENERATE()` → `String`
+- `getOnce()` → `Object`
+- `getOptional()` → `Object`
+- `getOutcomes()` → `List<EventOutcome>`
+- `getPdfGenerator()` → `IPdfGenerator`
+- `getPublicViewProperties()` → `PublicViewProperties`
+- `getRegistrationService()` → `IRegistrationService`
+- `getRequired()` → `Object`
+- `getScheduler()` → `Scheduler`
+- `getTRANSITIONS()` → `String`
+- `getTask()` → `Optional<Task>`
+- `getTransitions()` → `Object`
+- `getUNCHANGED_VALUE()` → `String`
+- `getUnchanged()` → `Object`
+- `getUseCase()` → `Case`
+- `getVisible()` → `Object`
+- `i18n(String, Map<String, String>)` → `I18nString`
+- `init(Action, Case, Optional<Task>, FieldActionsRunner)` → `Object`  _(+1 varianta)_
+- `initFieldsMap(Map<String, String>)` → `Object`
+- `initTransitionsMap(Map<String, String>)` → `Object`
+- `make(List<Field>, Closure)` → `Object`  _(+1 varianta)_
+- `makeUrl(String, String)` → `String`  _(+1 varianta)_
+- `orsr(Closure, String)` → `Object`
+- `psc(Closure, String)` → `Object`
+- `searchCases(Closure<Predicate>)` → `List<String>`
+- `set(String, Object)` → `void`
+- `setAction(Action)` → `void`
+- `setActionsRunner(FieldActionsRunner)` → `void`
+- `setAlways(Object)` → `void`
+- `setAsync(AsyncRunner)` → `void`
+- `setByCity(Object)` → `void`
+- `setByCode(Object)` → `void`
+- `setByIco(Object)` → `void`
+- `setClose(Object)` → `void`
+- `setConfigurableMenuService(IConfigurableMenuService)` → `void`
+- `setEditable(Object)` → `void`
+- `setExportConfiguration(ExportConfiguration)` → `void`
+- `setExportService(IExportService)` → `void`
+- `setForbidden(Object)` → `void`
+- `setHidden(Object)` → `void`
+- `setHistoryService(IHistoryService)` → `void`
+- `setImpersonationService(IImpersonationService)` → `void`
+- `setInitValueExpressionEvaluator(IInitValueExpressionEvaluator)` → `void`
+- `setInitValueOfField(Object)` → `void`
+- `setInitial(Object)` → `void`
+- `setMap(Object)` → `void`
+- `setMenuImportExportService(IMenuImportExportService)` → `void`
+- `setOnce(Object)` → `void`
+- `setOptional(Object)` → `void`
+- `setOutcomes(List<EventOutcome>)` → `void`
+- `setPdfGenerator(IPdfGenerator)` → `void`
+- `setPublicViewProperties(PublicViewProperties)` → `void`
+- `setRegistrationService(IRegistrationService)` → `void`
+- `setRequired(Object)` → `void`
+- `setScheduler(Scheduler)` → `void`
+- `setTask(Optional<Task>)` → `void`
+- `setTransitions(Object)` → `void`
+- `setUnchanged(Object)` → `void`
+- `setUseCase(Case)` → `void`
+- `setVisible(Object)` → `void`
+

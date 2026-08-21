@@ -54,6 +54,15 @@ else
   bad "pfgroovy oznacil akcie, ktore engine skompiluje - falosny pozitiv"
 fi
 
+# pfapi: inventar sa nesmie rozist s enginom. Neaktualny inventar je presne ta
+# chyba, kvoli ktorej cely tento subor existuje - agent siahne po neexistujucej
+# metode, alebo si napise vlastnu verziu tej, ktora tam uz je.
+if python3 tools/pfapi.py --check >/dev/null 2>&1; then
+  ok "pfapi inventar je aktualny"
+else
+  bad "reference/action-api.md je neaktualny - spusti: python3 tools/pfapi.py > reference/action-api.md"
+fi
+
 if [ ${#LOG_ARG[@]} -gt 0 ]; then
   echo "pftest: pfcheck proti beziacemu enginu"
   if tools/pfcheck.sh "${LOG_ARG[@]}" tools/fixtures/ok.xml >/dev/null 2>&1; then

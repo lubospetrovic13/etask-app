@@ -308,19 +308,23 @@ Hotové:
 * `tools/pfgroovy.py` — syntax Groovy, 0 falošných pozitív na 90 akciách
 * `tools/pfcheck.sh` — ground truth import, root cause z logu, kontrola loginu
 * `tools/pftest.sh` + `tools/fixtures/` — regresia nástrojov, 7 testov
+* `tools/pfapi.py` + `reference/action-api.md` — generovaný inventár extension pointov
+* `.claude/skills/petriflow/SKILL.md` + `CLAUDE.md` — instruction layer
 * `tools/README-petriflow-tools.md` — kedy ktorý a prečo tri
 * `reference/petriflow.schema.v1.1.0.xsd` — oficiálna schéma offline
 * oprava `wi_result` v `sd_work_item.xml`
 
 Ďalší krok v poradí podľa páky:
 
-1. **Inventár extension pointov ako skill file.** Priamy fix problému z časti 0 —
-   toho, kvôli ktorému som postavil horšiu verziu existujúceho
-   `createOrUpdateMenuItem`. Zoznam metód `EtaskActionDelegate` so signatúrami
-   a jednou vetou „na čo to je".
+1. ~~Inventár extension pointov ako skill file.~~ **Hotové** — `tools/pfapi.py`
+   generuje `reference/action-api.md` (169 metód enginu + vlastné metódy
+   projektu), skill file je v `.claude/skills/petriflow/SKILL.md`, boundary
+   pravidlo v `CLAUDE.md`. Generované zámerne: ručný zoznam by driftoval
+   s verziou enginu a nesprávny zoznam je horší než žiadny, preto je kontrola
+   aktuálnosti (`pfapi --check`) súčasťou `pftest.sh`.
 2. **Idempotentný re-seed** rolí a demo dát. Bez toho agent po tretej iterácii
    testuje na rozbitom stave (časť 2.4).
-3. **`CLAUDE.md`** s trojvrstvovým pravidlom z časti 4.
-4. **Skladateľná podmienka oprávnenia** — prvé skutočne chýbajúce primitívum
+3. **Skladateľná podmienka oprávnenia** — prvé skutočne chýbajúce primitívum
    (časť 2.3).
-5. Zjednotiť `processRolesIds` a `requiredProcessRoles` — dlh, ktorý som vyrobil.
+4. Zjednotiť `processRolesIds` a `requiredProcessRoles` — dlh, ktorý som vyrobil.
+5. Odčlenenie do samostatného repozitára: blokery v časti 8.
