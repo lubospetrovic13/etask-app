@@ -370,6 +370,31 @@ re-importe potrebné znova prideliť, kým viditeľnosť tímu zákazníka cez
 `userRef tk_agents` funguje ďalej. Pri vývoji to vyzerá ako chyba modelu (vedúci
 vidí menej než operátor), v produkcii, kde sa sieť importuje raz, to problém nie je.
 
+### B17. Preklep v názve metódy delegáta prejde importom a vráti HTTP 200
+
+Delegát je **dynamický**, takže volanie neexistujúcej metódy nie je pre Groovy
+chyba — rozhoduje sa až pri behu. Overená reťaz na `userWithRole()` namiesto
+`usersWithRole()`:
+
+| krok | výsledok |
+|---|---|
+| `pfgroovy` (parse Groovy) | ticho — syntax je platná |
+| import do enginu | **OK**, sieť sa naimportuje ako v1.0.0 |
+| spustenie akcie | `MissingMethodException` |
+| HTTP odpoveď na ten zápis | **200** |
+
+To posledné je to zradné: volajúci dostane 200, pole sa nezapíše a v odpovedi
+nie je nič. Rovnaká trieda tichosti ako B11 a B12.
+
+Jediná statická obrana je kontrola proti inventáru metód —
+`tools/pflint.py` (pravidlo `unknown-call-typo`) porovnáva nahé volania
+s `reference/action-api.md`. Od enginu sa to čakať nedá.
+
+Dôsledok pre rozširovanie delegáta: každá nová metóda zväčšuje plochu, kde
+preklep spadne až za behu. To nie je argument proti rozširovaniu — je to
+argument za to, aby bol inventár aktuálny (`pfapi --check` v `pftest.sh`).
+
+
 ---
 
 ## C. Mimo Petriflow, ale stálo to čas

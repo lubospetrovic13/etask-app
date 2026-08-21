@@ -22,6 +22,10 @@ rozhodovací postup, tiché pasce a odkaz na inventár extension pointov.
 povie, ktoré primitívum na vyššej vrstve chýba. Ak ju nedokážeš napísať, problém
 patrí vyššie.
 
+Vrstva 2 nie je záchranná brzda — **je to miesto, kde rastie jazyk**. Metóda
+pridaná do `EtaskActionDelegate` je nové Petriflow primitívum, volateľné menom
+z každej siete. Keď ten istý Groovy píšeš v druhej sieti, presuň ho tam.
+
 ## Pred písaním novej metódy
 
 Otvor `etask-configuration/reference/action-api.md` — generovaný inventár 169

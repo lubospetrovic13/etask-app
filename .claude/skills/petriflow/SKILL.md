@@ -25,14 +25,49 @@ je dodnes v `UriNodeData`: dve polia pre to isté, v inom id-priestore.
 Delegát je **dynamický**. Preklep v názve metódy prejde parserom aj importom
 a spadne až za behu, keď akciu niekto spustí. Zoznam je preto jediná obrana.
 
-## Pravidlo 2: tri vrstvy, a nikdy nezačínaj na tretej
+## Pravidlo 2: tri vrstvy, a vrstva 2 je miesto, kde rastie jazyk
 
 ```
 1. Petriflow XML          ← default. Stav, prechody, dáta, oprávnenia case-u.
-2. Custom action delegate ← I/O, cudzie API, výpočet, ktorý sa v Groovy akcii
-                            nedá vyjadriť čitateľne.
+2. Custom action delegate ← ROZŠIRUJE JAZYK. Nová metóda tu = nové Petriflow
+                            primitívum, volateľné menom z každej siete.
 3. Framework/runtime kód  ← len render, HTTP layer, a to, čo engine neposkytuje.
 ```
+
+Vrstva 2 **nie je záchranná brzda**. `EtaskActionDelegate` dedí engine
+`ActionDelegate`, je `@Component`, a čokoľvek v ňom je sa dá zavolať priamo
+z akcie menom — bez importu, bez wiringu, bez zásahu do frontendu. Je to
+mechanizmus, ktorým sa slovník Petriflow rozširuje, a preto je vrstva 3 skoro
+vždy zbytočná.
+
+**Pravidlo promócie:** keď ten istý Groovy píšeš v druhej sieti, nepíš ho po
+tretie — presuň ho do delegáta. Presne takto vznikli `userIdsOf()`
+a `usersWithRole()`: extrakcia id z userList sa kopírovala do každej siete
+vrátane pasce `u?._id`, ktorá zhodí celú akciu.
+
+### Ako pridať metódu
+
+```groovy
+// etask-backend-starter/src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy
+@Component
+class EtaskActionDelegate extends ActionDelegate {
+
+    /** Jedna veta, na čo to je - `pfapi` ju vytiahne do inventára. */
+    List<String> mojePrimitivum(Object vstup, String param = null) { ... }
+}
+```
+
+Potom `python3 tools/pfapi.py > reference/action-api.md` — inventár si metódu
+aj s jej javadocom vytiahne zo zdrojáku sám.
+
+**Cena za dynamický dispatch:** preklep v názve metódy **nezachytí engine**.
+Sieť sa naimportuje bez námietky a za behu vráti HTTP 200, kým akcia potichu
+spadne na `MissingMethodException`. Jediné, čo to chytí, je `pflint` proti
+inventáru — o dôvod viac ho po zmene siete spustiť.
+
+**Pozor na pretaženie aritou:** engine aj projekt majú `createOrUpdateMenuItem`,
+rozlišujú sa len počtom argumentov, a tá v enginu na update ceste padá. Inventár
+také kolízie označuje.
 
 Prechod na nižšiu vrstvu musí byť odôvodnený vetou, ktorá povie, **ktoré
 primitívum na vyššej vrstve chýba**. Tá veta je zároveň bug report pre framework.

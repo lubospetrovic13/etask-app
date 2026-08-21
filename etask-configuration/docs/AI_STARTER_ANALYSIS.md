@@ -245,6 +245,20 @@ kompiluje.
 
 ### 4. Hranica medzi Petriflow a frameworkovým kódom
 
+> **Opravené oproti prvej verzii tejto analýzy.** Vrstvu 2 som opísal defenzívne
+> („keď sa to v akcii vyjadriť nedá"), a to je zlé rámovanie. Delegát nie je
+> záchranná brzda — je to mechanizmus, ktorým **rastie jazyk**. Metóda pridaná
+> do `EtaskActionDelegate` je nové Petriflow primitívum, volateľné menom
+> z každej siete, bez importu a bez zásahu do frontendu. Preto je vrstva 3 skoro
+> vždy zbytočná, a preto platí pravidlo promócie: keď ten istý Groovy píšeš
+> v druhej sieti, presuň ho do delegáta.
+>
+> Cena za to je dynamický dispatch: preklep v názve metódy **engine nezachytí**
+> (overené — naimportuje sa a za behu vráti HTTP 200, kým akcia padne na
+> `MissingMethodException`). Preto `pflint` odvtedy kontroluje volania proti
+> `reference/action-api.md`. Rozširovanie slovníka a aktuálny inventár sú dve
+> strany tej istej veci.
+
 Navrhujem tri vrstvy s jasným pravidlom, kedy sa smie prejsť nižšie:
 
 ```

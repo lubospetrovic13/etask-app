@@ -40,6 +40,15 @@ else
   bad "pflint oznacil platne siete v processes/ - falosny pozitiv"
 fi
 
+# pflint: musi chytit preklep vo volani metody delegata. Toto je jediny
+# nastroj, ktory to chyti - engine to naimportuje bez namietky, lebo delegat je
+# dynamicky, a za behu vrati HTTP 200 a akciu potichu zhodi.
+if python3 tools/pflint.py tools/fixtures/bad-call.xml >/dev/null 2>&1; then
+  bad "pflint neoznacil bad-call.xml (preklep vo volani delegata)"
+else
+  ok "pflint chytil bad-call.xml"
+fi
+
 # pfgroovy: musi chytit rozbite Groovy
 if python3 tools/pfgroovy.py tools/fixtures/bad-groovy.xml >/dev/null 2>&1; then
   bad "pfgroovy neoznacil bad-groovy.xml"
@@ -70,6 +79,8 @@ if [ ${#LOG_ARG[@]} -gt 0 ]; then
   else
     bad "pfcheck nenaimportoval ok.xml"
   fi
+  # bad-call.xml tu ZAMERNE nie je: engine ho prijme (dynamicky dispatch),
+  # takze od pfcheck sa to cakat neda a je to dolezite vedet.
   for f in bad-role bad-groovy; do
     if tools/pfcheck.sh "${LOG_ARG[@]}" "tools/fixtures/$f.xml" >/dev/null 2>&1; then
       bad "pfcheck prijal $f.xml"

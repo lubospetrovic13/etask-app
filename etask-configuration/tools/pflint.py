@@ -74,6 +74,60 @@ def line_of(raw, needle, occurrence=1):
     return raw.count("\n", 0, idx) + 1
 
 
+ACTION_API = Path(__file__).resolve().parent.parent / "reference" / "action-api.md"
+
+# Groovy/Java konstrukcie, ktore vyzeraju ako nahe volanie a nie su nim.
+CALL_KEYWORDS = {
+    "if", "for", "while", "switch", "catch", "return", "new", "def", "it",
+    "assert", "throw", "synchronized", "try", "else", "instanceof", "in",
+    "println", "print", "printf", "sleep", "sprintf", "use", "with", "each",
+}
+
+
+def delegate_methods():
+    """Nazvy metod volatelnych z akcie, z generovaneho reference/action-api.md.
+
+    Ked inventar chyba, kontrola sa preskoci - hadat by znamenalo hlasit
+    funkcny kod. Vygenerovat: python3 tools/pfapi.py > reference/action-api.md
+    """
+    if not ACTION_API.is_file():
+        return None
+    text = ACTION_API.read_text(encoding="utf-8")
+    return set(re.findall(r"^(?:- |### )`([a-zA-Z_]\w*)\(", text, re.M))
+
+
+def close_match(name, known, max_distance=2):
+    """Najblizsi znamy nazov, ak je dost blizko. Levenshtein bez zavislosti."""
+    best, best_d = None, max_distance + 1
+    for candidate in known:
+        if abs(len(candidate) - len(name)) > max_distance:
+            continue
+        prev = list(range(len(candidate) + 1))
+        for i, ch in enumerate(name, 1):
+            cur = [i]
+            for j, cch in enumerate(candidate, 1):
+                cur.append(min(prev[j] + 1, cur[j - 1] + 1,
+                               prev[j - 1] + (ch != cch)))
+            prev = cur
+        if prev[-1] < best_d:
+            best, best_d = candidate, prev[-1]
+    return best if best_d <= max_distance else None
+
+
+def strip_strings(body):
+    """Vymaze obsah retazcovych literalov.
+
+    Bez tohto `"Odoslane parametre (bez obsahu)"` vypada ako volanie
+    `parametre(...)`. Slovensky text so slovom a zavorkou je bezny, takze
+    kontrola volani sa bez tohto neda pouzit.
+    """
+    body = re.sub(r'"""(?:[^"\\]|\\.|"(?!""))*"""', '""', body, flags=re.S)
+    body = re.sub(r"\'\'\'(?:[^'\\]|\\.|'(?!''))*\'\'\'", "''", body, flags=re.S)
+    body = re.sub(r'"(?:[^"\\\n]|\\.)*"', '""', body)
+    body = re.sub(r"'(?:[^'\\\n]|\\.)*'", "''", body)
+    return body
+
+
 def strip_comments(body):
     """Bez tohto linter hlasi vzory, ktore su v komentari - vratane komentarov,
     ktore pred tym istym vzorom varuju."""
@@ -270,7 +324,40 @@ def lint(path):
                                    f"kluc mapy '{key}' obsahuje . alebo $ - mongo to odmietne",
                                    "sluggifikuj kluc"))
 
-    # ---- 7. button cita textove pole v tej istej poziadavke (B2) --------
+    # ---- 7. volania, ktore sa nedaju rozresit ---------------------------
+    # Delegat je DYNAMICKY: preklep v nazve metody prejde parserom aj importom
+    # a spadne az za behu, ked akciu niekto spusti. Nahe volanie (bez tecky
+    # pred nim) moze byt len metoda delegata, procesna funkcia tejto siete,
+    # alebo lokalna closure - takze zvysok je podozrivy.
+    api = delegate_methods()
+    if api:
+        net_functions = {f.get("name") for f in findall(root, "function") if f.get("name")}
+        for aid, body in action_bodies:
+            where = f'<action id="{aid}"' if aid else "<action"
+            ln = line_of(raw, where)
+            code = strip_strings(body)
+            local = set(re.findall(r"\bdef\s+([a-zA-Z_]\w*)\s*=", code))
+            local |= set(re.findall(r"\b([a-zA-Z_]\w*)\s*=\s*\{", code))
+            for m in re.finditer(r"(?<![.\w$])([a-z][A-Za-z0-9_]*)\s*\(", code):
+                name = m.group(1)
+                if (name in CALL_KEYWORDS or name in api
+                        or name in net_functions or name in local
+                        or name in data_types):
+                    continue
+                suggestion = close_match(name, api)
+                if suggestion:
+                    out.append(Finding("error", "unknown-call-typo", rel, ln,
+                                       f"volanie `{name}(...)` nie je ani metoda delegata, ani funkcia "
+                                       f"tejto siete - vyzera ako preklep",
+                                       f"mysleny bol `{suggestion}(...)`? Delegat je dynamicky, "
+                                       "takze toto spadne az za behu"))
+                else:
+                    out.append(Finding("info", "unknown-call", rel, ln,
+                                       f"volanie `{name}(...)` sa neda rozresit",
+                                       "ak je to metoda delegata, aktualizuj inventar: "
+                                       "python3 tools/pfapi.py > reference/action-api.md"))
+
+    # ---- 8. button cita textove pole v tej istej poziadavke (B2) --------
     for tid, t in transitions.items():
         group_fields = {child_text(dr, "id") for dr in findall(t, "dataRef")}
         # Pasca plati len na pole, do ktoreho user v tom okamihu pise. Pole

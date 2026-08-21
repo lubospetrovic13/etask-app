@@ -53,6 +53,7 @@ a je zdokumentované v `docs/PETRIFLOW_LEARNINGS.md`.
 | `role-undeclared` | import spadne na `IllegalArgumentException: Role X not found` |
 | `type-textarea` | `type="textarea"` neexistuje, import spadne na NPE |
 | `setdata-unknown-transition` | preklep v id transition sa prejaví až za behu |
+| `unknown-call-typo` | preklep v názve metódy delegáta — **engine to prijme** a za behu vráti 200, kým akcia padne |
 | `action-unknown-field` | akcia berie `f.x`, ktoré neexistuje |
 
 ### Čo NEkontroluje a prečo
@@ -70,6 +71,14 @@ patrí do reference knowledge, nie do kontroly.
 
 Rovnako nekontroluje nič, čo závisí od stavu bežiacej instancie — na to je
 ground truth import do enginu.
+
+**Naopak jedna vec je tu a v `pfcheck` NIE JE:** kontrola, že volaná metóda
+delegáta existuje. Delegát je dynamický, takže engine sieť s preklepom
+naimportuje bez námietky. `pflint` porovnáva nahé volania s
+`reference/action-api.md`, s funkciami tej siete a s lokálnymi closures; hlási
+len to, čo je blízko známeho názvu (preklep), zvyšok ako `INFO`. Pred skenovaním
+zahadzuje reťazcové literály — inak by slovenské „Odoslané parametre (bez
+obsahu)" vypadalo ako volanie `parametre(...)`.
 
 ### Úrovne
 
