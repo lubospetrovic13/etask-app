@@ -42,5 +42,16 @@ ENV LANG=C.UTF-8 \
 COPY --from=build /app/target/app.jar /app.jar
 COPY --from=build /app/src/main/resources /src/main/resources
 
+# openssl je pre entrypoint - generuje JWT kluc, ak chyba.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY etask-backend-starter/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# Volume, aby kluc prezil restart aj vymenu obrazu. Keby sa generoval pri kazdom
+# starte, vsetkym by pri kazdom nasadeni vypadli sessions.
+VOLUME ["/etask/certificates"]
+
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app.jar"]
+ENTRYPOINT ["/docker-entrypoint.sh"]

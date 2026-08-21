@@ -289,20 +289,33 @@ skript, ktorý agent zavolá.
 
 ### 8. Ako pripraviť branch na odčlenenie
 
-Blokery pre odčlenenie, ktoré vidím dnes:
+Blokery, ktoré som identifikoval, sú **vyriešené** — každý z nich bol overený, nie
+predpokladaný:
 
-* `.idea/` je v repozitári — von.
-* `deploy/` a `.github/workflows/deploy.yml` mieria na konkrétny VPS a GHCR
-  cestu `lubospetrovic13/*` — musí sa to parametrizovať.
-* JWT kľúč: `certificates/` je gitignored, takže starter po checkoute
-  **nemá čím podpísať anonymnú session** a verejné formuláre vrátia 401.
-  Starter musí kľúč generovať pri prvom starte.
-* `super@netgrif.com` / `password` a štyri testovacie účty s `test1234` —
-  v šablóne, ktorú si niekto naklonuje a nasadí, je to nebezpečné.
-* Service Desk je zároveň worked example aj konkrétna appka. Treba sa rozhodnúť,
-  či ide do startera ako `examples/`, alebo von.
+| bloker | stav |
+|---|---|
+| `.idea/` v repozitári (5 súborov) | z gitu von, v `.gitignore` |
+| GHCR cesta `lubospetrovic13/*` | pipeline si owner derivuje sama (`github.repository_owner`); v `.env.example` je placeholder |
+| JWT kľúč gitignored → verejné formuláre 401 | `tools/bootstrap.sh` lokálne, `docker-entrypoint.sh` v kontejneri (do volume, aby prežil restart) |
+| `super`/`password` na verejnej adrese | `ADMIN_PASSWORD` je v compose **povinné** (`:?`), inak compose odmietne nabehnúť |
+| 4 testovacie účty s `test1234`, jeden ROLE_ADMIN | bez `ETASK_TEST_PASSWORD` sa **nevytvoria** (`EtaskUserCreator` preskočí prázdne heslo) |
+| `technical@netgrif.com` s heslom `password` | to isté, `TECHNICAL_PASSWORD` |
 
----
+Plus poistka, ktorá je pri šablóne dôležitejšia než jednotlivé opravy:
+`EtaskRunner` pri každom starte skontroluje bezpečnostnú pozíciu a nájdené veci
+**vypíše ako WARN**. Nič nemení a nič nezhodí — len sa to nedá prehliadnuť.
+Overené v oboch smeroch: nesprávne nastavená instancia dá 3 zistenia, správne
+nastavená „v poriadku".
+
+Prečo poistka a nie len opravy: šablónu si niekto naklonuje, zmení tri veci a
+nasadí. Zoznam v dokumentácii sa dá preskočiť, WARN v logu pri každom starte
+menej.
+
+**Jedno rozhodnutie zostáva a nie je technické:** Service Desk je zároveň worked
+example (5 sietí, netriviálny, agent sa z neho učí dialekt spoľahlivejšie než zo
+schémy) aj konkrétna aplikácia pre konkrétneho zákazníka. Buď ide do startera
+ako `examples/`, alebo von. Nesťahoval som ho nikam — to je tvoje rozhodnutie,
+nie moje.
 
 ## 5. Čo je hotové v tomto branchi a čo je ďalší krok
 
@@ -349,4 +362,6 @@ Hotové:
    takže po každom re-importe vedelo len ubrať uzly, na ktoré užívateľ právo má.
    Zostalo jedno pole (`requiredProcessRoles`, importId) a jedno miesto, kde sa
    rozhoduje (`UriNodeVisibilityService`).
-5. Odčlenenie do samostatného repozitára: blokery v časti 8.
+5. ~~Odčlenenie do samostatného repozitára.~~ **Blokery vyriešené** (časť 8).
+   Zostáva rozhodnúť, či Service Desk ide do startera ako `examples/` alebo von,
+   a potom `git subtree`/nový repozitár.

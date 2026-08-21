@@ -60,6 +60,20 @@ a spusti `tools/pftest.sh`.
   odporujú, siete porušujú schému a importujú sa).
 * Nespúšťať `pfcheck` na produkciu — importuje novú verziu siete.
 
+## Čerstvý checkout
+
+```bash
+etask-configuration/tools/bootstrap.sh
+```
+
+Vygeneruje JWT podpisový kľúč (je gitignored, takže po `git clone` chýba) a vypíše
+zvyšok postupu. Bez kľúča engine nepodpíše anonymnú session a **verejné formuláre
+vracajú 401** bez chybovej správy, ktorá by to s kľúčom spojila.
+
+`EtaskRunner` pri každom starte skontroluje bezpečnostnú pozíciu — default heslo
+admina, vytvorené testovacie účty, chýbajúci kľúč — a nájdené veci vypíše ako
+WARN. Keď to v logu vidíš, nie je to šum.
+
 ## Prostredie
 
 * Java **11** (nie 17, nie 21 — Groovy 3 na JDK 21 padne).

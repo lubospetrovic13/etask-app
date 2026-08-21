@@ -95,12 +95,18 @@ services:
       NAE_SERVER_URL: ${PUBLIC_URL}
       NAE_MAIL_FROM: ${MAIL_FROM:-}
 
+      # Bez tohto by mal systemovy admin heslo "password". Compose zlyhá,
+      # ak premenna nie je nastavena - to je zamer, nie nepohodlie.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD musi byt nastavene v .env}
+
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Prazdne = testovacie ucty sa NEVYTVORIA. Na verejnej instancii to tak nechaj.
       ETASK_TEST_PASSWORD: ${ETASK_TEST_PASSWORD:-}
 
       JAVA_TOOL_OPTIONS: ${BACKEND_JAVA_OPTS:--Xms512m -Xmx2g}
     volumes:
       - backend-storage:/storage
+      - backend-certs:/etask/certificates
     healthcheck:
       # /api/auth/login odpovedá 401 bez prihlásenia - to je zdravý stav.
       # Testujeme, že servlet vôbec odpovedá, nie že sme prihlásení.
@@ -156,6 +162,7 @@ services:
       - "443:443"
 
 volumes:
+  backend-certs:
   mongo-data:
   elastic-data:
   redis-data:
