@@ -1,0 +1,26 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>pfcheck_ok</id>
+	<version>1.0.0</version>
+	<initials>PFO</initials>
+	<title>pfcheck fixture ok</title>
+	<defaultRole>true</defaultRole>
+	<transitionRole>false</transitionRole>
+	<data type="text">
+		<id>note</id>
+		<title>Poznámka</title>
+	</data>
+	<transition>
+		<id>t_main</id>
+		<x>100</x><y>80</y>
+		<label>Krok</label>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef><id>default</id><logic><perform>true</perform></logic></roleRef>
+		<dataGroup>
+			<id>g</id><cols>4</cols><layout>grid</layout>
+			<dataRef><id>note</id><logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout></dataRef>
+		</dataGroup>
+	</transition>
+	<place><id>p</id><x>32</x><y>80</y><label>P</label><tokens>1</tokens><static>false</static></place>
+	<arc><id>a</id><type>read</type><sourceId>p</sourceId><destinationId>t_main</destinationId><multiplicity>1</multiplicity></arc>
+</document>

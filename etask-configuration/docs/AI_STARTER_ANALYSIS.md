@@ -106,7 +106,9 @@ programovať s istotou:
   * Zápis do vlastného casu po `createFilterInMenu` sa neuchová — ani `change`,
     ani `setData`.
 * **Neexistuje spôsob, ako sieť otestovať.** Žiadny unit test, žiadny dry-run.
-  Overenie = nahraj do bežiacej instancie a klikaj.
+  Overenie = nahraj do bežiacej instancie a klikaj. (Toto je čiastočne vyriešené
+  v tomto branchi — `tools/pfcheck.sh` — ale stále to overuje len import,
+  nie chovanie za behu.)
 
 Pre človeka je to otrava. Pre AI agenta je to fatálne: agent generuje, nedostane
 signál, považuje to za hotové. **Toto je skutočný dôvod, prečo implementácia
@@ -177,39 +179,63 @@ infrastruktúru okolo requestu.
 
 ---
 
-## 3. Prvý prototyp v tomto branchi: `tools/pflint.py`
+## 3. Prvý prototyp: zatvorenie feedback loopu
 
-Z analýzy vyplýva, že najvyššiu páku má **spätná väzba**, nie ďalšia
-dokumentácia. Preto prvá vec, ktorá v tomto branchi vznikla, je statický linter
-pre Petriflow siete.
+Z analýzy vyplýva, že najvyššiu páku má spätná väzba, nie ďalšia dokumentácia.
+V branchi sú preto tri nástroje, každý vidí niečo, čo ostatné nie:
 
-Kontroluje **len to, čo je overené za behu** — vedome nekontroluje poradie
-elementov, práve preto, že tri zdroje pravdy si odporujú a linter, ktorý
-označkuje funkčný kód, naučí agenta linter ignorovať.
+| nástroj | vidí | nevidí | cena |
+|---|---|---|---|
+| `pflint.py` | štruktúru XML, odkazy, tiché pasce | Groovy (je to text v CDATA) | 0,3 s, bez závislostí |
+| `pfgroovy.py` | syntax Groovy v akciách | čo engine prijme | 3 s, JDK + groovy jar |
+| `pfcheck.sh` | **všetko — ground truth** | chovanie za behu | 5 s, bežiaci engine |
+| `pftest.sh` | regresiu nástrojov samotných | | |
 
-Dnes kontroluje: nedeklarované `dataRef` a `userRef`, `roleRef` na nedeklarovanú
-rolu, `type="textarea"`, visiace arcs, duplikáty polí a action id, polia v
-hlavičke akcie, ktoré neexistujú, `setData` na neexistujúci transition, a päť
-tichých zabijakov z `PETRIFLOW_LEARNINGS` (`?._id`, `findCase{it.stringId}`,
-`async.run` okolo `setData`, `on transition` v jednotnom čísle, `getFieldValue`).
+`pflint` **vedome nekontroluje poradie elementov**, práve preto, že tri zdroje
+pravdy si odporujú (časť 2.2). Linter, ktorý označkuje funkčný kód, naučí agenta
+linter ignorovať.
 
-### Výsledok prvého spustenia
+`pfcheck` nie je `curl`, a to z dvoch dôvodov, ktoré sú samé zistením:
 
-Na ôsmich sieťach v repozitári: **0 chýb, 3 upozornenia — a všetky tri sú skutočné.**
+1. Import endpoint pri chybe vracia **holé `{"status":500}` bez dôvodu**.
+   Príčina je výlučne v logu servera, takže `pfcheck` log číta a vytiahne root
+   cause. Toto ma tento týždeň stálo hodiny — „500" nepovie, či je to preklep
+   v id, diakritika v názve procesu alebo chýbajúca rola.
+2. Zlyhaný import **nie je atomický** — stihne vytvoriť procesné role a
+   prihlásenie potom vracia 500. `pfcheck` preto po každom importe overí login.
+
+### Čo to našlo
+
+**pflint na ôsmich sieťach: 0 chýb, 3 upozornenia, všetky tri skutočné.**
 
 1. `sd_work_item.xml` — `btn_done` čítal `wi_result` bez `immediate="true"`.
-   **Moja vlastná sieť, ktorú som týždeň testoval.** Neprejavilo sa to, lebo pri
-   testovaní cez REST šla hodnota samostatným volaním; cez UI (blur + klik v jednej
-   požiadavke) by riešiteľ nedokázal úlohu dokončiť. Opravené v tomto commite.
-2. `ai_config.xml` — `btn_run_test` číta `mail_from` s tou istou pascou.
-   Neopravujem, nie je to moja sieť a nepoznám jej kontext — hlásim.
-3. `sd_request.xml` — `async.run` okolo prenosu do ticketu. Tú istú chybu som
-   v `sd_intake` opravoval ručne; tu ju linter našiel sám.
+   **Moja vlastná sieť, ktorú som týždeň testoval.** Cez REST sa to neprejavilo,
+   hodnota šla samostatným volaním; cez UI (blur + klik v jednej požiadavke) by
+   riešiteľ nedokázal úlohu dokončiť. Opravené.
+2. `ai_config.xml` — `btn_run_test` číta `mail_from` s tou istou pascou. Nie je
+   to moja sieť, len hlásim.
+3. `sd_request.xml` — `async.run` okolo prenosu do ticketu.
 
-Linter našiel v mojej odovzdanej práci chybu, ktorú týždeň manuálneho testovania
-nenašiel. To je jediný argument pre tento nástroj, ktorý potrebujem.
+### Čo to naučilo o stavbe takýchto nástrojov
 
----
+`pfgroovy` pri prvom spustení hlásil **47 syntaktických chýb na sieťach, ktoré
+engine skompiluje bez námietky**. Dvakrát za sebou, z dvoch rôznych príčin:
+
+* NAE hlavička akcie (`pole: f.pole, iné: f.iné;`) **nie je Groovy** —
+  jednopoložková verzia sa náhodou parsuje ako labeled statement, viacpoložková
+  už nie. Treba ju odstrihnúť, NAE si ju prekladá sám.
+* Samostatný parser nemá classpath enginu, takže `org.bson.types.ObjectId`
+  neresolvoval. Riešenie je obmedziť kompiláciu na fázu parsovania.
+
+Z toho vyplýva pravidlo, ktoré patrí do skill file: **ground truth je engine.
+Keď si offline nástroj a engine odporujú, chyba je v nástroji.** Preto existuje
+`pftest.sh` — sedem testov, a tá dôležitejšia polovica je, že nástroj nesmie
+označiť funkčný kód.
+
+Mimochodom, ten istý mechanizmus opravil aj moje vlastné tvrdenie: myslel som si,
+že engine akcie pri importe nekompiluje. Nekompiloval ich preto, že moja prvá
+fixture bola zle štruktúrovaná a **žiadnu akciu neobsahovala**. Engine ich
+kompiluje.
 
 ## 4. Odpovede na zvyšné otázky
 
@@ -278,17 +304,23 @@ Blokery pre odčlenenie, ktoré vidím dnes:
 
 Hotové:
 
-* `tools/pflint.py` — linter, overený na ôsmich sieťach, našiel tri reálne chyby
-* `reference/petriflow.schema.v1.1.0.xsd` — oficiálna schéma offline, s vysvetlením,
-  že runtime sa od nej odlišuje
+* `tools/pflint.py` — statická kontrola XML, 0 falošných pozitív na 8 sieťach
+* `tools/pfgroovy.py` — syntax Groovy, 0 falošných pozitív na 90 akciách
+* `tools/pfcheck.sh` — ground truth import, root cause z logu, kontrola loginu
+* `tools/pftest.sh` + `tools/fixtures/` — regresia nástrojov, 7 testov
+* `tools/README-petriflow-tools.md` — kedy ktorý a prečo tri
+* `reference/petriflow.schema.v1.1.0.xsd` — oficiálna schéma offline
 * oprava `wi_result` v `sd_work_item.xml`
-* táto analýza
 
-Ďalší krok v poradí podľa páky, nie podľa pohodlia:
+Ďalší krok v poradí podľa páky:
 
-1. **`tools/pfcheck.sh`** — import do bežiacej instancie a hlásenie chyby. Ground
-   truth namiesto hádania dialektu. Bez toho je linter len polovica loopu.
-2. **Inventár extension pointov** ako skill file. Priamy fix problému z časti 0.
-3. **Idempotentný re-seed** rolí a demo dát, aby iterácia nebola manuálna.
-4. **`CLAUDE.md`** s trojvrstvovým pravidlom.
+1. **Inventár extension pointov ako skill file.** Priamy fix problému z časti 0 —
+   toho, kvôli ktorému som postavil horšiu verziu existujúceho
+   `createOrUpdateMenuItem`. Zoznam metód `EtaskActionDelegate` so signatúrami
+   a jednou vetou „na čo to je".
+2. **Idempotentný re-seed** rolí a demo dát. Bez toho agent po tretej iterácii
+   testuje na rozbitom stave (časť 2.4).
+3. **`CLAUDE.md`** s trojvrstvovým pravidlom z časti 4.
+4. **Skladateľná podmienka oprávnenia** — prvé skutočne chýbajúce primitívum
+   (časť 2.3).
 5. Zjednotiť `processRolesIds` a `requiredProcessRoles` — dlh, ktorý som vyrobil.
