@@ -320,6 +320,56 @@ ne. Rola potom hovorí, *v ktorom* zozname človek je, zákazník *ktorý* zozna
 tým sú rola aj organizácia v jednom modeli. Rola v `roleRef` zostane len tam, kde
 naozaj platí globálne (u nás `manager`).
 
+### B15. Uzol URI sám žiadne zobrazenia nemá
+
+Karta v bočnom menu (uzol URI) je len priečinok. Čo sa v ňom dá otvoriť, sú **casy
+dvoch procesov enginu**: `filter` (dopyt) a `preference_filter_item` (položka menu,
+ktorá na filter odkazuje). Kým nevzniknú, karta existuje a nevedie nikam.
+
+Vyrobiť ich ide z akcie cez `createFilterInMenu`. Poradie argumentov nie je
+intuitívne a **prvý je URI cesta, nie identifikátor**:
+
+```groovy
+createFilterInMenu(
+        "service_desk",                                  // 1. URI cesta uzla
+        "sd_tickets",                                    // 2. menu_item_identifier
+        "Tikety",                                        // 3. názov (menu aj filter)
+        "processIdentifier:\"service_desk/sd_ticket\"",   // 4. dopyt
+        "Case",                                          // 5. "Case" alebo "Task"
+        [], [:], [:], [],                                // allowed/banned roles atď.
+        "confirmation_number",                           // 10. ikona
+        "public")                                        // 11. viditeľnosť
+```
+
+Ak sa prvé dva zamenia, `uriService.findByUri` vráti `null` a akcia padne na
+`NullPointerException` v `doCreateMenuItem` — bez zmienky o URI.
+
+Tri pasce navyše:
+
+* **`createOrUpdateCaseMenuItem` má iné poradie** (identifikátor je prvý, URI druhé)
+  a ak URI neexistuje, **vytvorí ho** — takže omylom pribudnú uzly ako `sd_tickets`
+  na úrovni rootu. Uzly žijú v Elasticsearch (`etask_uri`), nie v Mongu, takže sa
+  potom musí zmazať aj dokument uzla aj `childrenId` v rodičovi.
+* **Update cesta je v 6.3.1 rozbitá**: `createOrUpdate*MenuItem` na existujúcej
+  položke volá neexistujúce `updateFilter(Case, Map)` a spadne. Idempotenciu si preto
+  treba spraviť ručne: `if (findMenuItem(id) != null) return`.
+* **`allowed_nets` sa cez `createFilterInMenu` nastaviť nedá** — ani identifikátormi
+  sietí, ani ich stringId. Ovplyvňuje to len tlačidlo „nový prípad" v zobrazení.
+
+Dopyt píšte cez `processIdentifier`, nie cez id siete: identifikátor prežije
+re-import, id nie.
+
+### B16. Oprávnenie z `roleRef` re-import siete neprežije, z `userRef` áno
+
+Rola má stringId razené **per verzia siete**. Po re-importe má užívateľ rolu starej
+verzie, takže na casoch novej verzie stráca prístup — a naopak. Prístup cez
+`userRef` (zoznam ľudí v dátovom poli casu) je na verzii nezávislý a drží.
+
+V praxi to znamená, že „vedúci vidí všetko" cez `roleRef manager` je po každom
+re-importe potrebné znova prideliť, kým viditeľnosť tímu zákazníka cez
+`userRef tk_agents` funguje ďalej. Pri vývoji to vyzerá ako chyba modelu (vedúci
+vidí menej než operátor), v produkcii, kde sa sieť importuje raz, to problém nie je.
+
 ---
 
 ## C. Mimo Petriflow, ale stálo to čas

@@ -146,6 +146,23 @@
                     <exclude>**/*.woff2</exclude>
                 </excludes>
             </resource>
+            <!--
+                Service Desk siete su modelovane v "Ai Configuration App/processes"
+                a NetRunner ich importuje pri starte. Beru sa priamo odtial, aby
+                nebolo treba drzat druhu kopiu v resources - dve kopie toho isteho
+                XML sa nevyhnutne rozidu a potom nie je jasne, ktora plati.
+            -->
+            <resource>
+                <directory>${project.basedir}/../Ai Configuration App/processes</directory>
+                <targetPath>petriNets</targetPath>
+                <includes>
+                    <include>sd_customer.xml</include>
+                    <include>sd_work_item.xml</include>
+                    <include>sd_ticket.xml</include>
+                    <include>sd_intake.xml</include>
+                    <include>sd_menu.xml</include>
+                </includes>
+            </resource>
         </resources>
         <plugins>
             <plugin>

@@ -15,7 +15,14 @@ RUN chmod +x /app/vendor-deps.sh && /app/vendor-deps.sh
 COPY etask-backend-starter/pom.xml /app/pom.xml
 COPY etask-backend-starter/src /app/src
 
-RUN mvn -B -DskipTests=true -f /app/pom.xml clean package
+# Siete Service Desku sa do jaru beru priamo z modelovacieho priecinka (viď
+# <resources> v pom.xml), takze musia byt na tej istej relativnej ceste ako v
+# repozitari - inak by ich Maven mlcky preskocil a jar by sa zbalil bez nich.
+COPY ["Ai Configuration App/processes", "/Ai Configuration App/processes"]
+
+RUN mvn -B -DskipTests=true -f /app/pom.xml clean package \
+ && test -f /app/target/classes/petriNets/sd_ticket.xml \
+ || { echo "CHYBA: siete Service Desku sa nedostali do buildu"; exit 1; }
 
 
 FROM openjdk:11-jdk

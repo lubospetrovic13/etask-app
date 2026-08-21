@@ -140,12 +140,16 @@ dopočítavajú, takže zmena politiky ani priority nevyžaduje migráciu dát.
 
 ## Čo ešte nie je hotové
 
-- **Úlohy pre zamestnancov** (`sd_work_item` ako child case). Teraz je
-  riešiteľom ten, kto vykoná task — na jeden ticket s tromi ľuďmi to nestačí.
 - **Katalóg požiadaviek** — typy sú zatiaľ `options` v sieti, nie casy.
-- **Viditeľnosť po organizáciách** — zákazník teraz nevidí ani svoj ticket.
+- **Portál pre zákazníka** — zákazník svoj ticket po odoslaní nevidí. Číslo
+  ticketu dostane v potvrdení, ďalej nemá kde pozerať stav.
 - **Príloha z formulára** sa neprenáša do ticketu, iba text.
-- **Rate limiting a captcha** na verejnom formulári.
+- **Rate limiting a captcha** na verejnom formulári. Anonym vie `sd_ticket`
+  zakladať, takže je to spamovacia plocha.
+- **Sviatky a kalendár** v SLA (viď vyššie).
+- **Kaskáda `c_agents` do existujúcich ticketov** — keď sa u zákazníka zmení
+  tím, staré tickety si nesú pôvodné `tk_agents`. Prepnutie zabezpečí až
+  `tk_org_override` alebo nová verzia s prepočtom.
 
 ---
 
@@ -214,3 +218,98 @@ a task sa hneď znovu otvorí — ale je to zmätočné. Odstránenie je zmena v
 frontende (footer panelu), nie v sieti.
 
 Verejný odkaz je `printf 'sd_intake' | base64` → `/process/c2RfaW50YWtl`.
+
+---
+
+## Druhá fáza — úlohy pre zamestnancov a viditeľnosť
+
+```
+sd_customer                sd_ticket                     sd_work_item
+  t_customer   (manager)     t_triage  (tk_agents)          t_define   (agent/manager)
+  t_customer_read            t_plan    (tk_agents)  ──────►  t_wi_work  (wi_assignee)
+    (agent/specialist)       t_detail  (tk_*)         ◄────── hlásenie do wi_report
+                             t_work / t_pending / t_resolve
+sd_menu                        (tk_agents + tk_specialists + manager)
+  postaví zobrazenia nad uzlom URI `service_desk`
+```
+
+### Rola AND organizácia
+
+`roleRef` a `userRef` sa v Petriflow **zjednocujú, nie prienikajú** — „agent
+a zároveň pridelený tomuto zákazníkovi" sa deklaratívne napísať nedá. Model to
+obchádza tak, že rolu presunie do dát:
+
+* zákazník má dva zoznamy ľudí — `c_agents` a `c_specialists`,
+* tiket si ich pri príchode `src_org` z eformu skopíruje ako `tk_agents`
+  a `tk_specialists`,
+* case-level `view` a všetky transition-y odkazujú **len na tieto zoznamy**;
+  rola sama už právo vidieť tiket nedáva.
+
+Rola tak hovorí, *v ktorom* zo dvoch zoznamov človek u zákazníka je, zákazník
+*ktorý* zoznam to je. `roleRef manager` zostal jediná globálna rola — vedúci
+vidí všetko, inak by tiket od neznámej organizácie nemal komu patriť.
+
+Overená matica (tri tikety dvoch zákazníkov, päť užívateľov):
+
+| užívateľ | rola | Netgrif | Alfa | bez zmluvy |
+|---|---|:-:|:-:|:-:|
+| super | manager | ✓ | ✓ | ✓ |
+| admin | agent oboch zákazníkov | ✓ | ✓ | — |
+| operator | specialist Netgrifu | ✓ | — | — |
+| druhy | specialist Alfy | — | ✓ | — |
+| viewer | bez SD roly | — | — | — |
+
+Nespárovaná organizácia nie je tichá chyba: `tk_org_match` napíše prečo, tiket
+vidí iba vedúci, a `tk_org_override` ho dá priradiť ručne.
+
+### Pracovná úloha
+
+`t_wi_work` má **len `userRef wi_assignee`**, žiadnu rolu — práve to robí zo
+zoznamu „Moje úlohy" moje. Rola `specialist` by dala prístup ku všetkému.
+
+Cross-case prenos ide cez `setData`, a **poradie v mape nie je kozmetika**: set
+eventy sa spúšťajú postupne, takže kontext tiketu musí byť zapísaný skôr, než
+`wi_title` prepíše názov casu, a `wi_assignee_id` (ktoré naplní userList) až
+nakoniec. Prečo cez text a nie priamo userList: `setData` z iného casu čaká
+zoznam id, ale hodnota userList poľa je `UserListFieldValue`.
+
+Po dokončení úloha hlási späť do tiketu (`report_to_ticket`): zníži `wi_open`
+a pripíše výsledok do `wi_report`. Bez toho by `t_resolve` navždy odmietal
+uzavrieť požiadavku, aj keby bola všetka práca hotová.
+
+### SLA zo zmluvy
+
+`contract_sla_hours(tk_customer_id, priorita)` prečíta `c_sla_a/b/c`
+zo záznamu zákazníka a padá na štandardnú maticu, keď tam nič nie je. Overené:
+Netgrif má pre prioritu B dohodnutých 6 h, tiket podaný 07:36 dostal termín
+14:00 — nie 12:00, čo by dalo štandardné 4 h.
+
+### Menu
+
+Karta v bočnom menu je len priečinok; zobrazenia sú casy procesov `filter`
+a `preference_filter_item`. Kým nevzniknú, karta nevedie nikam — a po sprísnení
+oprávnení bol *General → All cases* jediný zoznam v aplikácii, takže operátor
+ani riešiteľ nemali k svojim tiketom v UI cestu vôbec.
+
+Stavia ich sieť `sd_menu` (Tikety, Moje úlohy, Zákazníci, Podania z formulára),
+lebo `createFilterInMenu` žije na action delegate a z runnera sa nedá zavolať.
+`SdMenuRunner` len zabezpečí, že jeden case tej siete existuje. Idempotentné
+dvakrát: runner preskočí existujúci case, sieť preskočí zobrazenie so zhodným
+dopytom — a keď sa dopyt zmenil, položku zahodí a postaví znova. Výsledok je
+v **názve casu** (`Menu Service Desku – 4/4`), nie v dátovom poli: po
+`createFilterInMenu` sa zápis do vlastného casu neuchová.
+
+Detaily API a pasce sú v `PETRIFLOW_LEARNINGS` B15 (poradie argumentov, rozbitá
+update cesta, uzly URI v Elasticsearch) a B16 (rola vs. userRef pri re-importe).
+
+### Rozbeh druhej fázy
+
+Siete sú registrované v `NetRunner.PetriNetEnum` a berú sa priamo
+z `Ai Configuration App/processes` (viď `<resources>` v `pom.xml`), takže čisté
+prostredie ich naimportuje samo a `SdMenuRunner` postaví menu. Ručne treba len
+priradiť roly a založiť zákazníkov.
+
+Pozor pri vývoji: `NetRunner` sieť importuje **len keď chýba**. Po zmene siete
+ju treba nahrať znova (Nahrať proces / `POST /api/petrinet/import`), inak beží
+stará verzia. A po re-importe treba znova priradiť procesné roly — role majú
+stringId razené per verzia.

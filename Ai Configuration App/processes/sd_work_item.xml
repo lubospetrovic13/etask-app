@@ -632,7 +632,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 		</dataGroup>
 	</transition>
 	<transition>
-		<id>t_work</id>
+		<id>t_wi_work</id>
 		<x>304</x>
 		<y>80</y>
 		<label>Moja úloha</label>
@@ -889,7 +889,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 		<id>a_work</id>
 		<type>read</type>
 		<sourceId>p_alive</sourceId>
-		<destinationId>t_work</destinationId>
+		<destinationId>t_wi_work</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 </document>

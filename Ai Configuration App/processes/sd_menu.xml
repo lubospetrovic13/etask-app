@@ -1,0 +1,153 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>service_desk/sd_menu</id>
+	<version>1.0.0</version>
+	<initials>SDM</initials>
+	<title>Menu Service Desku</title>
+	<icon>menu</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Karta Service Desk v bocnom menu existovala, ale nikam nevedla: uzol URI
+		sam ziadne zobrazenia nema, tie su casy procesov `filter` a
+		`preference_filter_item`. Bez nich sa operator ani riesitel k svojim
+		tiketom v UI nedostane vobec - jedina cesta bola General -> All cases,
+		co po sprisneni opravneni vidi len admin.
+
+		Tato siet ich vytvori. Robi to cez `createOrUpdate*MenuItem`, co je
+		idempotentne, takze sa da spustit znova po kazdom re-importe sieti (a
+		SdMenuRunner to na kazdom starte aj robi).
+
+		Poradie argumentov `createOrUpdateCaseMenuItem` nie je v prirucke a nie
+		je intuitivne - prve je URI cesta, nie identifikator:
+		  (uri, identifikator, nazov, dopyt, ikona, [], [:], [:], parent, [])
+		Ak sa prve dva zamenia, `uriService.findByUri` vrati null a akcia padne
+		na NullPointerException hlboko v `doCreateMenuItem`.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>menu_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+def created = []
+def unchanged = []
+def failed = []
+
+def views = [
+        [id: "sd_tickets", name: "Tikety", type: "Case", icon: "confirmation_number",
+         query: "processIdentifier:\"service_desk/sd_ticket\""],
+        // Zamerne `t_wi_work`, nie `t_work`: task dokument v indexe nesie
+        // processId (stringId siete, meni sa pri kazdom re-importe), nie
+        // processIdentifier - takze filter sa da spolahlivo zuzit len na
+        // unikatny id prechodu. Preto ma prechod pracovnej ulohy vlastne id.
+        [id: "sd_my_work", name: "Moje úlohy", type: "Task", icon: "build",
+         query: "transitionId:\"t_wi_work\""],
+        [id: "sd_customers", name: "Zákazníci", type: "Case", icon: "domain",
+         query: "processIdentifier:\"service_desk/sd_customer\""],
+        [id: "sd_submissions", name: "Podania z formulára", type: "Case", icon: "inbox",
+         query: "processIdentifier:\"service_desk/sd_intake\""],
+]
+
+views.each { v ->
+    def id = v.id as String
+    try {
+        // Idempotencia rucne: `createOrUpdate*MenuItem` v 6.3.1 na update pada
+        // (vola neexistujuce updateFilter). Takze zhodne zobrazenie necháme
+        // byt, ale ked sa dopyt zmenil, polozku zahodíme a postavíme znova -
+        // inak by v nasadenej instancii navzdy zostal stary dopyt a nikto by
+        // nevedel, preco zoznam zobrazuje nespravne veci.
+        def existing = menu_item(id)
+        if (existing != null) {
+            def current = getFilterFromMenuItem(existing)
+            def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
+            if (currentQuery == (v.query as String)) {
+                unchanged << id
+                return
+            }
+            deleteMenuItem(existing)
+        }
+        def item = createFilterInMenu(
+                "service_desk",     // URI cesta - POZOR, je prva, nie identifikator
+                id,                 // menu_item_identifier
+                v.name as String,   // nazov v menu aj nazov filtra
+                v.query as String,  // dopyt
+                v.type as String,   // "Case" alebo "Task"
+                [],                 // (nie allowed_nets - to sa tu nastavit neda)
+                [:],                // allowed_roles
+                [:],                // banned_roles
+                [],
+                v.icon as String,
+                "public"
+        )
+        if (item) { created << id } else { failed << id }
+    } catch (Exception e) {
+        failed << (id + " (" + e.getClass().simpleName + ": " + e.message + ")")
+    }
+}
+
+// Vysledok patri do nazvu casu, nie do datoveho pola: po createFilterInMenu sa
+// zapis do vlastneho casu (ani `change`, ani `setData`) neuchova - engine medzitym
+// zakladal ine casy a nas outcome zahodil. changeCaseProperty prezije.
+def summary = "Menu Service Desku – " + (created.size() + unchanged.size()) + "/" + views.size()
+if (failed) {
+    summary = "CHYBA menu Service Desku – nepodarilo sa: " + failed.join(", ")
+}
+changeCaseProperty("title").about { summary }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def identifier ->
+    // `findMenuItem(id)` z ActionDelegate existujucu polozku nenajde (hlada v
+    // inom rozsahu), takze by sa pri kazdom spusteni zalozila druha sada
+    // zobrazeni. Polozky su casy `preference_filter_item` a je ich zopar,
+    // takze si ich prejdeme sami.
+    def id = ((identifier ?: "") as String).trim()
+    if (!id) return null
+    def items = findCases { it.processIdentifier.eq("preference_filter_item") }
+    return items?.find { ((it.dataSet["menu_item_identifier"]?.value ?: "") as String) == id }
+}
+	]]></function>
+	<roleRef>
+		<id>manager</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>manager</id>
+		<title>Vedúci podpory</title>
+	</role>
+	<transition>
+		<id>t_menu</id>
+		<x>112</x>
+		<y>80</y>
+		<label>Stav menu</label>
+		<icon>menu</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>manager</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_menu</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_menu</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>
