@@ -1,0 +1,294 @@
+# eTask ako AI-native Petriflow harness — analýza a prvý prototyp
+
+Analýza toho, čo z tohto repozitára môže byť starter pre AI-driven tvorbu
+aplikácií nad Petriflow, a čo tomu dnes chýba. Nie je to potvrdenie konceptu —
+koncept je podľa mňa správny, ale z iných dôvodov, než sa na prvý pohľad zdá,
+a láme sa na inom mieste, než by človek čakal.
+
+Všetko podstatné nižšie je overené v tomto repozitári alebo za behu na
+NAE 6.3.1, nie odvodené.
+
+---
+
+## 0. Najdôležitejšie zistenie: dôkaz z môjho vlastného zlyhania
+
+Pri stavbe Service Desku som potreboval vytvoriť položky bočného menu. Strávil
+som na tom hodiny: dekompiloval som `ActionDelegate` z bajtkódu enginu, hádal
+poradie argumentov `createFilterInMenu`, omylom vytvoril dva neplatné URI uzly
+v Elasticsearchi, ktoré som potom musel ručne mazať, a nakoniec som si napísal
+vlastný `menu_item()` helper na idempotenciu, pretože `createOrUpdate*MenuItem`
+v 6.3.1 na update ceste padá.
+
+Pritom v tom istom repozitári, v súbore
+`etask-backend-starter/src/main/resources/petriNets/configuration_tiles.xml`,
+už tri roky existuje toto:
+
+```groovy
+createOrUpdateMenuItem("general", "general", "Case", "<dopyt>", "folder", "All cases", [])
+setUriNodeData("general", "General", null, "folder")
+setUriNodeDataFilters("general", ["general"])
+```
+
+Tri riadky. Správne poradie argumentov. Funkčná update cesta — `EtaskActionDelegate`
+ju rieši cez `changeFilter`/`changeMenuItem`, čiže obchádza presne ten rozbitý
+engine call, na ktorý som narazil. A `setUriNodeData` má parameter `roleIds`,
+takže aj časť toho, na čo som napísal nový Java servis, tam bola.
+
+**Toto je dôkaz tvojej tézy, nie ilustrácia.** Kompetentný agent s celým
+repozitárom po ruke, s prístupom k bajtkódu, k dokumentácii aj k bežiacej
+instancii, si postavil horšiu verziu už existujúceho extension pointu — pretože
+nemal ako vedieť, že existuje. Nešlo o schopnosť. Šlo o **absenciu
+instruction layeru**.
+
+A má to druhý, drahší dôsledok: v `UriNodeData` sú teraz **dve** polia pre to
+isté — pôvodné `processRolesIds` (stringId rolí, klientske filtrovanie) a moje
+`requiredProcessRoles` (importId, serverové). Nie sú to duplikáty len opticky,
+sú v inom id-priestore. To je technický dlh, ktorý vznikol výhradne z neznalosti
+vlastnej codebase.
+
+Ak má starter riešiť jednu vec, tak túto.
+
+---
+
+## 1. Čo sa dá použiť ako základ (a je to lepšie, než sa zdá)
+
+Vlastný kód je prekvapivo malý — a to je pre starter tá najlepšia správa:
+
+| časť | riadkov | rola v starteri |
+|---|---:|---|
+| backend Java + Groovy | 2 240 | framework/runtime layer |
+| frontend TypeScript | 2 758 | framework/runtime layer |
+| Petriflow siete | ~7 500 | **aplikačná logika — to, čo píše AI** |
+| dokumentácia | 3 852 | reference knowledge |
+
+Pomer je už dnes ten správny: aplikačná logika je väčšia než framework, ktorý ju
+nesie. To je presne to, čo od harnessu chceš.
+
+Ďalej je hotové a použiteľné:
+
+* **`EtaskActionDelegate`** (238 r.) — kanonický extension point. Dedí
+  `ActionDelegate`, je `@Component`, a všetko, čo v ňom je, je z Petriflow akcie
+  volateľné menom. Toto je tá „zapuzdrená implementácia", o ktorej píšeš, a už
+  funguje.
+* **`NetRunner` + `PetriNetEnum`** — siete sa importujú zo súborov pri starte,
+  aplikačná logika je oddelená od runtime kódu. Toto je už dnes presne ten model
+  „pri štarte sa načíta XML reprezentácia".
+* **`<resources>` v `pom.xml`** — siete idú do jaru priamo z modelovacieho
+  priečinka, takže neexistuje druhá kópia, ktorá by sa rozišla.
+* **`docs/petriflow_reference.md`** (1 874 r.) + **`PETRIFLOW_LEARNINGS.md`**
+  (460 r.) — surová reference knowledge. Nie je to ešte skill file, ale obsah tam je.
+* **Service Desk** (5 sietí) — netriviálny worked example: verejný eForm,
+  viackrokový wizard cez taskRef, per-organizačné oprávnenia, child casy,
+  SLA. Pre agenta je funkčný príklad cennejší než špecifikácia.
+
+---
+
+## 2. Kde sa koncept láme
+
+Toto je jadro analýzy. Nie „čo dorobiť", ale **kde to nefunguje a prečo**.
+
+### 2.1 Petriflow nemá spätnú väzbu — to je hlavný problém, nie expresivita
+
+AI harness stojí a padá na feedback loope. Petriflow dnes má taký, že sa nedá
+programovať s istotou:
+
+* Akcie sú **Groovy v CDATA vnútri XML**. Nič ich pred behom neskontroluje.
+  Preklep v názve poľa, zlá property, chybné poradie argumentov — všetko až za behu.
+* Zlyhania sú **tiché alebo zavádzajúce**. Zdokumentované prípady z jedného týždňa:
+  * `u?._id` vyhodí `MissingPropertyException` — `?.` chráni pred null, nie pred
+    chýbajúcou property. Zhodí **celú akciu v strede**: časť zmien zapísaná,
+    zvyšok nie, v odpovedi nič. Prejavilo sa to ako „`setData` aplikuje len prvé
+    dva záznamy mapy" a moja diagnóza bola tri hypotézy vedľa.
+  * `findCase { it.stringId.eq(id) }` vráti vždy `null` — `Case` v mongo pole
+    `stringId` nemá. V logu je len INFO, nie chyba.
+  * `async.run { }` výnimku spolkne. Zle prenesené pole = prázdny cieľový case
+    bez akejkoľvek stopy.
+  * Zápis do vlastného casu po `createFilterInMenu` sa neuchová — ani `change`,
+    ani `setData`.
+* **Neexistuje spôsob, ako sieť otestovať.** Žiadny unit test, žiadny dry-run.
+  Overenie = nahraj do bežiacej instancie a klikaj.
+
+Pre človeka je to otrava. Pre AI agenta je to fatálne: agent generuje, nedostane
+signál, považuje to za hotové. **Toto je skutočný dôvod, prečo implementácia
+uteká do Angularu** — nie že by Petriflow nevedel daný problém vyjadriť, ale že
+v TypeScripte agent dostane chybu za dve sekundy a v Petriflow za dvadsať minút
+manuálneho klikania. Feedback loop rozhoduje, kam kód utečie.
+
+### 2.2 Tri navzájom si odporujúce zdroje pravdy o dialekte
+
+Každá sieť v repozitári deklaruje
+`xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd"`.
+Overil som, čo tá schéma hovorí, a porovnal s realitou:
+
+| zdroj | poradie v `<data>` |
+|---|---|
+| oficiálna XSD v1.1.0 | `placeholder` → `desc` → … → `init` → … → `component` |
+| NAE 6.3.1 za behu | prijme aj `component` pred `init` |
+| `PETRIFLOW_LEARNINGS` B5 | `desc` hneď za `title`, teda pred `placeholder` |
+
+Všetky siete v tomto repozitári majú `component` pred `init` a **importujú sa**.
+Engine je teda voľnejší než schéma, a náš vlastný zápisník tvrdí tretiu vec.
+
+Navyše: `petriflow_schema.xsd` priložená v jare enginu je len stub, ktorý
+`<xs:include>`-uje tú **živú URL**. Čiže „schéma enginu" je to, čo petriflow.com
+serveruje dnes — nie to, čo engine v 2023 prijímal.
+
+Dopad na harness: agent, ktorý urobí to najprirozumnejšie (otvorí schému
+z hlavičky siete), sa naučí **iný dialekt, než jeho runtime prijme**. A XSD
+validácia sa ako gate použiť nedá.
+
+### 2.3 Algebra oprávnení nevie vyjadriť prienik
+
+`roleRef` a `userRef` sa **zjednocujú, nie prienikajú**. „Agent a zároveň
+pridelený tomuto zákazníkovi" sa deklaratívne napísať nedá. V Service Desku som
+to musel obísť tak, že som rolu presunul do dát (zákazník má dva zoznamy ľudí a
+tiket si ich kopíruje). Funguje to a je to obhájiteľný model, ale je to
+**workaround pre chýbajúce primitívum**, nie návrh.
+
+To je konkrétna odpoveď na tvoju otázku 3: prvé primitívum, ktoré treba doplniť,
+nie je nová akcia, ale **skladateľná podmienka oprávnenia**.
+
+### 2.4 Verziovanie zabíja iteračný cyklus
+
+Rola má `stringId` razené **per verzia siete**. Po re-importe užívateľ na casoch
+novej verzie prístup stráca. Casy si držia verziu siete, v ktorej vznikli. Za
+jednu session som sieť importoval 12-krát a po každom importe musel znovu
+prideliť role.
+
+Pre produkciu je to správne (nemenné, auditovateľné). Pre AI development loop je
+to brutálne: každá iterácia znamená manuálny setup. Starter musí mať
+**idempotentný re-seed** — inak agent po tretej iterácii testuje na rozbitom stave.
+
+### 2.5 Čo Petriflow naozaj nevie a patrí mimo neho
+
+Čestný zoznam z tohto týždňa — miesta, kde som **musel** ísť mimo Petriflow,
+a bolo to správne:
+
+| požiadavka | prečo nie Petriflow |
+|---|---|
+| taskRef sa má preklopiť bez reloadu | čisto klientský render; Petriflow nemá pojem „prekresli" |
+| viditeľnosť uzla menu podľa roly | `UriNode` nemá pole pre role a endpointy enginu neberú usera |
+| verejný single-task cold link | bootstrap anonymnej session v knižnici; tri pokusy, slepá ulička |
+
+Prvé dva sú legitímne framework-layer. Tretí je defekt knižnice. **Toto je
+hranica**, ktorú treba napísať do skill file: Petriflow je jazyk pre *stav,
+prechody, dáta a oprávnenia case-u*. Nie je jazyk pre render a nie je jazyk pre
+infrastruktúru okolo requestu.
+
+---
+
+## 3. Prvý prototyp v tomto branchi: `tools/pflint.py`
+
+Z analýzy vyplýva, že najvyššiu páku má **spätná väzba**, nie ďalšia
+dokumentácia. Preto prvá vec, ktorá v tomto branchi vznikla, je statický linter
+pre Petriflow siete.
+
+Kontroluje **len to, čo je overené za behu** — vedome nekontroluje poradie
+elementov, práve preto, že tri zdroje pravdy si odporujú a linter, ktorý
+označkuje funkčný kód, naučí agenta linter ignorovať.
+
+Dnes kontroluje: nedeklarované `dataRef` a `userRef`, `roleRef` na nedeklarovanú
+rolu, `type="textarea"`, visiace arcs, duplikáty polí a action id, polia v
+hlavičke akcie, ktoré neexistujú, `setData` na neexistujúci transition, a päť
+tichých zabijakov z `PETRIFLOW_LEARNINGS` (`?._id`, `findCase{it.stringId}`,
+`async.run` okolo `setData`, `on transition` v jednotnom čísle, `getFieldValue`).
+
+### Výsledok prvého spustenia
+
+Na ôsmich sieťach v repozitári: **0 chýb, 3 upozornenia — a všetky tri sú skutočné.**
+
+1. `sd_work_item.xml` — `btn_done` čítal `wi_result` bez `immediate="true"`.
+   **Moja vlastná sieť, ktorú som týždeň testoval.** Neprejavilo sa to, lebo pri
+   testovaní cez REST šla hodnota samostatným volaním; cez UI (blur + klik v jednej
+   požiadavke) by riešiteľ nedokázal úlohu dokončiť. Opravené v tomto commite.
+2. `ai_config.xml` — `btn_run_test` číta `mail_from` s tou istou pascou.
+   Neopravujem, nie je to moja sieť a nepoznám jej kontext — hlásim.
+3. `sd_request.xml` — `async.run` okolo prenosu do ticketu. Tú istú chybu som
+   v `sd_intake` opravoval ručne; tu ju linter našiel sám.
+
+Linter našiel v mojej odovzdanej práci chybu, ktorú týždeň manuálneho testovania
+nenašiel. To je jediný argument pre tento nástroj, ktorý potrebujem.
+
+---
+
+## 4. Odpovede na zvyšné otázky
+
+### 4. Hranica medzi Petriflow a frameworkovým kódom
+
+Navrhujem tri vrstvy s jasným pravidlom, kedy sa smie prejsť nižšie:
+
+```
+1. Petriflow XML          ← default. Stav, prechody, dáta, oprávnenia case-u.
+2. Custom action delegate ← keď treba I/O, cudzie API, alebo výpočet, ktorý sa
+                            v Groovy akcii nedá vyjadriť čitateľne.
+3. Framework/runtime kód  ← len render, HTTP layer, a to, čo engine neposkytuje
+                            (napr. filtrovanie menu podľa roly).
+```
+
+Pravidlo pre agenta: **nikdy nezačínaj na vrstve 3.** Prechod na nižšiu vrstvu
+musí byť odôvodnený vetou, ktorá povie, ktoré primitívum na vyššej vrstve chýba.
+Tá veta je zároveň bug report pre framework.
+
+### 5.–6. Štruktúra repozitára a čo má byť v skill files
+
+Skill files nemajú byť prepis referencie. Majú obsahovať to, čo sa z kódu
+**nedá vyčítať**:
+
+* **Inventár extension pointov** — to, čo mne chýbalo. Zoznam metód
+  `EtaskActionDelegate` s presnými signatúrami a jednou vetou „na čo to je".
+  Toto je najvyššia priorita.
+* **Rozhodovací postup** — kedy Petriflow, kedy delegate, kedy framework.
+* **Tiché pasce** — `PETRIFLOW_LEARNINGS` prerobené na pravidlá, nie príbehy.
+* **Varovanie o dialekte** — schéma z hlavičky siete nie je pravda; pravda je
+  `reference/petriflow.schema.v1.1.0.xsd` **a** runtime, a runtime vyhráva.
+* **Worked examples** — Service Desk ako referenčný vzor.
+
+### 7. MCP server vs. template repository
+
+**Template repository, jednoznačne, a MCP až keď preukáže potrebu.**
+
+MCP server nad codebase rieši problém, ktorý tu nie je. Vlastný kód je 5 000
+riadkov — to sa do kontextu zmestí celé. Problém nebol nikdy „nezmestí sa mi
+knowledge do promptu"; problém bol **„neviem, že tá knowledge existuje"**.
+To MCP server nerieši, to rieši skill file a dobrá štruktúra.
+
+MCP začne dávať zmysel na inej veci: nástroj `import_and_validate(net.xml)`,
+ktorý sieť nahrá do bežiacej instancie a vráti chybu — teda **ako feedback loop,
+nie ako knowledge base**. To je ale zbytočné robiť ako MCP, keď to môže byť
+skript, ktorý agent zavolá.
+
+### 8. Ako pripraviť branch na odčlenenie
+
+Blokery pre odčlenenie, ktoré vidím dnes:
+
+* `.idea/` je v repozitári — von.
+* `deploy/` a `.github/workflows/deploy.yml` mieria na konkrétny VPS a GHCR
+  cestu `lubospetrovic13/*` — musí sa to parametrizovať.
+* JWT kľúč: `certificates/` je gitignored, takže starter po checkoute
+  **nemá čím podpísať anonymnú session** a verejné formuláre vrátia 401.
+  Starter musí kľúč generovať pri prvom starte.
+* `super@netgrif.com` / `password` a štyri testovacie účty s `test1234` —
+  v šablóne, ktorú si niekto naklonuje a nasadí, je to nebezpečné.
+* Service Desk je zároveň worked example aj konkrétna appka. Treba sa rozhodnúť,
+  či ide do startera ako `examples/`, alebo von.
+
+---
+
+## 5. Čo je hotové v tomto branchi a čo je ďalší krok
+
+Hotové:
+
+* `tools/pflint.py` — linter, overený na ôsmich sieťach, našiel tri reálne chyby
+* `reference/petriflow.schema.v1.1.0.xsd` — oficiálna schéma offline, s vysvetlením,
+  že runtime sa od nej odlišuje
+* oprava `wi_result` v `sd_work_item.xml`
+* táto analýza
+
+Ďalší krok v poradí podľa páky, nie podľa pohodlia:
+
+1. **`tools/pfcheck.sh`** — import do bežiacej instancie a hlásenie chyby. Ground
+   truth namiesto hádania dialektu. Bez toho je linter len polovica loopu.
+2. **Inventár extension pointov** ako skill file. Priamy fix problému z časti 0.
+3. **Idempotentný re-seed** rolí a demo dát, aby iterácia nebola manuálna.
+4. **`CLAUDE.md`** s trojvrstvovým pravidlom.
+5. Zjednotiť `processRolesIds` a `requiredProcessRoles` — dlh, ktorý som vyrobil.

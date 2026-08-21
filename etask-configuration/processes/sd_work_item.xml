@@ -271,7 +271,14 @@ if (id) {
 		<title>Odpracované hodiny</title>
 		<desc>Vyplní riešiteľ pri dokončení.</desc>
 	</data>
-	<data type="text">
+	<!--
+		immediate="true" nie je kozmetika: btn_done cita wi_result.value vo
+		svojej akcii, a blur textarey a klik na tlacidlo su jedna poziadavka -
+		bez immediate by akcia precitala prazdno a odmietla ulohu dokoncit.
+		Nasel to tools/pflint.py, nie testovanie: pri testovani cez REST sa
+		hodnota posielala samostatnym volanim, takze pasca sa neprejavila.
+	-->
+	<data type="text" immediate="true">
 		<id>wi_result</id>
 		<title>Čo sa urobilo</title>
 		<component>
