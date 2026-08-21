@@ -36,6 +36,18 @@ parserom aj importom a spadne až za behu; tento zoznam je jediná obrana. Vznik
 preto, že bez neho bola postavená horšia verzia už existujúceho extension pointu
 — podrobne v `etask-configuration/docs/AI_STARTER_ANALYSIS.md`, časť 0.
 
+## Nová aplikácia
+
+```bash
+cd etask-configuration
+cp examples/skeleton.xml processes/mojaapp.xml    # prepíš <id>, <initials>, <title>
+# dopíš "mojaapp.xml" do processes.json → "import"
+```
+
+Toto je celý postup. **Žiadny zásah do Javy ani do `pom.xml`** — inak by stack
+protirečil vlastnému pravidlu, že aplikačná logika patrí do Petriflow. `NetRunner`
+číta `processes.json` a identifikátor si berie z `<id>` v XML.
+
 ## Overovanie
 
 Po zmene siete, v tomto poradí:

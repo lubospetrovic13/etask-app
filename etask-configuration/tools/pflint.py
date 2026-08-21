@@ -156,8 +156,11 @@ def direct(el, name):
 
 def lint(path):
     out = []
-    raw = Path(path).read_text(encoding="utf-8")
     rel = str(path)
+    try:
+        raw = Path(path).read_text(encoding="utf-8")
+    except OSError as e:
+        return [Finding("error", "unreadable", rel, 1, f"subor sa neda precitat: {e.strerror}")]
 
     try:
         root = ET.fromstring(raw)

@@ -1,0 +1,24 @@
+{
+  "_comment": [
+    "Ktoré siete sa importujú pri štarte a v akom poradí.",
+    "",
+    "Pridanie novej aplikácie: hoď XML do processes/ a dopíš sem jeden riadok.",
+    "Žiadny zásah do Javy ani do pom.xml - to by protirečilo tomu, že aplikačná",
+    "logika patrí do Petriflow.",
+    "",
+    "Poradie záleží: sieť, ktorá v akcii odkazuje na URI uzol alebo na inú sieť,",
+    "musí byť za ňou. Uzol URI vznikne až importom prvej siete, ktorej",
+    "identifikátor tú cestu nesie.",
+    "",
+    "Identifikátor sa NEUVÁDZA - NetRunner si ho prečíta z <id> v XML, takže",
+    "sa nedá rozísť so sieťou."
+  ],
+  "import": [
+    "configuration_tiles.xml",
+    "sd_customer.xml",
+    "sd_work_item.xml",
+    "sd_ticket.xml",
+    "sd_intake.xml",
+    "sd_menu.xml"
+  ]
+}

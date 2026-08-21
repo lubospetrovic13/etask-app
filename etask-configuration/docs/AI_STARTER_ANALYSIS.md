@@ -70,9 +70,10 @@ nesie. To je presne to, čo od harnessu chceš.
   `ActionDelegate`, je `@Component`, a všetko, čo v ňom je, je z Petriflow akcie
   volateľné menom. Toto je tá „zapuzdrená implementácia", o ktorej píšeš, a už
   funguje.
-* **`NetRunner` + `PetriNetEnum`** — siete sa importujú zo súborov pri starte,
-  aplikačná logika je oddelená od runtime kódu. Toto je už dnes presne ten model
-  „pri štarte sa načíta XML reprezentácia".
+* **`NetRunner`** — siete sa importujú zo súborov pri starte, aplikačná logika je
+  oddelená od runtime kódu. Toto je už dnes presne ten model „pri štarte sa načíta
+  XML reprezentácia". (Zoznam bol pôvodne Java enum; nahradil ho manifest
+  `processes.json` — viď bod 6 v časti 5.)
 * **`<resources>` v `pom.xml`** — siete idú do jaru priamo z modelovacieho
   priečinka, takže neexistuje druhá kópia, ktorá by sa rozišla.
 * **`docs/petriflow_reference.md`** (1 874 r.) + **`PETRIFLOW_LEARNINGS.md`**
@@ -344,6 +345,8 @@ Hotové:
 * `tools/pfseed.py` + `seed.json` — idempotentné prideľovanie rolí, oprava osirelých
 * `tools/README-petriflow-tools.md` — kedy ktorý a prečo tri
 * `reference/petriflow.schema.v1.1.0.xsd` — oficiálna schéma offline
+* `processes.json` + prepísaný `NetRunner` — nová appka bez zásahu do Javy
+* `examples/skeleton.xml` — najmenšia funkčná sieť ako východisko
 * oprava `wi_result` v `sd_work_item.xml`
 
 Ďalší krok v poradí podľa páky:
@@ -379,3 +382,21 @@ Hotové:
 5. ~~Odčlenenie do samostatného repozitára.~~ **Blokery vyriešené** (časť 8).
    Zostáva rozhodnúť, či Service Desk ide do startera ako `examples/` alebo von,
    a potom `git subtree`/nový repozitár.
+6. ~~Pridanie aplikácie bez zásahu do frameworku.~~ **Hotové** — a bol to
+   najtvrdší nález celej tejto časti. Test bol jednoduchý: čerstvý klon,
+   `bootstrap.sh`, a pridať appku. Nedalo sa to bez editovania **`NetRunner`
+   (Java enum)** a **`pom.xml` (`<includes>`)** — teda šablóna, ktorá káže
+   nepísať Javu, vyžadovala napísať Javu, aby sa dala použiť. Riešenie:
+   `processes.json` ako manifest (poradie + zoznam), `pom.xml` kopíruje
+   `processes/*.xml` hromadne, `NetRunner` číta manifest z classpath
+   a identifikátor si berie regexom z `<id>` v XML — takže sa nemôže rozísť
+   so sieťou tak, ako sa rozchádzal enum.
+
+   Overené v klone end-to-end: 1 XML + 1 riadok manifestu → runner sieť
+   naimportoval (existujúce preskočil), case sa vytvoril, akcia tlačidla
+   prebehla, `changeCaseProperty("title")` a dátové pole sa zapísali.
+
+   Pasca, na ktorej to najprv padlo: **stale `target/`**. Maven pri existujúcom
+   `target/` preskočí kopírovanie zdroja a jar vyjde bez novej siete, bez
+   varovania. To je ten istý tvar chyby ako pri presune adresára po merge
+   s `main` — Maven mlčí a zlyhá až runtime.

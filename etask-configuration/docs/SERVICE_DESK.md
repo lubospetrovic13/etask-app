@@ -304,7 +304,7 @@ update cesta, uzly URI v Elasticsearch) a B16 (rola vs. userRef pri re-importe).
 
 ### Rozbeh druhej fázy
 
-Siete sú registrované v `NetRunner.PetriNetEnum` a berú sa priamo
+Siete sú registrované v `etask-configuration/processes.json` a berú sa priamo
 z `etask-configuration/processes` (viď `<resources>` v `pom.xml`), takže čisté
 prostredie ich naimportuje samo a `SdMenuRunner` postaví menu. Ručne treba len
 priradiť roly a založiť zákazníkov.

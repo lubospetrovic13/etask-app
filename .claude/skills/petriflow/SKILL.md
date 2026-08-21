@@ -162,6 +162,9 @@ Siete v tomto repozitári porušujú schému a importujú sa. `pflint` preto por
 ```
 etask-configuration/
   processes/            aplikačná logika — siete (toto upravuješ)
+  processes.json        čo sa importuje pri štarte a v akom poradí
+  examples/
+    skeleton.xml        najmenšia funkčná sieť — odtiaľto začni novú appku
   reference/
     action-api.md       generovaný inventár extension pointov ← ČÍTAJ PRVÉ
     petriflow.schema.v1.1.0.xsd
@@ -170,14 +173,32 @@ etask-configuration/
     PETRIFLOW_LEARNINGS.md    čo referencia nepokrýva alebo tvrdí zle
     SERVICE_DESK.md           worked example: eForm, SLA, per-org oprávnenia
     AI_STARTER_ANALYSIS.md    prečo je repozitár takto postavený
-  tools/                pflint, pfgroovy, pfcheck, pftest, pfapi
+  tools/                pflint, pfgroovy, pfcheck, pftest, pfapi, pfseed
 etask-backend-starter/
   src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy   ← vrstva 2
-  src/main/groovy/com/netgrif/etask/startup/NetRunner.groovy     siete → import
+  src/main/groovy/com/netgrif/etask/startup/NetRunner.groovy     číta manifest
 ```
 
-Siete sa importujú pri starte z `processes/` (`NetRunner.PetriNetEnum`), ale
-**len keď v databáze chýbajú**. Po zmene siete ju treba nahrať znova.
+Siete sa importujú pri starte podľa `processes.json`, ale **len keď v databáze
+chýbajú**. Po zmene siete ju treba nahrať znova (`pfcheck`).
+
+## Nová aplikácia: XML + riadok v manifeste
+
+```bash
+cd etask-configuration
+cp examples/skeleton.xml processes/dovolenka.xml     # prepíš <id>, <initials>, <title>
+# dopíš "dovolenka.xml" do processes.json → "import"
+python3 tools/pflint.py processes/dovolenka.xml
+```
+
+**Do Javy ani do `pom.xml` sa nesiaha.** Manifest je jediný zoznam, `pom.xml`
+kopíruje `processes/*.xml` hromadne a `NetRunner` si identifikátor prečíta
+z `<id>` v XML — nedá sa teda rozísť so sieťou. Ak sa pri pridávaní appky
+chystáš editovať Javu, je to signál, že robíš niečo iné, než si myslíš.
+
+Na poradí v manifeste záleží: uzol URI vzniká až importom prvej siete, ktorej
+identifikátor tú cestu nesie, takže sieť odkazujúca na uzol (typicky menu)
+patrí za ňu.
 
 ## Worked example
 
