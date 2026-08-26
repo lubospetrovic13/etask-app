@@ -23,6 +23,7 @@ LOG_ARG=()
 fail=0
 ok() { printf '  OK   %s\n' "$1"; }
 bad() { printf '  FAIL %s\n' "$1"; fail=$((fail + 1)); }
+skip() { printf '  SKIP %s\n' "$1"; }
 
 echo "pftest: offline nastroje"
 
@@ -91,12 +92,21 @@ if [ ${#LOG_ARG[@]} -gt 0 ]; then
 
   # pfseed: po aplikovani musi druhy beh nahlasit nulu zmien. Neidempotentny
   # seed je horsi nez zadny - agent by po kazdom behu videl iny stav.
-  if python3 tools/pfseed.py >/dev/null 2>&1; then
+  seed_out=$(python3 tools/pfseed.py 2>&1)
+  if [ $? -eq 0 ]; then
     if python3 tools/pfseed.py --dry-run 2>&1 | grep -q "zmien 0"; then
       ok "pfseed je idempotentny"
     else
       bad "pfseed nie je idempotentny - druhy beh hlasi zmeny"
     fi
+  # Vsetky zlyhania su "uzivatel neexistuje" -> cudzia instancia, nie rozbity
+  # pfseed. Keby to hlasilo FAIL, agent sa naucí vystup ignorovat a potom
+  # prehliadne aj skutocne zlyhanie. Pozor na uplnost zoznamu tokenov: kym tu
+  # chybal NECITATELNY, tento test by osirele role zamlcal ako "cudzia instancia".
+  elif seed_missing=$(grep -c 'NENAJDENY' <<<"$seed_out")
+       seed_failed=$(grep -cE 'NENAJDENY|NECITATELNY|CHYBA' <<<"$seed_out")
+       [ "$seed_missing" -gt 0 ] && [ "$seed_failed" -eq "$seed_missing" ]; then
+    skip "pfseed: uzivatelia zo seed.json na tejto instancii nie su"
   else
     bad "pfseed zlyhal (osirele role? spusti tools/pfseed.py --repair)"
   fi

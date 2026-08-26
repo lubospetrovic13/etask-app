@@ -1,24 +1,50 @@
 {
   "_comment": [
-    "Ktoré siete sa importujú pri štarte a v akom poradí.",
+    "Jediný zoznam toho, čo runtime robí so sieťami. Číta ho ProcessManifest.",
     "",
-    "Pridanie novej aplikácie: hoď XML do processes/ a dopíš sem jeden riadok.",
-    "Žiadny zásah do Javy ani do pom.xml - to by protirečilo tomu, že aplikačná",
-    "logika patrí do Petriflow.",
+    "Pridanie novej aplikácie: hoď XML do processes/ a dopíš sem riadok do",
+    "\"import\". Žiadny zásah do Javy ani do pom.xml - to by protirečilo tomu,",
+    "že aplikačná logika patrí do Petriflow.",
     "",
-    "Poradie záleží: sieť, ktorá v akcii odkazuje na URI uzol alebo na inú sieť,",
-    "musí byť za ňou. Uzol URI vznikne až importom prvej siete, ktorej",
-    "identifikátor tú cestu nesie.",
+    "import        súbory sietí, v poradí importu. Poradie záleží: uzol URI",
+    "              vznikne až importom prvej siete, ktorej identifikátor tú cestu",
+    "              nesie, takže sieť odkazujúca na uzol (typicky menu) patrí za ňu.",
+    "              Identifikátor sa NEUVÁDZA - NetRunner ho číta z <id> v XML.",
+    "bootstrapCase identifikátory sietí, ktorých má pri štarte existovať práve",
+    "              jeden case. Typicky sieť stavajúca zobrazenia menu: uzol URI",
+    "              sám o sebe žiadne nenesie a menu API enginu je na action",
+    "              delegate, teda dosiahnuteľné len z akcie - a akcia chce case.",
+    "uriNodes      ikona a viditeľnosť karty v bočnom menu. requiredProcessRoles",
+    "              sú importId rolí (z <role><id> v sieti), nie stringId -",
+    "              stringId sa razí per verziu siete a re-import by zoznam vyprázdnil.",
+    "              Prázdne oboje = uzol vidí každý prihlásený.",
     "",
-    "Identifikátor sa NEUVÁDZA - NetRunner si ho prečíta z <id> v XML, takže",
-    "sa nedá rozísť so sieťou."
+    "Service Desk (sd_*) je príkladová aplikácia, nie časť frameworku.",
+    "Odstránenie: zmaž processes/sd_*.xml, ich riadky v \"import\", položku",
+    "\"service_desk\" nižšie a netScope v seed.json."
   ],
   "import": [
     "configuration_tiles.xml",
+
     "sd_customer.xml",
     "sd_work_item.xml",
     "sd_ticket.xml",
     "sd_intake.xml",
     "sd_menu.xml"
-  ]
+  ],
+  "bootstrapCase": [
+    "service_desk/sd_menu"
+  ],
+  "uriNodes": {
+    "general": {
+      "icon": "widgets",
+      "requiredAuthorities": ["ROLE_ADMIN"],
+      "requiredProcessRoles": []
+    },
+    "service_desk": {
+      "icon": "support_agent",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": ["agent", "specialist", "manager"]
+    }
+  }
 }

@@ -345,7 +345,8 @@ Hotové:
 * `tools/pfseed.py` + `seed.json` — idempotentné prideľovanie rolí, oprava osirelých
 * `tools/README-petriflow-tools.md` — kedy ktorý a prečo tri
 * `reference/petriflow.schema.v1.1.0.xsd` — oficiálna schéma offline
-* `processes.json` + prepísaný `NetRunner` — nová appka bez zásahu do Javy
+* `processes.json` + `ProcessManifest` — nová appka bez zásahu do Javy
+* Service Desk odpojený od frameworku — je to príkladová aplikácia, nie výbava
 * `examples/skeleton.xml` — najmenšia funkčná sieť ako východisko
 * oprava `wi_result` v `sd_work_item.xml`
 
@@ -400,3 +401,21 @@ Hotové:
    `target/` preskočí kopírovanie zdroja a jar vyjde bez novej siete, bez
    varovania. To je ten istý tvar chyby ako pri presune adresára po merge
    s `main` — Maven mlčí a zlyhá až runtime.
+7. ~~Rozhodnúť, či Service Desk zostáva ako `examples/`.~~ **Zostáva** — ale to
+   rozhodnutie malo cenu len vtedy, ak SD prestane byť súčasťou frameworku.
+   Tri miesta ho poznali po mene:
+
+   | bolo | je |
+   |---|---|
+   | `SdMenuRunner` s natvrdo `service_desk/sd_menu` | `BootstrapCaseRunner` nad `bootstrapCase` v manifeste |
+   | `UriNodeDataRunner.NODES` — mapa v Jave | `uriNodes` v manifeste |
+   | `EtaskRunnerController` komentár o SD | popis mechanizmu |
+
+   Kritérium bolo jednoduché: **odstránenie príkladovej appky nesmie znamenať
+   zásah do Javy.** Dnes je to päť XML súborov a tri záznamy v manifeste.
+
+   Vedľajší nález pri prevode: `UriNodeDataRunner` porovnával `Set` z dokumentu
+   s hodnotou z konfigurácie. Kým bola konfigurácia v Jave (`as Set`), sedelo to;
+   z JSON prídu zoznamy, takže porovnanie by nikdy nesedelo a runner by
+   zapisoval pri každom štarte — „idempotentný" len na papieri. Preto sa obe
+   strany prevádzajú na `Set<String>` pred porovnaním.

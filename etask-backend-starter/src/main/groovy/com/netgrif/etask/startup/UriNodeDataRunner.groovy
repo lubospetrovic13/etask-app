@@ -21,7 +21,13 @@ import org.springframework.stereotype.Component
  * someone's mongo shell history.
  *
  * Runs on every boot and is idempotent: it only writes when something actually
- * differs, and it leaves nodes it does not know about alone.
+ * differs, and it leaves nodes the manifest does not mention alone.
+ *
+ * The rules themselves live in `uriNodes` in etask-configuration/processes.json,
+ * not here: an app that ships its own menu card would otherwise mean editing
+ * Java to register it. requiredProcessRoles there are Petriflow import ids, not
+ * role string ids - a role's string id is minted per net version, so a re-import
+ * of the process would mint new ones and silently empty the list.
  */
 @Component
 class UriNodeDataRunner extends AbstractOrderedCommandLineRunner {
@@ -34,31 +40,14 @@ class UriNodeDataRunner extends AbstractOrderedCommandLineRunner {
     @Autowired
     private UriNodeDataRepository repository
 
-    /**
-     * uriPath -> configuration.
-     *
-     * requiredProcessRoles holds Petriflow import ids, not role string ids: a
-     * role's string id is minted per net version, so a re-import of the process
-     * would mint new ones and silently empty the list.
-     */
-    private static final Map<String, Map> NODES = [
-            "general"     : [
-                    icon                : "widgets",
-                    requiredAuthorities : ["ROLE_ADMIN"] as Set,
-                    requiredProcessRoles: [] as Set,
-            ],
-            "service_desk": [
-                    icon                : "support_agent",
-                    requiredAuthorities : [] as Set,
-                    requiredProcessRoles: ["agent", "specialist", "manager"] as Set,
-            ],
-    ]
+    @Autowired
+    private ProcessManifest manifest
 
     @Override
     void run(String... args) throws Exception {
         log.info("Calling uri node data runner")
         migrateLegacyRoleIds()
-        NODES.each { String uriPath, Map config ->
+        manifest.uriNodes().each { String uriPath, Map config ->
             UriNode node = uriService.findByUri(uriPath)
             if (node == null) {
                 // Nodes appear when a process whose identifier carries the path
@@ -94,6 +83,13 @@ class UriNodeDataRunner extends AbstractOrderedCommandLineRunner {
     }
 
     private void applyTo(UriNode node, String uriPath, Map config) {
+        String icon = config.icon as String
+        // Z JSON pridu zoznamy, v dokumente su mnoziny. Bez tohto prevodu by
+        // porovnanie nizsie nikdy nesedelo a runner by zapisoval pri kazdom
+        // starte - "idempotentny" len na papieri.
+        Set<String> authorities = asStringSet(config.requiredAuthorities)
+        Set<String> roles = asStringSet(config.requiredProcessRoles)
+
         UriNodeData data = repository.findByUriNodeId(node.getId()).orElse(null)
         boolean isNew = data == null
         if (isNew) {
@@ -102,16 +98,16 @@ class UriNodeDataRunner extends AbstractOrderedCommandLineRunner {
         }
 
         boolean changed = isNew
-        if (data.getIcon() != config.icon) {
-            data.setIcon(config.icon as String)
+        if (data.getIcon() != icon) {
+            data.setIcon(icon)
             changed = true
         }
-        if (data.getRequiredAuthorities() != config.requiredAuthorities) {
-            data.setRequiredAuthorities(config.requiredAuthorities as Set<String>)
+        if (asStringSet(data.getRequiredAuthorities()) != authorities) {
+            data.setRequiredAuthorities(authorities)
             changed = true
         }
-        if (data.getRequiredProcessRoles() != config.requiredProcessRoles) {
-            data.setRequiredProcessRoles(config.requiredProcessRoles as Set<String>)
+        if (asStringSet(data.getRequiredProcessRoles()) != roles) {
+            data.setRequiredProcessRoles(roles)
             changed = true
         }
 
@@ -120,7 +116,14 @@ class UriNodeDataRunner extends AbstractOrderedCommandLineRunner {
             return
         }
         repository.save(data)
-        log.info("Uri node ${uriPath}: icon=${config.icon}, " +
-                "authorities=${config.requiredAuthorities}, roles=${config.requiredProcessRoles}")
+        log.info("Uri node ${uriPath}: icon=${icon}, " +
+                "authorities=${authorities}, roles=${roles}")
+    }
+
+    private static Set<String> asStringSet(Object value) {
+        if (value == null) {
+            return [] as Set<String>
+        }
+        return (value as Collection).collect { it as String } as Set<String>
     }
 }

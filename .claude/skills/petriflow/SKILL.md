@@ -176,7 +176,8 @@ etask-configuration/
   tools/                pflint, pfgroovy, pfcheck, pftest, pfapi, pfseed
 etask-backend-starter/
   src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy   ← vrstva 2
-  src/main/groovy/com/netgrif/etask/startup/NetRunner.groovy     číta manifest
+  src/main/groovy/com/netgrif/etask/startup/ProcessManifest.groovy   číta manifest
+  src/main/groovy/com/netgrif/etask/startup/NetRunner.groovy         import sietí
 ```
 
 Siete sa importujú pri starte podľa `processes.json`, ale **len keď v databáze
@@ -200,7 +201,25 @@ Na poradí v manifeste záleží: uzol URI vzniká až importom prvej siete, kto
 identifikátor tú cestu nesie, takže sieť odkazujúca na uzol (typicky menu)
 patrí za ňu.
 
+Manifest má tri sekcie a všetky tri sú tam preto, aby appka nemusela siahať do
+Javy:
+
+| kľúč | na čo |
+|---|---|
+| `import` | súbory sietí a poradie importu |
+| `bootstrapCase` | siete, ktorých má pri štarte existovať práve jeden case (typicky tá, čo stavia zobrazenia menu) |
+| `uriNodes` | ikona a viditeľnosť karty v bočnom menu — `requiredAuthorities` a `requiredProcessRoles` (importId, nie stringId) |
+
+**Vlastná karta v menu** teda znamená: sieť s identifikátorom `mojaapp/mojaapp`,
+položka `"mojaapp"` v `uriNodes`, a ak má karta niečo otvárať, sieť stavajúca
+zobrazenia v `bootstrapCase`. Vzor je Service Desk (`sd_menu.xml`).
+
 ## Worked example
+
+Service Desk je **príkladová aplikácia, nie časť frameworku** — runtime ho nepozná
+po mene, je to len päť sietí a tri záznamy v manifeste. Odstrániť sa dá zmazaním
+`processes/sd_*.xml`, ich riadkov v `import`, `bootstrapCase`, položky
+`service_desk` v `uriNodes` a `netScope` v `seed.json`. Žiadny Java súbor.
 
 Než začneš písať, prečítaj `docs/SERVICE_DESK.md` a pozri `processes/sd_*.xml`.
 Je tam verejný viackrokový eForm cez taskRef bez klikania DOKONČIŤ, child casy,

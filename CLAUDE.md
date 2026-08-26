@@ -48,6 +48,12 @@ Toto je celý postup. **Žiadny zásah do Javy ani do `pom.xml`** — inak by st
 protirečil vlastnému pravidlu, že aplikačná logika patrí do Petriflow. `NetRunner`
 číta `processes.json` a identifikátor si berie z `<id>` v XML.
 
+Manifest nesie aj `bootstrapCase` (siete, ktorých má pri štarte existovať jeden
+case — typicky tá, čo stavia zobrazenia menu) a `uriNodes` (ikona a viditeľnosť
+karty v bočnom menu). Service Desk je príkladová aplikácia postavená len na
+týchto troch sekciách; runtime ho nepozná po mene a odstráni sa zmazaním sietí
+a ich riadkov v manifeste.
+
 ## Overovanie
 
 Po zmene siete, v tomto poradí:

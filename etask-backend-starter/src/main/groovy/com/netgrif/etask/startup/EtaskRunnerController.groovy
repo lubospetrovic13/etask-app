@@ -36,9 +36,9 @@ class EtaskRunnerController extends RunnerController {
             // Must run after NetRunner: uri nodes only exist once the processes
             // whose identifiers carry their path have been imported.
             UriNodeDataRunner,
-            // Must run after NetRunner too: it creates a case of
-            // service_desk/sd_menu, which builds the menu views.
-            SdMenuRunner,
+            // Must run after NetRunner too: it creates one case per process
+            // listed in `bootstrapCase`, and those processes build the menu views.
+            BootstrapCaseRunner,
             // END OF ADDITIONAL CUSTOM RUNNERS
             FinisherRunnerSuperCreator,
             FinisherRunner,
