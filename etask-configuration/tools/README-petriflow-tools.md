@@ -1,5 +1,9 @@
 # Nástroje na Petriflow siete
 
+> Stack sa rozbieha cez `tools/up.sh`. Recepty na bežné úlohy (menu, používatelia,
+> anonymný prístup, téma, vlastné komponenty) sú v `../docs/RUNBOOK.md`.
+
+
 Tri kroky, každý má vlastný dôvod existovať. Poradie je od najrýchlejšieho
 k najspoľahlivejšiemu:
 

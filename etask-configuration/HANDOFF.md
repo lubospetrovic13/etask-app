@@ -1,5 +1,13 @@
 # Handout pre ďalšie vlákno
 
+> **Historický dokument** — zachytáva stav vlákna, ktoré stavalo frontend nad AI
+> POC. Niektoré tvrdenia už neplatia (siete sa registrujú v `processes.json`,
+> nie v `NetRunner.PetriNetEnum`).
+>
+> Ak sem prichádzaš pracovať na projekte, začni inde:
+> **`docs/RUNBOOK.md`** (rozbeh a bežné úlohy) a **`CLAUDE.md`** (pravidlá).
+
+
 POC: **kategorizácia a vyťaženie klientskej komunikácie** pomocou LLM, konfigurovateľné
 z Petriflow. Nasadenie Netgrif Platform 6.3.1, single-tenant, lokálne.
 

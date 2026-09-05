@@ -84,6 +84,12 @@ prípady, kde bola vrstva 3 správna:
 
 ## Pravidlo 3: overuj, nehádaj
 
+Bežiaci stack (bez neho sa `pfcheck` nemá čoho pýtať):
+
+```bash
+etask-configuration/tools/up.sh
+```
+
 Po každej zmene siete, v tomto poradí:
 
 ```bash
@@ -161,6 +167,7 @@ Siete v tomto repozitári porušujú schému a importujú sa. `pflint` preto por
 
 ```
 etask-configuration/
+  docs/RUNBOOK.md       recepty na bežné úlohy (rozbeh, menu, useri, anonym)
   processes/            aplikačná logika — siete (toto upravuješ)
   processes.json        čo sa importuje pri štarte a v akom poradí
   examples/
@@ -173,7 +180,7 @@ etask-configuration/
     PETRIFLOW_LEARNINGS.md    čo referencia nepokrýva alebo tvrdí zle
     SERVICE_DESK.md           worked example: eForm, SLA, per-org oprávnenia
     AI_STARTER_ANALYSIS.md    prečo je repozitár takto postavený
-  tools/                pflint, pfgroovy, pfcheck, pftest, pfapi, pfseed
+  tools/                up.sh, pflint, pfgroovy, pfcheck, pftest, pfapi, pfseed
 etask-backend-starter/
   src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy   ← vrstva 2
   src/main/groovy/com/netgrif/etask/startup/ProcessManifest.groovy   číta manifest

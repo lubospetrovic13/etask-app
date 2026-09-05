@@ -10,6 +10,26 @@ Ak sa úloha týka Petriflow sietí, procesov, akcií, oprávnení alebo formul�
 **načítaj skill `petriflow`**. Je v `.claude/skills/petriflow/SKILL.md` a obsahuje
 rozhodovací postup, tiché pasce a odkaz na inventár extension pointov.
 
+**Pre bežné úlohy je hotový recept v `etask-configuration/docs/RUNBOOK.md`** —
+neimprovizuj, keď tam je overený postup. Pokrýva to, čo sa na tomto repozitári
+reálne žiada:
+
+| úloha | recept |
+|---|---|
+| rozbehať appku | `etask-configuration/tools/up.sh` (RUNBOOK 1) |
+| nová sieť / aplikácia | RUNBOOK 2 |
+| logika v Jave volaná z Petriflow | RUNBOOK 3 |
+| karta a priečinok v bočnom menu | RUNBOOK 4 |
+| úprava vizuálu, téma | RUNBOOK 5 |
+| nový field komponent | RUNBOOK 6 |
+| noví používatelia a roly | RUNBOOK 7 |
+| anonymný / verejný prístup | RUNBOOK 8 |
+
+Skoro každá z nich má pascu, ktorá sa neprejaví ako chyba — chýbajúci JWT kľúč
+vracia 401 bez správy, re-import siete ticho odoberie roly, `nc-task-list`
+nezobrazí vlastné polia a build o tom mlčí. Tie pasce sú v RUNBOOKu pri
+príslušnom kroku.
+
 ## Tri vrstvy
 
 ```
@@ -83,6 +103,12 @@ a spusti `tools/pftest.sh`.
 * Nespúšťať `pfcheck` na produkciu — importuje novú verziu siete.
 
 ## Čerstvý checkout
+
+```bash
+etask-configuration/tools/up.sh          # kompletný stack, idempotentne
+```
+
+`up.sh` volá `bootstrap.sh` sám. Keď treba len kľúč a nič viac:
 
 ```bash
 etask-configuration/tools/bootstrap.sh

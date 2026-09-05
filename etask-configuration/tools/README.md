@@ -1,5 +1,10 @@
 # Meracie nástroje
 
+> Rozbeh stacku je `tools/up.sh` (jeden príkaz, idempotentný).
+> Petriflow nástroje sú v `README-petriflow-tools.md`.
+> Recepty na bežné úlohy sú v `../docs/RUNBOOK.md`.
+
+
 Čistý Node, žiadne závislosti (`sassc.js` si berie `sass` z frontendového `node_modules`).
 Postavené preto, že pri práci s cudzou knižnicou sa **kaskáda ani kontrast nedajú odhadnúť** —
 a `ng build` je na spätnú väzbu príliš pomalý.

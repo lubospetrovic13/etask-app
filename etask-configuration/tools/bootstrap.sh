@@ -32,7 +32,12 @@ else
 fi
 
 echo
-echo "Dalej:"
+echo "Cely stack jednym prikazom (vratane tychto krokov):"
+echo "  etask-configuration/tools/up.sh"
+echo
+echo "Recepty na bezne ulohy: etask-configuration/docs/RUNBOOK.md"
+echo
+echo "Rucne, krok po kroku:"
 echo "  1. Java 11 (Groovy 3 na JDK 21 pada):"
 echo "       export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64"
 echo "  2. Zavislosti, ktore sa nedaju rozresit z verejnych repozitarov:"
