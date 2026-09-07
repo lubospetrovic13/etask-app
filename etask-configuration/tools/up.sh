@@ -16,9 +16,14 @@
 #
 #   tools/up.sh                  # rozbehne, co nebezi; existujuce data necha
 #   tools/up.sh --build          # vynuti cisty rebuild backendu
+#   tools/up.sh --restart        # zastavi beziaci backend a spusti znova
+#   tools/up.sh --stop           # len zastavi backend
 #   tools/up.sh --fresh          # zahodi databazu a zacne odznova
 #   tools/up.sh --frontend       # popri backende spusti aj ng serve
 #   tools/up.sh --db mojadb      # ina databaza (default etask)
+#
+# Ked sa stavalo (novy jar), backend sa restartuje sam - inak by si pozeral
+# na appku bez sieti, ktore si prave pridal.
 #
 # Nespusta sa proti produkcii - --fresh maze data.
 
@@ -30,11 +35,15 @@ DB="${DATABASE_NAME:-etask}"
 DO_BUILD=0
 DO_FRESH=0
 DO_FRONTEND=0
+DO_RESTART=0
+DO_STOP=0
 LOG_DIR="${ETASK_LOG_DIR:-$ROOT/.run}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --build)    DO_BUILD=1; shift ;;
+    --restart)  DO_RESTART=1; shift ;;
+    --stop)     DO_STOP=1; shift ;;
     --fresh)    DO_FRESH=1; shift ;;
     --frontend) DO_FRONTEND=1; shift ;;
     --db)       DB="$2"; shift 2 ;;
@@ -47,6 +56,32 @@ step() { printf '\n== %s\n' "$1"; }
 die()  { printf 'up: %s\n' "$1" >&2; exit 1; }
 
 mkdir -p "$LOG_DIR"
+
+# Zatvorka okolo prveho znaku: bez nej vzorka sedi na vlastny prikazovy riadok
+# a `pkill` zabije shell, z ktoreho ho spustas. Obaja, kto to tu skusali rucne,
+# na to naleteli - preto je to tu raz a spravne.
+backend_pids() { pgrep -f "[j]ar target/app.jar" 2>/dev/null; }
+
+stop_backend() {
+  local pids
+  pids=$(backend_pids) || true
+  [ -z "$pids" ] && return 1
+  # shellcheck disable=SC2086
+  kill $pids 2>/dev/null
+  for _ in $(seq 1 20); do
+    [ -z "$(backend_pids)" ] && return 0
+    sleep 1
+  done
+  # shellcheck disable=SC2086
+  kill -9 $(backend_pids) 2>/dev/null
+  return 0
+}
+
+if [ "$DO_STOP" = 1 ]; then
+  step "Zastavujem backend"
+  stop_backend && echo "zastaveny" || echo "nebezal"
+  exit 0
+fi
 
 # --- 1. JWT kluc ------------------------------------------------------------
 step "JWT kluc"
@@ -100,6 +135,8 @@ MONGO=$(docker ps --format '{{.Names}}' | grep -m1 mongo || true)
 
 if [ "$DO_FRESH" = 1 ]; then
   step "--fresh: zahadzujem databazu $DB"
+  # Najprv preč s backendom - inak drží spojenie na databázu, ktorú ideme zahodiť.
+  stop_backend >/dev/null 2>&1 || true
   docker exec "$MONGO" mongosh --quiet --eval "db.getSiblingDB('$DB').dropDatabase()" >/dev/null
   # Indexy URI su v Elasticsearchi, nie v Mongu. Bez ich zmazania by po
   # dropDatabase zostali uzly menu bez sieti, ktore ich vyrobili.
@@ -118,19 +155,41 @@ if [ "$DO_BUILD" = 0 ] && [ -f "$JAR" ]; then
   [ -n "$newer" ] && { echo "zdroje su novsie nez jar ($newer) - prestavujem"; DO_BUILD=1; }
 fi
 
+REBUILT=0
 if [ "$DO_BUILD" = 1 ] || [ ! -f "$JAR" ]; then
   echo "mvn clean package (par minut)..."
   (cd etask-backend-starter && JAVA_HOME="$JAVA_HOME" mvn -o -q clean package -DskipTests) \
     || (cd etask-backend-starter && JAVA_HOME="$JAVA_HOME" mvn -q clean package -DskipTests) \
     || die "build zlyhal"
+  REBUILT=1
 fi
 echo "ok ($JAR)"
 
 # --- 6. Backend -------------------------------------------------------------
 step "Backend"
-if curl -sf -m 3 -o /dev/null "http://localhost:8080/api/auth/login" \
-   || curl -s -m 3 -o /dev/null -w '%{http_code}' "http://localhost:8080/api/auth/login" 2>/dev/null | grep -q 401; then
-  echo "uz bezi na :8080 (nerestartujem)"
+
+# Preco sa restartuje: kym to skript nerobil, prestaval jar a nechal bezat stary
+# proces - takze si pridal siet, spustil `up.sh`, dostal "uz bezi" a pozeral na
+# appku bez nej. Ziadna chybova sprava, len nesedia veci. Nove siete znamenaju
+# novy jar, takze ked sa stavalo, MUSI sa aj restartovat. To iste po --fresh:
+# beziaci backend by ukazoval na databazu, ktoru sme prave zahodili.
+NEED_RESTART=0
+[ "$REBUILT" = 1 ] && NEED_RESTART=1
+[ "$DO_FRESH" = 1 ] && NEED_RESTART=1
+[ "$DO_RESTART" = 1 ] && NEED_RESTART=1
+
+if [ -n "$(backend_pids)" ]; then
+  if [ "$NEED_RESTART" = 1 ]; then
+    echo "bezi stary proces, zastavujem ho (novy jar alebo --fresh)"
+    stop_backend
+  else
+    echo "uz bezi na :8080, zdroje sa nezmenili (nerestartujem)"
+    echo "  vynutis to cez: tools/up.sh --restart"
+  fi
+fi
+
+if [ -n "$(backend_pids)" ]; then
+  : # nechavame bezat
 else
   BE_LOG="$LOG_DIR/backend.log"
   # nohup + disown: bez `disown` zostane java v tabulke uloh tohto shellu,

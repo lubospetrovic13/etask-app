@@ -20,10 +20,21 @@ build, backend. Je idempotentný — čo beží, nechá bežať.
 
 ```bash
 tools/up.sh --build       # vynúti čistý rebuild
+tools/up.sh --restart     # zastaví bežiaci backend a spustí znova
+tools/up.sh --stop        # len zastaví backend
 tools/up.sh --fresh       # zahodí databázu a začne odznova
 tools/up.sh --frontend    # popri backende aj ng serve na :4200
 tools/up.sh --db mojadb   # iná databáza
 ```
+
+**Po zmene siete stačí `tools/up.sh` znova** — zdroje sú novšie než jar, takže
+sa prestaví a backend sa **reštartuje sám**. Kým to skript nerobil, prestavil jar
+a nechal bežať starý proces: pridal si sieť, dostal „už beží" a pozeral na appku
+bez nej. Žiadna chybová správa, len nesedeli veci.
+
+Ak backend zabíjaš ručne, **nie `pkill -f "target/app.jar"`** — tá vzorka sedí aj
+na vlastný príkazový riadok a zabiješ si shell, z ktorého to spúšťaš. Použi
+`tools/up.sh --stop`.
 
 Prihlásenie: `super@netgrif.com` / `password`.
 

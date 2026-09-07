@@ -12,6 +12,9 @@ Jeden príkaz: JWT kľúč, Java 11, Docker, Mongo + Elasticsearch + Redis, buil
 backend. Idempotentný — čo beží, nechá bežať. Potom
 http://localhost:8080, prihlásenie `super@netgrif.com` / `password`.
 
+Po zmene siete ho spusti znova: prestaví jar a backend reštartuje sám.
+`--stop` ho zastaví, `--restart` vynúti reštart.
+
 ## Kam ísť ďalej
 
 | chcem… | kde |
