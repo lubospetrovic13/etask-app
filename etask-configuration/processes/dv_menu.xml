@@ -1,0 +1,201 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>dovolenky/dv_menu</id>
+	<version>1.0.0</version>
+	<initials>DVM</initials>
+	<title>Menu Dovoleniek</title>
+	<icon>menu</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Karta "Dovolenky" v bočnom menu sama žiadne zobrazenia nenesie - uzol URI
+		vznikne importom siete s identifikátorom `dovolenky/...`, ale to, čo pod
+		kartou vidno, sú casy procesov `filter` a `preference_filter_item`.
+		Bez nich karta existuje a vedie do prázdna.
+
+		Túto sieť teda drží pri živote jediný bootstrap case (processes.json ->
+		bootstrapCase), z ktorého sa spustí akcia nižšie.
+
+		Používa sa `createOrUpdateMenuItem` so 7 argumentmi - tá z projektu, nie
+		tá z enginu (rozlišujú sa len aritou a engine na update ceste volá
+		neexistujúce `updateFilter`). Dôvod je siedmy argument `allowedNets`:
+		bez neho zobrazenie existuje, ale tlačidlo "+" v ňom vráti "Žiadne
+		povolené siete" a zamestnanec si žiadosť nemá ako založiť. sd_menu.xml
+		stavia zobrazenia cez `createFilterInMenu`, ktoré allowedNets nastaviť
+		nevie - preto tam ten istý problém je a Service Desk sa zakladá inak.
+
+		Idempotencia je ručne: `findMenuItem(id)` vnútri tej metódy existujúcu
+		položku nenájde (hľadá v inom rozsahu), takže pri druhom spustení by
+		vznikla druhá sada zobrazení. Rovnaké necháme byť, zmenené zahodíme
+		a postavíme znova.
+
+		Štyri zobrazenia, všetky typu Case, a stav sa filtruje cez `taskIds` -
+		pole v indexe casu, ktoré drží id práve otvorených prechodov. Teda
+		`taskIds:"t_dv_rozhodnutie"` = "žiadosti, o ktorých sa dá rozhodnúť",
+		`taskIds:"t_dv_vysledok"` = "vybavené". Filtrovať podľa `dv_stav` by bolo
+		čitateľnejšie, ale dataSet polia sa v Elasticu spoľahlivo dopytovať nedajú
+		(gotcha 40 v referencii) - `taskIds` áno, a je to to isté tvrdenie
+		o stave, len vyjadrené polohou tokenu.
+
+		Prvá verzia mala tieto zobrazenia typu Task (dopyt na `transitionId`).
+		Filtrovalo sa to samo a vyzeralo to elegantnejšie, ale malo to chybu:
+		zobrazenie typu Task ukáže riadok na úlohu, nie na žiadosť, takže pri
+		viacerých úlohách v jednom stave by bola tá istá žiadosť v zozname
+		viackrát. Zobrazenie typu Case otvorí celý case a v ňom sú úlohy vedľa
+		seba.
+
+		Cena za to je, že Case zoznam sa filtruje oprávnením `view` na case, nie
+		právom prechod vykonať - žiadateľ má `view` na svoju žiadosť, takže by
+		si vlastnú videl aj v "Na schválenie". Preto má tá položka `allowed_roles`
+		nastavené na `veduci`: drawer aj počítadlá ju potom zamestnancovi vôbec
+		nezobrazia. Nie je to bezpečnostná hranica (tou je `perform` na prechode),
+		je to poriadok v menu.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>dv_menu_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+def created = []
+def unchanged = []
+def failed = []
+
+// allowedNets je to, z coho zobrazenie stavia ponuku tlacidla "+". Zaklada sa
+// len ziadost, takze tam patri jedina siet - a len pri zobrazeni typu Case,
+// task sa zalozit neda.
+def ziadost = "dovolenky/dv_ziadost"
+def vsetky = "processIdentifier:\"" + ziadost + "\""
+def views = [
+        [id: "dv_moje", name: "Žiadosti o dovolenku", type: "Case", icon: "beach_access",
+         query: vsetky, nets: [ziadost], roles: [:]],
+        [id: "dv_na_schvalenie", name: "Na schválenie", type: "Case", icon: "how_to_reg",
+         query: vsetky + " AND taskIds:\"t_dv_rozhodnutie\"", nets: [],
+         roles: ["veduci": ziadost]],
+        [id: "dv_rozpisane", name: "Rozpísané a vrátené", type: "Case", icon: "edit_calendar",
+         query: vsetky + " AND taskIds:\"t_dv_podanie\"", nets: [ziadost], roles: [:]],
+        // Vybavene = token je v p_vybavena, teda existuje uloha t_dv_vysledok.
+        // Nefiltruje sa to podla `dv_stav`, hoci by to bolo citatelnejsie:
+        // dataSet polia v Elasticu spolahlivo dopytovat nevieme, `taskIds` ano.
+        [id: "dv_vybavene", name: "Vybavené", type: "Case", icon: "task_alt",
+         query: vsetky + " AND taskIds:\"t_dv_vysledok\"", nets: [], roles: [:]],
+]
+
+views.each { v ->
+    def id = v.id as String
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            def current = getFilterFromMenuItem(existing)
+            def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
+            def currentNets = (current?.dataSet?."allowedNets"?.value ?: []) as List
+            // allowed_roles su ulozene ako options s klucom "importId:identifikator",
+            // takze sa porovnava zakodovana podoba, nie vstupna mapa.
+            def currentRoles = ((existing?.dataSet?."allowed_roles"?.options ?: [:]) as Map).keySet() as Set
+            def wantRoles = ((v.roles as Map).collect { k, net -> (k as String) + ":" + (net as String) }) as Set
+            if (currentQuery == (v.query as String) && currentNets == (v.nets as List)
+                    && currentRoles == wantRoles) {
+                bez_dialogu(existing, v.nets as List)
+                unchanged << id
+                return
+            }
+            deleteMenuItem(existing)
+        }
+        // Sedem argumentov = varianta z EtaskActionDelegate. Poradie NIE je
+        // rovnake ako pri createFilterInMenu: tu je prve id, az potom URI.
+        def item = createOrUpdateMenuItem(
+                id,                 // menu_item_identifier
+                "dovolenky",        // URI cesta
+                v.type as String,   // "Case" alebo "Task"
+                v.query as String,  // dopyt
+                v.icon as String,
+                v.name as String,   // nazov v menu aj nazov filtra
+                v.nets as List,     // allowedNets - bez toho "+" nefunguje
+                v.roles as Map      // allowed_roles: importId -> identifikator siete
+        )
+        if (item) { created << id } else { failed << id }
+        bez_dialogu(item, v.nets as List)
+    } catch (Exception e) {
+        failed << (id + " (" + e.getClass().simpleName + ": " + e.message + ")")
+    }
+}
+
+// Vysledok patri do nazvu casu, nie do datoveho pola: po createFilterInMenu sa
+// zapis do vlastneho casu neuchova - engine medzitym zakladal ine casy a nas
+// outcome zahodil. changeCaseProperty prezije.
+def summary = "Menu Dovoleniek – " + (created.size() + unchanged.size()) + "/" + views.size()
+if (failed) {
+    summary = "CHYBA menu Dovoleniek – nepodarilo sa: " + failed.join(", ")
+}
+changeCaseProperty("title").about { summary }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="bez_dialogu"><![CDATA[
+{ def menuItem, def nets ->
+    // Bez tohto vyskoci pri "+" dialóg "Vyplňte názov prípadu" a názov žiadosti
+    // si vymýšľa človek. Riadi to `enable_case_title` na prechode `view` položky
+    // menu - nie je to argument `createOrUpdateMenuItem`, takže sa dopisuje
+    // zvlášť cez setData. Case sa potom založí rovno a názov mu dá `create`
+    // akcia siete. Týka sa len zobrazení, ktoré vôbec majú allowedNets.
+    if (menuItem == null || !nets) return
+    setData("view", menuItem, [
+            "enable_case_title"             : ["value": false, "type": "boolean"],
+            "case_require_title_in_creation": ["value": false, "type": "boolean"]
+    ])
+}
+	]]></function>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def identifier ->
+    // `findMenuItem(id)` z ActionDelegate existujucu polozku nenajde (hlada
+    // v inom rozsahu), takze by sa pri kazdom spusteni zalozila druha sada
+    // zobrazeni. Polozky su casy `preference_filter_item`, takze si ich
+    // prejdeme sami.
+    def id = ((identifier ?: "") as String).trim()
+    if (!id) return null
+    def items = findCases { it.processIdentifier.eq("preference_filter_item") }
+    return items?.find { ((it.dataSet["menu_item_identifier"]?.value ?: "") as String) == id }
+}
+	]]></function>
+	<roleRef>
+		<id>veduci</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>veduci</id>
+		<title>Vedúci oddelenia</title>
+	</role>
+	<transition>
+		<id>t_dv_menu</id>
+		<x>112</x>
+		<y>80</y>
+		<label>Stav menu</label>
+		<icon>menu</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>veduci</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_dv_menu</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_dv_menu</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

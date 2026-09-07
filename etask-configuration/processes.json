@@ -30,10 +30,14 @@
     "sd_work_item.xml",
     "sd_ticket.xml",
     "sd_intake.xml",
-    "sd_menu.xml"
+    "sd_menu.xml",
+
+    "dv_ziadost.xml",
+    "dv_menu.xml"
   ],
   "bootstrapCase": [
-    "service_desk/sd_menu"
+    "service_desk/sd_menu",
+    "dovolenky/dv_menu"
   ],
   "uriNodes": {
     "general": {
@@ -45,6 +49,11 @@
       "icon": "support_agent",
       "requiredAuthorities": [],
       "requiredProcessRoles": ["agent", "specialist", "manager"]
+    },
+    "dovolenky": {
+      "icon": "beach_access",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": ["zamestnanec", "veduci"]
     }
   }
 }
