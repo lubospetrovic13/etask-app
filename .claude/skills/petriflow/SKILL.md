@@ -96,18 +96,31 @@ Po každej zmene siete, v tomto poradí:
 cd etask-configuration
 python3 tools/pflint.py processes/          # 0,3 s — štruktúra, tiché pasce
 python3 tools/pfgroovy.py processes/       # 3 s   — syntax Groovy
-tools/pfcheck.sh --log <backend.log> processes/   # ground truth import
+python3 tools/pfsync.py --sync             # import do enginu + role
 ```
+
+`pfsync` porovná každé XML s tým, čo engine naozaj drží, rozdielne prežene cez
+`pfcheck` a potom prideli role. Prečo nestačí reštart: **`NetRunner` importuje
+sieť len keď v databáze chýba**, takže po zmene existujúceho XML engine ďalej
+drží starý model, `LATEST` mieri na neho a nové casy z neho vznikajú. Nikde sa
+to neohlási.
 
 **Ground truth je engine.** Keď si offline nástroj a engine odporujú, chyba je
 v nástroji — nie v sieti. Stalo sa to dvakrát pri stavbe `pfgroovy`. Detaily
 v `tools/README-petriflow-tools.md`.
 
-**Po re-importe siete prideľ role znova:**
+**Po re-importe siete prideľ role znova** — `pfsync --sync` to už robí, ručne:
 
 ```bash
 python3 tools/pfseed.py          # cieľový stav je v seed.json
 ```
+
+A potom sa **odhlás a prihlás**: prihlásená session drží staré `stringId` rolí,
+takže zakladanie casu vráti 403, hoci cez API tomu istému účtu prejde.
+
+**Case si drží verziu siete, v ktorej vznikol.** Po zmene siete testuj na novom
+case — do starého nové prechody ani polia nepribudnú a vyzerá to, že zmena
+nefunguje. Nové casy sú v poriadku: frontend si sieť vyžiada ako `LATEST`.
 
 Rola má `stringId` per verziu siete, takže po re-importe užívateľ na casoch novej
 verzie prístup stratí. Bez tohto kroku testuješ na rozbitom stave a nevieš o tom.
@@ -146,6 +159,12 @@ poznaj ich aj tak — plný zoznam je v `docs/PETRIFLOW_LEARNINGS.md`.
   Rola zostáva autoritatívna — koho niekto pridá do zoznamu omylom a rolu nemá,
   prístup nedostane. Vzor je v `sd_ticket` (`apply_customer`). Id z userList
   poľa nikdy neťahaj ručne, na to je `userIdsOf()` — `u?._id` zhodí celú akciu.
+* **Read-only pohľad na read arcu z konzumovaného miesta zmizne natrvalo.**
+  Keď na tom mieste niekto klikne DOKONČIŤ a dokončenie sa odmietne (prázdne
+  `required` pole alebo výnimka z `phase="pre"`), engine tú read-only úlohu
+  zmaže a už ju neobnoví — token sa nepohol, takže nie je čo ju znova povoliť.
+  Read arc pre pohľad veď len z miesta, ktoré žiadny prechod nekonzumuje
+  (`p_alive`), alebo z koncového. Detaily v `PETRIFLOW_LEARNINGS.md`, B8b.
 * **Rola má stringId per verziu siete.** Po re-importe treba role prideliť znova.
   Oprávnenie cez `userRef` re-import prežije, cez `roleRef` nie.
 * **Nové dátové pole sa nepropaguje do existujúcich casov.** Case si drží verziu.

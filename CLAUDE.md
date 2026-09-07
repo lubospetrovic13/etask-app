@@ -82,13 +82,32 @@ Po zmene siete, v tomto poradí:
 cd etask-configuration
 python3 tools/pflint.py processes/                 # 0,3 s
 python3 tools/pfgroovy.py processes/              # 3 s
-tools/pfcheck.sh --log <backend.log> processes/   # ground truth
-python3 tools/pfseed.py                           # role po re-importe
+python3 tools/pfsync.py --sync                    # import + role, len čo sa rozišlo
 ```
 
 **Ground truth je bežiaci engine.** Import endpoint pri chybe vracia holé
-`{"status":500}` bez dôvodu — príčina je len v logu servera. Bez `pfcheck` sieť
-nie je overená.
+`{"status":500}` bez dôvodu — príčina je len v logu servera. Bez importu do
+enginu sieť nie je overená.
+
+`pfsync` je ten import: porovná každé XML s tým, čo engine naozaj drží
+(`GET /api/petrinet/{id}/file` vracia naimportované XML bajt za bajtom),
+rozdielne prežene cez `pfcheck` a potom prideli role cez `pfseed`. Robí to isté
+ako tie dva nástroje ručne, ale len pre to, čo sa naozaj zmenilo — a hlavne ti
+povie, keď si zabudol.
+
+**Prečo na tom záleží viac, než sa zdá:** `NetRunner` importuje sieť len keď
+v databáze **chýba**. Po zmene existujúceho XML sa pri starte nestane nič —
+engine ďalej drží starý model, `LATEST` mieri na neho a **nové casy z neho
+vznikajú**. Nikde sa to neohlási a v appke to vyzerá tak, že zmena nefunguje.
+`tools/up.sh` preto `pfsync --sync` volá sám po starte backendu.
+
+Dve veci, ktoré z toho vyplývajú a stoja každého aspoň jedno ladenie:
+
+* **Case si drží verziu siete, v ktorej vznikol.** Nové prechody a polia doň
+  nepribudnú. Kto po zmene testuje na starom case, testuje starý model.
+* **Po pridelení rolí sa treba odhlásiť a prihlásiť.** Prihlásená session drží
+  staré `stringId` rolí, takže zakladanie casu vráti **403**, hoci cez API tomu
+  istému účtu prejde.
 
 Keď si offline nástroj a engine odporujú, **chyba je v nástroji**. Oprav nástroj
 a spusti `tools/pftest.sh`.
@@ -100,7 +119,11 @@ a spusti `tools/pftest.sh`.
 * Nedôverovať schéme z hlavičky siete — runtime sa od nej odlišuje.
 * Nekontrolovať poradie podelementov `<data>` v nástrojoch (tri zdroje pravdy si
   odporujú, siete porušujú schému a importujú sa).
-* Nespúšťať `pfcheck` na produkciu — importuje novú verziu siete.
+* Nespúšťať `pfcheck` ani `pfsync --sync` na produkciu — importujú novú verziu
+  siete.
+* Nezavesiť read-only pohľad na read arc z miesta, ktoré nejaký prechod
+  konzumuje. Odmietnuté `finish` na tom prechode tú úlohu zmaže a už ju
+  neobnoví (`docs/PETRIFLOW_LEARNINGS.md`, B8b).
 
 ## Čerstvý checkout
 
