@@ -65,14 +65,52 @@ def javap_lines(jar):
     return res.stdout.splitlines(), None
 
 
+def engine_version_from_pom():
+    """Verzia enginu, na ktorej projekt naozaj stoji - z pom.xml backendu.
+
+    Bez toho sa brala lexikograficky posledna z ~/.m2, co na stroji s viacerymi
+    verziami enginu (teda na kazdom, kde sa robi na viacerych projektoch)
+    znamena inventar CUDZIEHO API: 6.5.0-SNAPSHOT namiesto 6.3.1, o 36 metod
+    viac a ine signatury. A kedze `pflint` validuje nazvy metod proti tomuto
+    inventaru, prijal by metody, ktore v beziacom enginu nie su, a naopak.
+    """
+    pom = Path(__file__).resolve().parent.parent.parent / "etask-backend-starter" / "pom.xml"
+    if not pom.is_file():
+        return None
+    xml = pom.read_text(encoding="utf-8", errors="replace")
+    m = re.search(
+        r"<artifactId>\s*application-engine\s*</artifactId>\s*<version>\s*([^<\s]+)\s*</version>",
+        xml)
+    return m.group(1) if m else None
+
+
 def find_engine_jar():
     env = os.environ.get("PF_ENGINE_JAR")
     if env and Path(env).is_file():
         return env
     root = Path.home() / ".m2/repository/com/netgrif/application-engine"
-    jars = [j for j in root.glob("*/application-engine-*.jar")
-            if "sources" not in j.name and "javadoc" not in j.name] if root.is_dir() else []
-    return str(sorted(jars)[-1]) if jars else None
+    if not root.is_dir():
+        return None
+
+    def real(jars):
+        return [j for j in jars if "sources" not in j.name and "javadoc" not in j.name]
+
+    version = engine_version_from_pom()
+    if version:
+        exact = real((root / version).glob("application-engine-*.jar")) \
+            if (root / version).is_dir() else []
+        if exact:
+            return str(sorted(exact)[-1])
+        print(f"pfapi: pom.xml chce engine {version}, ale jar preň v ~/.m2 nie je",
+              file=sys.stderr)
+
+    jars = real(list(root.glob("*/application-engine-*.jar")))
+    if not jars:
+        return None
+    pick = str(sorted(jars)[-1])
+    print(f"pfapi: POZOR beriem {Path(pick).name} - nie je to verzia z pom.xml",
+          file=sys.stderr)
+    return pick
 
 
 def short(t):

@@ -15,6 +15,23 @@
 #   tools/pftest.sh --log /cesta/backend.log # aj pfcheck proti enginu
 
 set -uo pipefail
+
+# Python: `python3` na Windows (Git Bash) ukazuje na WindowsApps alias, ktory
+# len vypise "Python was not found" a vrati nenulovo - takze kazda kontrola
+# nizsie by "zlyhala" bez toho, aby sa vobec spustila. Preto sa hlada aj
+# `python` a `py -3`, a diakritika sa nesmie zlomit na cp1252.
+PY=""
+for cand in python3 python; do
+  if command -v "$cand" >/dev/null 2>&1 && "$cand" -c "import sys" >/dev/null 2>&1; then
+    PY="$cand"; break
+  fi
+done
+if [ -z "$PY" ] && command -v py >/dev/null 2>&1 && py -3 -c "import sys" >/dev/null 2>&1; then
+  PY="py -3"
+fi
+[ -n "$PY" ] || { echo "python sa nenasiel (skusal som python3, python, py -3)" >&2; exit 2; }
+export PYTHONIOENCODING=utf-8
+
 cd "$(dirname "$0")/.." || exit 2
 
 LOG_ARG=()
@@ -28,14 +45,14 @@ skip() { printf '  SKIP %s\n' "$1"; }
 echo "pftest: offline nastroje"
 
 # pflint: musi chytit nedeklarovanu rolu
-if python3 tools/pflint.py tools/fixtures/bad-role.xml >/dev/null 2>&1; then
+if $PY tools/pflint.py tools/fixtures/bad-role.xml >/dev/null 2>&1; then
   bad "pflint neoznacil bad-role.xml"
 else
   ok "pflint chytil bad-role.xml"
 fi
 
 # pflint: nesmie oznacit platne siete
-if python3 tools/pflint.py processes/ >/dev/null 2>&1; then
+if $PY tools/pflint.py processes/ >/dev/null 2>&1; then
   ok "pflint neoznacil platne siete"
 else
   bad "pflint oznacil platne siete v processes/ - falosny pozitiv"
@@ -44,21 +61,21 @@ fi
 # pflint: musi chytit preklep vo volani metody delegata. Toto je jediny
 # nastroj, ktory to chyti - engine to naimportuje bez namietky, lebo delegat je
 # dynamicky, a za behu vrati HTTP 200 a akciu potichu zhodi.
-if python3 tools/pflint.py tools/fixtures/bad-call.xml >/dev/null 2>&1; then
+if $PY tools/pflint.py tools/fixtures/bad-call.xml >/dev/null 2>&1; then
   bad "pflint neoznacil bad-call.xml (preklep vo volani delegata)"
 else
   ok "pflint chytil bad-call.xml"
 fi
 
 # pfgroovy: musi chytit rozbite Groovy
-if python3 tools/pfgroovy.py tools/fixtures/bad-groovy.xml >/dev/null 2>&1; then
+if $PY tools/pfgroovy.py tools/fixtures/bad-groovy.xml >/dev/null 2>&1; then
   bad "pfgroovy neoznacil bad-groovy.xml"
 else
   ok "pfgroovy chytil bad-groovy.xml"
 fi
 
 # pfgroovy: nesmie oznacit 90 akcii, ktore engine skompiluje
-if python3 tools/pfgroovy.py processes/ >/dev/null 2>&1; then
+if $PY tools/pfgroovy.py processes/ >/dev/null 2>&1; then
   ok "pfgroovy neoznacil platne akcie"
 else
   bad "pfgroovy oznacil akcie, ktore engine skompiluje - falosny pozitiv"
@@ -67,10 +84,10 @@ fi
 # pfapi: inventar sa nesmie rozist s enginom. Neaktualny inventar je presne ta
 # chyba, kvoli ktorej cely tento subor existuje - agent siahne po neexistujucej
 # metode, alebo si napise vlastnu verziu tej, ktora tam uz je.
-if python3 tools/pfapi.py --check >/dev/null 2>&1; then
+if $PY tools/pfapi.py --check >/dev/null 2>&1; then
   ok "pfapi inventar je aktualny"
 else
-  bad "reference/action-api.md je neaktualny - spusti: python3 tools/pfapi.py > reference/action-api.md"
+  bad "reference/action-api.md je neaktualny - spusti: $PY tools/pfapi.py > reference/action-api.md"
 fi
 
 if [ ${#LOG_ARG[@]} -gt 0 ]; then
@@ -92,9 +109,9 @@ if [ ${#LOG_ARG[@]} -gt 0 ]; then
 
   # pfseed: po aplikovani musi druhy beh nahlasit nulu zmien. Neidempotentny
   # seed je horsi nez zadny - agent by po kazdom behu videl iny stav.
-  seed_out=$(python3 tools/pfseed.py 2>&1)
+  seed_out=$($PY tools/pfseed.py 2>&1)
   if [ $? -eq 0 ]; then
-    if python3 tools/pfseed.py --dry-run 2>&1 | grep -q "zmien 0"; then
+    if $PY tools/pfseed.py --dry-run 2>&1 | grep -q "zmien 0"; then
       ok "pfseed je idempotentny"
     else
       bad "pfseed nie je idempotentny - druhy beh hlasi zmeny"

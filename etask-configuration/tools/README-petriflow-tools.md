@@ -175,6 +175,33 @@ falošný pozitív naučí agenta ignorovať výstup.
 
 ---
 
+## pfsync.py — čo sa rozišlo s bežiacim enginom
+
+```bash
+python3 tools/pfsync.py            # výpis: ktoré siete engine drží inak
+python3 tools/pfsync.py --list     # len cesty, na rúru do pfcheck
+python3 tools/pfsync.py --sync     # rozdielne naimportuje a prideli role
+```
+
+`NetRunner` importuje sieť **len keď v databáze chýba**. Po zmene existujúceho
+XML sa pri starte nestane nič: engine ďalej drží starý model, `LATEST` mieri na
+neho a nové casy z neho vznikajú. Nikde sa to neohlási — v appke to vyzerá tak,
+že zmena nefunguje.
+
+Zisťuje sa to **bezstavovo**: `GET /api/petrinet/{id}/file` vráti presne to XML,
+ktoré bolo naimportované, bajt za bajtom. Stačí ho porovnať s lokálnym súborom,
+netreba marker ani checksum súbor. Pri prvom spustení na tomto repozitári to
+odhalilo, že bežiaca instancia drží iný `sd_ticket` a `sd_work_item`, než je
+v repozitári — nikto o tom nevedel.
+
+`--sync` prežene rozdielne siete cez `pfcheck.sh` (import + príčina z logu)
+a potom pustí `pfseed.py` (rola má `stringId` per verziu siete). To isté volá
+`tools/up.sh` v kroku „Siete vs. engine“; vypnúť sa to dá `ETASK_NO_SYNC=1`.
+
+**Windows:** `bash` v PATH ukazuje na WSL (`C:\Windows\System32\bash.exe`)
+a bez nainštalovanej distribúcie padne na `execvpe(/bin/bash) failed`. `pfsync`
+preto System32 preskakuje a hľadá Git Bash; prebiť sa to dá `PFSYNC_BASH`.
+
 ## pfseed.py — procesné role do deklarovaného stavu
 
 ```bash

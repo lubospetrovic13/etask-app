@@ -217,6 +217,39 @@ transition**, nie jedného miesta do viacerých transition.
 
 *Overené za behu — tri tasky v jednom case.*
 
+### B8b. Read arc na KONZUMOVANOM miesta nepreži odmietnuté `finish`
+
+Trvale otvorený read-only pohľad sa dá zavesiť na read arc z ktoréhokoľvek miesta.
+Kým to miesto nikto nekonzumuje (`p_alive` v `sd_ticket`), je to bezpečné. Keď ho
+konzumuje iný prechod, je to **mína**:
+
+```
+[p_na_schvalenie] ──read──► [t_pohlad]        (read-only, žiadateľ)
+                  ──regular──► [t_rozhodnutie]  (konzumuje token)
+```
+
+Keď na `t_rozhodnutie` niekto klikne DOKONČIŤ a dokončenie sa **odmietne** — či už
+enginom (`required` pole je prázdne), alebo výnimkou z vlastnej akcie
+v `phase="pre"` — engine `t_pohlad` **zmaže a už nikdy neobnoví**. Token sa nepohol,
+takže neexistuje udalosť, ktorá by ho znova povolila. Case zostane s tokenom
+v `p_na_schvalenie`, `t_rozhodnutie` prežije, ale `t_pohlad` je navždy preč.
+
+Ako sa to prejaví: používateľ, ktorý mal len ten pohľad, po jednom nepodarenom
+kliknutí kolegy stratí prístup k vlastnému casu. Bez chybovej správy, bez záznamu
+v logu. A `pflint` to nevie chytiť — štruktúra je platná.
+
+```
+overené za behu, NAE 6.3.1:
+  pred odmietnutým finish:  ['t_pohlad', 't_rozhodnutie']
+  po odmietnutom finish:    ['t_rozhodnutie']
+```
+
+**Pravidlo:** read arc pre read-only pohľad veď len z miesta, ktoré žiadny prechod
+nekonzumuje — z vlastného `p_alive`, alebo z koncového miesta (`p_vybavena`), ktoré
+je sink. Ak pohľad naozaj musí existovať v strede toku, jediná bezpečná cesta je
+vlastné miesto, do ktorého predchádzajúci prechod uloží druhý token, a ktoré sa
+vyprázdňuje systémovým prechodom — nie tým, ktorý môže odmietnuť dokončenie.
+
 ### B9. `<properties>` v `<component>`
 
 Štýlovanie komponentu, v príručke nikde:

@@ -225,6 +225,39 @@ else
   echo "log: $BE_LOG"
 fi
 
+# --- 6b. Siete do aktualneho stavu -----------------------------------------
+# `NetRunner` importuje siet len ked v databaze CHYBA, takze po zmene
+# existujuceho XML sa pri starte NESTANE NIC: engine dalej drzi stary model,
+# `LATEST` mieri na neho a nove casy z neho vznikaju. Nikde sa to neohlasi.
+# Tento krok to dorovna - `pfsync` porovna kazde XML s tym, co engine naozaj
+# drzi (`GET /api/petrinet/{id}/file`), rozdielne prezene cez `pfcheck`
+# a potom prideli role (`pfseed`), lebo rola ma stringId per verziu siete.
+#
+# Preskocit sa to da cez ETASK_NO_SYNC=1 (napr. ked sa siete menia rucne
+# v appke a nechces, aby ich skript prepisal z repozitara).
+step "Siete vs. engine"
+if [ "${ETASK_NO_SYNC:-0}" = "1" ]; then
+  echo "preskocene (ETASK_NO_SYNC=1)"
+else
+  # `python3` na Windows (Git Bash) je WindowsApps alias, ktory len vypise
+  # "Python was not found" - preto sa skusa aj `python` a `py -3`.
+  SYNC_PY=""
+  for cand in python3 python; do
+    if command -v "$cand" >/dev/null 2>&1 && "$cand" -c "import sys" >/dev/null 2>&1; then
+      SYNC_PY="$cand"; break
+    fi
+  done
+  if [ -z "$SYNC_PY" ] && command -v py >/dev/null 2>&1 && py -3 -c "import sys" >/dev/null 2>&1; then
+    SYNC_PY="py -3"
+  fi
+  if [ -n "$SYNC_PY" ]; then
+    (cd etask-configuration && PYTHONIOENCODING=utf-8 $SYNC_PY tools/pfsync.py --sync) ||       echo "POZOR: zosuladenie sieti zlyhalo, engine moze drzat stary model"
+  else
+    echo "python sa nenasiel - preskocene."
+    echo "  Rucne: cd etask-configuration && python3 tools/pfsync.py --sync"
+  fi
+fi
+
 # --- 7. Frontend ------------------------------------------------------------
 if [ "$DO_FRONTEND" = 1 ]; then
   step "Frontend"

@@ -28,9 +28,21 @@ tools/up.sh --db mojadb   # iná databáza
 ```
 
 **Po zmene siete stačí `tools/up.sh` znova** — zdroje sú novšie než jar, takže
-sa prestaví a backend sa **reštartuje sám**. Kým to skript nerobil, prestavil jar
+sa prestaví, backend sa **reštartuje sám** a nakoniec sa siete **dorovnajú
+s enginom** (krok „Siete vs. engine“). Kým to skript nerobil, prestavil jar
 a nechal bežať starý proces: pridal si sieť, dostal „už beží" a pozeral na appku
 bez nej. Žiadna chybová správa, len nesedeli veci.
+
+To dorovnanie je druhá polovica tej istej pasce a je horšia, lebo prežije aj
+reštart: **`NetRunner` importuje sieť len keď v databáze chýba.** Po zmene
+existujúceho XML sa pri starte nestane nič — engine ďalej drží starý model,
+`LATEST` mieri na neho a **nové casy vznikajú zo starého modelu**. Presne takto
+sa nová možnosť v tasku javí ako nefunkčná. `up.sh` preto na konci pustí
+`tools/pfsync.py --sync`, ktorý porovná každé XML s tým, čo engine naozaj drží,
+rozdielne prežene cez `pfcheck` a potom prideli role cez `pfseed`.
+
+Keď to nechceš (napr. siete meníš ručne v appke a nechceš ich prepísať
+z repozitára): `ETASK_NO_SYNC=1 tools/up.sh`.
 
 Ak backend zabíjaš ručne, **nie `pkill -f "target/app.jar"`** — tá vzorka sedí aj
 na vlastný príkazový riadok a zabiješ si shell, z ktorého to spúšťaš. Použi
@@ -47,6 +59,17 @@ Prihlásenie: `super@netgrif.com` / `password`.
 | bez `LANG=C.UTF-8` | import siete s diakritikou v názve zhodí `InvalidPathException` |
 | stale `target/` | Maven preskočí kopírovanie zdrojov: jar bez sietí, alebo s triedou, ktorú zdroj už nemá |
 | chýbajúci Redis | Spring spadne až na session store, dlho po štarte |
+| sieť zmenená, nie znovu naimportovaná | engine drží starý model, nové casy z neho vznikajú, nikde ani slovo (rieši `pfsync`) |
+
+**Na Windows (Git Bash)** má `up.sh` štyri miesta, kde sa zadrhne, a všetky
+mlčia rovnako ako to ostatné:
+
+| pasca | ako sa prejaví |
+|---|---|
+| `pgrep` v Git Bash neexistuje | `--restart` bežiaci backend nenájde, nezastaví ho, `mvn clean` narazí na zamknutý `app.jar` a build spadne. Zastav JVM ručne (PowerShell `Stop-Process`) |
+| `JAVA_HOME` sa hľadá v `/usr/lib/jvm/*` | nenájde Windows JDK — `export JAVA_HOME="/c/Program Files (x86)/jdk-11"` pred spustením |
+| python nástroje padajú na vlastnom výpise | `UnicodeEncodeError` na `→` a diakritike — `PYTHONIOENCODING=utf-8` |
+| `bash` v PATH je WSL | `execvpe(/bin/bash) failed` pri volaní `.sh` z pythonu; `pfsync` to obchádza sám, inak `PFSYNC_BASH` |
 
 `up.sh` porovnáva čas zdrojov s časom jaru a keď sú novšie, prestaví — tá tretia
 pasca stála v tomto repozitári tri ladenia.
@@ -81,7 +104,19 @@ tools/pfcheck.sh --log .run/backend.log processes/mojaapp.xml   # ground truth
 odtiaľ vytiahne. Bez neho sieť nie je overená.
 
 `NetRunner` importuje sieť **len keď v databáze chýba**. Po zmene existujúcej
-siete ju treba nahrať znova (`pfcheck`, alebo Nahrať proces v appke).
+siete ju treba nahrať znova — `tools/up.sh` to už robí sám (`pfsync`), ručne je
+to `pfcheck`, alebo Nahrať proces v appke.
+
+**Case si drží verziu siete, v ktorej vznikol.** Nové prechody a polia doň
+nepribudnú, takže po re-importe testuješ na starom modeli, ak testuješ na starom
+case — a nová možnosť v tasku vyzerá, že nefunguje. Nové casy sú v poriadku:
+frontend si net vyžiada ako `LATEST`, takže „+“ zakladá vždy z najnovšej
+naimportovanej verzie. Zosúladiť sa dá len zahodením starých casov.
+
+```bash
+python3 tools/pfsync.py            # ktoré siete sa rozišli s enginom
+python3 tools/pfsync.py --sync     # dorovnať (import + role)
+```
 
 ---
 
@@ -165,6 +200,46 @@ a postaviť znova.
 
 Pozor na poradie argumentov: `createFilterInMenu("service_desk", id, nazov,
 dopyt, "Case", ...)` — **prvá je URI cesta, nie identifikátor**.
+
+**A ešte dôležitejšie: `createFilterInMenu` nevie nastaviť `allowedNets`.**
+Zobrazenie potom vyzerá hotovo, ale tlačidlo „+“ v ňom vráti **„Žiadne povolené
+siete“** a používateľ si case nemá ako založiť. Build ani import o tom mlčia,
+zoznam sa tvári správne — vidno to až kliknutím. Na zobrazenie, z ktorého sa má
+dať zakladať, použi projektovú `createOrUpdateMenuItem` so **7 argumentmi**
+(iné poradie — prvé je id, až potom URI):
+
+```groovy
+createOrUpdateMenuItem(id, "mojaapp", "Case", dopyt, ikona, nazov,
+                       ["mojaapp/mojaapp_ziadost"])   // <- allowedNets
+```
+
+`sd_menu.xml` túto pascu má — Service Desk sa zakladá cez verejný eForm, takže
+tam „+“ nikto nepotreboval.
+
+A ešte dve veci na tej istej položke menu, ktoré `createOrUpdateMenuItem` berie
+a nikde inde sa nedajú nastaviť:
+
+* **deviaty argument `roles`** (`[importId: "identifikator/siete"]`) obmedzí, kto
+  položku v menu vôbec uvidí. Uloží sa ako `allowed_roles` s kľúčom
+  `importId:identifikator` a filtruje ju drawer aj počítadlá. Nie je to
+  bezpečnostná hranica — tou zostáva `perform` na prechode — je to poriadok
+  v menu. Potrebné to je vtedy, keď zobrazenie typu Case ukazuje casy, ktoré
+  používateľ smie *vidieť*, ale nie na nich nič robiť.
+* **dialóg „Vyplňte názov prípadu“** pri „+“ sa vypína poľom
+  `enable_case_title` na prechode `view` položky menu. Nie je to argument, takže
+  sa dopisuje zvlášť:
+
+```groovy
+setData("view", menuItem, [
+        "enable_case_title"             : ["value": false, "type": "boolean"],
+        "case_require_title_in_creation": ["value": false, "type": "boolean"]
+])
+```
+
+Bez toho si názov casu vymýšľa človek a zoznam vyzerá tak, ako sa komu chcelo
+písať. S tým ho skladá `create` akcia siete — a vyplatí sa začať stavom, nie
+skončiť ním: stĺpec Názov sa v zozname skracuje a to, čo je na konci, odpadne
+prvé.
 
 A ešte: po `createFilterInMenu` sa zápis do vlastného casu (ani `change`, ani
 `setData`) neuchová — engine medzitým zakladal iné casy a výsledok zahodí.
@@ -263,6 +338,10 @@ cd etask-configuration && python3 tools/pfseed.py
 razené per verziu, takže po re-importe používateľ na casoch novej verzie
 prístup stratí — bez chybovej správy. Oprávnenie cez `userRef` re-import
 prežije, cez `roleRef` nie.
+
+**Po `pfseed` sa treba odhlásiť a prihlásiť.** Prihlásená session drží staré
+`stringId` rolí, takže na novej verzii siete nemá nič a zakladanie casu vráti
+**403** — hoci cez API tomu istému účtu prejde. Nie je to chyba oprávnení siete.
 
 Keď `pfseed` ohlási používateľa ako `NECITATELNY` (500 z `/api/user/search`), sú
 to osirelé roly po zlyhanom importe. Cez API sa to opraviť nedá:
