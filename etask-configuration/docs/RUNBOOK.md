@@ -265,6 +265,26 @@ to prečíta a vloží ako `NAE_DEFAULT_HEADERS` do injektora práve tohto
 zobrazenia, takže každé zobrazenie môže mať iné stĺpce. **Žiadny zásah do
 Angularu to nepotrebuje** — je to dátové pole na prípade menu.
 
+**Stĺpec z dátového poľa sa ale zobrazí len na zobrazení, ktoré má ten net
+v `allowedNets`.** `CaseHeaderService` skladá ponuku stĺpcov z povolených sietí
+a `initializeDefaultHeaderState` v nej každé `uniqueId` len **vyhľadá**; čo
+nenájde, nechá prázdne a **nič nezaloguje**. Zobrazenie bez `allowedNets` teda
+ukáže iba `meta-*` stĺpce, hoci `default_headers` má v dátach uložené správne
+a `pfsync` aj `pfcheck` sú zelené. Vyzerá to presne ako „nastavil som stĺpce
+a nefunguje to".
+
+Overené na štyroch zobrazeniach tej istej siete — korelácia je úplná:
+
+| zobrazenie | `allowedNets` | vykreslené stĺpce |
+|---|---|---|
+| Žiadosti o dovolenku | `[dv_ziadost]` | Názov, Stav, Dátum od, Dátum do |
+| Rozpísané a vrátené | `[dv_ziadost]` | Názov, Stav, Dátum od, Dátum do |
+| Na schválenie | `[]` | len Názov |
+| Vybavené | `[]` | len Názov |
+
+`allowedNets` sa teda oplatí dať aj zobrazeniu, z ktorého sa zakladať nemá —
+inak si vyberáš medzi tlačidlom „+“ a stĺpcami.
+
 Dátové pole sa do zoznamu aj do vyhľadávania dostane, len keď má
 `immediate="true"`. Vtedy ho engine indexuje do Elasticu pod `dataSet.<idPola>`
 s podpoľami podľa typu:
