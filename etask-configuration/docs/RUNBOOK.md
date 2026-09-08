@@ -245,6 +245,61 @@ A ešte: po `createFilterInMenu` sa zápis do vlastného casu (ani `change`, ani
 `setData`) neuchová — engine medzitým zakladal iné casy a výsledok zahodí.
 `changeCaseProperty("title")` prežije.
 
+### Stĺpce zoznamu a vyhľadávanie podľa dátových polí
+
+Zoznam casov ukazuje predvolene len metadáta. Vlastné stĺpce sa nastavujú
+poľom `default_headers` na tom istom prechode `view` — comma-separated
+`HeaderColumn.uniqueId`:
+
+```groovy
+setData("view", menuItem, ["default_headers": [
+        "value": "meta-title" +
+                 ",mojaapp/mojaapp_ziadost-stav_label" +
+                 ",mojaapp/mojaapp_ziadost-datum_od",
+        "type": "text"]])
+```
+
+Metadáta majú tvar `meta-<nieco>` (`meta-title`, `meta-creationDate`), dátové
+pole `<identifikator/siete>-<idPola>`. `GroupNavigationComponentResolverService`
+to prečíta a vloží ako `NAE_DEFAULT_HEADERS` do injektora práve tohto
+zobrazenia, takže každé zobrazenie môže mať iné stĺpce. **Žiadny zásah do
+Angularu to nepotrebuje** — je to dátové pole na prípade menu.
+
+Dátové pole sa do zoznamu aj do vyhľadávania dostane, len keď má
+`immediate="true"`. Vtedy ho engine indexuje do Elasticu pod `dataSet.<idPola>`
+s podpoľami podľa typu:
+
+```
+dataSet.<id>.textValue          .textValue.keyword   .fulltextValue
+dataSet.<id>.numberValue        .dateValue           .timestampValue
+dataSet.<id>.booleanValue
+```
+
+Takže priečinok „Vybavené" je obyčajný dopyt nad dátovým poľom, nie nová sieť:
+
+```groovy
+def query = "processIdentifier:\"mojaapp/mojaapp_ziadost\"" +
+            " AND dataSet.stav_label.textValue:(\"Schválená\" OR \"Zamietnutá\")"
+```
+
+Pozor, `immediate` polia majú `initial=false`, takže sa **samy od seba stĺpcom
+nestanú** — bez `default_headers` ich používateľ musí zapnúť ručne pri každom
+zobrazení. To je presne to, čo vyzerá ako „nefunguje to".
+
+Tri pasce, ktoré na tomto stáli ladenie:
+
+* **Toto nie je to isté ako Mongo.** `findCases { it.dataSet... }` v Groovy
+  akcii **nefunguje** (`MissingPropertyException`, viď `petriflow_reference.md`).
+  Vyššie uvedené je Elastic dopyt vo `filter` casu, čo je iná cesta k dátam.
+* **Diakritiku v dopyte neposielaj cez query string zo shellu.** Testovanie cez
+  `curl ...?query=Schválená` vráti 0 výsledkov, hoci dopyt je správny — reťazec
+  sa cestou zmrší. Cez JSON telo `POST /api/workflow/case/search` vráti to, čo
+  má. Stálo ma to nesprávny záver, že sa dátové polia hľadať nedajú.
+* **`deleteMenuItem` nechá `filter` case osirelý.** Tie sa hromadia a
+  `getFilterFromMenuItem` potom vracia nesprávny z nich, takže podmienka
+  „zmenil sa dopyt?" prestane platiť. Pred `deleteMenuItem` treba zavolať
+  `deleteFilter(getFilterFromMenuItem(existing))`.
+
 ---
 
 ## 5. Úprava vizuálu
@@ -366,7 +421,26 @@ bez authorities sa používateľ prihlási a **nevidí nič** — prístup k vie
 ktoré sa pletú, a prázdna množina sa neprejaví ako chyba, len ako prázdna appka.
 
 `assignRoleByImportId` berie `<role><id>` a identifikátor siete, nie `stringId` —
-ten sa razí per verziu siete a z akcie nie je z čoho ho vziať.
+ten sa razí per verziu siete a z akcie nie je z čoho ho vziať. `processRoleOptions()`
+preto kľúčuje `importId:identifikator/siete`: samotné `importId` jednoznačné nie
+je, `veduci` býva v dvoch sieťach naraz. Pri napĺňaní `multichoice_map` sa kľúč
+láme na **prvej** dvojbodke — identifikátor siete žiadnu neobsahuje, ale kto
+rozdelí na poslednej, dostane nezmysel.
+
+Dve veci, ktoré na takom procese treba spraviť vedome:
+
+* **Heslo z dát prípadu vymaž** v tej istej `post` akcii, ktorá účet založila
+  (`heslo_pole.value = ""`). Inak ostane v čitateľnej podobe v `dataSet` a v
+  histórii prípadu.
+* **Prehľad zaves na read arc zo sinku.** Miesto, ktoré nejaký prechod
+  konzumuje, na to nestačí — odmietnuté `finish` tú úlohu zmaže a už ju
+  neobnoví (`PETRIFLOW_LEARNINGS.md`, B8b).
+
+Hotová sieť, ktorá toto celé robí — validácie v `pre`, založenie účtu a
+pridelenie rolí v `post`, karta v menu s vlastnými stĺpcami — je na vetve
+`claude/uzivatelia-app` (`processes/us_uzivatel.xml`), aj s akceptačným testom
+`tools/uscheck.py`, ktorý overuje, že sa účet naozaj **prihlási** a že mu sedí
+procesná rola.
 
 **Procesné roly** (`agent`, `specialist`, …) rozhodujú o prístupe k taskom
 a casom. Deklaratívny cieľový stav pre dev a seedovanie je v `seed.json`:
