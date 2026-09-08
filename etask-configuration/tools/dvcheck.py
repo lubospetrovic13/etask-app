@@ -242,6 +242,33 @@ def main():
             got = view_task_fields(title).get("default_headers")
             check(f"'{title}' ma predvolene stlpce Nazov/Stav/Od/Do", got == WANT_HEADERS, got)
 
+    # Stlpec z DATOVEHO pola sa vykresli len na zobrazeni, ktore ma ten net
+    # v `allowedNets`. `CaseHeaderService` sklada ponuku stlpcov z povolenych
+    # sieti a `default_headers` v nej `uniqueId` iba VYHLADA - co nenajde,
+    # nechá prazdne a nic nezaloguje. Bez tejto kontroly to vyzera uplne
+    # v poriadku: hodnota `default_headers` je ulozena spravne, pfsync aj
+    # pfcheck su zelene, a v appke su vidno len `meta-*` stlpce.
+    # Realne sa to stalo dvom zo styroch zobrazeni tejto siete.
+    def allowed_nets_of(title):
+        st, full = boss.get(f"/api/workflow/case/{items[title]}")
+        fcid = view_task_fields(title).get("filter_case_id")
+        if not fcid:
+            return None
+        st, fc = boss.get(f"/api/workflow/case/{fcid}")
+        for d in (fc.get("immediateData") or []):
+            if d.get("allowedNets"):
+                return list(d["allowedNets"])
+        return []
+
+    for title in ["Žiadosti o dovolenku", "Na schválenie", "Rozpísané a vrátené", "Vybavené"]:
+        if title not in items:
+            continue
+        headers = (view_task_fields(title).get("default_headers") or "").split(",")
+        need = {h.rsplit("-", 1)[0] for h in headers if h and not h.startswith("meta-")}
+        have = set(allowed_nets_of(title) or [])
+        check(f"'{title}' ma v allowedNets siete svojich stlpcov",
+              need <= have, f"treba {sorted(need)}, ma {sorted(have)}")
+
     def roles_of(title):
         st, full = boss.get(f"/api/workflow/case/{items[title]}")
         for d in (full.get("immediateData") or []):

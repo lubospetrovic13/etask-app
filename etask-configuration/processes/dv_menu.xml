@@ -84,11 +84,19 @@ def stlpce = "meta-title" +
         ",dovolenky/dv_ziadost-dv_od" +
         ",dovolenky/dv_ziadost-dv_do"
 
+// `nets` je allowedNets. Nesie DVE veci naraz, a tá druhá nie je zrejmá:
+//   1. tlačidlo "+" - bez neho vráti "Žiadne povolené siete";
+//   2. ponuku stĺpcov. `CaseHeaderService` ju skladá z povolených sietí
+//      a `default_headers` v nej `uniqueId` len VYHĽADÁ. Čo nenájde, nechá
+//      prázdne a nič nezaloguje - takže zobrazenie bez `nets` ukáže iba
+//      `meta-*` stĺpce, hoci `default_headers` má uložené správne.
+// Preto ho majú aj zobrazenia, z ktorých sa zakladať nemá. Zistené preklikaním:
+// "Na schválenie" a "Vybavené" ukazovali iba stĺpec Názov.
 def views = [
         [id: "dv_moje", name: "Žiadosti o dovolenku", type: "Case", icon: "beach_access",
          query: vsetky, nets: [ziadost], roles: [:], headers: stlpce],
         [id: "dv_na_schvalenie", name: "Na schválenie", type: "Case", icon: "how_to_reg",
-         query: vsetky + " AND taskIds:\"t_dv_rozhodnutie\"", nets: [],
+         query: vsetky + " AND taskIds:\"t_dv_rozhodnutie\"", nets: [ziadost],
          roles: ["veduci": ziadost], headers: stlpce],
         [id: "dv_rozpisane", name: "Rozpísané a vrátené", type: "Case", icon: "edit_calendar",
          query: vsetky + " AND taskIds:\"t_dv_podanie\"", nets: [ziadost], roles: [:],
@@ -101,7 +109,7 @@ def views = [
         // ziadosti, nie o tom, ktora uloha je zhodou okolnosti otvorena.
         [id: "dv_vybavene", name: "Vybavené", type: "Case", icon: "task_alt",
          query: vsetky + " AND dataSet.dv_stav_label.textValue:(\"Schválená\" OR \"Zamietnutá\")",
-         nets: [], roles: [:], headers: stlpce],
+         nets: [ziadost], roles: [:], headers: stlpce],
 ]
 
 views.each { v ->
@@ -109,13 +117,21 @@ views.each { v ->
     try {
         def existing = menu_item(id)
         if (existing != null) {
-            // Porovnava sa LEN dopyt. Nie preto, ze ostatne nezalezi, ale preto,
-            // ze kazde zbytocne "zmenilo sa to" znamena zmazat a postavit znova
-            // - a to je jedina cesta, ktora funguje (nizsie). Nazov, ikonu,
-            // stlpce a vypnuty dialog vieme dorovnat na existujucej polozke.
+            // Porovnava sa dopyt A allowedNets. Nazov, ikonu, stlpce a vypnuty
+            // dialog vieme dorovnat na existujucej polozke; tieto dve nie -
+            // idu do konstruktora a menia sa len zmazanim a postavenim znova.
+            //
+            // `allowedNets` tu bolo doplnene az potom, co sa ukazalo, ze bez neho
+            // sa zmena ticho zahodi: pridal som siet dvom zobrazeniam, dopyt sa
+            // nezmenil, podmienka nizsie ich vyhlasila za nezmenene a stlpce sa
+            // dalej nezobrazovali. Rozdiel vidno na `filter` case, v poli
+            // `filter` -> `allowedNets`.
             def current = getFilterFromMenuItem(existing)
             def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
-            if (currentQuery == (v.query as String)) {
+            def currentNets = ((current?.dataSet?."filter"?.allowedNets ?: []) as List)
+                    .collect { it as String } as Set
+            def wantNets = (v.nets as List).collect { it as String } as Set
+            if (currentQuery == (v.query as String) && currentNets == wantNets) {
                 nastav_zobrazenie(existing, v.nets as List, v.headers)
                 unchanged << id
                 return
@@ -131,10 +147,16 @@ views.each { v ->
             // osirely; po niekolkych behoch ich je v databaze hromada a
             // `getFilterFromMenuItem` potom moze vratit ten nespravny, cim sa
             // porovnanie vyssie rozsype a cely cyklus sa opakuje.
+            //
+            // PORADIE JE POVINNE: najprv polozka, potom filter. Naopak to padne
+            // na `IllegalArgumentException: Could not find Case with id [...]`,
+            // lebo `deleteMenuItem` si filter este raz nacita podla id ulozeneho
+            // na polozke. Referenciu na filter drzime v `current`, takze po
+            // zmazani polozky ho mame stale cim zmazat.
+            deleteMenuItem(existing)
             if (current != null) {
                 deleteFilter(current)
             }
-            deleteMenuItem(existing)
         }
         // DEVAT argumentov, a to zamerne. `createOrUpdateMenuItem` existuje
         // dvakrat: projektova (id, uri, type, query, icon, title, allowedNets,
