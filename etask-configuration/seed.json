@@ -8,7 +8,7 @@
     "netScope tu mieri na príkladovú aplikáciu Service Desk. Pre vlastnú appku",
     "ho prepíš (napr. [\"mojaapp/*\"]) alebo pridaj ďalší vzor."
   ],
-  "netScope": ["service_desk/*", "uzivatelia/*"],
+  "netScope": ["service_desk/*", "pouzivatelia/*"],
   "users": [
     { "email": "super@netgrif.com",     "roles": ["manager", "agent", "spravca"] },
     { "email": "admin@test.local",      "roles": ["agent", "spravca"] },

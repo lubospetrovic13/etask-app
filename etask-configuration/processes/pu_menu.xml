@@ -1,7 +1,7 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>uzivatelia/us_menu</id>
+	<id>pouzivatelia/pu_menu</id>
 	<version>1.0.0</version>
-	<initials>USM</initials>
+	<initials>PUM</initials>
 	<title>Menu Používateľov</title>
 	<icon>menu</icon>
 	<defaultRole>false</defaultRole>
@@ -26,27 +26,27 @@
 	-->
 	<caseEvents>
 		<event type="create">
-			<id>us_menu_create</id>
+			<id>pu_menu_create</id>
 			<actions phase="post">
 				<action id="1"><![CDATA[
 def created = []
 def unchanged = []
 def failed = []
 
-def siet = "uzivatelia/us_uzivatel"
+def siet = "pouzivatelia/pu_pouzivatel"
 def vsetky = "processIdentifier:\"" + siet + "\""
 def stlpce = "meta-title" +
-        ",uzivatelia/us_uzivatel-us_stav_label" +
-        ",uzivatelia/us_uzivatel-us_email" +
-        ",uzivatelia/us_uzivatel-us_authority"
+        ",pouzivatelia/pu_pouzivatel-pu_stav_label" +
+        ",pouzivatelia/pu_pouzivatel-pu_email" +
+        ",pouzivatelia/pu_pouzivatel-pu_priezvisko"
 
 def views = [
-        [id: "us_vsetci", name: "Používatelia", type: "Case", icon: "group",
+        [id: "pu_vsetci", name: "Používatelia", type: "Case", icon: "group",
          query: vsetky, nets: [siet], roles: [:], headers: stlpce],
-        // Filtrovanie podla datoveho pola - `us_stav_label` ma immediate="true",
-        // takze je v indexe pod `dataSet.us_stav_label.textValue`.
-        [id: "us_rozpisane", name: "Rozpísané", type: "Case", icon: "edit_note",
-         query: vsetky + " AND dataSet.us_stav_label.textValue:\"Rozpísaný\"",
+        // Filtrovanie podla datoveho pola - `pu_stav_label` ma immediate="true",
+        // takze je v indexe pod `dataSet.pu_stav_label.textValue`.
+        [id: "pu_rozpisane", name: "Rozpísané", type: "Case", icon: "edit_note",
+         query: vsetky + " AND dataSet.pu_stav_label.textValue:\"Rozpísaný\"",
          nets: [siet], roles: [:], headers: stlpce],
 ]
 
@@ -146,7 +146,7 @@ changeCaseProperty("title").about { summary }
 		<title>Správca používateľov</title>
 	</role>
 	<transition>
-		<id>t_us_menu</id>
+		<id>t_pu_menu</id>
 		<x>112</x>
 		<y>80</y>
 		<label>Stav menu</label>
@@ -168,10 +168,10 @@ changeCaseProperty("title").about { summary }
 		<static>false</static>
 	</place>
 	<arc>
-		<id>a_us_menu</id>
+		<id>a_pu_menu</id>
 		<type>read</type>
 		<sourceId>p_alive</sourceId>
-		<destinationId>t_us_menu</destinationId>
+		<destinationId>t_pu_menu</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 </document>

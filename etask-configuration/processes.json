@@ -32,12 +32,12 @@
     "sd_intake.xml",
     "sd_menu.xml",
 
-    "us_uzivatel.xml",
-    "us_menu.xml"
+    "pu_pouzivatel.xml",
+    "pu_menu.xml"
   ],
   "bootstrapCase": [
     "service_desk/sd_menu",
-    "uzivatelia/us_menu"
+    "pouzivatelia/pu_menu"
   ],
   "uriNodes": {
     "general": {
@@ -50,7 +50,7 @@
       "requiredAuthorities": [],
       "requiredProcessRoles": ["agent", "specialist", "manager"]
     },
-    "uzivatelia": {
+    "pouzivatelia": {
       "icon": "manage_accounts",
       "requiredAuthorities": [],
       "requiredProcessRoles": ["spravca"]
