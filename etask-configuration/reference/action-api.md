@@ -58,14 +58,41 @@ Prienik: z uzivatelov v `source` vrati tych, ktori drzia rolu `roleImportId`.
 ### `createNewUser(String name, String surname, String email, String password, List<String> authorities)`
 Vytvori uzivatela aj so systemovymi authorities. Vrati vytvoreneho IUser.
 
-### `assignRoleByImportId(IUser user, String roleImportId, String netIdentifier)`
-Pridel procesnu rolu podla importId a identifikatora siete.
+### `setProcessRole(IUser user, String roleImportId, String netIdentifier, String version, boolean assign)`
+Pridel alebo odober procesnu rolu. Tenky adapter nad enginovym
+
+### `setProcessRole(String userId, String roleImportId, String netIdentifier, String version, boolean assign)`
+Varianta podla ID uctu - a je to tá, ktorú treba volať.
+
+### `changeUserPassword(String userId, String newPassword)`
+Zmena hesla podla ID uctu.
 
 ### `processRoleOptions()`
 Roly vsetkych aplikacnych sieti v instancii, ako mapa
 
+### `processRoleOptions(String netIdentifier, String version = null)`
+Roly JEDNEHO procesu, ako mapa importId -> "Nazov roly".
+
+### `processOptions()`
+Procesy (aplikacne siete) instancie, ako mapa identifikator -> "Nazov".
+
+### `processVersionOptions(String netIdentifier)`
+Volba "vsetky verzie" v `processVersionOptions`. */
+
+### `userOptions()`
+Pouzivatelia instancie, ako mapa id -> "Meno Priezvisko (e-mail)".
+
+### `userSnapshot(String userId)`
+Aktualny stav uctu, na predvyplnenie formulara pri uprave.
+
+### `updateUserProfile(String userId, String name, String surname)`
+Zmena mena a priezviska existujuceho uctu.
+
+### `setUserAuthorities(String userId, List<String> authorities)`
+Nastavi systemove authorities uctu na presne tento zoznam.
+
 ### `callAIToolByConfig(Map params)`
-Zavolá LLM podľa aktívnej AI konfigurácie a vráti čitateľný report.
+"1.0.0" -> Version. Trieda `Version` ma len @AllArgsConstructor, ziadne
 
 > **Pozor na `createOrUpdateMenuItem`.** Existuje dvakrát: tu (7–9 argumentov,
 > funkčná update cesta cez `changeFilter`/`changeMenuItem`) a v enginu

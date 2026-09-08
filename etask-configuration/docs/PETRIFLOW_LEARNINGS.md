@@ -428,6 +428,64 @@ preklep spadne až za behu. To nie je argument proti rozširovaniu — je to
 argument za to, aby bol inventár aktuálny (`pfapi --check` v `pftest.sh`).
 
 
+### B9. `removeRole` z ActionDelegate procesnú rolu NEODOBERIE (engine 6.3.1)
+
+Pridelenie funguje, odobranie nie — a mlčí. Príčina je v engine:
+
+```java
+// AbstractUserService
+public IUser addRole(IUser user, String roleStringId) {
+    ProcessRole role = processRoleService.findById(roleStringId);      // správne
+    ...
+}
+
+@Deprecated(since = "6.2.0")
+public IUser removeRole(IUser user, String roleStringId) {
+    return removeRole(user, processRoleService.findByImportId(roleStringId));
+    //                                        ^^^^^^^^^^^^^^ podľa importId,
+    //                      hoci parameter je stringId
+}
+```
+
+Podľa `stringId` teda `findByImportId` nenájde **nič**,
+`user.removeProcessRole(null)` neodoberie nič a `save` uloží nezmenený dokument.
+Bez výnimky, bez logu, `finish` vráti `success`. Do tejto metódy pritom vedú
+**všetky** varianty `ActionDelegate.removeRole(...)`, takže z Petriflow akcie sa
+rola v 6.3.1 odobrať nedá vôbec.
+
+(A keby jej niekto dal `importId`, `findByImportId` vracia *prvú* rolu s tým
+`importId` spomedzi všetkých sietí a verzií — čiže náhodnú. Tak či tak zle.)
+
+**Obídenie:** rolu odober priamo, objekt `ProcessRole` máš zo siete.
+
+```groovy
+IUser fresh = userService.findById(userId, false)
+fresh.removeProcessRole(role)      // role = net.roles.values().find { it.importId == ... }
+userService.save(fresh)
+```
+
+Cena obídenia: enginová (chránená) varianta popri uložení obnovuje aj security
+context. Bez toho si prihlásená session odobranú rolu podrží až do odhlásenia —
+čo je to isté pravidlo, ktoré už platí pre prideľovanie.
+
+*Nájdené tak, že akcia nahlásila „odobraná rola" a rola tam po nej stále bola.
+Regresia je v `tools/pucheck.py`.*
+
+### B10. Účet sa nesmie držať ako objekt cez viac zmien
+
+Každá zmena používateľa je `read – mutuj – save` **celého** dokumentu. Kto si
+`IUser` podrží a spraví cez neho dve zmeny za sebou, druhou prepíše výsledok
+prvej — posledný `save` zapíše svoju už neaktuálnu kópiu.
+
+Prejav: heslo sa zmenilo, ale meno, authorities aj odobraná rola sa **ticho
+vrátili** do pôvodného stavu. `finish` vrátil `success`, v logu nič.
+
+Platí to aj vnútri jedného cyklu: `assignRole`/`removeRole` vracajú
+aktualizovaného používateľa a je potrebné použiť **ten vrátený**, nie ten, ktorý
+sa im podal.
+
+Pravidlo: primitíva na zmenu účtu berú `userId` a účet si načítajú samy.
+
 ---
 
 ## C. Mimo Petriflow, ale stálo to čas

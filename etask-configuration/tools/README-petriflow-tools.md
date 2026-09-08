@@ -10,6 +10,8 @@ k najspoľahlivejšiemu:
 ```
 pflint.py     XML: štruktúra, odkazy, tiché pasce      ~0,3 s   bez závislostí
 pfgroovy.py   Groovy v akciách: syntax                  ~3 s    JDK + groovy jar
+pfview.py     vykreslí to frontend?                     ~2 s    node_modules
+pfsync.py     čo sa rozišlo s bežiacim enginom          ~2 s    bežiaci engine
 pfcheck.sh    import do bežiaceho enginu = ground truth ~5 s    bežiaci engine
 pfseed.py     procesné role do deklarovaného stavu     ~5 s    bežiaci engine
 pfapi.py      inventár extension pointov (generátor)   ~2 s    jar enginu
@@ -20,6 +22,10 @@ Prečo tri a nie jeden: **každý vidí niečo, čo ostatné nie.** `pflint` nev
 parsovať Groovy, lebo je to text v CDATA. `pfgroovy` nevie, čo engine prijme,
 lebo dialekt sa z XML zistiť nedá. `pfcheck` vie všetko, ale potrebuje bežiaci
 engine a databázu, takže pri iterácii nad sieťou je najdrahší.
+
+`pfview` stojí bokom od tejto trojice: nekontroluje sieť proti enginu, ale proti
+**frontendu**. Engine sieť prijme, aj keď si vypýta komponent, ktorý Angular nevie
+vykresliť — takže `pfcheck` na zelenej neznamená, že to používateľ uvidí.
 
 **Ground truth je `pfcheck`.** Keď si offline nástroj a engine odporujú, pravdu
 má engine a chyba je v nástroji. Stalo sa to dvakrát pri stavbe `pfgroovy` —
@@ -172,6 +178,48 @@ tools/pftest.sh --log /cesta/backend.log # aj pfcheck
 Sedem testov nad `tools/fixtures/`: každý nástroj musí na rozbitej sieti zlyhať
 a na platných sieťach v `processes/` prejsť. Druhá polovica je dôležitejšia —
 falošný pozitív naučí agenta ignorovať výstup.
+
+---
+
+## pfview.py — vykreslí to frontend?
+
+```bash
+python3 tools/pfview.py
+python3 tools/pfview.py --inventory                # čo sa z knižnice prečítalo
+python3 tools/pfview.py --src DIR --nets DIR       # pre pftest.sh, na fixtures
+```
+
+Jediná kontrola vrstvy 3. Tri veci, ktoré prejdú buildom aj `pfcheck`-om
+a prejavia sa až preklikaním:
+
+**A. Kópia knižničnej šablóny zaostala.** `EtaskFieldComponentResolverComponent`
+je kópia knižničného resolvera, lebo ten je hardcoded `ngSwitch` bez registry.
+Keď knižnica pridá typ poľa, v kópii chýba vetva a pole sa vykreslí ako prázdne
+miesto. Nástroj vytiahne originál priamo zo skompilovaného balíka
+(`selector: "nc-x" ... template: "..."` v `ngDeclareComponent`) a porovná vetvy.
+Kópiu nájde podľa vety `Copy of @netgrif/components <súbor>.component.html`
+v hlavičke — tá veta je zápis do registra, nie komentár.
+
+**B. Knižničný komponent obchádza vlastný.** Ak projekt vlastní
+`app-etask-X`, žiadna iná šablóna nesmie použiť `nc-X`. Výnimka je jediná:
+vlastný komponent smie knižničný obaliť vo svojej vlastnej šablóne. Komentáre
+sa pred kontrolou odstraňujú — inak by nástroj hlásil práve ten súbor, ktorý
+opravu vysvetľuje.
+
+**C. Sieť si pýta niečo, čo nikto nečíta.** `<component><name>` aj
+`<property key>` sú voľné reťazce a neznámu hodnotu Angular ticho zahodí.
+Inventár sa skladá z knižnice (`ngSwitch` na `getComponentType()` v šablóne
+konkrétneho typu poľa, enumy v `.d.ts`, pole `textFieldNames`) **aj z vlastných
+komponentov projektu** — bez tej druhej polovice nástroj hlásil 15 falošných
+chýb na `<name>toggle</name>`, ktoré je platné.
+
+Keď typ poľa renderuje vlastný komponent, ktorý `component.name` vôbec nečíta
+(`boolean` berie variant z `<properties>`), meno sa neoveruje a povie to. Kľúče
+properties sa overujú vždy, proti tomu konkrétnemu súboru.
+
+Inventár sa číta z `node_modules/@netgrif` pri každom spustení. Zoznam napísaný
+rukou by po prvom povýšení knižnice klamal — a klamúci lint je horší než žiadny.
+Bez `node_modules` nástroj skončí s kódom 2 a povie, že nemá s čím porovnávať.
 
 ---
 

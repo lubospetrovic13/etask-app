@@ -1,0 +1,82 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>fixtures/header_transition</id>
+	<version>1.0.0</version>
+	<initials>HDR</initials>
+	<title>Fixture - alias prechodu v hlavicke akcie</title>
+	<defaultRole>true</defaultRole>
+	<!--
+		Toto je PLATNA siet a `pfgroovy` na nej MUSI prejst.
+
+		Existuje preto, ze NAE hlavicka akcie nemá len polia: `f.` je dátové
+		pole, `t.` prechod - a bez aliasu prechodu sa `make <pole>, <behavior>
+		on <prechod> when { ... }` napísať nedá. `pfgroovy` dlho poznal len
+		`f.`, takže celá hlavička s `t.` mu spadla do tela ako Groovy a hlásil
+		syntaktickú chybu na sieti, ktorú engine bez námietky naimportuje.
+
+		Na startere túto konštrukciu nepoužíva žiadna sieť, takže bez tejto
+		fixture by sa oprava dala nepozorovane vrátiť.
+	-->
+	<data type="enumeration_map">
+		<id>volba</id>
+		<title>Voľba</title>
+		<options>
+			<option key="ano">Áno</option>
+			<option key="nie">Nie</option>
+		</options>
+		<init>nie</init>
+	</data>
+	<data type="text">
+		<id>dovod</id>
+		<title>Dôvod</title>
+	</data>
+	<transition>
+		<id>t_rozhodnutie</id>
+		<x>140</x>
+		<y>80</y>
+		<label>Rozhodnutie</label>
+		<dataGroup>
+			<id>g</id>
+			<cols>4</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>volba</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>volba_set</id>
+					<actions phase="post">
+						<action id="1"><![CDATA[
+t_rozhodnutie: t.t_rozhodnutie, volba: f.volba, dovod: f.dovod;
+
+if ((volba.value as String) == "nie") {
+    make dovod, required on t_rozhodnutie when { true }
+} else {
+    make dovod, hidden on t_rozhodnutie when { true }
+}
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>dovod</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p_start</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Štart</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_in</id>
+		<type>read</type>
+		<sourceId>p_start</sourceId>
+		<destinationId>t_rozhodnutie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

@@ -82,6 +82,7 @@ Po zmene siete, v tomto poradí:
 cd etask-configuration
 python3 tools/pflint.py processes/                 # 0,3 s
 python3 tools/pfgroovy.py processes/              # 3 s
+python3 tools/pfview.py                           # frontend vykreslí, čo sieť pýta
 python3 tools/pfsync.py --sync                    # import + role, len čo sa rozišlo
 ```
 
@@ -108,6 +109,16 @@ Dve veci, ktoré z toho vyplývajú a stoja každého aspoň jedno ladenie:
 * **Po pridelení rolí sa treba odhlásiť a prihlásiť.** Prihlásená session drží
   staré `stringId` rolí, takže zakladanie casu vráti **403**, hoci cez API tomu
   istému účtu prejde.
+
+`pfview` je to isté pre vrstvu 3, kde `pfsync` ekvivalent nemá: sieť sa
+naimportuje aj vtedy, keď si vypýta komponent, ktorý frontend nevie vykresliť.
+Angular v tom prípade **nič nenahlási** — vykreslí default alebo prázdne miesto.
+Inventár si nástroj číta z `node_modules/@netgrif` pri každom spustení, takže
+po povýšení knižnice odpovedá podľa nej, nie podľa zoznamu napísaného rukou.
+Chytá tri veci: zastaralú kópiu knižničnej šablóny (nový typ poľa sa v nej
+neobjaví a pole zmizne), knižničný komponent použitý namiesto vlastného
+(`<nc-task-list>` — najdrahšia chyba v histórii tohto frontendu) a
+`<component>` alebo `<property key>`, ktoré nikto nečíta.
 
 Keď si offline nástroj a engine odporujú, **chyba je v nástroji**. Oprav nástroj
 a spusti `tools/pftest.sh`.

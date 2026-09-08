@@ -274,6 +274,16 @@ if [ "$DO_FRONTEND" = 1 ]; then
   done
   echo
   echo "http://localhost:4200  (log: $FE_LOG)"
+
+  # --- 7b. Vykresli frontend to, co siete pytaju? ---------------------------
+  # `pfsync` overil, ze engine drzi to iste, co repozitar. To ale nehovori nic
+  # o tom, ci to pouzivatel uvidi: siet sa naimportuje aj s komponentom, ktory
+  # Angular nepozna, a ten ho ticho zahodi. Toto je jedina kontrola tej vrstvy.
+  # Nezastavuje start - je to hlasenie, nie brana.
+  if [ -n "${SYNC_PY:-}" ]; then
+    step "Frontend vs. siete"
+    (cd etask-configuration && PYTHONIOENCODING=utf-8 $SYNC_PY tools/pfview.py) || true
+  fi
 fi
 
 # --- 8. Kam dalej -----------------------------------------------------------

@@ -81,6 +81,16 @@ else
   bad "pfgroovy oznacil akcie, ktore engine skompiluje - falosny pozitiv"
 fi
 
+# pfgroovy: NAE hlavicka ma aj `t.` (alias prechodu), nielen `f.`. Bez toho
+# padne cela hlavicka do tela ako Groovy a nastroj hlasi chybu na sieti, ktoru
+# engine naimportuje. Na startere to nepouziva ziadna siet, takze bez tejto
+# kontroly by sa oprava dala nepozorovane vratit.
+if $PY tools/pfgroovy.py tools/fixtures/header-transition.xml >/dev/null 2>&1; then
+  ok "pfgroovy zvladol alias prechodu (t.) v hlavicke"
+else
+  bad "pfgroovy oznacil header-transition.xml - hlavicka s `t.` je platna"
+fi
+
 # pfapi: inventar sa nesmie rozist s enginom. Neaktualny inventar je presne ta
 # chyba, kvoli ktorej cely tento subor existuje - agent siahne po neexistujucej
 # metode, alebo si napise vlastnu verziu tej, ktora tam uz je.
@@ -88,6 +98,28 @@ if $PY tools/pfapi.py --check >/dev/null 2>&1; then
   ok "pfapi inventar je aktualny"
 else
   bad "reference/action-api.md je neaktualny - spusti: $PY tools/pfapi.py > reference/action-api.md"
+fi
+
+# pfview: kontroly frontendovej vrstvy. Fixtures nesu presne tri tiche chyby -
+# zastaralu kopiu resolvera, kniznicny komponent obchadzajuci vlastny a siet
+# s neznamym komponentom/property. Ziadna z nich sa neprejavi na builde, takze
+# jedina obrana je, ze tento nastroj na nich naozaj spadne.
+if [ -d ../etask-frontend-starter/node_modules/@netgrif ]; then
+  if $PY tools/pfview.py --src tools/fixtures/pfview-src \
+       --nets tools/fixtures/pfview-nets >/dev/null 2>&1; then
+    bad "pfview neoznacil fixtures/pfview-* - tri tiche chyby presli"
+  else
+    ok "pfview chytil fixtures/pfview-*"
+  fi
+  # Falosny pozitiv je tu drahsi nez inde: `toggle` na boolean poli je platny
+  # (variant sa cita z properties) a naivny inventar ho hlasi 15x.
+  if $PY tools/pfview.py >/dev/null 2>&1; then
+    ok "pfview neoznacil skutocny frontend a siete"
+  else
+    bad "pfview oznacil platny frontend - falosny pozitiv"
+  fi
+else
+  skip "pfview: etask-frontend-starter/node_modules chyba (npm ci)"
 fi
 
 if [ ${#LOG_ARG[@]} -gt 0 ]; then
