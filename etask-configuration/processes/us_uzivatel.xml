@@ -1,0 +1,423 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>uzivatelia/us_uzivatel</id>
+	<version>1.0.0</version>
+	<initials>USR</initials>
+	<title>Používateľ</title>
+	<icon>person_add</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Zakladanie používateľov a prideľovanie procesných rolí - celé v Petriflow.
+
+		Toto je zámerne ukázané na niečom, čo vyzerá ako systémová administrácia:
+		engine má `IUserService` a delegát z neho robí primitíva, takže sa to dá
+		napísať bez jediného riadku Javy v tejto sieti. Presne to je pointa
+		vrstiev - vrstva 2 už tie primitíva má, vrstva 1 ich len skladá.
+
+		  p_novy -> t_us_zadanie -> p_vytvoreny ...read... t_us_prehlad
+
+		Dve veci, ktoré sa pletú a ktoré tento proces rieši naraz:
+
+		  * SYSTÉMOVÉ AUTHORITIES (`ROLE_USER`, `ROLE_ADMIN`) rozhodujú o prístupe
+		    k viewom podľa `nae.json`. Bez nich sa človek prihlási a NEVIDÍ NIC.
+		  * PROCESNÉ ROLE (`zamestnanec`, `veduci`, ...) rozhodujú o prístupe
+		    k taskom a casom konkrétnej siete.
+
+		Zoznam procesných rolí sa NEZADÁVA natvrdo - `processRoleOptions()` ho
+		zloží zo sietí, ktoré sú v instancii naimportované, takže nová appka sa tu
+		objaví sama. Kľúč je `importId:identifikátor/siete`, lebo `stringId` roly
+		sa razí per verziu siete a po re-importe by bol neplatný.
+
+		Heslo: admin ho zadá a po vytvorení sa z prípadu ZMAŽE. V produkcii je
+		správnejšie `inviteUser`, kde si ho človek nastaví sám - ale to potrebuje
+		nakonfigurovaný `spring.mail.host`, ktorý na dev instancii prázdny je,
+		takže by to zlyhalo bez toho, aby bolo jasné prečo.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>us_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+us_roly: f.us_roly, us_stav: f.us_stav, us_stav_label: f.us_stav_label,
+us_email: f.us_email;
+
+// Moznosti roli sa citaju z instancie, nie z tohto XML. Keby boli natvrdo,
+// kazda nova appka by znamenala zasah do tejto siete.
+def moznosti = processRoleOptions()
+change us_roly options { moznosti }
+
+change us_stav value { "koncept" }
+change us_stav_label value { "Rozpísaný" }
+changeCaseProperty("title").about { nazov(us_email, "Rozpísaný") }
+changeCaseProperty("color").about { "grey" }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="kto"><![CDATA[
+{ def u ->
+    // `?.` chráni pred null, nie pred chýbajúcou property.
+    return (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+}
+	]]></function>
+	<function scope="process" name="nazov"><![CDATA[
+{ def us_email, def stav ->
+    def mail = ((us_email.value ?: "") as String).trim()
+    return (stav as String) + " · " + (mail ?: "Nový používateľ")
+}
+	]]></function>
+	<function scope="process" name="zvolene_roly"><![CDATA[
+{ def us_roly ->
+    // Hodnota multichoice_map je zoznam klucov, ale cez REST aj z UI prichadza
+    // v roznych obalkach. Bez tohto by sa `each` prehnal po znakoch retazca.
+    def raw = us_roly.value
+    if (raw == null) return []
+    if (raw instanceof Collection) return raw.collect { it as String }
+    if (raw.hasProperty("value") && raw.value instanceof Collection) {
+        return raw.value.collect { it as String }
+    }
+    def s = (raw as String).trim()
+    return s ? [s] : []
+}
+	]]></function>
+	<function scope="process" name="je_email"><![CDATA[
+{ def hodnota ->
+    def mail = ((hodnota ?: "") as String).trim()
+    return mail ==~ /^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/
+}
+	]]></function>
+	<roleRef>
+		<id>spravca</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>spravca</id>
+		<title>Správca používateľov</title>
+	</role>
+	<data type="i18n">
+		<id>div_udaje</id>
+		<title/>
+		<init>Údaje o používateľovi</init>
+	</data>
+	<data type="i18n">
+		<id>div_roly</id>
+		<title/>
+		<init>Prístup</init>
+	</data>
+	<data type="i18n">
+		<id>div_vysledok</id>
+		<title/>
+		<init>Výsledok</init>
+	</data>
+	<data type="text" immediate="true">
+		<id>us_meno</id>
+		<title>Meno</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>us_priezvisko</id>
+		<title>Priezvisko</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>us_email</id>
+		<title>E-mail</title>
+		<desc>Prihlasovacie meno. Musí byť v instancii jedinečný.</desc>
+	</data>
+	<data type="text">
+		<id>us_heslo</id>
+		<title>Počiatočné heslo</title>
+		<desc>Po vytvorení sa z prípadu zmaže. Odovzdajte ho používateľovi osobne.</desc>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>us_authority</id>
+		<title>Systémový prístup</title>
+		<desc>Bez tohto sa používateľ prihlási, ale neuvidí žiadne zobrazenie.</desc>
+		<options>
+			<option key="user">Bežný používateľ</option>
+			<option key="admin">Administrátor</option>
+		</options>
+		<init>user</init>
+	</data>
+	<data type="multichoice_map" immediate="true">
+		<id>us_roly</id>
+		<title>Procesné role</title>
+		<desc>Načítané zo sietí naimportovaných v instancii. Rozhodujú o prístupe k úlohám.</desc>
+	</data>
+	<data type="text">
+		<id>us_kontrola</id>
+		<title>Kontrola</title>
+		<!-- Skryté, kým nie je čo povedať - viď dv_ziadost, tá istá úvaha. -->
+	</data>
+	<data type="text" immediate="true">
+		<id>us_stav_label</id>
+		<title>Stav</title>
+	</data>
+	<data type="text">
+		<id>us_stav</id>
+		<title>Kód stavu</title>
+	</data>
+	<data type="text">
+		<id>us_vysledok</id>
+		<title>Čo sa stalo</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>us_vytvoril</id>
+		<title>Vytvoril</title>
+	</data>
+	<data type="dateTime">
+		<id>us_vytvorene_o</id>
+		<title>Vytvorené</title>
+	</data>
+	<transition>
+		<id>t_us_zadanie</id>
+		<x>140</x>
+		<y>80</y>
+		<label>Nový používateľ</label>
+		<icon>person_add</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>spravca</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_udaje</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_udaje</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>us_meno</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>us_priezvisko</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>us_email</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>us_heslo</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>us_kontrola</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_roly</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>us_authority</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>us_roly</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_us_zadanie_finish</id>
+			<actions phase="pre">
+				<action id="2"><![CDATA[
+us_email: f.us_email, us_heslo: f.us_heslo;
+
+// Tri veci, ktoré `required` neoverí a ktoré po vytvorení už nemá kto vrátiť.
+def mail = ((us_email.value ?: "") as String).trim()
+if (!je_email(mail)) {
+    throw new java.lang.IllegalStateException("E-mail nemá platný tvar: " + mail)
+}
+if (findUserByEmail(mail) != null) {
+    throw new java.lang.IllegalStateException("Používateľ s e-mailom " + mail + " už existuje.")
+}
+if (((us_heslo.value ?: "") as String).length() < 8) {
+    throw new java.lang.IllegalStateException("Heslo musí mať aspoň 8 znakov.")
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+us_meno: f.us_meno, us_priezvisko: f.us_priezvisko, us_email: f.us_email,
+us_heslo: f.us_heslo, us_authority: f.us_authority, us_roly: f.us_roly,
+us_stav: f.us_stav, us_stav_label: f.us_stav_label, us_vysledok: f.us_vysledok,
+us_vytvoril: f.us_vytvoril, us_vytvorene_o: f.us_vytvorene_o;
+
+def mail = ((us_email.value ?: "") as String).trim()
+def authorities = (((us_authority.value ?: "user") as String) == "admin")
+        ? ["ROLE_USER", "ROLE_ADMIN"] : ["ROLE_USER"]
+
+def novy = createNewUser(
+        ((us_meno.value ?: "") as String).trim(),
+        ((us_priezvisko.value ?: "") as String).trim(),
+        mail,
+        (us_heslo.value ?: "") as String,
+        authorities)
+
+def riadky = ["používateľ vytvorený: " + mail,
+              "systémový prístup: " + authorities.join(", ")]
+
+def pridelene = []
+def zlyhane = []
+zvolene_roly(us_roly).each { String kluc ->
+    // Kluc je "importId:identifikator/siete" - `stringId` roly sa razi per
+    // verziu siete, takze v akcii nie je z coho ho vziat.
+    int i = kluc.indexOf(":")
+    if (i <= 0) { zlyhane << kluc; return }
+    def importId = kluc.substring(0, i)
+    def siet = kluc.substring(i + 1)
+    if (assignRoleByImportId(novy, importId, siet)) {
+        pridelene << (importId + " (" + siet + ")")
+    } else {
+        zlyhane << kluc
+    }
+}
+riadky << (pridelene ? "procesné role: " + pridelene.join(", ") : "procesné role: žiadne")
+if (zlyhane) {
+    riadky << "NEPODARILO SA prideliť: " + zlyhane.join(", ")
+}
+
+change us_stav value { zlyhane ? "ciastocne" : "vytvoreny" }
+change us_stav_label value { zlyhane ? "Vytvorený s výhradou" : "Vytvorený" }
+change us_vysledok value { riadky.join("\n") }
+change us_vytvoril value { kto(loggedUser()) }
+change us_vytvorene_o value { java.time.LocalDateTime.now() }
+
+// Heslo z pripadu prec. Zostalo by v datach citatelne pre kazdeho, kto ma
+// na case `view` - a to je pri sprave uzivatelov to posledne, co chceme.
+change us_heslo value { "" }
+
+changeCaseProperty("title").about {
+    nazov(us_email, zlyhane ? "Vytvorený s výhradou" : "Vytvorený")
+}
+changeCaseProperty("color").about { zlyhane ? "orange" : "green" }
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_us_prehlad</id>
+		<x>332</x>
+		<y>80</y>
+		<label>Vytvorený používateľ</label>
+		<icon>how_to_reg</icon>
+		<assignPolicy>auto</assignPolicy>
+		<!--
+			Read arc z p_vytvoreny, ktoré je koncové miesto - nikto ho
+			nekonzumuje, takže pohľad nemôže zmiznúť po odmietnutom DOKONČIŤ
+			(PETRIFLOW_LEARNINGS B8b).
+		-->
+		<roleRef>
+			<id>spravca</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_prehlad</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>us_stav_label</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>us_email</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>us_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>us_priezvisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>us_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>us_vytvoril</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>us_vytvorene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p_novy</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Rozpísaný</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_vytvoreny</id>
+		<x>236</x>
+		<y>80</y>
+		<label>Vytvorený</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_zadanie_in</id>
+		<type>regular</type>
+		<sourceId>p_novy</sourceId>
+		<destinationId>t_us_zadanie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_zadanie_out</id>
+		<type>regular</type>
+		<sourceId>t_us_zadanie</sourceId>
+		<destinationId>p_vytvoreny</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_prehlad</id>
+		<type>read</type>
+		<sourceId>p_vytvoreny</sourceId>
+		<destinationId>t_us_prehlad</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

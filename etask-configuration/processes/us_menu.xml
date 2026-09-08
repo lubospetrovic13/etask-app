@@ -1,0 +1,167 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>uzivatelia/us_menu</id>
+	<version>1.0.0</version>
+	<initials>USM</initials>
+	<title>Menu Používateľov</title>
+	<icon>menu</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Karta "Používatelia" a jej zobrazenia. Vzor je dv_menu.xml vrátane oboch
+		pascí, ktoré tam stáli za ladenie:
+
+		  * `createOrUpdateMenuItem` sa volá s DEVIATIMI argumentmi. Existuje
+		    dvakrát - projektová (7-9) a enginová (11) - a rozlišujú sa len
+		    aritou. Pri ôsmich si Groovy vybral enginovú a padlo to.
+		  * Jej UPDATE cesta nefunguje ani v projektovej variante (`changeFilter`
+		    sa prekladá na neexistujúce `updateFilter`), takže zmenená položka sa
+		    vždy zahodí a postaví znova - aj s jej `filter` casom, ktorý
+		    `deleteMenuItem` necháva osirelý.
+
+		`default_headers` sú predvolené stĺpce zoznamu: comma-separated
+		`HeaderColumn.uniqueId`, ktoré resolver vloží ako `NAE_DEFAULT_HEADERS` do
+		injektora práve tohto zobrazenia. Dátové pole tam smie byť len ak má
+		`immediate="true"`.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>us_menu_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+def created = []
+def unchanged = []
+def failed = []
+
+def siet = "uzivatelia/us_uzivatel"
+def vsetky = "processIdentifier:\"" + siet + "\""
+def stlpce = "meta-title" +
+        ",uzivatelia/us_uzivatel-us_stav_label" +
+        ",uzivatelia/us_uzivatel-us_email" +
+        ",uzivatelia/us_uzivatel-us_authority"
+
+def views = [
+        [id: "us_vsetci", name: "Používatelia", type: "Case", icon: "group",
+         query: vsetky, nets: [siet], roles: [:], headers: stlpce],
+        // Filtrovanie podla datoveho pola - `us_stav_label` ma immediate="true",
+        // takze je v indexe pod `dataSet.us_stav_label.textValue`.
+        [id: "us_rozpisane", name: "Rozpísané", type: "Case", icon: "edit_note",
+         query: vsetky + " AND dataSet.us_stav_label.textValue:\"Rozpísaný\"",
+         nets: [siet], roles: [:], headers: stlpce],
+]
+
+views.each { v ->
+    def id = v.id as String
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            def current = getFilterFromMenuItem(existing)
+            def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
+            if (currentQuery == (v.query as String)) {
+                nastav_zobrazenie(existing, v.nets as List, v.headers)
+                unchanged << id
+                return
+            }
+            if (current != null) {
+                deleteFilter(current)
+            }
+            deleteMenuItem(existing)
+        }
+        def item = createOrUpdateMenuItem(
+                id,                 // menu_item_identifier
+                "uzivatelia",       // URI cesta
+                v.type as String,
+                v.query as String,
+                v.icon as String,
+                v.name as String,
+                v.nets as List,     // allowedNets - bez toho "+" nefunguje
+                v.roles as Map,
+                [:]                 // bannedRoles - dourcuje aritu na projektovu
+        )
+        if (item) { created << id } else { failed << id }
+        nastav_zobrazenie(item, v.nets as List, v.headers)
+    } catch (Exception e) {
+        failed << (id + " (" + e.getClass().simpleName + ": " + e.message + ")")
+    }
+}
+
+def summary = "Menu Používateľov – " + (created.size() + unchanged.size()) + "/" + views.size()
+if (failed) {
+    summary = "CHYBA menu Používateľov – nepodarilo sa: " + failed.join(", ")
+}
+changeCaseProperty("title").about { summary }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="nastav_zobrazenie"><![CDATA[
+{ def menuItem, def nets, def headers ->
+    // enable_case_title  - vypnutý dialóg "Vyplňte názov prípadu" pri "+".
+    // default_headers    - predvolené stĺpce zoznamu.
+    // Ani jedno nie je argument `createOrUpdateMenuItem`.
+    if (menuItem == null) return
+    def payload = [:]
+    if (nets) {
+        payload.put("enable_case_title", ["value": false, "type": "boolean"])
+        payload.put("case_require_title_in_creation", ["value": false, "type": "boolean"])
+    }
+    if (headers) {
+        payload.put("default_headers", ["value": headers as String, "type": "text"])
+    }
+    if (payload) {
+        setData("view", menuItem, payload)
+    }
+}
+	]]></function>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def identifier ->
+    // `findMenuItem(id)` z ActionDelegate existujucu polozku nenajde (hlada
+    // v inom rozsahu), takze by sa pri kazdom spusteni zalozila druha sada.
+    def id = ((identifier ?: "") as String).trim()
+    if (!id) return null
+    def items = findCases { it.processIdentifier.eq("preference_filter_item") }
+    return items?.find { ((it.dataSet["menu_item_identifier"]?.value ?: "") as String) == id }
+}
+	]]></function>
+	<roleRef>
+		<id>spravca</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>spravca</id>
+		<title>Správca používateľov</title>
+	</role>
+	<transition>
+		<id>t_us_menu</id>
+		<x>112</x>
+		<y>80</y>
+		<label>Stav menu</label>
+		<icon>menu</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>spravca</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_us_menu</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_us_menu</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>
