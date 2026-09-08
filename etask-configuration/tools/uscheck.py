@@ -191,6 +191,29 @@ def main():
                   f.get("default_headers"))
             check(f"'{want}' sa nepyta na nazov pripadu",
                   f.get("enable_case_title") is False, f.get("enable_case_title"))
+    # Stlpec z DATOVEHO pola sa vykresli len na zobrazeni, ktore ma ten net
+    # v `allowedNets` - `CaseHeaderService` sklada ponuku stlpcov z povolenych
+    # sieti a `default_headers` v nej `uniqueId` iba vyhlada. Co nenajde, necha
+    # prazdne a NIC nezaloguje, takze hodnota v datach sedi a v appke vidno len
+    # `meta-*`. V sesterskej appke to takto ticho vypadlo dvom zobrazeniam.
+    for want in ["Používatelia", "Rozpísané"]:
+        if want not in items:
+            continue
+        st, tl = boss.get(f"/api/task/case/{items[want]}")
+        vt = [t for t in (tl or []) if t["transitionId"] == "view"]
+        v = values(boss, vt[0]["stringId"]) if vt else {}
+        need = {h.rsplit("-", 1)[0]
+                for h in (v.get("default_headers") or "").split(",")
+                if h and not h.startswith("meta-")}
+        have = set()
+        if v.get("filter_case_id"):
+            st, fc = boss.get(f"/api/workflow/case/{v['filter_case_id']}")
+            for d in (fc.get("immediateData") or []):
+                if d.get("allowedNets"):
+                    have = set(d["allowedNets"])
+        check(f"'{want}' ma v allowedNets siete svojich stlpcov",
+              need <= have, f"treba {sorted(need)}, ma {sorted(have)}")
+
     st, mc = boss.post("/api/workflow/case/search?size=10",
                        {"process": [{"identifier": "uzivatelia/us_menu"}]})
     mt = [c["title"] for c in mc.get("_embedded", {}).get("cases", [])]

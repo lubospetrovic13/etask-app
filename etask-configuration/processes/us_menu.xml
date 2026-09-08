@@ -55,17 +55,27 @@ views.each { v ->
     try {
         def existing = menu_item(id)
         if (existing != null) {
+            // Porovnava sa dopyt A allowedNets - oboje ide do konstruktora
+            // a na existujucej polozke sa zmenit neda. Kym sa porovnaval len
+            // dopyt, pridanie siete sa ticho zahodilo: podmienka vyhlasila
+            // polozku za nezmenenu a stlpce z datovych poli sa nezobrazili.
             def current = getFilterFromMenuItem(existing)
             def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
-            if (currentQuery == (v.query as String)) {
+            def currentNets = ((current?.dataSet?."filter"?.allowedNets ?: []) as List)
+                    .collect { it as String } as Set
+            def wantNets = (v.nets as List).collect { it as String } as Set
+            if (currentQuery == (v.query as String) && currentNets == wantNets) {
                 nastav_zobrazenie(existing, v.nets as List, v.headers)
                 unchanged << id
                 return
             }
+            // PORADIE JE POVINNE: najprv polozka, potom filter. Naopak to padne
+            // na `IllegalArgumentException: Could not find Case with id [...]`,
+            // lebo `deleteMenuItem` si filter este raz nacita podla id na polozke.
+            deleteMenuItem(existing)
             if (current != null) {
                 deleteFilter(current)
             }
-            deleteMenuItem(existing)
         }
         def item = createOrUpdateMenuItem(
                 id,                 // menu_item_identifier
