@@ -90,6 +90,28 @@ else
   bad "reference/action-api.md je neaktualny - spusti: $PY tools/pfapi.py > reference/action-api.md"
 fi
 
+# pfview: kontroly frontendovej vrstvy. Fixtures nesu presne tri tiche chyby -
+# zastaralu kopiu resolvera, kniznicny komponent obchadzajuci vlastny a siet
+# s neznamym komponentom/property. Ziadna z nich sa neprejavi na builde, takze
+# jedina obrana je, ze tento nastroj na nich naozaj spadne.
+if [ -d ../etask-frontend-starter/node_modules/@netgrif ]; then
+  if $PY tools/pfview.py --src tools/fixtures/pfview-src \
+       --nets tools/fixtures/pfview-nets >/dev/null 2>&1; then
+    bad "pfview neoznacil fixtures/pfview-* - tri tiche chyby presli"
+  else
+    ok "pfview chytil fixtures/pfview-*"
+  fi
+  # Falosny pozitiv je tu drahsi nez inde: `toggle` na boolean poli je platny
+  # (variant sa cita z properties) a naivny inventar ho hlasi 15x.
+  if $PY tools/pfview.py >/dev/null 2>&1; then
+    ok "pfview neoznacil skutocny frontend a siete"
+  else
+    bad "pfview oznacil platny frontend - falosny pozitiv"
+  fi
+else
+  skip "pfview: etask-frontend-starter/node_modules chyba (npm ci)"
+fi
+
 if [ ${#LOG_ARG[@]} -gt 0 ]; then
   echo "pftest: pfcheck proti beziacemu enginu"
   if tools/pfcheck.sh "${LOG_ARG[@]}" tools/fixtures/ok.xml >/dev/null 2>&1; then

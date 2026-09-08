@@ -298,6 +298,30 @@ Konfigurácia ide cez `<component><properties>`, ktoré knižnica ignoruje, ale
 knižničný panel a teda knižničný resolver — vlastné polia sa nezobrazia
 **vôbec** a build to neodhalí. Správne je `<app-etask-task-list>`.
 
+Odvtedy to odhalí `tools/pfview.py`. Spusti ho po každom zásahu do frontendu
+alebo do `<component>` v sieti — je to jediná kontrola tejto vrstvy:
+
+```bash
+python3 tools/pfview.py              # tri kontroly
+python3 tools/pfview.py --inventory  # čo frontend vôbec pozná
+```
+
+| kontrola | čo chytí | ako by to vyzeralo bez nej |
+|---|---|---|
+| A | kópia knižničnej šablóny zaostala | nový typ poľa sa vykreslí ako prázdne miesto |
+| B | `<nc-x>` tam, kde vlastníme `<app-etask-x>` | vlastné polia sa nezobrazia vôbec |
+| C | `<component><name>` alebo `<property key>`, ktoré nikto nečíta | ticho sa vykreslí default |
+
+Kontrola A je dôvod, prečo hlavička skopírovaného súboru **musí** obsahovať
+vetu `Copy of @netgrif/components <pôvodný-súbor>.component.html` — nástroj
+podľa nej nájde originál v balíku a porovná vetvy `ngSwitch`. Bez tej vety
+súbor nikto nesleduje.
+
+Kontrola C nekontroluje `<component><name>` pri type, ktorého komponent
+vlastníme a `component.name` vôbec nečíta (`boolean` číta variant
+z `<properties>`). Kontrolujú sa tam kľúče properties — preklep v `key`
+je tichý presne tak isto.
+
 `change <field>` podporuje na úrovni enginu iba `value`, `choices`, `options`,
 `allowedNets` a `validations`. `placeholder` ani ikona sa z akcie meniť nedajú —
 obchádza sa to paritou hodnoty (vzor je vlastný button).

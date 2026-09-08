@@ -1,0 +1,52 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>fixtures/bad_component</id>
+	<version>1.0.0</version>
+	<initials>BAD</initials>
+	<title>Fixture - komponenty, ktore frontend nerenderuje</title>
+	<defaultRole>true</defaultRole>
+	<data type="text">
+		<id>zly_nazov</id>
+		<title>Komponent, ktory neexistuje</title>
+		<component>
+			<name>supertextarea</name>
+		</component>
+	</data>
+	<data type="number">
+		<id>zly_typ</id>
+		<title>Komponent existuje, ale pre iny typ pola</title>
+		<component>
+			<name>richtextarea</name>
+		</component>
+	</data>
+	<data type="boolean">
+		<id>preklep_v_property</id>
+		<title>Preklep v kluci property</title>
+		<component>
+			<name>toggle</name>
+			<properties>
+				<property key="varaint">chip</property>
+			</properties>
+		</component>
+	</data>
+	<transition>
+		<id>t</id>
+		<x>0</x>
+		<y>0</y>
+		<label>T</label>
+	</transition>
+	<place>
+		<id>p</id>
+		<x>0</x>
+		<y>0</y>
+		<label>P</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a</id>
+		<type>read</type>
+		<sourceId>p</sourceId>
+		<destinationId>t</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

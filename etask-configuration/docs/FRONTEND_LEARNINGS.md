@@ -155,6 +155,10 @@ EtaskTaskPanelComponent (panelContentComponent)
 `ngOnInit`, takže default sa dá nastaviť v konstruktore.
 
 **Cena:** nové typy polí z budúcej verzie knižnice sa v skopírovanej šablóne neobjavia.
+Pole takého typu zmizne — bez chyby, bez warningu, bez stopy v konzole. `tools/pfview.py`
+preto originál vytiahne z balíka v `node_modules` a porovná vetvy `ngSwitch`; kópiu nájde
+podľa vety `Copy of @netgrif/components ...` v hlavičke súboru, takže tá veta nie je
+komentár, ale zápis do registra.
 
 ### D2. `nc-task-list` obchádza celú tú reťaz
 
@@ -162,7 +166,14 @@ Najdrahšia chyba tohto vlákna. Knižničné `<nc-task-list>` renderuje `<nc-ta
 knižničný task-content a knižničný resolver — **vlastné field komponenty sa nezobrazia vôbec**.
 
 Prejav: `app-etask-boolean-field: 0`, `nc-boolean-field: 1`, hoci bolo všetko správne
-zapojené. Žiadny build ani statická kontrola to neodhalí.
+zapojené. Žiadny build to neodhalí — a v čase, keď sa to stalo, ani žiadna statická
+kontrola. Dnes je to `pfview` kontrola B: pravidlo je „ak projekt vlastní
+`app-etask-X`, žiadna iná šablóna nesmie použiť `nc-X`", s jedinou výnimkou pre
+vlastný komponent, ktorý knižničný obaľuje vo svojej vlastnej šablóne.
+
+Komentáre sa pred kontrolou odstraňujú. Bez toho by nástroj hlásil práve ten súbor,
+ktorý opravu **vysvetľuje** — a falošný poplach na dokumentácii opravy je najkratšia
+cesta k tomu, aby sa výstup prestal čítať.
 
 Miesta, ktoré na to treba skontrolovať (obe boli chybné):
 - `etask-tabbed-task-view.component.html` (task view v otvorenom case)

@@ -96,6 +96,7 @@ Po každej zmene siete, v tomto poradí:
 cd etask-configuration
 python3 tools/pflint.py processes/          # 0,3 s — štruktúra, tiché pasce
 python3 tools/pfgroovy.py processes/       # 3 s   — syntax Groovy
+python3 tools/pfview.py                    # 2 s   — vykreslí to frontend?
 python3 tools/pfsync.py --sync             # import do enginu + role
 ```
 
@@ -104,6 +105,12 @@ python3 tools/pfsync.py --sync             # import do enginu + role
 sieť len keď v databáze chýba**, takže po zmene existujúceho XML engine ďalej
 drží starý model, `LATEST` mieri na neho a nové casy z neho vznikajú. Nikde sa
 to neohlási.
+
+`pfview` je jediná kontrola vrstvy 3. Sieť sa naimportuje, aj keď si vypýta
+`<component><name>` alebo `<property key>`, ktoré frontend nečíta — Angular to
+ticho zahodí a vykreslí default. Rovnako ticho zmizne pole, ktorého typ chýba
+v našej kópii knižničného resolvera. Inventár sa číta z `node_modules/@netgrif`
+pri každom spustení, nie zo zoznamu v kóde.
 
 **Ground truth je engine.** Keď si offline nástroj a engine odporujú, chyba je
 v nástroji — nie v sieti. Stalo sa to dvakrát pri stavbe `pfgroovy`. Detaily
@@ -199,7 +206,7 @@ etask-configuration/
     PETRIFLOW_LEARNINGS.md    čo referencia nepokrýva alebo tvrdí zle
     SERVICE_DESK.md           worked example: eForm, SLA, per-org oprávnenia
     AI_STARTER_ANALYSIS.md    prečo je repozitár takto postavený
-  tools/                up.sh, pflint, pfgroovy, pfcheck, pftest, pfapi, pfseed
+  tools/                up.sh, pflint, pfgroovy, pfview, pfcheck, pftest, pfapi, pfseed
 etask-backend-starter/
   src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy   ← vrstva 2
   src/main/groovy/com/netgrif/etask/startup/ProcessManifest.groovy   číta manifest
