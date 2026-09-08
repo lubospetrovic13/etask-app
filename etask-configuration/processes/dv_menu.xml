@@ -29,13 +29,22 @@
 		vznikla druhá sada zobrazení. Rovnaké necháme byť, zmenené zahodíme
 		a postavíme znova.
 
-		Štyri zobrazenia, všetky typu Case, a stav sa filtruje cez `taskIds` -
-		pole v indexe casu, ktoré drží id práve otvorených prechodov. Teda
-		`taskIds:"t_dv_rozhodnutie"` = "žiadosti, o ktorých sa dá rozhodnúť",
-		`taskIds:"t_dv_vysledok"` = "vybavené". Filtrovať podľa `dv_stav` by bolo
-		čitateľnejšie, ale dataSet polia sa v Elasticu spoľahlivo dopytovať nedajú
-		(gotcha 40 v referencii) - `taskIds` áno, a je to to isté tvrdenie
-		o stave, len vyjadrené polohou tokenu.
+		Štyri zobrazenia, všetky typu Case. Filtrovať sa dá dvoma spôsobmi a oba
+		sú tu použité zámerne:
+
+		  * podľa **polohy tokenu** - `taskIds` je pole v indexe casu, ktoré drží
+		    id práve otvorených prechodov. `taskIds:"t_dv_rozhodnutie"` = "žiadosti,
+		    o ktorých sa dá rozhodnúť". Hovorí to o tom, čo sa s casom dá robiť.
+		  * podľa **dátového poľa** - polia s `immediate="true"` engine indexuje
+		    pod `dataSet.<id pola>` a v query stringu sú dostupné ako `.textValue`
+		    a `.textValue.keyword` (text), `.timestampValue` a `.dateValue`
+		    (dátum), `.booleanValue`. Zobrazenie "Vybavené" to používa a je to
+		    čitateľnejšie: hovorí o stave žiadosti, nie o tom, ktorá úloha je
+		    zhodou okolností otvorená.
+
+		POZOR na zámenu: gotcha 40 v referencii hovorí, že `dataSet` filtre
+		NEFUNGUJÚ - ale to je o `findCases { it.dataSet... }`, teda o QueryDSL nad
+		Mongom. V Elasticu fungujú. Sú to dva rôzne mechanizmy s tým istým názvom.
 
 		Prvá verzia mala tieto zobrazenia typu Task (dopyt na `transitionId`).
 		Filtrovalo sa to samo a vyzeralo to elegantnejšie, ale malo to chybu:
@@ -65,19 +74,34 @@ def failed = []
 // task sa zalozit neda.
 def ziadost = "dovolenky/dv_ziadost"
 def vsetky = "processIdentifier:\"" + ziadost + "\""
+
+// Predvolene stlpce zoznamu. Su to `HeaderColumn.uniqueId` oddelene ciarkou:
+// meta stlpec je `meta-<pole>` (title, visualId, author, creationDate),
+// datove pole je `<identifikator siete>-<id pola>` a MUSI mat immediate="true",
+// inak sa do casu ani do indexu nedostane a stlpec zostane prazdny.
+def stlpce = "meta-title" +
+        ",dovolenky/dv_ziadost-dv_stav_label" +
+        ",dovolenky/dv_ziadost-dv_od" +
+        ",dovolenky/dv_ziadost-dv_do"
+
 def views = [
         [id: "dv_moje", name: "Žiadosti o dovolenku", type: "Case", icon: "beach_access",
-         query: vsetky, nets: [ziadost], roles: [:]],
+         query: vsetky, nets: [ziadost], roles: [:], headers: stlpce],
         [id: "dv_na_schvalenie", name: "Na schválenie", type: "Case", icon: "how_to_reg",
          query: vsetky + " AND taskIds:\"t_dv_rozhodnutie\"", nets: [],
-         roles: ["veduci": ziadost]],
+         roles: ["veduci": ziadost], headers: stlpce],
         [id: "dv_rozpisane", name: "Rozpísané a vrátené", type: "Case", icon: "edit_calendar",
-         query: vsetky + " AND taskIds:\"t_dv_podanie\"", nets: [ziadost], roles: [:]],
-        // Vybavene = token je v p_vybavena, teda existuje uloha t_dv_vysledok.
-        // Nefiltruje sa to podla `dv_stav`, hoci by to bolo citatelnejsie:
-        // dataSet polia v Elasticu spolahlivo dopytovat nevieme, `taskIds` ano.
+         query: vsetky + " AND taskIds:\"t_dv_podanie\"", nets: [ziadost], roles: [:],
+         headers: stlpce],
+        // Filtruje sa podla DATOVEHO POLA, nie podla polohy tokenu. Da sa to:
+        // polia s immediate="true" engine indexuje pod `dataSet.<id>` a v query
+        // stringu su dostupne ako `.textValue` / `.keyword` (text),
+        // `.timestampValue` / `.dateValue` (datum), `.booleanValue`.
+        // Je to citatelnejsie nez `taskIds:"t_dv_vysledok"` - hovori to o stave
+        // ziadosti, nie o tom, ktora uloha je zhodou okolnosti otvorena.
         [id: "dv_vybavene", name: "Vybavené", type: "Case", icon: "task_alt",
-         query: vsetky + " AND taskIds:\"t_dv_vysledok\"", nets: [], roles: [:]],
+         query: vsetky + " AND dataSet.dv_stav_label.textValue:(\"Schválená\" OR \"Zamietnutá\")",
+         nets: [], roles: [:], headers: stlpce],
 ]
 
 views.each { v ->
@@ -85,23 +109,43 @@ views.each { v ->
     try {
         def existing = menu_item(id)
         if (existing != null) {
+            // Porovnava sa LEN dopyt. Nie preto, ze ostatne nezalezi, ale preto,
+            // ze kazde zbytocne "zmenilo sa to" znamena zmazat a postavit znova
+            // - a to je jedina cesta, ktora funguje (nizsie). Nazov, ikonu,
+            // stlpce a vypnuty dialog vieme dorovnat na existujucej polozke.
             def current = getFilterFromMenuItem(existing)
             def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
-            def currentNets = (current?.dataSet?."allowedNets"?.value ?: []) as List
-            // allowed_roles su ulozene ako options s klucom "importId:identifikator",
-            // takze sa porovnava zakodovana podoba, nie vstupna mapa.
-            def currentRoles = ((existing?.dataSet?."allowed_roles"?.options ?: [:]) as Map).keySet() as Set
-            def wantRoles = ((v.roles as Map).collect { k, net -> (k as String) + ":" + (net as String) }) as Set
-            if (currentQuery == (v.query as String) && currentNets == (v.nets as List)
-                    && currentRoles == wantRoles) {
-                bez_dialogu(existing, v.nets as List)
+            if (currentQuery == (v.query as String)) {
+                nastav_zobrazenie(existing, v.nets as List, v.headers)
                 unchanged << id
                 return
             }
+            // UPDATE CESTA `createOrUpdateMenuItem` V 6.3.1 NEFUNGUJE, a to ani
+            // v projektovej variante: jej `changeFilter filter query { ... }`
+            // sa preklada na `updateFilter(Case, Map)`, ktore v delegate nie je,
+            // takze akcia padne na MissingMethodException. Dokumentacia to
+            // pripisuje enginovej variante, ale plati to pre obe.
+            //
+            // Preto sa polozka ZAHODI a postavi znova - a musi sa zahodit aj jej
+            // `filter` case. `deleteMenuItem` maze len polozku a filter nechava
+            // osirely; po niekolkych behoch ich je v databaze hromada a
+            // `getFilterFromMenuItem` potom moze vratit ten nespravny, cim sa
+            // porovnanie vyssie rozsype a cely cyklus sa opakuje.
+            if (current != null) {
+                deleteFilter(current)
+            }
             deleteMenuItem(existing)
         }
-        // Sedem argumentov = varianta z EtaskActionDelegate. Poradie NIE je
-        // rovnake ako pri createFilterInMenu: tu je prve id, az potom URI.
+        // DEVAT argumentov, a to zamerne. `createOrUpdateMenuItem` existuje
+        // dvakrat: projektova (id, uri, type, query, icon, title, allowedNets,
+        // roles = [:], bannedRoles = [:]) a enginova s 11 parametrami, ktora na
+        // update ceste vola neexistujuce `updateFilter` a PADNE. Rozlisuju sa
+        // LEN aritou. Pri osmich argumentoch si Groovy vybral enginovu a padlo
+        // to na `MissingMethodException: updateFilter()` - pri deviatich sedi
+        // projektova presne, bez dopocitavania defaultov.
+        //
+        // Poradie NIE je rovnake ako pri createFilterInMenu: tu je prve id,
+        // az potom URI.
         def item = createOrUpdateMenuItem(
                 id,                 // menu_item_identifier
                 "dovolenky",        // URI cesta
@@ -110,10 +154,11 @@ views.each { v ->
                 v.icon as String,
                 v.name as String,   // nazov v menu aj nazov filtra
                 v.nets as List,     // allowedNets - bez toho "+" nefunguje
-                v.roles as Map      // allowed_roles: importId -> identifikator siete
+                v.roles as Map,     // allowed_roles: importId -> identifikator siete
+                [:]                 // bannedRoles - dourcuje aritu na projektovu
         )
         if (item) { created << id } else { failed << id }
-        bez_dialogu(item, v.nets as List)
+        nastav_zobrazenie(item, v.nets as List, v.headers)
     } catch (Exception e) {
         failed << (id + " (" + e.getClass().simpleName + ": " + e.message + ")")
     }
@@ -131,18 +176,34 @@ changeCaseProperty("title").about { summary }
 			</actions>
 		</event>
 	</caseEvents>
-	<function scope="process" name="bez_dialogu"><![CDATA[
-{ def menuItem, def nets ->
-    // Bez tohto vyskoci pri "+" dialóg "Vyplňte názov prípadu" a názov žiadosti
-    // si vymýšľa človek. Riadi to `enable_case_title` na prechode `view` položky
-    // menu - nie je to argument `createOrUpdateMenuItem`, takže sa dopisuje
-    // zvlášť cez setData. Case sa potom založí rovno a názov mu dá `create`
-    // akcia siete. Týka sa len zobrazení, ktoré vôbec majú allowedNets.
-    if (menuItem == null || !nets) return
-    setData("view", menuItem, [
-            "enable_case_title"             : ["value": false, "type": "boolean"],
-            "case_require_title_in_creation": ["value": false, "type": "boolean"]
-    ])
+	<function scope="process" name="nastav_zobrazenie"><![CDATA[
+{ def menuItem, def nets, def headers ->
+    // Dve veci na prechode `view` položky menu, ktoré `createOrUpdateMenuItem`
+    // ako argumenty nemá, takže sa dopisujú zvlášť cez setData:
+    //
+    //   enable_case_title  - keď je true (default), vyskočí pri "+" dialóg
+    //                        "Vyplňte názov prípadu" a názov si vymýšľa človek.
+    //                        Vypnutý sa case založí rovno a názov mu dá `create`
+    //                        akcia siete. Týka sa len zobrazení s allowedNets.
+    //   default_headers    - predvolené stĺpce zoznamu, `HeaderColumn.uniqueId`
+    //                        oddelené čiarkou. Toto je JEDINÝ spôsob, ako ich
+    //                        deklarovať bez zásahu do Angularu: engine ich dá do
+    //                        dát položky menu, `GroupNavigationComponentResolver`
+    //                        ich rozdelí a vloží ako `NAE_DEFAULT_HEADERS` do
+    //                        injektora práve toho zobrazenia. Globálny token by
+    //                        vyprázdnil stĺpce všetkých ostatných zobrazení.
+    if (menuItem == null) return
+    def payload = [:]
+    if (nets) {
+        payload.put("enable_case_title", ["value": false, "type": "boolean"])
+        payload.put("case_require_title_in_creation", ["value": false, "type": "boolean"])
+    }
+    if (headers) {
+        payload.put("default_headers", ["value": headers as String, "type": "text"])
+    }
+    if (payload) {
+        setData("view", menuItem, payload)
+    }
 }
 	]]></function>
 	<function scope="process" name="menu_item"><![CDATA[

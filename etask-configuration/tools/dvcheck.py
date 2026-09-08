@@ -232,6 +232,16 @@ def main():
         check("zakladanie sa nepyta na nazov pripadu",
               vf.get("enable_case_title") is False, vf.get("enable_case_title"))
 
+    # default_headers = predvolene stlpce zoznamu. Jediny sposob, ako ich
+    # deklarovat bez zasahu do Angularu: resolver ich rozdeli podla ciarky
+    # a vlozi ako NAE_DEFAULT_HEADERS do injektora prave toho zobrazenia.
+    WANT_HEADERS = ("meta-title,dovolenky/dv_ziadost-dv_stav_label"
+                    ",dovolenky/dv_ziadost-dv_od,dovolenky/dv_ziadost-dv_do")
+    for title in ["Žiadosti o dovolenku", "Na schválenie", "Rozpísané a vrátené", "Vybavené"]:
+        if title in items:
+            got = view_task_fields(title).get("default_headers")
+            check(f"'{title}' ma predvolene stlpce Nazov/Stav/Od/Do", got == WANT_HEADERS, got)
+
     def roles_of(title):
         st, full = boss.get(f"/api/workflow/case/{items[title]}")
         for d in (full.get("immediateData") or []):
