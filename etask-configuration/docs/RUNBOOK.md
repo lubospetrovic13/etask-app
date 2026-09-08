@@ -285,6 +285,25 @@ Overené na štyroch zobrazeniach tej istej siete — korelácia je úplná:
 `allowedNets` sa teda oplatí dať aj zobrazeniu, z ktorého sa zakladať nemá —
 inak si vyberáš medzi tlačidlom „+“ a stĺpcami.
 
+Kde to hľadať, keď to nesedí: na položke menu (`preference_filter_item`)
+`allowedNets` **nie je**. Je na naviazanom `filter` case, v poli `filter`:
+
+```
+GET /api/workflow/case/{filter_case_id}  →  immediateData[].allowedNets
+```
+
+Dve pasce pri prestavbe položky, obe tichšie než tá pôvodná:
+
+* **Strážna podmienka musí porovnávať aj `allowedNets`, nielen dopyt.** Dopyt aj
+  `allowedNets` idú do konštruktora a na existujúcej položke sa zmeniť nedajú.
+  Kto porovnáva len dopyt, pridá sieť, dopyt sa nezmení — a prestavba položku
+  vyhlási za nezmenenú a nechá tak. Vyzerá to, že zmena v sieti nefunguje.
+* **Poradie mazania je povinné: najprv `deleteMenuItem`, potom `deleteFilter`.**
+  Naopak to padne na `IllegalArgumentException: Could not find Case with id`,
+  lebo `deleteMenuItem` si filter ešte raz načíta podľa id uloženého na položke.
+  Referenciu na filter si drž vopred, aby si ho po zmazaní položky mal čím
+  zmazať — inak ostane osirelý.
+
 Dátové pole sa do zoznamu aj do vyhľadávania dostane, len keď má
 `immediate="true"`. Vtedy ho engine indexuje do Elasticu pod `dataSet.<idPola>`
 s podpoľami podľa typu:
