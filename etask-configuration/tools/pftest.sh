@@ -81,6 +81,16 @@ else
   bad "pfgroovy oznacil akcie, ktore engine skompiluje - falosny pozitiv"
 fi
 
+# pfgroovy: NAE hlavicka ma aj `t.` (alias prechodu), nielen `f.`. Bez toho
+# padne cela hlavicka do tela ako Groovy a nastroj hlasi chybu na sieti, ktoru
+# engine naimportuje. Na startere to nepouziva ziadna siet, takze bez tejto
+# kontroly by sa oprava dala nepozorovane vratit.
+if $PY tools/pfgroovy.py tools/fixtures/header-transition.xml >/dev/null 2>&1; then
+  ok "pfgroovy zvladol alias prechodu (t.) v hlavicke"
+else
+  bad "pfgroovy oznacil header-transition.xml - hlavicka s `t.` je platna"
+fi
+
 # pfapi: inventar sa nesmie rozist s enginom. Neaktualny inventar je presne ta
 # chyba, kvoli ktorej cely tento subor existuje - agent siahne po neexistujucej
 # metode, alebo si napise vlastnu verziu tej, ktora tam uz je.

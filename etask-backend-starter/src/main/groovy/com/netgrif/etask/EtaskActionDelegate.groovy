@@ -11,6 +11,7 @@ import com.netgrif.application.engine.petrinet.domain.UriContentType
 import com.netgrif.application.engine.petrinet.domain.UriNode
 import com.netgrif.application.engine.petrinet.domain.dataset.logic.action.ActionDelegate
 import com.netgrif.application.engine.petrinet.domain.roles.ProcessRole
+import com.netgrif.application.engine.petrinet.domain.version.Version
 import com.netgrif.application.engine.workflow.domain.Case
 import com.netgrif.etask.ai.AiCallService
 import com.netgrif.etask.petrinet.domain.UriNodeData
@@ -329,28 +330,110 @@ class EtaskActionDelegate extends ActionDelegate {
     }
 
     /**
-     * Pridel procesnu rolu podla importId a identifikatora siete.
+     * Pridel alebo odober procesnu rolu. Tenky adapter nad enginovym
+     * `assignRole`/`removeRole` - NIE ich nahrada.
      *
-     * `assignRole` z enginu berie stringId roly, ktore sa razi PER VERZIU siete -
-     * z Petriflow akcie ho teda nie je z coho vziat a po re-importe by aj tak
-     * bolo neplatne. Tato varianta prijima to, co je v XML natvrdo a nemeni sa:
-     * `<role><id>` a identifikator siete. Rolu najde na najnovsej verzii.
+     * Engine uz obe operacie podla importId a identifikatora siete ma, a to
+     * v dvoch presne tych variantach, ktore treba:
      *
-     * Vrati true, ak rola existuje a bola pridelena.
+     *   assignRole(importId, netId, user)            ... VSETKY verzie siete
+     *   assignRole(importId, netId, version, user)   ... jedna konkretna verzia
+     *
+     * (Predchadzajuca verzia tohto suboru mala vlastne `assignRoleByImportId`,
+     * ktore duplikovalo tu prvu - a robilo menej: pridelilo rolu len na
+     * najnovsej verzii. Presne pripad, pred ktorym varuje CLAUDE.md.)
+     *
+     * Zostava teda len to, co z Petriflow akcie naozaj nejde:
+     *   - `Version` je objekt, akcia ma verziu ako retazec "1.0.0";
+     *   - enginova varianta robi `.roles.values().find { ... }.stringId`, takze
+     *     pri neznamom importId hodi NullPointerException. Tu sa vrati false.
+     *
+     * @param version prazdne alebo null = vsetky verzie siete (plosne)
+     * @param assign true = pridelit, false = odobrat
+     * @return true, ak rola na tej sieti existuje a operacia sa vykonala
      */
-    boolean assignRoleByImportId(IUser user, String roleImportId, String netIdentifier) {
-        if (user == null || !roleImportId || !netIdentifier) {
+    boolean setProcessRole(IUser user, String roleImportId, String netIdentifier,
+                           String version, boolean assign) {
+        return setProcessRole(user?.stringId as String, roleImportId, netIdentifier,
+                              version, assign)
+    }
+
+    /**
+     * Varianta podla ID uctu - a je to tá, ktorú treba volať.
+     *
+     * DOVOD, a stálo to jedno ladenie: kazda zmena uctu je `read - mutuj - save`
+     * celeho dokumentu. Kto si objekt `IUser` PODRZI a spravi cez neho dve
+     * zmeny za sebou, prepise tou druhou vysledok prvej - posledny `save` zapise
+     * svoju (uz neaktualnu) kopiu. V praxi to vypadalo tak, ze heslo sa zmenilo,
+     * ale meno, authorities aj odobrana rola sa TICHO vratili do povodneho stavu.
+     * `finish` pritom vratil `success`.
+     *
+     * Preto sa ucet nacita znova pred kazdym volanim a pouzije sa objekt, ktory
+     * enginova metoda VRATI - nie ten, ktory sme jej dali.
+     */
+    boolean setProcessRole(String userId, String roleImportId, String netIdentifier,
+                           String version, boolean assign) {
+        if (!userId || !roleImportId || !netIdentifier) {
             return false
         }
-        PetriNet net = petriNetService.getNewestVersionByIdentifier(netIdentifier)
-        if (net == null) {
+        String v = (version ?: "").trim()
+        List<PetriNet> nets = (v.isEmpty() || v == VSETKY_VERZIE)
+                ? petriNetService.getByIdentifier(netIdentifier)
+                : [petriNetService.getPetriNet(netIdentifier, parseVersion(v))]
+        nets = nets.findAll { it != null }
+        if (nets.isEmpty()) {
             return false
         }
-        def found = net.roles.find { it.value.importId == roleImportId }
-        if (!found) {
+        boolean done = false
+        nets.each { PetriNet net ->
+            ProcessRole role = net.roles.values().find { it.importId == roleImportId }
+            if (role == null) {
+                return
+            }
+            IUser fresh = userService.findById(userId, false)
+            if (fresh == null) {
+                return
+            }
+            if (assign) {
+                assignRole(role.stringId, fresh)
+            } else {
+                // NEPOUZIVAT enginove `removeRole` - v 6.3.1 je rozbite a mlci.
+                // `AbstractUserService.removeRole(IUser, String roleStringId)`
+                // si rolu vytiahne cez `processRoleService.findByImportId(...)`,
+                // teda podla importId - hoci parameter je stringId. Podla
+                // stringId tak nenajde NIC, `removeProcessRole(null)` neodoberie
+                // nic a `save` ulozi nezmeneny dokument. Bez chyby, bez logu.
+                // (`addRole` ten isty parameter riesi spravne cez `findById`,
+                // takze pridelenie funguje a odobranie nie - odtial ta asymetria.)
+                // Rolu preto odoberame priamo, mame ju ako objekt zo siete.
+                fresh.removeProcessRole(role)
+                userService.save(fresh)
+            }
+            done = true
+        }
+        return done
+    }
+
+    /**
+     * Zmena hesla podla ID uctu.
+     *
+     * Existuje preto, aby siet nemusela drzat objekt uctu: `changePassword`
+     * z `registrationService` berie `RegisteredUser` a uklada ho cely, takze
+     * podrzany objekt by prepisal vsetko, co sa medzitym zmenilo. Viac pri
+     * `setProcessRole(String, ...)`.
+     *
+     * Silu hesla overuje engine (`registrationService.isPasswordSufficient`),
+     * nie táto metoda - politika patrí do konfiguracie instancie.
+     */
+    boolean changeUserPassword(String userId, String newPassword) {
+        if (!userId || !newPassword) {
             return false
         }
-        assignRole(found.value.stringId, user)
+        IUser user = userService.findById(userId, false)
+        if (user == null) {
+            return false
+        }
+        registrationService.changePassword(user, newPassword)
         return true
     }
 
@@ -369,23 +452,242 @@ class EtaskActionDelegate extends ActionDelegate {
      */
     Map<String, String> processRoleOptions() {
         Map<String, String> out = [:]
-        Set<String> identifiers = petriNetService.getAll()
-                .collect { it.identifier }
-                .findAll { it != null && it.contains("/") } as Set<String>
-        identifiers.sort().each { String identifier ->
+        applicationNetIdentifiers().each { String identifier ->
             PetriNet net = petriNetService.getNewestVersionByIdentifier(identifier)
             if (net == null) {
                 return
             }
-            net.roles.each { key, ProcessRole role ->
-                if (role.importId in ["default", "anonymous"]) {
-                    return
-                }
+            assignableRoles(net).each { ProcessRole role ->
                 out.put(role.importId + ":" + identifier,
                         "${role.name} (${net.title})" as String)
             }
         }
         return out
+    }
+
+    /**
+     * Roly JEDNEHO procesu, ako mapa importId -> "Nazov roly".
+     *
+     * Toto je druha polovica vyberu v dvoch krokoch: najprv `processOptions()`
+     * da procesy, potom sa touto metodou z vybraneho procesu doplnia jeho roly
+     * (`change pole options { ... }` v `set` akcii pola s procesom).
+     *
+     * Kluc je tu cisty importId, nie "importId:siet" - siet uz je vybrana
+     * a drzi ju vlastne pole, takze ju netreba nosit v kluci.
+     *
+     * @param version prazdne alebo null = najnovsia verzia siete
+     */
+    Map<String, String> processRoleOptions(String netIdentifier, String version = null) {
+        Map<String, String> out = [:]
+        PetriNet net = resolveNet(netIdentifier, version)
+        if (net == null) {
+            return out
+        }
+        assignableRoles(net).each { ProcessRole role ->
+            out.put(role.importId, role.name as String)
+        }
+        return out
+    }
+
+    /**
+     * Procesy (aplikacne siete) instancie, ako mapa identifikator -> "Nazov".
+     *
+     * Prvy krok vyberu roly v dvoch krokoch. Bez neho by pole s rolami muselo
+     * ponukat vsetky roly vsetkych sietí naraz - co je pri niekolkych appkach
+     * zoznam, v ktorom sa neda nic najst.
+     */
+    Map<String, String> processOptions() {
+        Map<String, String> out = [:]
+        applicationNetIdentifiers().each { String identifier ->
+            PetriNet net = petriNetService.getNewestVersionByIdentifier(identifier)
+            if (net != null) {
+                out.put(identifier, net.title as String)
+            }
+        }
+        return out
+    }
+
+    /** Volba "vsetky verzie" v `processVersionOptions`. */
+    static final String VSETKY_VERZIE = "vsetky"
+
+    /**
+     * Verzie jedneho procesu, ako mapa hodnota -> popis.
+     *
+     * Prvy zaznam je VSETKY_VERZIE a je aj rozumny default: rola ma `stringId`
+     * razene per verziu siete, takze pridelenie len na jednej verzii znamena, ze
+     * na casoch inej verzie uzivatel pristup NEMA. Konkretna verzia je tu pre
+     * pripad, kedy to niekto chce zamerne.
+     *
+     * KLUCE SU ZASLUGOVANE: "1.0.0" -> "1_0_0". Moznosti nastavene za behu sa
+     * ukladaju ako Mongo dokument a Mongo v nazvoch poli zakazuje bodku - kluc
+     * s verziou by zhodil ulozenie na "Map key 1.0.0 contains dots but no
+     * replacement was configured". (`petriflow_reference.md`, C17.) Popis
+     * zostava s bodkami, `setProcessRole` si podtrzniky prelozi spat.
+     */
+    Map<String, String> processVersionOptions(String netIdentifier) {
+        Map<String, String> out = [(VSETKY_VERZIE): "Všetky verzie"]
+        List<PetriNet> nets = petriNetService.getByIdentifier(netIdentifier) ?: []
+        PetriNet newest = petriNetService.getNewestVersionByIdentifier(netIdentifier)
+        String newestVersion = newest?.version?.toString()
+        nets.collect { it.version?.toString() }
+                .findAll { it != null }
+                .unique()
+                .sort(false) { String v -> versionKey(v) }
+                .reverse()
+                .each { String v ->
+                    out.put(v.replace(".", "_"),
+                            v == newestVersion ? "${v} (najnovšia)" as String : v)
+                }
+        return out
+    }
+
+    /**
+     * Pouzivatelia instancie, ako mapa id -> "Meno Priezvisko (e-mail)".
+     *
+     * Na vyber uctu, ktory sa ma upravit. Systemove ucty enginu (`system`,
+     * anonymny) sa preskakuju - nemaju sa cez appku upravovat.
+     */
+    Map<String, String> userOptions() {
+        Map<String, String> out = [:]
+        userService.findAll(true).each { IUser u ->
+            String email = u.email as String
+            if (!email || email.startsWith("anonymous") || email == "system@netgrif.com") {
+                return
+            }
+            out.put(u.stringId as String,
+                    "${u.name} ${u.surname} (${email})" as String)
+        }
+        return out.sort { it.value }
+    }
+
+    /**
+     * Aktualny stav uctu, na predvyplnenie formulara pri uprave.
+     *
+     * Kluce: meno, priezvisko, email, authorities (List<String>),
+     * roly (Map<identifikatorSiete, List<importId>>).
+     */
+    Map<String, Object> userSnapshot(String userId) {
+        IUser user = userId ? userService.findById(userId, false) : null
+        if (user == null) {
+            return [:]
+        }
+        Map<String, List<String>> roles = [:]
+        (user.processRoles ?: []).each { ProcessRole role ->
+            if (role.importId in ["default", "anonymous"]) {
+                return
+            }
+            // ProcessRole nenesie identifikator siete, takze sa hlada spatne:
+            // rovnaky stringId musi byt v roles niektorej naimportovanej siete.
+            petriNetService.getAll().each { PetriNet net ->
+                if (net.identifier == null || !net.identifier.contains("/")) {
+                    return
+                }
+                if (net.roles.values().any { it.stringId == role.stringId }) {
+                    roles.computeIfAbsent(net.identifier, { [] as List<String> })
+                    if (!roles[net.identifier].contains(role.importId)) {
+                        roles[net.identifier] << (role.importId as String)
+                    }
+                }
+            }
+        }
+        return [
+                meno       : user.name as String,
+                priezvisko : user.surname as String,
+                email      : user.email as String,
+                authorities: (user.authorities ?: []).collect { it.name as String }.sort(),
+                roly       : roles,
+        ]
+    }
+
+    /**
+     * Zmena mena a priezviska existujuceho uctu.
+     *
+     * E-mail sa zamerne menit neda: je to prihlasovacie meno a zaroven kluc,
+     * podla ktoreho ucty hlada `seed.json`, `EtaskUserCreator` aj kazdy test.
+     * Zmena e-mailu je zalozenie noveho uctu, nie uprava.
+     */
+    IUser updateUserProfile(String userId, String name, String surname) {
+        IUser user = userId ? userService.findById(userId, false) : null
+        if (user == null) {
+            return null
+        }
+        if (name != null && !(name as String).trim().isEmpty()) {
+            user.name = (name as String).trim()
+        }
+        if (surname != null && !(surname as String).trim().isEmpty()) {
+            user.surname = (surname as String).trim()
+        }
+        return userService.save(user)
+    }
+
+    /**
+     * Nastavi systemove authorities uctu na presne tento zoznam.
+     *
+     * Nie pridanie - nastavenie: pri uprave sa ocakava, ze co v zozname nie je,
+     * ucet mat nema. Neexistujuca authority sa zalozi
+     * (`authorityService.getOrCreate`), rovnako ako v `createNewUser`.
+     */
+    IUser setUserAuthorities(String userId, List<String> authorities) {
+        IUser user = userId ? userService.findById(userId, false) : null
+        if (user == null) {
+            return null
+        }
+        Set<Authority> wanted = (authorities ?: [])
+                .findAll { it != null && !(it as String).trim().isEmpty() }
+                .collect { authorityService.getOrCreate((it as String).trim()) } as Set<Authority>
+        user.authorities = wanted
+        return userService.save(user)
+    }
+
+    // ---- pomocne, nepouzivat priamo z akcie -------------------------------
+
+    private List<String> applicationNetIdentifiers() {
+        // Systemove siete enginu (`filter`, `preference_filter_item`, ...) maju
+        // identifikator bez `/`, aplikacne siete v tomto repozitari maju tvar
+        // `appka/siet`. Preto to rozlisenie.
+        return petriNetService.getAll()
+                .collect { it.identifier }
+                .findAll { it != null && it.contains("/") }
+                .unique()
+                .sort()
+    }
+
+    private static List<ProcessRole> assignableRoles(PetriNet net) {
+        // `default` a `anonymous` su vstavane a neprideluju sa.
+        return net.roles.values().findAll { it.importId != null &&
+                !(it.importId in ["default", "anonymous"]) }.toList()
+    }
+
+    private PetriNet resolveNet(String netIdentifier, String version) {
+        if (!netIdentifier) {
+            return null
+        }
+        String v = ((version ?: "") as String).trim()
+        if (v.isEmpty() || v == VSETKY_VERZIE) {
+            return petriNetService.getNewestVersionByIdentifier(netIdentifier)
+        }
+        return petriNetService.getPetriNet(netIdentifier, parseVersion(v))
+    }
+
+    /**
+     * "1.0.0" -> Version. Trieda `Version` ma len @AllArgsConstructor, ziadne
+     * `fromString` - a v Groovy by volanie neexistujucej statickej metody
+     * preslo kompilaciou a spadlo az za behu.
+     */
+    private static Version parseVersion(String v) {
+        // Kluc moznosti je zaslugovany ("1_0_0"), verzia z ineho zdroja moze
+        // prist s bodkami. Berieme oboje.
+        List<Integer> parts = versionKey((v ?: "").replace("_", "."))
+        while (parts.size() < 3) {
+            parts << 0
+        }
+        return new Version(parts[0] as long, parts[1] as long, parts[2] as long)
+    }
+
+    private static List<Integer> versionKey(String v) {
+        return (v ?: "0").split("\\.").collect {
+            try { Integer.parseInt(it) } catch (NumberFormatException ignored) { 0 }
+        }
     }
 
     // ==================================================================

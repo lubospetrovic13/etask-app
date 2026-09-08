@@ -37,7 +37,14 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
-HEADER_PAIR = re.compile(r"^\s*[A-Za-z_][A-Za-z0-9_]*\s*:\s*f\.[A-Za-z_][A-Za-z0-9_]*\s*$")
+# NAE hlavicka nema len polia. `f.` je datove pole, `t.` prechod - to druhe je
+# potrebne pre `make <pole>, <behavior> on <prechod> when { ... }`, ktore bez
+# aliasu prechodu napisat nejde. Kym tu bolo len `f.`, cela hlavicka s `t.`
+# padla do tela ako Groovy a pfgroovy hlasil syntakticku chybu na sieti, ktoru
+# engine bez namietky naimportuje - presne ten falosny pozitiv, kvoli ktoremu
+# existuje pftest. Prefix je preto jedno male pismeno, nie vypocet zoznamu.
+HEADER_PAIR = re.compile(
+    r"^\s*[A-Za-z_][A-Za-z0-9_]*\s*:\s*[a-z]\.[A-Za-z_][A-Za-z0-9_]*\s*$")
 
 
 def split_header(code):

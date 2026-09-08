@@ -70,6 +70,11 @@ mlčia rovnako ako to ostatné:
 | `JAVA_HOME` sa hľadá v `/usr/lib/jvm/*` | nenájde Windows JDK — `export JAVA_HOME="/c/Program Files (x86)/jdk-11"` pred spustením |
 | python nástroje padajú na vlastnom výpise | `UnicodeEncodeError` na `→` a diakritike — `PYTHONIOENCODING=utf-8` |
 | `bash` v PATH je WSL | `execvpe(/bin/bash) failed` pri volaní `.sh` z pythonu; `pfsync` to obchádza sám, inak `PFSYNC_BASH` |
+| jar spustený ručne bez `-Dsun.jnu.encoding=UTF-8` | sieť s diakritikou v `<title>` sa **naimportuje do Mongu, ale jej XML sa neuloží** do `storage/uploadedModels`. `GET /api/petrinet/{id}/file` potom navždy vracia 500 a `pfsync` ju hlási ako `NEDA_SA_PRECITAT`. Rieši sa re-importom zo správne spusteného JVM |
+| jar spustený ručne z koreňa repozitára | `PdfRunner` asserts na relatívne `src/main/resources/...` a **aplikácia nenaskočí** — siete sa pritom naimportujú, takže log vyzerá polovične úspešne. Jar sa spúšťa z `etask-backend-starter/` |
+
+Obe posledné dve platia len pri ručnom spúšťaní; `up.sh` to robí správne. Preto
+sa naň vyplatí držať.
 
 `up.sh` porovnáva čas zdrojov s časom jaru a keď sú novšie, prestaví — tá tretia
 pasca stála v tomto repozitári tri ladenia.
@@ -117,6 +122,36 @@ naimportovanej verzie. Zosúladiť sa dá len zahodením starých casov.
 python3 tools/pfsync.py            # ktoré siete sa rozišli s enginom
 python3 tools/pfsync.py --sync     # dorovnať (import + role)
 ```
+
+### Premenovanie alebo odstránenie appky
+
+Vyhodenie zo `processes.json` **nič nezmaže** — manifest hovorí, čo sa má
+naimportovať, nie čo má existovať. Po premenovaní tak v instancii zostane stará
+appka aj so svojou kartou a jej zobrazenia sa miešajú s novými (rovnaké názvy).
+Poriadok treba spraviť v štyroch krokoch a v tomto poradí:
+
+```bash
+# 1. položky menu starej appky + ich `filter` casy   (najprv položka, potom filter)
+# 2. casy starých sietí                              DELETE /api/workflow/case/{id}
+# 3. samotné siete, všetky verzie                    DELETE /api/petrinet/{id}
+# 4. uzol URI                                        nie je REST, viď nižšie
+```
+
+Prvé tri idú cez REST. **Uzol URI (karta v menu) nezmizne ani po zmazaní sietí** —
+je to samostatný dokument v **Elasticsearchi**, nie v Mongu, a nikde sa negeneruje
+znova:
+
+```bash
+curl -s "localhost:9200/etask_uri/_search?size=50"      # nájdi id podľa uriPath
+# vyhoď ho z childrenId koreňa a potom zmaž
+curl -s -X POST "localhost:9200/etask_uri/_update/<ROOT_ID>" -H 'Content-Type: application/json'   -d '{"script":{"source":"ctx._source.childrenId.removeIf(c -> c == params.dead)","params":{"dead":"<NODE_ID>"}}}'
+curl -s -X DELETE "localhost:9200/etask_uri/_doc/<NODE_ID>"
+curl -s -X POST "localhost:9200/etask_uri/_refresh"
+```
+
+Kto to preskočí, vidí v menu kartu, ktorá vedie do prázdna, a nenájde dôvod ani
+v manifeste, ani v Mongu. Alternatíva je `tools/up.sh --fresh`, ktorý zahodí
+všetko — vrátane toho, čo si nechať chcel.
 
 ---
 
@@ -450,8 +485,13 @@ bez Javy. Delegát na to má primitíva:
 
 ```groovy
 def u = createNewUser(meno, priezvisko, email, heslo, ["ROLE_USER"])
-assignRoleByImportId(u, "zamestnanec", "dovolenky/dv_ziadost")
-def moznosti = processRoleOptions()   // "importId:siet" -> "Rola (Sieť)"
+
+// Vyber v dvoch krokoch: proces -> jeho role a jeho verzie.
+def procesy = processOptions()                          // "appka/siet" -> "Názov"
+def roly    = processRoleOptions("dovolenky/dv_ziadost")  // importId -> "Názov roly"
+def verzie  = processVersionOptions("dovolenky/dv_ziadost")
+
+setProcessRole(u.stringId, "zamestnanec", "dovolenky/dv_ziadost", "", true)
 ```
 
 `createNewUser` **bez** zoznamu authorities dáva `ROLE_USER`. Nie je to kozmetika:
@@ -459,27 +499,44 @@ bez authorities sa používateľ prihlási a **nevidí nič** — prístup k vie
 `nae.json` podľa authorities, nie podľa procesných rolí. Sú to dve oddelené veci,
 ktoré sa pletú, a prázdna množina sa neprejaví ako chyba, len ako prázdna appka.
 
-`assignRoleByImportId` berie `<role><id>` a identifikátor siete, nie `stringId` —
-ten sa razí per verziu siete a z akcie nie je z čoho ho vziať. `processRoleOptions()`
-preto kľúčuje `importId:identifikator/siete`: samotné `importId` jednoznačné nie
-je, `veduci` býva v dvoch sieťach naraz. Pri napĺňaní `multichoice_map` sa kľúč
-láme na **prvej** dvojbodke — identifikátor siete žiadnu neobsahuje, ale kto
-rozdelí na poslednej, dostane nezmysel.
+**Prideľovanie rolí už engine má** — `assignRole(importId, siet, user)` plošne na
+všetkých verziách a `assignRole(importId, siet, Version, user)` na jednej. Projekt
+k tomu pridáva len `setProcessRole(...)`, a to z dvoch dôvodov: `Version` je
+objekt (akcia má verziu ako reťazec) a enginová varianta pri neznámom `importId`
+hodí `NullPointerException`. **Odoberanie enginové nepoužívaj vôbec** — v 6.3.1
+je rozbité a mlčí (`PETRIFLOW_LEARNINGS.md`, C1).
 
-Dve veci, ktoré na takom procese treba spraviť vedome:
+`processVersionOptions` dáva ako prvú voľbu **všetky verzie** a to je aj to, čo
+človek chce skoro vždy: rola má `stringId` razené per verziu, takže pridelenie
+na jednej verzii na casoch inej verzie neplatí. Kľúče sú zaslugované (`1_0_0`),
+lebo bodka v kľúči `options` zhodí ukladanie do Monga
+(`petriflow_reference.md`, C17).
 
+Tri veci, ktoré na takom procese treba spraviť vedome:
+
+* **Účet nedrž ako objekt cez viac zmien.** Každá zmena je `read – mutuj – save`
+  celého dokumentu, takže druhá prepíše výsledok prvej. Prejavilo sa to tak, že
+  heslo sa zmenilo, ale meno, oprávnenia aj odobraná rola sa **ticho vrátili** do
+  pôvodného stavu — a `finish` vrátil `success`. Pracuj s `userId` a použi
+  primitíva, ktoré si účet načítajú samy.
 * **Heslo z dát prípadu vymaž** v tej istej `post` akcii, ktorá účet založila
-  (`heslo_pole.value = ""`). Inak ostane v čitateľnej podobe v `dataSet` a v
-  histórii prípadu.
-* **Prehľad zaves na read arc zo sinku.** Miesto, ktoré nejaký prechod
-  konzumuje, na to nestačí — odmietnuté `finish` tú úlohu zmaže a už ju
-  neobnoví (`PETRIFLOW_LEARNINGS.md`, B8b).
+  (`change heslo_pole value { "" }`). Inak ostane v čitateľnej podobe v `dataSet`
+  a v histórii prípadu.
+* **Read-only prehľad zaves na read arc zo sinku**, alebo ho nemaj samostatný.
+  Miesto, ktoré nejaký prechod konzumuje, na to nestačí — odmietnuté `finish` tú
+  úlohu zmaže a už ju neobnoví (`PETRIFLOW_LEARNINGS.md`, B8b).
 
-Hotová sieť, ktorá toto celé robí — validácie v `pre`, založenie účtu a
-pridelenie rolí v `post`, karta v menu s vlastnými stĺpcami — je na vetve
-`claude/uzivatelia-app` (`processes/us_uzivatel.xml`), aj s akceptačným testom
-`tools/uscheck.py`, ktorý overuje, že sa účet naozaj **prihlási** a že mu sedí
-procesná rola.
+A ešte jedna, ktorá nie je o používateľoch, ale bije práve tu: **skryté pole musí
+byť v `dataGroup` prechodu.** Nie preto, aby ho niekto videl —
+`GET /api/task/{id}/data` vracia len polia z dataGroup, takže inak ho nevidí ani
+test, ani nikto, kto sa prípadu pýta cez API.
+
+Hotová sieť, ktorá toto celé robí — validácie v `pre`, založenie aj úprava účtu,
+dvojkrokový výber rolí s `autocomplete`, voľba verzie procesu a karta v menu
+s vlastnými stĺpcami — je na vetve `claude/uzivatelia-app`
+(`processes/pu_pouzivatel.xml`), aj s akceptačným testom `tools/pucheck.py`
+(59 kontrol), ktorý overuje, že sa účet naozaj **prihlási**, že nové heslo funguje
+a staré nie, a že odobraná rola je naozaj odobraná.
 
 **Procesné roly** (`agent`, `specialist`, …) rozhodujú o prístupe k taskom
 a casom. Deklaratívny cieľový stav pre dev a seedovanie je v `seed.json`:
