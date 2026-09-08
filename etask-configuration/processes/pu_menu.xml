@@ -79,7 +79,7 @@ views.each { v ->
         }
         def item = createOrUpdateMenuItem(
                 id,                 // menu_item_identifier
-                "uzivatelia",       // URI cesta
+                "pouzivatelia",     // URI cesta - MUSI sedet s uriNodes v processes.json
                 v.type as String,
                 v.query as String,
                 v.icon as String,
