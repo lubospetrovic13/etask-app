@@ -55,6 +55,15 @@ Prienik: z uzivatelov v `source` vrati tych, ktori drzia rolu `roleImportId`.
 
 ### `createNewUser(String name, String surname, String email, String password)`
 
+### `createNewUser(String name, String surname, String email, String password, List<String> authorities)`
+Vytvori uzivatela aj so systemovymi authorities. Vrati vytvoreneho IUser.
+
+### `assignRoleByImportId(IUser user, String roleImportId, String netIdentifier)`
+Pridel procesnu rolu podla importId a identifikatora siete.
+
+### `processRoleOptions()`
+Roly vsetkych aplikacnych sieti v instancii, ako mapa
+
 ### `callAIToolByConfig(Map params)`
 Zavolá LLM podľa aktívnej AI konfigurácie a vráti čitateľný report.
 

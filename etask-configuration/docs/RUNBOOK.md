@@ -327,8 +327,25 @@ preskakuje, aby v šablóne nebolo natvrdo žiadne heslo. Presne preto testovaci
 ETASK_TEST_PASSWORD=test1234 tools/up.sh --fresh
 ```
 
+**Používateľa vie založiť aj proces**, nielen properties — a to celé v Petriflow,
+bez Javy. Delegát na to má primitíva:
+
+```groovy
+def u = createNewUser(meno, priezvisko, email, heslo, ["ROLE_USER"])
+assignRoleByImportId(u, "zamestnanec", "dovolenky/dv_ziadost")
+def moznosti = processRoleOptions()   // "importId:siet" -> "Rola (Sieť)"
+```
+
+`createNewUser` **bez** zoznamu authorities dáva `ROLE_USER`. Nie je to kozmetika:
+bez authorities sa používateľ prihlási a **nevidí nič** — prístup k viewom riadi
+`nae.json` podľa authorities, nie podľa procesných rolí. Sú to dve oddelené veci,
+ktoré sa pletú, a prázdna množina sa neprejaví ako chyba, len ako prázdna appka.
+
+`assignRoleByImportId` berie `<role><id>` a identifikátor siete, nie `stringId` —
+ten sa razí per verziu siete a z akcie nie je z čoho ho vziať.
+
 **Procesné roly** (`agent`, `specialist`, …) rozhodujú o prístupe k taskom
-a casom. V properties nie sú — deklaratívny cieľový stav je v `seed.json`:
+a casom. Deklaratívny cieľový stav pre dev a seedovanie je v `seed.json`:
 
 ```bash
 cd etask-configuration && python3 tools/pfseed.py

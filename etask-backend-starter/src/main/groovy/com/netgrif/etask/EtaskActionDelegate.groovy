@@ -4,6 +4,7 @@ import com.netgrif.application.engine.auth.domain.Authority
 import com.netgrif.application.engine.auth.domain.IUser
 import com.netgrif.application.engine.auth.domain.User
 import com.netgrif.application.engine.auth.domain.UserState
+import com.netgrif.application.engine.auth.service.interfaces.IAuthorityService
 import com.netgrif.application.engine.petrinet.domain.I18nString
 import com.netgrif.application.engine.petrinet.domain.PetriNet
 import com.netgrif.application.engine.petrinet.domain.UriContentType
@@ -25,6 +26,9 @@ class EtaskActionDelegate extends ActionDelegate {
 
     @Autowired
     private AiCallService aiCallService
+
+    @Autowired
+    private IAuthorityService authorityService
 
     /**
      * create or update menu item of specified type
@@ -287,17 +291,101 @@ class EtaskActionDelegate extends ActionDelegate {
     }
 
     def createNewUser(String name, String surname, String email, String password) {
+        return createNewUser(name, surname, email, password, ["ROLE_USER"])
+    }
+
+    /**
+     * Vytvori uzivatela aj so systemovymi authorities. Vrati vytvoreneho IUser.
+     *
+     * Preco varianta s authorities: bez nich sa uzivatel prihlasi a NEVIDI NIC.
+     * Pristup k viewom riadi `nae.json` podla authorities (`ROLE_USER`,
+     * `ROLE_ADMIN`), nie podla procesnych roli - to su dve oddelene veci, ktore
+     * sa lahko pletu. Povodna varianta zakladala uzivatela s prazdnou mnozinou
+     * a Petriflow akcia nemala ako to doplnit; prvy uzivatel vytvoreny z procesu
+     * sa prihlasil do prazdnej aplikacie a nebolo z coho zistit preco.
+     * Bezparametricka varianta preto teraz dava ROLE_USER, co je rozumny default.
+     *
+     * Authorities sa riesia rovnako ako v EtaskUserCreator (properties):
+     * `authorityService.getOrCreate(nazov)`, takze nazov, ktory este neexistuje,
+     * sa zalozi.
+     */
+    IUser createNewUser(String name, String surname, String email, String password,
+                        List<String> authorities) {
         if (userService.findByEmail(email, true) != null) {
             throw new IllegalArgumentException("Používateľ s rovnakým emailom už bol vytvorený")
         }
-        userService.saveNew(new User(
+        User user = new User(
                 name: name,
                 surname: surname,
                 email: email,
                 password: password,
                 state: UserState.ACTIVE,
                 authorities: [] as Set<Authority>,
-                processRoles: [] as Set<ProcessRole>))
+                processRoles: [] as Set<ProcessRole>)
+        (authorities ?: []).each { String authority ->
+            user.addAuthority(authorityService.getOrCreate(authority))
+        }
+        return userService.saveNew(user)
+    }
+
+    /**
+     * Pridel procesnu rolu podla importId a identifikatora siete.
+     *
+     * `assignRole` z enginu berie stringId roly, ktore sa razi PER VERZIU siete -
+     * z Petriflow akcie ho teda nie je z coho vziat a po re-importe by aj tak
+     * bolo neplatne. Tato varianta prijima to, co je v XML natvrdo a nemeni sa:
+     * `<role><id>` a identifikator siete. Rolu najde na najnovsej verzii.
+     *
+     * Vrati true, ak rola existuje a bola pridelena.
+     */
+    boolean assignRoleByImportId(IUser user, String roleImportId, String netIdentifier) {
+        if (user == null || !roleImportId || !netIdentifier) {
+            return false
+        }
+        PetriNet net = petriNetService.getNewestVersionByIdentifier(netIdentifier)
+        if (net == null) {
+            return false
+        }
+        def found = net.roles.find { it.value.importId == roleImportId }
+        if (!found) {
+            return false
+        }
+        assignRole(found.value.stringId, user)
+        return true
+    }
+
+    /**
+     * Roly vsetkych aplikacnych sieti v instancii, ako mapa
+     * "importId:identifikatorSiete" -> "Nazov roly (Nazov siete)".
+     *
+     * Na naplnenie `options` multichoice_map pola z akcie, aby appka na spravu
+     * uzivatelov nemusela mat nazvy roli natvrdo - inak by kazda nova appka
+     * znamenala zasah do nej.
+     *
+     * Systemove siete enginu (`filter`, `preference_filter_item`, ...) sa
+     * preskakuju: ich identifikator neobsahuje `/`, kym aplikacne siete v tomto
+     * repozitari maju tvar `appka/siet`. Vstavane roly `default` a `anonymous`
+     * tiez, tie sa neprideluju.
+     */
+    Map<String, String> processRoleOptions() {
+        Map<String, String> out = [:]
+        Set<String> identifiers = petriNetService.getAll()
+                .collect { it.identifier }
+                .findAll { it != null && it.contains("/") } as Set<String>
+        identifiers.sort().each { String identifier ->
+            PetriNet net = petriNetService.getNewestVersionByIdentifier(identifier)
+            if (net == null) {
+                return
+            }
+            net.roles.each { key, ProcessRole role ->
+                if (role.importId in ["default", "anonymous"]) {
+                    return
+                }
+                out.put(role.importId + ":" + identifier,
+                        "${role.name} (${net.title})" as String)
+            }
+        }
+        return out
     }
 
     // ==================================================================
