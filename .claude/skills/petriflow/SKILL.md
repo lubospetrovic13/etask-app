@@ -8,6 +8,10 @@ description: Práca s Petriflow sieťami v tomto repozitári — tvorba a úprav
 Aplikačná logika je v Petriflow sieťach, nie v Jave a nie v Angulari. Framework
 je ~5 500 riadkov, siete ~7 500 — ten pomer je zámer a má sa udržať.
 
+**Najprv `etask-configuration/reference/cheatsheet.md`** — jedna strana:
+postup, osem rozhodnutí a zoznam toho, čo mlčí. Tento skill je to, čo príde po
+nej; dlhé dokumenty sú referencia na dožiadanie, nie povinné čítanie.
+
 ## Pravidlo 1: najprv sa pozri, čo už existuje
 
 **Pred napísaním akejkoľvek metódy si otvor `etask-configuration/reference/action-api.md`.**

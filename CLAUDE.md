@@ -6,6 +6,14 @@ pomer je zámer.
 
 ## Než začneš čokoľvek meniť
 
+**Začni `etask-configuration/reference/cheatsheet.md`.** Je to jedna strana:
+postup, osem rozhodnutí, ktoré určujú, či to bude fungovať, a zoznam toho, čo
+mlčí. Dokumentácia tohto repozitára má 3 700 riadkov a načítať ju celú pred
+prvým riadkom kódu je najväčšia jednotlivá položka nákladu na jednu appku —
+pričom väčšina z nej odpovedá na otázku, ktorú v danej úlohe nikto nepoloží.
+Cheatsheet má v pravom stĺpci napísané, kde presne je zvyšok, keď ho budeš
+potrebovať.
+
 Ak sa úloha týka Petriflow sietí, procesov, akcií, oprávnení alebo formulárov,
 **načítaj skill `petriflow`**. Je v `.claude/skills/petriflow/SKILL.md` a obsahuje
 rozhodovací postup, tiché pasce a odkaz na inventár extension pointov.
