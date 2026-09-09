@@ -6,6 +6,14 @@ pomer je zámer.
 
 ## Než začneš čokoľvek meniť
 
+**Začni `etask-configuration/reference/cheatsheet.md`.** Je to jedna strana:
+postup, osem rozhodnutí, ktoré určujú, či to bude fungovať, a zoznam toho, čo
+mlčí. Dokumentácia tohto repozitára má 3 700 riadkov a načítať ju celú pred
+prvým riadkom kódu je najväčšia jednotlivá položka nákladu na jednu appku —
+pričom väčšina z nej odpovedá na otázku, ktorú v danej úlohe nikto nepoloží.
+Cheatsheet má v pravom stĺpci napísané, kde presne je zvyšok, keď ho budeš
+potrebovať.
+
 Ak sa úloha týka Petriflow sietí, procesov, akcií, oprávnení alebo formulárov,
 **načítaj skill `petriflow`**. Je v `.claude/skills/petriflow/SKILL.md` a obsahuje
 rozhodovací postup, tiché pasce a odkaz na inventár extension pointov.
@@ -60,11 +68,18 @@ preto, že bez neho bola postavená horšia verzia už existujúceho extension p
 
 ```bash
 cd etask-configuration
-cp examples/skeleton.xml processes/mojaapp.xml    # prepíš <id>, <initials>, <title>
-# dopíš "mojaapp.xml" do processes.json → "import"
+python3 tools/pfnew.py mojaapp ziadost "Žiadosť o niečo" --role pracovnik
 ```
 
-Toto je celý postup. **Žiadny zásah do Javy ani do `pom.xml`** — inak by stack
+Vygeneruje sieť, menu sieť so zobrazeniami a stĺpcami, doplní `processes.json`
+a `seed.json` a napíše akceptačný test proti bežiacemu enginu. Skelet už
+obsahuje vzory, ktoré sa inak vymýšľajú znova — stavové pole s `immediate`,
+názov prípadu začínajúci stavom, deväť argumentov `createOrUpdateMenuItem`,
+`allowedNets` kvôli stĺpcom, read arc zo sinku. Dopisuje sa domenová logika,
+nie appka.
+
+Ručne je to `cp examples/skeleton.xml processes/mojaapp.xml` a zápis do
+manifestu. Toto je celý postup. **Žiadny zásah do Javy ani do `pom.xml`** — inak by stack
 protirečil vlastnému pravidlu, že aplikačná logika patrí do Petriflow. `NetRunner`
 číta `processes.json` a identifikátor si berie z `<id>` v XML.
 

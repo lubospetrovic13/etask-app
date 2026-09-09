@@ -75,6 +75,7 @@ def line_of(raw, needle, occurrence=1):
 
 
 ACTION_API = Path(__file__).resolve().parent.parent / "reference" / "action-api.md"
+MANIFEST = Path(__file__).resolve().parent.parent / "processes.json"
 
 # Groovy/Java konstrukcie, ktore vyzeraju ako nahe volanie a nie su nim.
 CALL_KEYWORDS = {
@@ -94,6 +95,20 @@ def delegate_methods():
         return None
     text = ACTION_API.read_text(encoding="utf-8")
     return set(re.findall(r"^(?:- |### )`([a-zA-Z_]\w*)\(", text, re.M))
+
+
+def manifest_uri_nodes():
+    """Kluce `uriNodes` z processes.json, alebo None ak sa manifest neda precitat.
+
+    None znamena "neviem" - a vtedy sa nekontroluje. Lint, ktory hlasi chybu
+    preto, ze si nenasiel konfiguraciu, je horsi nez ziadny.
+    """
+    try:
+        import json
+        return set((json.loads(MANIFEST.read_text(encoding="utf-8"))
+                    .get("uriNodes") or {}).keys())
+    except Exception:
+        return None
 
 
 def close_match(name, known, max_distance=2):
@@ -223,6 +238,85 @@ def lint(path):
                                f"pole '{fid}' nie je v ziadnom dataGroup ani v akcii tejto siete",
                                "moze byt v poriadku - hodnotu mu vie zapisat ina siet cez "
                                "setData(transition, case, map); inak je to mrtve pole"))
+
+    # ---- 3b. pole, ktore siet zapisuje, ale nie je v ziadnom dataGroup ---
+    # `GET /api/task/{id}/data` vracia LEN polia z dataGroup - aj skryte. Pole,
+    # do ktoreho si siet sama pise a ktore v ziadnom dataGroup nie je, teda
+    # neuvidi ani test, ani nikto, kto sa pripadu pyta cez API. Stalo to jedno
+    # ladenie: akumulator rol vyzeral prazdny, hoci v nom data boli.
+    for fid in data_types:
+        if fid in referenced:
+            continue
+        if re.search(r"\bchange\s+" + re.escape(fid) + r"\s+(value|options|choices)\b",
+                     action_text):
+            out.append(Finding("info", "data-written-not-in-group", rel,
+                               line_of(raw, f"<id>{fid}</id>"),
+                               f"pole '{fid}' siet zapisuje, ale nie je v ziadnom dataGroup",
+                               "cez API sa precitat NEDA - GET /api/task/{id}/data vracia len "
+                               "polia z dataGroup, aj skryte. Na cisto vnutorny stav je to "
+                               "v poriadku; ked ho ma niekto vidiet alebo testovat, pridaj "
+                               "dataRef s <behavior>hidden</behavior>"))
+
+    # ---- 3c. bodka alebo dolar v kluci moznosti --------------------------
+    # Moznosti sa ukladaju ako Mongo dokument a Mongo v nazvoch poli zakazuje
+    # bodku aj dolar. Plati to na staticke `<option key>` aj na kluce nastavene
+    # za behu (`change X options { ... }`) - tie druhe staticky neuvidime, preto
+    # je v hlaske aj pripomienka. (petriflow_reference.md, C17.)
+    for d in data_els:
+        fid = child_text(d, "id") or "?"
+        for opts in findall(d, "options"):
+            for opt in findall(opts, "option"):
+                key = opt.get("key") or ""
+                bad = [ch for ch in (".", "$") if ch in key]
+                if bad:
+                    out.append(Finding("error", "option-key-mongo", rel,
+                                       line_of(raw, f'key="{key}"'),
+                                       f"'{fid}': kluc moznosti '{key}' obsahuje {' a '.join(bad)}",
+                                       "Mongo to v nazve pola zakazuje, ulozenie spadne na "
+                                       "\"Map key ... contains dots\" - pouzi slug (napr. 1_0_0)"))
+
+    # ---- 3d. `removeRole` z akcie v 6.3.1 nefunguje ----------------------
+    # `AbstractUserService.removeRole(IUser, String roleStringId)` hlada rolu
+    # cez `findByImportId`, teda podla importId, hoci parameter je stringId.
+    # Nenajde nic, neodoberie nic, ulozi nezmeneny dokument - bez chyby a bez
+    # logu. (PETRIFLOW_LEARNINGS.md, B9.)
+    for a in findall(root, "action"):
+        body = strip_comments(strip_strings(a.text or ""))
+        if re.search(r"\bremoveRole\s*\(", body):
+            out.append(Finding("error", "engine-remove-role", rel,
+                               line_of(raw, "removeRole"),
+                               "volanie `removeRole(...)` rolu NEODOBERIE (engine 6.3.1) a mlci",
+                               "pouzi `setProcessRole(userId, importId, siet, verzia, false)`"))
+
+    # ---- 3e. URI cesta polozky menu vs. uriNodes v manifeste -------------
+    # Karta v menu vznika z `uriNodes` v processes.json. Polozka postavena pod
+    # inou cestou existuje, ale nema kartu, na ktorej by sa zobrazila - a nikde
+    # sa to neohlasi: bootstrap case hlasi uspech a polozka je cez REST
+    # v poriadku. Presne toto stalo jeden cyklus po premenovani appky.
+    nodes = manifest_uri_nodes()
+    if nodes:
+        # POZOR NA PORADIE ARGUMENTOV, lisi sa medzi tymi dvomi funkciami:
+        #   createOrUpdateMenuItem(id, uri, type, query, ...)   -> uri je DRUHE
+        #   createFilterInMenu(uri, id, nazov, query, ...)      -> uri je PRVE
+        # Prvá verzia tohto pravidla brala prvý literál a na
+        # `createOrUpdateMenuItem` teda kontrolovala identifikátor položky.
+        # Odpoveď vyšla správne len náhodou.
+        for fn, idx in (("createOrUpdateMenuItem", 1), ("createFilterInMenu", 0)):
+            for a in findall(root, "action"):
+                body = strip_comments(a.text or "")
+                for m in re.finditer(re.escape(fn) + r"\s*\(([^)]{0,400})", body):
+                    lits = re.findall(r'"([^"\n]*)"', m.group(1))
+                    if len(lits) <= idx:
+                        continue
+                    uri = lits[idx]
+                    if not uri or uri in nodes:
+                        continue
+                    out.append(Finding("warning", "menu-uri-unknown", rel,
+                                       line_of(raw, '"%s"' % uri),
+                                       f"{fn}: URI cesta '{uri}' nie je medzi `uriNodes` "
+                                       f"v processes.json",
+                                       f"polozka menu vznikne, ale nebude mat kartu, na ktorej "
+                                       f"by bola vidno; zname uzly: {', '.join(sorted(nodes))}"))
 
     # ---- 4. role ---------------------------------------------------------
     for tid, t in transitions.items():
