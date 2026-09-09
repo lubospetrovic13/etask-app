@@ -76,6 +76,26 @@ else
   ok "pflint chytil bad-lint4.xml"
 fi
 
+# pfi18n: chybajuci preklad je tichy - bez `name` aj bez riadku v bloku `<i18n>`
+# sa zobrazi povodna hodnota, import prejde a log mlci. Fixture ma pat sposobov,
+# ako to pokazit, vratane `locale="en-US"`, ktory sa naimportuje a nikdy sa
+# nepouzije.
+if $PY tools/pfi18n.py tools/fixtures/bad-i18n.xml >/dev/null 2>&1; then
+  bad "pfi18n neoznacil bad-i18n.xml (locale en-US, chybajuci kluc aj preklad)"
+else
+  ok "pfi18n chytil bad-i18n.xml"
+fi
+
+# a naopak: na sietach repozitara musi byt ticho. Toto je test na FALSE
+# POSITIVES - linter, ktory oznacuje funkcny kod, naucí agenta ignorovat vystup.
+if $PY tools/pfi18n.py processes/sd_customer.xml processes/sd_intake.xml \
+        processes/sd_menu.xml processes/sd_ticket.xml processes/sd_work_item.xml \
+        >/dev/null 2>&1; then
+  ok "pfi18n neoznacil prelozene siete"
+else
+  bad "pfi18n oznacil prelozene siete Service Desku"
+fi
+
 # pfgroovy: musi chytit rozbite Groovy
 if $PY tools/pfgroovy.py tools/fixtures/bad-groovy.xml >/dev/null 2>&1; then
   bad "pfgroovy neoznacil bad-groovy.xml"

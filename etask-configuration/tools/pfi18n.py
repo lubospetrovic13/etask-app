@@ -9,8 +9,8 @@ z poziadavky a kazdy titulok, popis, placeholder aj hodnotu moznosti vrati uz
 prelozene. Mechanizmus je dvojdielny a to je presne to, co sa neda uhadnut:
 
   1. Kazdy prelozitelny element (`<title>`, `<label>`, `<placeholder>`, `<desc>`,
-     `<option>`, titulok udalosti, `<caseName>`) musi mat atribut `name` - to je
-     KLUC prekladu.
+     `<option>`, titulok udalosti, `<caseName>`, `<init>` na poli `type="i18n"`)
+     musi mat atribut `name` - to je KLUC prekladu.
   2. Pre kazdy kluc musi existovat riadok v bloku `<i18n locale="...">`.
 
 Chybajuca polovica sa NEPREJAVI NIJAKO. `name` bez bloku `i18n` sa naimportuje
@@ -63,7 +63,22 @@ TRANSLATABLE = {
     "desc": "desc",
     "option": "opt",
     "caseName": "case_name",
+    "init": "init",
 }
+
+# `<init>` je prelozitelny LEN na poli `type="i18n"`.
+#
+# Na tom poli je init zobrazovana hodnota - typicky nadpis sekcie formulara -
+# a `FieldFactory.buildI18nField` ju pusti cez `toI18NString`, takze atribut
+# `name` na nej funguje ako kdekolvek inde:
+#
+#     } else if (data.getInit() != null && data.getInit().getName() != null
+#                && !data.getInit().getName().equals("")) {
+#         i18nField.setDefaultValue(importer.toI18NString(data.getInit()));
+#
+# Na kazdom inom type je `<init>` predvolena HODNOTA - cislo, datum, text -
+# a vyzadovat pre nu preklad by bolo nezmyselne.
+INIT_ONLY_FOR_TYPE = "i18n"
 
 # Kde sa `name` NEMA vyzadovat.
 #
@@ -92,14 +107,48 @@ def strip_ns(tag):
     return tag.split("}", 1)[-1]
 
 
-def line_of(raw, needle, occurrence=1):
-    """Cislo riadku n-teho vyskytu podstringu. 0 ked nie je."""
+def comment_spans(raw):
+    """Rozsahy XML komentarov, aby sa v nich nehladalo."""
+    spans = []
+    i = 0
+    while True:
+        a = raw.find("<!--", i)
+        if a < 0:
+            return spans
+        b = raw.find("-->", a + 4)
+        if b < 0:
+            spans.append((a, len(raw)))
+            return spans
+        spans.append((a, b + 3))
+        i = b + 3
+
+
+def line_of(raw, needle, occurrence=1, skip_comments=True):
+    """
+    Cislo riadku n-teho vyskytu podstringu MIMO komentarov. 0 ked nie je.
+
+    Komentare sa preskakuju preto, ze siete v tomto repozitari maju v
+    komentaroch citovane presne tie retazce, na ktore sa hlaska vztahuje - a
+    hlaska, ktora ukaze na komentar vysvetlujuci pascu namiesto na miesto, kde
+    tá pasca je, je horsia nez ziadna: kto podla nej opravuje, opravuje zly
+    riadok a zacne nastroju neverit.
+    """
+    spans = comment_spans(raw) if skip_comments else []
+
+    def in_comment(pos):
+        return any(a <= pos < b for a, b in spans)
+
+    found = 0
     idx = -1
-    for _ in range(occurrence):
+    while True:
         idx = raw.find(needle, idx + 1)
         if idx < 0:
             return 0
-    return raw.count("\n", 0, idx) + 1
+        if in_comment(idx):
+            continue
+        found += 1
+        if found == occurrence:
+            return raw.count("\n", 0, idx) + 1
 
 
 def visible_strings(root):
@@ -122,7 +171,13 @@ def visible_strings(root):
 
     def walk(el, stack):
         tag = strip_ns(el.tag)
-        parent_tag = strip_ns(stack[-1].tag) if stack else ""
+        parent = stack[-1] if stack else None
+        parent_tag = strip_ns(parent.tag) if parent is not None else ""
+        if tag == "init" and (parent_tag != "data"
+                              or parent.get("type") != INIT_ONLY_FOR_TYPE):
+            for child in el:
+                walk(child, stack + [el])
+            return
         if tag in TRANSLATABLE and parent_tag not in SKIP_PARENTS:
             suffix = TRANSLATABLE[tag]
             if tag == "option":

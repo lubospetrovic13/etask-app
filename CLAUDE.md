@@ -32,6 +32,7 @@ reálne žiada:
 | nový field komponent | RUNBOOK 6 |
 | noví používatelia a roly | RUNBOOK 7 |
 | anonymný / verejný prístup | RUNBOOK 8 |
+| dvojjazyčná appka (SK + EN) | RUNBOOK 9 |
 
 Skoro každá z nich má pascu, ktorá sa neprejaví ako chyba — chýbajúci JWT kľúč
 vracia 401 bez správy, re-import siete ticho odoberie roly, `nc-task-list`
@@ -97,9 +98,15 @@ Po zmene siete, v tomto poradí:
 cd etask-configuration
 python3 tools/pflint.py processes/                 # 0,3 s
 python3 tools/pfgroovy.py processes/              # 3 s
+python3 tools/pfi18n.py processes/                # každý viditeľný text má preklad
 python3 tools/pfview.py                           # frontend vykreslí, čo sieť pýta
 python3 tools/pfsync.py --sync                    # import + role, len čo sa rozišlo
 ```
+
+`pfi18n` je v reťazi preto, že chýbajúci preklad je **tichý**: bez atribútu
+`name` aj bez riadku v bloku `<i18n>` sa zobrazí pôvodná hodnota a appka vyzerá
+funkčne — len je jednojazyčná. Portál sa pritom prepína medzi SK a EN, takže
+appka bez prekladov je polovica preloženej obrazovky. Recept je RUNBOOK 9.
 
 **Ground truth je bežiaci engine.** Import endpoint pri chybe vracia holé
 `{"status":500}` bez dôvodu — príčina je len v logu servera. Bez importu do

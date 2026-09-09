@@ -349,12 +349,19 @@ def stlpce = "meta-title" +
         ",__APP__/__NET__-__PREFIX___predmet"
 
 def views = [
-        [id: "__PREFIX___vsetky", name: "__TITLE__", type: "Case", icon: "__ICON__",
+        // Nazov prveho zobrazenia je TITULOK SIETE, nie kopia toho retazca.
+        // Titulok siete je I18nString a ma svoj preklad v bloku `<i18n>`, takze
+        // sa preklada na jednom mieste; kopia by znamenala prelozit to dvakrat
+        // a druhy vyskyt by nikto nenasiel - nazvy zobrazeni su v Groovy akcii,
+        // kde `pfi18n` nedosiahne.
+        [id: "__PREFIX___vsetky", name: petriNetService.getNewestVersionByIdentifier(siet).title,
+         type: "Case", icon: "__ICON__",
          query: vsetky, nets: [siet], roles: [:], headers: stlpce],
         // Filtrovanie podla DATOVEHO POLA, nie podla polohy tokenu. Ide to,
         // lebo `__PREFIX___stav_label` ma `immediate="true"` a engine ho
         // indexuje pod `dataSet.__PREFIX___stav_label.textValue`.
-        [id: "__PREFIX___rozpisane", name: "Rozpísané", type: "Case", icon: "edit_note",
+        [id: "__PREFIX___rozpisane", name: i18n("Rozpísané", ["en": "Draft"]),
+         type: "Case", icon: "edit_note",
          query: vsetky + " AND dataSet.__PREFIX___stav_label.textValue:\\"Rozpísané\\"",
          nets: [siet], roles: [:], headers: stlpce],
 ]
@@ -371,7 +378,15 @@ views.each { v ->
             def currentNets = ((current?.dataSet?."filter"?.allowedNets ?: []) as List)
                     .collect { it as String } as Set
             def wantNets = (v.nets as List).collect { it as String } as Set
-            if (currentQuery == (v.query as String) && currentNets == wantNets) {
+            // Do porovnania patri aj NAZOV, vratane prekladov. Bez toho by uz
+            // nasadena instancia zmeneny nazov (a doplneny preklad) nikdy
+            // nedostala: polozka tam je s tym istym dopytom, takze by sa vzdy
+            // vyhodnotila ako nezmenena.
+            def currentName = current?.dataSet?."i18n_filter_name"?.value
+            def sameName = currentName != null &&
+                    (currentName.defaultValue as String) == (v.name.defaultValue as String) &&
+                    (currentName.translations ?: [:]) == (v.name.translations ?: [:])
+            if (currentQuery == (v.query as String) && currentNets == wantNets && sameName) {
                 nastav_zobrazenie(existing, v.nets as List, v.headers)
                 unchanged << id
                 return
@@ -387,7 +402,7 @@ views.each { v ->
                 v.type as String,
                 v.query as String,
                 v.icon as String,
-                v.name as String,
+                v.name,             // I18nString - polozka menu vie byt dvojjazycna
                 v.nets as List,     // allowedNets - bez toho ziadne stlpce
                 v.roles as Map,
                 [:]                 // bannedRoles - dourcuje aritu na projektovu
@@ -748,7 +763,54 @@ if __name__ == "__main__":
 '''
 
 
+# Preklady retazcov, ktore skelet vlastni.
+#
+# Kluce doplni `pfi18n --init` (odvodi ich z id elementov, aby ich schema bola
+# jedna a tá istá vsade), a tento slovnik potom TODO riadky prelozi. Preto tu
+# nie su `name=` atributy natvrdo v sablone: keby sa schema klucov niekedy
+# zmenila, sablona by sa rozisla s nastrojom a nikto by si to nevsimol - kluc
+# bez prekladu sa totiz nijako neprejavi.
+#
+# `__TITLE__` a `__ROLE_TITLE__` tu nie su zamerne. Su od uzivatela, ich
+# anglicky preklad nikto nepozna, takze zostanu ako `TODO ...` a `pfi18n` ich
+# nahlasi ako upozornenie. To je cielene: appka, ktora sa tvari dvojjazycne
+# a ma dvakrat to iste, je horsia nez appka, o ktorej vie, ze preklad chyba.
+SKELETON_EN = {
+    "Zadanie": "Brief",
+    "Výsledok": "Result",
+    "Predmet": "Subject",
+    "Popis": "Description",
+    "Stav": "Status",
+    "Samostatné pole, aby sa dalo dať do stĺpca a hľadať podľa neho.":
+        "A field of its own, so it can be a column and be searched on.",
+    "Podal": "Submitted by",
+    "Podané": "Submitted",
+    "Podanie": "Submission",
+    "Rozpísané": "Draft",
+    "Stav menu": "Menu state",
+    "Živé": "Alive",
+}
+
+
+def add_translations(paths):
+    """Doplni `name=` a blok `<i18n locale="en">` do vygenerovanych sieti."""
+    import pfi18n
+
+    for path in paths:
+        if path.suffix != ".xml":
+            continue
+        pfi18n.init(path)
+        raw = path.read_text(encoding="utf-8")
+        for sk, en in SKELETON_EN.items():
+            raw = raw.replace(f">{pfi18n.TODO}{sk}</i18nString>",
+                              f">{en}</i18nString>")
+        path.write_text(raw, encoding="utf-8")
+
+
 # ---------------------------------------------------------------- generator
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 
 def render(template, subs):
     out = template
@@ -903,6 +965,9 @@ def main(argv=None):
             continue
         path.write_text(content, encoding="utf-8")
         print(f"  {path.relative_to(ROOT)}: {len(content.splitlines())} riadkov")
+    if not args.dry_run:
+        add_translations([t[0] for t in targets])
+        print("  + preklady: doplnene `name=` a blok <i18n locale=\"en\">")
     patch_manifest(args.app, prefix, args.entity, args.icon, args.role, args.dry_run)
     patch_seed(args.app, args.dry_run)
 
@@ -910,6 +975,7 @@ def main(argv=None):
 Dalej:
   python3 tools/pflint.py processes/
   python3 tools/pfgroovy.py processes/
+  python3 tools/pfi18n.py processes/      # prelozi TODO riadky (nazov appky a roly)
   python3 tools/pfview.py
   tools/up.sh                     # manifest sa pakuje do jaru, treba prestavat
   # do seed.json dopis, kto ma dostat rolu `%s` (netScope je uz doplneny),

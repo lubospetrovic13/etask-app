@@ -565,6 +565,43 @@ možnosťami ho nedávaj.
 
 ---
 
+### B23. Tlačidlo úlohy sa dá premenovať a prázdnym titulkom skryť
+
+Titulok udalosti sa **posiela klientovi a prekladá sa**. (V tomto katalógu
+najprv stálo, že sa neposiela; bolo to zmerané na sieti, ktorá žiadny titulok
+nedefinovala — `ENGINE_ISSUES.md` E3.)
+
+```xml
+<event type="finish">
+    <id>zd_podat</id>
+    <title name="zd_podat_title">Podať žiadosť</title>
+</event>
+```
+
+V payloade tasku sú štyri kľúče — `assignTitle`, `cancelTitle`,
+`delegateTitle`, `finishTitle` — a knižnica pri chýbajúcom titulku spadne na
+globálny i18n kľúč (`tasks.view.finish` atď.). Kľúč v payloade **chýba**, keď
+titulok nie je nastavený; to nie je dôkaz, že ho server neposiela nikdy.
+
+Druhá polovica, ktorá nie je nikde napísaná: **prázdny titulok tlačidlo skryje.**
+
+```xml
+<event type="delegate">
+    <id>zd_bez_delegovania</id>
+    <title name="zd_delegate_title"></title>
+</event>
+```
+
+`canFinish()` a spol. sú `hasPermission(...) && getXTitle() !== ''`, takže je to
+spôsob, ako z panela odobrať `delegate` alebo `cancel` bez zásahu do oprávnení —
+a hlavne bez toho, aby sa tým zmenilo, čo používateľ smie. Jediná výnimka je
+`canReassign()`, ktorý titulok nekontroluje.
+
+Ako to zapadá do dvojjazyčnosti: `<title name="…">` je preložiteľný ako každý
+iný, takže „Podať" / „Submit" je jeden riadok v bloku `<i18n>`. Prázdny titulok
+potrebuje prázdny preklad v každom jazyku, inak sa tlačidlo v druhom jazyku
+vráti.
+
 ## C. Mimo Petriflow, ale stálo to čas
 
 ### C1. Groovy nekontroluje volania metód pri kompilácii

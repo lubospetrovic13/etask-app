@@ -200,20 +200,49 @@ prekladu je legitímna.
 **Príznak.** Zmena existujúcej položky menu skončí na
 `MissingMethodException: updateFilter()`.
 
-**Príčina.** `changeFilter ... query { }` sa prekladá na `updateFilter(Case, Map)`,
-ktoré v delegáte nie je. Platí to pre **obe** varianty — dokumentácia to
-pripisuje len enginovej.
+**Príčina.** `updateFilter` **existuje** — ale je `private`:
+
+```groovy
+// ActionDelegate.groovy
+private void updateFilter(Case filter, Map dataSet) {          // :1884
+    setData(DefaultFiltersRunner.DETAILS_TRANSITION, filter, dataSet)
+}
+private void updateMenuItemRoles(Case item, Closure cl, String roleFieldId) { … }  // :1648
+```
+
+Uzávery v `changeFilter` a `changeMenuItem` ich volajú **dynamicky**, takže sa
+volanie rieši cez metaclass inštancie. A tou inštanciou je podtrieda aplikácie
+(`EtaskActionDelegate`), ktorá privátne metódy predka nevystavuje:
+
+```
+groovy.lang.MissingMethodException: No signature of method:
+com.netgrif.etask.EtaskActionDelegate.updateFilter() is applicable
+for argument types: (Case, LinkedHashMap)
+```
+
+Čo to znamená: **`changeFilter` a `changeMenuItem` fungujú len vtedy, keď si
+nikto `ActionDelegate` nerozšíri** — a rozšírenie delegáta je dokumentovaný
+spôsob, ako pridať vlastné akcie. Týka sa to teda každej aplikácie. Zasiahnuté
+sú `query`, `visibility`, `allowedNets`, `filterMetadata` a `allowedRoles` /
+`bannedRoles`; `title`, `icon` a `uri` privátnu metódu nevolajú a prejdú.
+
+Prejaví sa to až pri **druhom** importe: prvý ide create cestou (položka
+neexistuje), druhý vráti HTTP 500.
 
 Druhá polovica: `deleteMenuItem` maže položku a jej `filter` case nechá.
 Po niekoľkých behoch ich je v databáze hromada a `getFilterFromMenuItem` potom
 vracia nesprávny.
 
-**Obídenie.** Položku vždy zahodiť a postaviť znova, v poradí `deleteMenuItem`
-→ `deleteFilter` (naopak padne — `deleteMenuItem` si filter ešte raz načíta
-podľa id na položke).
+**Obídenie.** Dve možnosti. Vo vlastnej metóde delegáta zapísať priamo —
+`setData("t2", filter, [...])` je presne to, čo `updateFilter` robí, a `setData`
+je verejné; tak to má `EtaskActionDelegate.createOrUpdateMenuItem`. Kde to nie
+je vlastná metóda (napr. `createFilterInMenu`), položku zahodiť a postaviť
+znova, v poradí `deleteMenuItem` → `deleteFilter` (naopak padne — `deleteMenuItem`
+si filter ešte raz načíta podľa id na položke).
 
-**Návrh opravy.** Doplniť `updateFilter`, alebo update cestu odstrániť a povedať
-to. A `deleteMenuItem` nech maže aj filter.
+**Návrh opravy.** Zmeniť `private` na `protected` — jeden riadok na dvoch
+metódach. Alebo uzávery neriešiť dynamicky. A `deleteMenuItem` nech maže aj
+filter.
 
 ---
 
@@ -382,6 +411,41 @@ a `locale="en-US"` s hodnotou `FULL LOCALE en-US` na tom istom kľúči. Na
 
 **Návrh opravy.** Kľúč pri importe normalizovať na `Locale.forLanguageTag(...)
 .getLanguage()`, alebo pri neznámom tvare odmietnuť import.
+
+---
+
+## E16. Knižnica zahodí preklad názvu zobrazenia v ľavom menu
+
+**Príznak.** Položka menu je založená ako `I18nString` s prekladmi, payload ich
+naozaj nesie — a v menu je stále jazyk, v ktorom položka vznikla.
+
+**Príčina.** Rozhodnutie je na klientovi (server túto hodnotu nelokalizuje) a
+klient si vyberie `defaultValue`:
+
+```js
+// AbstractNavigationDoubleDrawerComponent.resolveFilterCaseToViewNavigationItem
+title: filter.immediateData.find(f => f.stringId === 'entry_name')?.value?.defaultValue
+       || filter.title
+```
+
+`entry_name` na `preference_filter_item` je typu `enumeration`, takže jeho
+hodnota **je** `I18nString` a preklady sú k dispozícii — knižnica ich len
+nepoužije.
+
+**Dôkaz.** Namerané na 6.3.1, `POST /api/workflow/case/search` nad
+`preference_filter_item`, s `Accept-Language: sk` aj `en` rovnako:
+
+```json
+"entry_name": {"defaultValue": "Tikety", "translations": {"en": "Tickets"}}
+```
+
+**Obídenie.** Prebiť `resolveFilterCaseToViewNavigationItem` a vybrať preklad
+podľa aktuálneho jazyka (`view-title.ts` v tomto repozitári). Pozor: kaskáda
+`translations[lang] → defaultValue → filter.title` musí zostať, inak položka
+založená obyčajným reťazcom zmizne.
+
+**Návrh opravy.** Vybrať `translations[currentLang]`, keď existuje. Kaskáda
+ostáva rovnaká, takže je to spätne kompatibilné.
 
 ---
 

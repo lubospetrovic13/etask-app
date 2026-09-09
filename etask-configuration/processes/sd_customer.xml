@@ -35,6 +35,10 @@
 		<i18nString name="c_note_title">Contract note</i18nString>
 		<i18nString name="t_customer_label">Customer</i18nString>
 		<i18nString name="t_customer_read_label">Customer - overview</i18nString>
+	
+		<i18nString name="div_identity_init">Organisation</i18nString>
+		<i18nString name="div_team_init">Who handles it</i18nString>
+		<i18nString name="div_sla_init">Agreed response hours</i18nString>
 	</i18n>
 	<icon>domains</icon>
 	<defaultRole>false</defaultRole>
@@ -105,17 +109,17 @@ changeCaseProperty("title").about { "Nový zákazník" }
 	<data type="i18n">
 		<id>div_identity</id>
 		<title/>
-		<init>Organizácia</init>
+		<init name="div_identity_init">Organizácia</init>
 	</data>
 	<data type="i18n">
 		<id>div_team</id>
 		<title/>
-		<init>Kto ju obsluhuje</init>
+		<init name="div_team_init">Kto ju obsluhuje</init>
 	</data>
 	<data type="i18n">
 		<id>div_sla</id>
 		<title/>
-		<init>Dohodnuté hodiny odozvy</init>
+		<init name="div_sla_init">Dohodnuté hodiny odozvy</init>
 	</data>
 	<data type="text">
 		<id>c_name</id>

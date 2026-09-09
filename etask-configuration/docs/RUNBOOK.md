@@ -623,3 +623,110 @@ Dve veci, ktoré stoja za vedomie dopredu:
 * Podformuláre so `system` roleRef sa anonymovi v zozname taskov nezobrazia,
   ale cez `taskRef` sa vykreslia **a sú editovateľné**. To je mechanizmus, na
   ktorom stojí viackrokový eForm bez klikania DOKONČIŤ (`sd_intake.xml`).
+
+---
+
+## 9. Dvojjazyčná appka (SK + EN)
+
+Portál sa prepína medzi slovenčinou a angličtinou. Appka sa prepne s ním len
+vtedy, keď má preklady v sieti — inak zostane jednojazyčná a nikde sa to
+neohlási.
+
+### Ako to funguje
+
+Prekladá **server**. `Accept-Language` z požiadavky (posiela ho
+`TranslateInterceptor` knižnice) rozhodne, ktorý reťazec sa vráti. Mechanizmus
+je dvojdielny:
+
+1. Preložiteľný element potrebuje atribút **`name`** — to je kľúč prekladu.
+2. Pre každý kľúč musí byť riadok v bloku **`<i18n locale="...">`**.
+
+```xml
+<title name="zd_dovod_title">Dôvod</title>
+...
+<i18n locale="en">
+    <i18nString name="zd_dovod_title">Reason</i18nString>
+</i18n>
+```
+
+**Chýbajúca polovica sa neprejaví nijako.** Bez `name` aj bez riadku v `i18n`
+sa zobrazí pôvodná hodnota, import prejde a log mlčí. Appka vyzerá funkčne
+a je jednojazyčná.
+
+**Kód jazyka musí byť dvojpísmenový.** `locale="en-US"` sa naimportuje a nikdy
+sa nepoužije — kľúč sa ukladá verbatim, ale hľadá sa cez `Locale.getLanguage()`
+(`ENGINE_ISSUES.md` E15).
+
+### Postup
+
+```bash
+cd etask-configuration
+python3 tools/pfi18n.py --init processes/mojaapp.xml   # doplní name= a blok i18n
+# prelož TODO riadky
+python3 tools/pfi18n.py processes/                     # 0 chýb, 0 upozornení
+python3 tools/pfsync.py --sync
+```
+
+`--init` je mechanická práca, nie preklad: kľúče odvodí z id elementov a do
+bloku napíše slovenskú hodnotu s prefixom `TODO `. Tie `TODO` hlási kontrola
+ako upozornenie — preklad, ktorý nikto nepreložil, má byť vidno, inak sa
+„dvojjazyčná" appka odlišuje od jednojazyčnej len tým, že má dvakrát to isté.
+
+### Čo prekladať netreba
+
+`<label>` na `<place>`. Engine ho preloží rovnako, ale klientovi ho neposiela
+žiadny endpoint — payload siete je len referencia bez uzlov.
+
+### Čo sa preložiť NEDÁ
+
+* **Názov prípadu.** `Case.title` je obyčajný `String`. `defaultCaseName` sa
+  preloží raz, jazykom toho, kto prípad zakladá, a tak zamrzne — anglicky
+  hovoriaci používateľ uvidí názvy, ktoré vyrobil slovenský kolega. Preto do
+  názvov prípadov nepatrí próza, ale **dáta**: číslo, dátum, meno, stav ako
+  krátky kód. Stav ako slovo („Podané") tam patrí len vtedy, keď je jednojazyčnosť
+  prijateľná.
+* **Názov uzla URI** (karta priečinka). Nie je `I18nString` vôbec —
+  `UriService` mu nastaví názov ako `String` z cesty. Prekladá sa na frontende:
+  kľúč `uriNode.<segment>` v `etask-frontend-starter/src/assets/i18n/*.json`,
+  pipe `uriNodeTitle`. Uzol bez záznamu spadne na skrášlený segment.
+* **Hodnota, ktorú vypočíta akcia.** `change pole value { "Aktívny" }` zapíše
+  reťazec a ten je jednojazyčný. Ak sa má prepínať, musí to byť pole s
+  možnosťami a preložené `options`, alebo `i18n(...)`:
+  `change pole options { ["a": i18n("Aktívny", ["en": "Active"])] }`.
+
+### Názvy zobrazení v ľavom menu
+
+Potrebujú obe strany. Sieť ich musí poslať ako `I18nString`:
+
+```groovy
+createFilterInMenu("mojaapp", "ma_vsetky",
+        i18n("Všetky žiadosti", ["en": "All requests"]),
+        dopyt, "Case", [], [:], [:], [], "list", "public")
+```
+
+a frontend ich musí prečítať — knižnica si berie `defaultValue` a preklad
+zahodí (`ENGINE_ISSUES.md` E16). V tomto repozitári to rieši `view-title.ts`,
+takže netreba nič doplniť; v inom projekte to treba prebiť.
+
+**Pozor na idempotenciu.** Ak si sieť stráži „už existuje, preskoč" iba podľa
+dopytu, nasadená inštancia preklady **nikdy nedostane** — položky tam sú s tým
+istým dopytom, takže sa vždy vyhodnotia ako nezmenené. Do porovnania patrí aj
+názov vrátane prekladov (vzor je v `processes/sd_menu.xml`).
+
+A druhá pasca na tom istom mieste: akcia stavajúca menu býva v udalosti
+`create`, teda beží **raz za prípad**. Prípad si drží verziu siete, takže po
+re-importe menu siete sa nová verzia akcie nespustí, kým nevznikne nový prípad.
+`BootstrapCaseRunner` preto hľadá prípad pre **tú verziu**, nie len pre
+identifikátor.
+
+### Portál
+
+Prepínač je v ľavom paneli a na prihlasovacej stránke; ponúka práve tie jazyky,
+ktoré sú v `EtaskLanguageSelectorComponent`. Pridať tretí znamená doplniť aj
+`assets/i18n/<kod>.json`, `uriNode.*` kľúče a `<i18n locale="<kod>">` do
+**každej** siete — ponúknuť jazyk je prísľub, že v ňom je celá obrazovka.
+
+Jazyk sa pamätá v preferenciách používateľa a v `localStorage['Language']`.
+Aplikácia nastavuje default **len keď si používateľ nikdy nevybral**;
+bezpodmienečné `setLanguage(...)` pri starte prepíše obnovenú voľbu a prepínač
+prestane fungovať po reloade.

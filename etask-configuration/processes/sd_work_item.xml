@@ -50,6 +50,10 @@
 		<i18nString name="btn_cancel_placeholder">Cancel the work item</i18nString>
 		<i18nString name="t_define_label">Work item brief</i18nString>
 		<i18nString name="t_wi_work_label">My work item</i18nString>
+	
+		<i18nString name="div_context_init">Which request it belongs to</i18nString>
+		<i18nString name="div_assign_init">Brief</i18nString>
+		<i18nString name="div_progress_init">Progress</i18nString>
 	</i18n>
 	<icon>assignment_ind</icon>
 	<defaultRole>true</defaultRole>
@@ -164,7 +168,7 @@ changeCaseProperty("title").about { "Nová úloha" }
 	<data type="i18n">
 		<id>div_context</id>
 		<title/>
-		<init>Z ktorej požiadavky</init>
+		<init name="div_context_init">Z ktorej požiadavky</init>
 		<component>
 			<name>divider</name>
 			<properties>
@@ -175,7 +179,7 @@ changeCaseProperty("title").about { "Nová úloha" }
 	<data type="i18n">
 		<id>div_assign</id>
 		<title/>
-		<init>Zadanie</init>
+		<init name="div_assign_init">Zadanie</init>
 		<component>
 			<name>divider</name>
 			<properties>
@@ -186,7 +190,7 @@ changeCaseProperty("title").about { "Nová úloha" }
 	<data type="i18n">
 		<id>div_progress</id>
 		<title/>
-		<init>Priebeh</init>
+		<init name="div_progress_init">Priebeh</init>
 		<component>
 			<name>divider</name>
 			<properties>

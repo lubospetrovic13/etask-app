@@ -117,6 +117,12 @@
 		<i18nString name="t_pending_label">Ask for more information</i18nString>
 		<i18nString name="t_resolve_label">Resolve</i18nString>
 		<i18nString name="t_plan_label">Assigning work</i18nString>
+	
+		<i18nString name="div_submitted_init">Customer submission</i18nString>
+		<i18nString name="div_sla_init">Deadlines</i18nString>
+		<i18nString name="div_triage_init">Triage - classification and pick-up</i18nString>
+		<i18nString name="div_work_init">Progress of the work</i18nString>
+		<i18nString name="div_plan_init">Work items</i18nString>
 	</i18n>
 	<icon>confirmation_number</icon>
 	<defaultRole>true</defaultRole>
@@ -349,7 +355,7 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 	<data type="i18n">
 		<id>div_submitted</id>
 		<title/>
-		<init>Podanie zákazníka</init>
+		<init name="div_submitted_init">Podanie zákazníka</init>
 		<component>
 			<name>divider</name>
 			<properties>
@@ -360,7 +366,7 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 	<data type="i18n">
 		<id>div_sla</id>
 		<title/>
-		<init>Lehoty</init>
+		<init name="div_sla_init">Lehoty</init>
 		<component>
 			<name>divider</name>
 			<properties>
@@ -371,7 +377,7 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 	<data type="i18n">
 		<id>div_triage</id>
 		<title/>
-		<init>Triáž — zaradenie a prevzatie</init>
+		<init name="div_triage_init">Triáž — zaradenie a prevzatie</init>
 		<component>
 			<name>divider</name>
 			<properties>
@@ -382,7 +388,7 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 	<data type="i18n">
 		<id>div_work</id>
 		<title/>
-		<init>Postup riešenia</init>
+		<init name="div_work_init">Postup riešenia</init>
 		<component>
 			<name>divider</name>
 			<properties>
@@ -747,7 +753,7 @@ make src_org, hidden on transitions when { return !showIt }
 	<data type="i18n">
 		<id>div_plan</id>
 		<title/>
-		<init>Pracovné úlohy</init>
+		<init name="div_plan_init">Pracovné úlohy</init>
 		<component>
 			<name>divider</name>
 			<properties>
