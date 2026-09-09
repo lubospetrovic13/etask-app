@@ -2,7 +2,122 @@
 	<id>service_desk/sd_ticket</id>
 	<version>1.0.0</version>
 	<initials>SDT</initials>
-	<title>Požiadavka podpory</title>
+	<title name="net_title">Požiadavka podpory</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Support request</i18nString>
+		<i18nString name="agent_title">Support operator</i18nString>
+		<i18nString name="specialist_title">Specialist</i18nString>
+		<i18nString name="manager_title">Support manager</i18nString>
+		<i18nString name="src_type_title">Type as stated by the customer</i18nString>
+		<i18nString name="src_type_opt_incident">Report an incident</i18nString>
+		<i18nString name="src_type_opt_service">Service task</i18nString>
+		<i18nString name="src_type_opt_change">Change request</i18nString>
+		<i18nString name="src_type_opt_access">System access</i18nString>
+		<i18nString name="src_type_opt_question">Question</i18nString>
+		<i18nString name="src_service_title">Service</i18nString>
+		<i18nString name="src_service_opt_portal">Customer portal</i18nString>
+		<i18nString name="src_service_opt_core">Main application</i18nString>
+		<i18nString name="src_service_opt_integration">Integration with another system</i18nString>
+		<i18nString name="src_service_opt_reports">Reports and exports</i18nString>
+		<i18nString name="src_service_opt_account">Account and login</i18nString>
+		<i18nString name="src_service_opt_unknown">Not sure</i18nString>
+		<i18nString name="src_title_title">Name as given by the customer</i18nString>
+		<i18nString name="src_description_title">Description from the customer</i18nString>
+		<i18nString name="src_severity_title">Urgency as stated by the customer</i18nString>
+		<i18nString name="src_severity_opt_A">A - it blocks everyone</i18nString>
+		<i18nString name="src_severity_opt_B">B - limiting, but work can continue</i18nString>
+		<i18nString name="src_severity_opt_C">C - can wait</i18nString>
+		<i18nString name="src_steps_title">How to reproduce it</i18nString>
+		<i18nString name="src_workaround_title">Customer's workaround</i18nString>
+		<i18nString name="src_name_title">Reporter</i18nString>
+		<i18nString name="src_email_title">E-mail</i18nString>
+		<i18nString name="src_phone_title">Phone</i18nString>
+		<i18nString name="src_org_title">Organisation</i18nString>
+		<i18nString name="tk_agents_title">Customer's operators</i18nString>
+		<i18nString name="tk_agents_desc">Copied from the customer register. Only these people (and the manager) can see this ticket.</i18nString>
+		<i18nString name="tk_specialists_title">Customer's specialists</i18nString>
+		<i18nString name="tk_specialists_desc">Copied from the customer register.</i18nString>
+		<i18nString name="tk_org_match_title">Customer assignment</i18nString>
+		<i18nString name="tk_customer_id_title">Customer ID</i18nString>
+		<i18nString name="tk_org_name_title">Customer</i18nString>
+		<i18nString name="tk_org_name_desc">The official name from the register. The customer types anything into the form; this is what it was matched to.</i18nString>
+		<i18nString name="tk_org_override_title">Correct the organisation</i18nString>
+		<i18nString name="tk_org_override_desc">For when the customer writes the name differently than the register has it. The ticket is re-matched after saving.</i18nString>
+		<i18nString name="src_affects_more_title">Affects more than one person</i18nString>
+		<i18nString name="src_started_title">Since when</i18nString>
+		<i18nString name="src_request_id_title">Submission ID</i18nString>
+		<i18nString name="src_request_id_desc">The public form case the request came from.</i18nString>
+		<i18nString name="tk_type_title">Classification</i18nString>
+		<i18nString name="tk_type_desc">The type the request is actually handled under. It may differ from what the customer chose.</i18nString>
+		<i18nString name="tk_type_opt_incident">Incident</i18nString>
+		<i18nString name="tk_type_opt_service">Service task</i18nString>
+		<i18nString name="tk_type_opt_change">Change request</i18nString>
+		<i18nString name="tk_type_opt_access">Access</i18nString>
+		<i18nString name="tk_type_opt_question">Question</i18nString>
+		<i18nString name="tk_priority_title">Priority</i18nString>
+		<i18nString name="tk_priority_desc">Sets the response deadline: A within 2, B within 4 and C within 8 business hours.</i18nString>
+		<i18nString name="tk_priority_opt_A">A - critical</i18nString>
+		<i18nString name="tk_priority_opt_B">B - not critical</i18nString>
+		<i18nString name="tk_priority_opt_C">C - low</i18nString>
+		<i18nString name="tk_priority_changed_title">Priority changed from the submission</i18nString>
+		<i18nString name="tk_priority_reason_title">Why you changed the priority</i18nString>
+		<i18nString name="tk_priority_reason_desc">Sent to the reporter. The change cannot be saved without it.</i18nString>
+		<i18nString name="tk_state_title">Status</i18nString>
+		<i18nString name="tk_state_opt_new">New</i18nString>
+		<i18nString name="tk_state_opt_accepted">Picked up</i18nString>
+		<i18nString name="tk_state_opt_pending">Waiting for the customer</i18nString>
+		<i18nString name="tk_state_opt_working">In progress</i18nString>
+		<i18nString name="tk_state_opt_resolved">Resolved</i18nString>
+		<i18nString name="tk_note_title">Internal note</i18nString>
+		<i18nString name="tk_note_desc">The customer cannot see it.</i18nString>
+		<i18nString name="tk_worklog_title">Progress log</i18nString>
+		<i18nString name="tk_worklog_desc">Appended, never overwritten. It is the history of the work.</i18nString>
+		<i18nString name="tk_pending_reason_title">What you need from the customer</i18nString>
+		<i18nString name="tk_pending_reason_desc">Sent to them by e-mail. Deadlines do not run until they reply.</i18nString>
+		<i18nString name="tk_resolution_title">How it was resolved</i18nString>
+		<i18nString name="tk_resolution_desc">The text the customer receives. Write it so it makes sense without context.</i18nString>
+		<i18nString name="sla_created_at_title">Submitted</i18nString>
+		<i18nString name="sla_accepted_at_title">Picked up</i18nString>
+		<i18nString name="sla_response_due_title">Response due by</i18nString>
+		<i18nString name="sla_response_due_desc">Counted in business hours, Mon-Fri 08:00-16:00.</i18nString>
+		<i18nString name="sla_ok_title">Response deadline</i18nString>
+		<i18nString name="sla_pause_from_title">Paused since</i18nString>
+		<i18nString name="sla_pause_minutes_title">Paused working minutes</i18nString>
+		<i18nString name="sla_pause_minutes_desc">Total time spent waiting for the customer.</i18nString>
+		<i18nString name="show_submitted_title">Customer submission</i18nString>
+		<i18nString name="show_submitted_desc">Collapses or expands what came in from the form.</i18nString>
+		<i18nString name="new_wi_title_title">What needs doing</i18nString>
+		<i18nString name="new_wi_title_desc">This is what the specialist sees in their work item list.</i18nString>
+		<i18nString name="new_wi_type_title">Kind of work</i18nString>
+		<i18nString name="new_wi_type_opt_analysis">Analysis</i18nString>
+		<i18nString name="new_wi_type_opt_fix">Fix</i18nString>
+		<i18nString name="new_wi_type_opt_test">Test</i18nString>
+		<i18nString name="new_wi_type_opt_deploy">Deployment</i18nString>
+		<i18nString name="new_wi_type_opt_other">Other</i18nString>
+		<i18nString name="new_wi_assignee_title">To</i18nString>
+		<i18nString name="new_wi_assignee_desc">Only this person will see the work item and work on it.</i18nString>
+		<i18nString name="new_wi_estimate_title">Estimate in hours</i18nString>
+		<i18nString name="btn_add_wi_placeholder">Assign a work item</i18nString>
+		<i18nString name="wi_list_title">Assigned work items</i18nString>
+		<i18nString name="wi_report_title">Reports from specialists</i18nString>
+		<i18nString name="wi_report_desc">The work item writes this itself when the specialist finishes or cancels it. No need to edit it by hand.</i18nString>
+		<i18nString name="wi_open_title">Open work items</i18nString>
+		<i18nString name="wi_refs_title">Work item detail</i18nString>
+		<i18nString name="wi_refs_desc">Forms of the assigned work items, editable right here.</i18nString>
+		<i18nString name="t_detail_label">Request overview</i18nString>
+		<i18nString name="t_triage_label">Triage and pick-up</i18nString>
+		<i18nString name="t_work_label">Record progress</i18nString>
+		<i18nString name="t_pending_label">Ask for more information</i18nString>
+		<i18nString name="t_resolve_label">Resolve</i18nString>
+		<i18nString name="t_plan_label">Assigning work</i18nString>
+	</i18n>
 	<icon>confirmation_number</icon>
 	<defaultRole>true</defaultRole>
 	<anonymousRole>false</anonymousRole>
@@ -221,15 +336,15 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 	</roleRef>
 	<role>
 		<id>agent</id>
-		<title>Operátor podpory</title>
+		<title name="agent_title">Operátor podpory</title>
 	</role>
 	<role>
 		<id>specialist</id>
-		<title>Špecialista</title>
+		<title name="specialist_title">Špecialista</title>
 	</role>
 	<role>
 		<id>manager</id>
-		<title>Vedúci podpory</title>
+		<title name="manager_title">Vedúci podpory</title>
 	</role>
 	<data type="i18n">
 		<id>div_submitted</id>
@@ -277,30 +392,30 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 	</data>
 	<data type="enumeration_map">
 		<id>src_type</id>
-		<title>Typ podľa zákazníka</title>
+		<title name="src_type_title">Typ podľa zákazníka</title>
 		<options>
-			<option key="incident">Nahlásiť poruchu</option>
-			<option key="service">Servisný zásah</option>
-			<option key="change">Žiadosť o zmenu</option>
-			<option key="access">Prístup do systému</option>
-			<option key="question">Otázka</option>
+			<option key="incident" name="src_type_opt_incident">Nahlásiť poruchu</option>
+			<option key="service" name="src_type_opt_service">Servisný zásah</option>
+			<option key="change" name="src_type_opt_change">Žiadosť o zmenu</option>
+			<option key="access" name="src_type_opt_access">Prístup do systému</option>
+			<option key="question" name="src_type_opt_question">Otázka</option>
 		</options>
 	</data>
 	<data type="enumeration_map">
 		<id>src_service</id>
-		<title>Služba</title>
+		<title name="src_service_title">Služba</title>
 		<options>
-			<option key="portal">Zákaznícky portál</option>
-			<option key="core">Hlavná aplikácia</option>
-			<option key="integration">Integrácia s iným systémom</option>
-			<option key="reports">Reporty a exporty</option>
-			<option key="account">Účet a prihlásenie</option>
-			<option key="unknown">Neviem určiť</option>
+			<option key="portal" name="src_service_opt_portal">Zákaznícky portál</option>
+			<option key="core" name="src_service_opt_core">Hlavná aplikácia</option>
+			<option key="integration" name="src_service_opt_integration">Integrácia s iným systémom</option>
+			<option key="reports" name="src_service_opt_reports">Reporty a exporty</option>
+			<option key="account" name="src_service_opt_account">Účet a prihlásenie</option>
+			<option key="unknown" name="src_service_opt_unknown">Neviem určiť</option>
 		</options>
 	</data>
 	<data type="text">
 		<id>src_title</id>
-		<title>Názov od zákazníka</title>
+		<title name="src_title_title">Názov od zákazníka</title>
 		<event type="set">
 			<id>src_title_set</id>
 			<actions phase="post">
@@ -318,49 +433,49 @@ if (t) {
 	</data>
 	<data type="text">
 		<id>src_description</id>
-		<title>Popis od zákazníka</title>
+		<title name="src_description_title">Popis od zákazníka</title>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="enumeration_map">
 		<id>src_severity</id>
-		<title>Súrnosť podľa zákazníka</title>
+		<title name="src_severity_title">Súrnosť podľa zákazníka</title>
 		<options>
-			<option key="A">A — blokuje to všetkých</option>
-			<option key="B">B — obmedzuje, ale dá sa pokračovať</option>
-			<option key="C">C — počká</option>
+			<option key="A" name="src_severity_opt_A">A — blokuje to všetkých</option>
+			<option key="B" name="src_severity_opt_B">B — obmedzuje, ale dá sa pokračovať</option>
+			<option key="C" name="src_severity_opt_C">C — počká</option>
 		</options>
 	</data>
 	<data type="text">
 		<id>src_steps</id>
-		<title>Ako sa to dá zopakovať</title>
+		<title name="src_steps_title">Ako sa to dá zopakovať</title>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>src_workaround</id>
-		<title>Dočasné riešenie zákazníka</title>
+		<title name="src_workaround_title">Dočasné riešenie zákazníka</title>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>src_name</id>
-		<title>Nahlasovateľ</title>
+		<title name="src_name_title">Nahlasovateľ</title>
 	</data>
 	<data type="text">
 		<id>src_email</id>
-		<title>E-mail</title>
+		<title name="src_email_title">E-mail</title>
 	</data>
 	<data type="text">
 		<id>src_phone</id>
-		<title>Telefón</title>
+		<title name="src_phone_title">Telefón</title>
 	</data>
 	<data type="text">
 		<id>src_org</id>
-		<title>Organizácia</title>
+		<title name="src_org_title">Organizácia</title>
 		<event type="set">
 			<id>src_org_set</id>
 			<actions phase="post">
@@ -379,31 +494,31 @@ apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
 	</data>
 	<data type="userList">
 		<id>tk_agents</id>
-		<title>Operátori zákazníka</title>
-		<desc>Skopírované z registra zákazníkov. Iba títo ľudia (a vedúci) tento tiket vidia.</desc>
+		<title name="tk_agents_title">Operátori zákazníka</title>
+		<desc name="tk_agents_desc">Skopírované z registra zákazníkov. Iba títo ľudia (a vedúci) tento tiket vidia.</desc>
 	</data>
 	<data type="userList">
 		<id>tk_specialists</id>
-		<title>Riešitelia zákazníka</title>
-		<desc>Skopírované z registra zákazníkov.</desc>
+		<title name="tk_specialists_title">Riešitelia zákazníka</title>
+		<desc name="tk_specialists_desc">Skopírované z registra zákazníkov.</desc>
 	</data>
 	<data type="text">
 		<id>tk_org_match</id>
-		<title>Priradenie k zákazníkovi</title>
+		<title name="tk_org_match_title">Priradenie k zákazníkovi</title>
 	</data>
 	<data type="text">
 		<id>tk_customer_id</id>
-		<title>ID zákazníka</title>
+		<title name="tk_customer_id_title">ID zákazníka</title>
 	</data>
 	<data type="text">
 		<id>tk_org_name</id>
-		<title>Zákazník</title>
-		<desc>Oficiálny názov z registra. Zákazník do formulára píše čokoľvek, tu je to, na čo sa to spárovalo.</desc>
+		<title name="tk_org_name_title">Zákazník</title>
+		<desc name="tk_org_name_desc">Oficiálny názov z registra. Zákazník do formulára píše čokoľvek, tu je to, na čo sa to spárovalo.</desc>
 	</data>
 	<data type="text">
 		<id>tk_org_override</id>
-		<title>Opraviť organizáciu</title>
-		<desc>Keď zákazník napíše názov inak, než je v registri. Po zápise sa tiket priradí znova.</desc>
+		<title name="tk_org_override_title">Opraviť organizáciu</title>
+		<desc name="tk_org_override_desc">Keď zákazník napíše názov inak, než je v registri. Po zápise sa tiket priradí znova.</desc>
 		<event type="set">
 			<id>tk_org_override_set</id>
 			<actions phase="post">
@@ -420,7 +535,7 @@ apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
 	</data>
 	<data type="boolean">
 		<id>src_affects_more</id>
-		<title>Týka sa viacerých ľudí</title>
+		<title name="src_affects_more_title">Týka sa viacerých ľudí</title>
 		<component>
 			<name>toggle</name>
 			<properties>
@@ -433,35 +548,35 @@ apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
 	</data>
 	<data type="dateTime">
 		<id>src_started</id>
-		<title>Odkedy to trvá</title>
+		<title name="src_started_title">Odkedy to trvá</title>
 	</data>
 	<data type="text">
 		<id>src_request_id</id>
-		<title>ID podania</title>
-		<desc>Case verejného formulára, z ktorého požiadavka prišla.</desc>
+		<title name="src_request_id_title">ID podania</title>
+		<desc name="src_request_id_desc">Case verejného formulára, z ktorého požiadavka prišla.</desc>
 	</data>
 	<data type="enumeration_map" immediate="true">
 		<id>tk_type</id>
-		<title>Zaradenie</title>
-		<desc>Typ, pod ktorým sa požiadavka rieši. Môže sa líšiť od toho, čo zvolil zákazník.</desc>
+		<title name="tk_type_title">Zaradenie</title>
+		<desc name="tk_type_desc">Typ, pod ktorým sa požiadavka rieši. Môže sa líšiť od toho, čo zvolil zákazník.</desc>
 		<init>incident</init>
 		<options>
-			<option key="incident">Porucha</option>
-			<option key="service">Servisný zásah</option>
-			<option key="change">Žiadosť o zmenu</option>
-			<option key="access">Prístup</option>
-			<option key="question">Otázka</option>
+			<option key="incident" name="tk_type_opt_incident">Porucha</option>
+			<option key="service" name="tk_type_opt_service">Servisný zásah</option>
+			<option key="change" name="tk_type_opt_change">Žiadosť o zmenu</option>
+			<option key="access" name="tk_type_opt_access">Prístup</option>
+			<option key="question" name="tk_type_opt_question">Otázka</option>
 		</options>
 	</data>
 	<data type="enumeration_map" immediate="true">
 		<id>tk_priority</id>
-		<title>Priorita</title>
-		<desc>Určuje lehotu odozvy: A do 2, B do 4 a C do 8 pracovných hodín.</desc>
+		<title name="tk_priority_title">Priorita</title>
+		<desc name="tk_priority_desc">Určuje lehotu odozvy: A do 2, B do 4 a C do 8 pracovných hodín.</desc>
 		<init>B</init>
 		<options>
-			<option key="A">A — kritická</option>
-			<option key="B">B — nekritická</option>
-			<option key="C">C — nízka</option>
+			<option key="A" name="tk_priority_opt_A">A — kritická</option>
+			<option key="B" name="tk_priority_opt_B">B — nekritická</option>
+			<option key="C" name="tk_priority_opt_C">C — nízka</option>
 		</options>
 		<event type="set">
 			<id>tk_priority_set</id>
@@ -484,7 +599,7 @@ make tk_priority_reason, hidden on transitions when { return !changed }
 	</data>
 	<data type="boolean">
 		<id>tk_priority_changed</id>
-		<title>Priorita zmenená oproti podaniu</title>
+		<title name="tk_priority_changed_title">Priorita zmenená oproti podaniu</title>
 		<component>
 			<name>toggle</name>
 			<properties>
@@ -497,72 +612,72 @@ make tk_priority_reason, hidden on transitions when { return !changed }
 	</data>
 	<data type="text">
 		<id>tk_priority_reason</id>
-		<title>Prečo ste prioritu zmenili</title>
-		<desc>Pošle sa nahlasovateľovi. Bez toho sa zmena nedá uložiť.</desc>
+		<title name="tk_priority_reason_title">Prečo ste prioritu zmenili</title>
+		<desc name="tk_priority_reason_desc">Pošle sa nahlasovateľovi. Bez toho sa zmena nedá uložiť.</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="enumeration_map">
 		<id>tk_state</id>
-		<title>Stav</title>
+		<title name="tk_state_title">Stav</title>
 		<init>new</init>
 		<options>
-			<option key="new">Nová</option>
-			<option key="accepted">Prevzatá</option>
-			<option key="pending">Čaká na zákazníka</option>
-			<option key="working">V riešení</option>
-			<option key="resolved">Vyriešená</option>
+			<option key="new" name="tk_state_opt_new">Nová</option>
+			<option key="accepted" name="tk_state_opt_accepted">Prevzatá</option>
+			<option key="pending" name="tk_state_opt_pending">Čaká na zákazníka</option>
+			<option key="working" name="tk_state_opt_working">V riešení</option>
+			<option key="resolved" name="tk_state_opt_resolved">Vyriešená</option>
 		</options>
 	</data>
 	<data type="text">
 		<id>tk_note</id>
-		<title>Interná poznámka</title>
-		<desc>Zákazník ju nevidí.</desc>
+		<title name="tk_note_title">Interná poznámka</title>
+		<desc name="tk_note_desc">Zákazník ju nevidí.</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>tk_worklog</id>
-		<title>Záznam postupu</title>
-		<desc>Pripisuje sa, nemaže. Slúži ako história riešenia.</desc>
+		<title name="tk_worklog_title">Záznam postupu</title>
+		<desc name="tk_worklog_desc">Pripisuje sa, nemaže. Slúži ako história riešenia.</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>tk_pending_reason</id>
-		<title>Čo od zákazníka potrebujete</title>
-		<desc>Pošle sa mu e-mailom. Kým nedoplní, lehoty sa nepočítajú.</desc>
+		<title name="tk_pending_reason_title">Čo od zákazníka potrebujete</title>
+		<desc name="tk_pending_reason_desc">Pošle sa mu e-mailom. Kým nedoplní, lehoty sa nepočítajú.</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>tk_resolution</id>
-		<title>Ako sa to vyriešilo</title>
-		<desc>Text, ktorý dostane zákazník. Píšte tak, aby to pochopil aj bez kontextu.</desc>
+		<title name="tk_resolution_title">Ako sa to vyriešilo</title>
+		<desc name="tk_resolution_desc">Text, ktorý dostane zákazník. Píšte tak, aby to pochopil aj bez kontextu.</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="dateTime">
 		<id>sla_created_at</id>
-		<title>Podané</title>
+		<title name="sla_created_at_title">Podané</title>
 	</data>
 	<data type="dateTime">
 		<id>sla_accepted_at</id>
-		<title>Prevzaté</title>
+		<title name="sla_accepted_at_title">Prevzaté</title>
 	</data>
 	<data type="dateTime">
 		<id>sla_response_due</id>
-		<title>Odozva najneskôr do</title>
-		<desc>Počítané v pracovnom čase Po-Pi 08:00-16:00.</desc>
+		<title name="sla_response_due_title">Odozva najneskôr do</title>
+		<desc name="sla_response_due_desc">Počítané v pracovnom čase Po-Pi 08:00-16:00.</desc>
 	</data>
 	<data type="boolean">
 		<id>sla_ok</id>
-		<title>Lehota odozvy</title>
+		<title name="sla_ok_title">Lehota odozvy</title>
 		<component>
 			<name>toggle</name>
 			<properties>
@@ -579,18 +694,18 @@ make tk_priority_reason, hidden on transitions when { return !changed }
 	</data>
 	<data type="dateTime">
 		<id>sla_pause_from</id>
-		<title>Pauza od</title>
+		<title name="sla_pause_from_title">Pauza od</title>
 	</data>
 	<data type="number">
 		<id>sla_pause_minutes</id>
-		<title>Napauzované pracovné minúty</title>
-		<desc>Súčet času, počas ktorého sa čakalo na zákazníka.</desc>
+		<title name="sla_pause_minutes_title">Napauzované pracovné minúty</title>
+		<desc name="sla_pause_minutes_desc">Súčet času, počas ktorého sa čakalo na zákazníka.</desc>
 		<init>0</init>
 	</data>
 	<data type="boolean" immediate="true">
 		<id>show_submitted</id>
-		<title>Podanie zákazníka</title>
-		<desc>Zbalí alebo rozbalí to, čo prišlo z formulára.</desc>
+		<title name="show_submitted_title">Podanie zákazníka</title>
+		<desc name="show_submitted_desc">Zbalí alebo rozbalí to, čo prišlo z formulára.</desc>
 		<component>
 			<name>toggle</name>
 			<properties>
@@ -642,34 +757,34 @@ make src_org, hidden on transitions when { return !showIt }
 	</data>
 	<data type="text" immediate="true">
 		<id>new_wi_title</id>
-		<title>Čo treba urobiť</title>
-		<desc>Toto uvidí riešiteľ v zozname svojich úloh.</desc>
+		<title name="new_wi_title_title">Čo treba urobiť</title>
+		<desc name="new_wi_title_desc">Toto uvidí riešiteľ v zozname svojich úloh.</desc>
 	</data>
 	<data type="enumeration_map" immediate="true">
 		<id>new_wi_type</id>
-		<title>Druh práce</title>
+		<title name="new_wi_type_title">Druh práce</title>
 		<init>analysis</init>
 		<options>
-			<option key="analysis">Analýza</option>
-			<option key="fix">Oprava</option>
-			<option key="test">Test</option>
-			<option key="deploy">Nasadenie</option>
-			<option key="other">Iné</option>
+			<option key="analysis" name="new_wi_type_opt_analysis">Analýza</option>
+			<option key="fix" name="new_wi_type_opt_fix">Oprava</option>
+			<option key="test" name="new_wi_type_opt_test">Test</option>
+			<option key="deploy" name="new_wi_type_opt_deploy">Nasadenie</option>
+			<option key="other" name="new_wi_type_opt_other">Iné</option>
 		</options>
 	</data>
 	<data type="userList">
 		<id>new_wi_assignee</id>
-		<title>Komu</title>
-		<desc>Úlohu uvidí a bude na nej pracovať iba táto osoba.</desc>
+		<title name="new_wi_assignee_title">Komu</title>
+		<desc name="new_wi_assignee_desc">Úlohu uvidí a bude na nej pracovať iba táto osoba.</desc>
 	</data>
 	<data type="number" immediate="true">
 		<id>new_wi_estimate</id>
-		<title>Odhad v hodinách</title>
+		<title name="new_wi_estimate_title">Odhad v hodinách</title>
 	</data>
 	<data type="button">
 		<id>btn_add_wi</id>
 		<title/>
-		<placeholder>Zadať úlohu</placeholder>
+		<placeholder name="btn_add_wi_placeholder">Zadať úlohu</placeholder>
 		<component>
 			<name>raised</name>
 		</component>
@@ -759,34 +874,34 @@ if (!title) {
 	</data>
 	<data type="text">
 		<id>wi_list</id>
-		<title>Zadané úlohy</title>
+		<title name="wi_list_title">Zadané úlohy</title>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>wi_report</id>
-		<title>Hlásenia od riešiteľov</title>
-		<desc>Píše to sem samotná úloha, keď ju riešiteľ dokončí alebo zruší. Ručne to netreba upravovať.</desc>
+		<title name="wi_report_title">Hlásenia od riešiteľov</title>
+		<desc name="wi_report_desc">Píše to sem samotná úloha, keď ju riešiteľ dokončí alebo zruší. Ručne to netreba upravovať.</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="number">
 		<id>wi_open</id>
-		<title>Otvorených úloh</title>
+		<title name="wi_open_title">Otvorených úloh</title>
 		<init>0</init>
 	</data>
 	<data type="taskRef">
 		<id>wi_refs</id>
-		<title>Detail úloh</title>
-		<desc>Formuláre zadaných úloh, editovateľné priamo tu.</desc>
+		<title name="wi_refs_title">Detail úloh</title>
+		<desc name="wi_refs_desc">Formuláre zadaných úloh, editovateľné priamo tu.</desc>
 	</data>
 	<transition>
 		<id>t_detail</id>
 		<x>112</x>
 		<y>240</y>
-		<label>Prehľad požiadavky</label>
+		<label name="t_detail_label">Prehľad požiadavky</label>
 		<icon>fact_check</icon>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
@@ -1147,7 +1262,7 @@ if (!title) {
 		<id>t_triage</id>
 		<x>112</x>
 		<y>80</y>
-		<label>Triáž a prevzatie</label>
+		<label name="t_triage_label">Triáž a prevzatie</label>
 		<icon>rule</icon>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
@@ -1469,7 +1584,7 @@ if (mail) {
 		<id>t_work</id>
 		<x>304</x>
 		<y>80</y>
-		<label>Zaznamenať postup</label>
+		<label name="t_work_label">Zaznamenať postup</label>
 		<icon>build</icon>
 		<assignPolicy>auto</assignPolicy>
 		<userRef>
@@ -1571,7 +1686,7 @@ change tk_note value { "" }
 		<id>t_pending</id>
 		<x>304</x>
 		<y>240</y>
-		<label>Vyžiadať doplnenie</label>
+		<label name="t_pending_label">Vyžiadať doplnenie</label>
 		<icon>hourglass_empty</icon>
 		<assignPolicy>auto</assignPolicy>
 		<userRef>
@@ -1680,7 +1795,7 @@ if (mail) {
 		<id>t_resolve</id>
 		<x>496</x>
 		<y>80</y>
-		<label>Vyriešiť</label>
+		<label name="t_resolve_label">Vyriešiť</label>
 		<icon>task_alt</icon>
 		<assignPolicy>auto</assignPolicy>
 		<userRef>
@@ -1799,7 +1914,7 @@ if (mail) {
 		<id>t_plan</id>
 		<x>496</x>
 		<y>208</y>
-		<label>Zadanie úloh</label>
+		<label name="t_plan_label">Zadanie úloh</label>
 		<icon>assignment_ind</icon>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>

@@ -7,6 +7,7 @@ import {
   FILTER_IDENTIFIERS,
   FILTER_VIEW_TASK_TRANSITION_ID,
   FilterExtractionService,
+  LanguageService,
   LoadingEmitter,
   RoleAccess,
   TaskResourceService,
@@ -18,6 +19,7 @@ import {Subscription} from 'rxjs';
 import {map} from 'rxjs/operators';
 import custom_views from '../../../../assets/custom_views.json';
 import {UriNodeTitlePipe} from '../../side-nav/uri-node-title.pipe';
+import {localisedViewTitle} from '../../side-nav/view-title';
 import icons from '../../../../assets/uriNodeIcons.json';
 import {ETaskUriNodeResource} from '../service/etask-uri-resource.service';
 import {EtaskUriService} from '../service/etask-uri.service';
@@ -47,6 +49,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private _dynamicRoutingService: DynamicNavigationRouteProviderService,
     private _accessService: AccessService,
     private _nodeTitle: UriNodeTitlePipe,
+    private _language: LanguageService,
   ) {
     this._loading = new LoadingEmitter();
   }
@@ -184,7 +187,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       access: {},
       navigation: {
         icon: filter.immediateData.find(f => f.stringId === 'icon_name')?.value,
-        title: filter.immediateData.find(f => f.stringId === 'entry_name')?.value?.defaultValue || filter.title,
+        title: localisedViewTitle(filter, this._language.getLanguage()),
       },
       routing: {
         path: this.getFilterRoutingPath(filter),

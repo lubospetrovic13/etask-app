@@ -22,8 +22,9 @@ import org.springframework.stereotype.Component
  * (`createFilterInMenu`) je na action delegate a z runnera sa zavolat neda.
  * Runner teda len zabezpeci, ze existuje case, z ktoreho sa akcia spusti.
  *
- * Idempotentne dvojmo: preskoci siet, ktorej case uz je, a sieti samotne
- * preskakuju polozky menu s uz existujucim identifikatorom.
+ * Idempotentne dvojmo: preskoci siet, ktorej case pre TUTO VERZIU uz je, a siete
+ * samotne preskakuju polozky menu s uz existujucim identifikatorom. Per verzia,
+ * nie per identifikator - dovod je v tele metody.
  *
  * Zamerne to nevie meno konkretnej aplikacie: ked bol tento runner
  * `SdMenuRunner` s natvrdo zapisanym `service_desk/sd_menu`, znamenala nova
@@ -61,16 +62,37 @@ class BootstrapCaseRunner extends AbstractOrderedCommandLineRunner {
             return
         }
 
+        // Case sa hlada pre TUTO VERZIU siete, nie len pre identifikator.
+        //
+        // Predtym tu stalo `processIdentifier.eq(identifier)`, teda "existuje
+        // aspon jeden case?", a to malo tichy dosledok: case si drzi verziu
+        // siete, v ktorej vznikol, a akcia stavajuca menu je v udalosti
+        // `create` - teda bezi presne raz za case. Po re-importe menu siete
+        // teda runner nasiel stary case, preskocil - a NOVA verzia akcie sa
+        // nespustila nikdy. Zmena zobrazeni v menu sa v nasadenej instancii
+        // neprejavila a nikde sa to neohlasilo; vyzeralo to, ze re-import
+        // nefunguje.
+        //
+        // Prejavilo sa to az pri prekladoch: siet zacala nazvy zobrazeni
+        // posielat dvojjazycne, import presiel, a v menu bola dalej
+        // jednojazycna verzia z casu, ktory vznikol pred tou zmenou.
+        //
+        // Stare casy sa zamerne nemazu. Su to artefakty buildu menu, ale
+        // mazanie casu je nevratne a runner na starte nie je miesto, kde to
+        // robit; siete samotne su idempotentne (polozku s existujucim
+        // identifikatorom preskocia alebo ju prepisu), takze druhy case
+        // menu nepokazi.
         long existing = workflowService.searchAll(
-                QCase.case$.processIdentifier.eq(identifier)).totalElements
+                QCase.case$.processIdentifier.eq(identifier)
+                        .and(QCase.case$.petriNetObjectId.eq(net.getObjectId()))).totalElements
         if (existing > 0) {
-            log.debug("Bootstrap case pre ${identifier} uz existuje")
+            log.debug("Bootstrap case pre ${identifier} v${net.version} uz existuje")
             return
         }
 
         IUser author = userService.getSystem()
         workflowService.createCase(net.stringId, net.title?.defaultValue ?: identifier,
                 null, author.transformToLoggedUser())
-        log.info("Bootstrap case pre ${identifier} vytvoreny")
+        log.info("Bootstrap case pre ${identifier} v${net.version} vytvoreny")
     }
 }

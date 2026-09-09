@@ -2,7 +2,55 @@
 	<id>service_desk/sd_work_item</id>
 	<version>1.0.0</version>
 	<initials>SDW</initials>
-	<title>Pracovná úloha</title>
+	<title name="net_title">Pracovná úloha</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Work item</i18nString>
+		<i18nString name="agent_title">Support operator</i18nString>
+		<i18nString name="specialist_title">Specialist</i18nString>
+		<i18nString name="manager_title">Support manager</i18nString>
+		<i18nString name="wi_ticket_id_title">Ticket ID</i18nString>
+		<i18nString name="wi_ticket_no_title">Request number</i18nString>
+		<i18nString name="wi_ticket_title_title">Request</i18nString>
+		<i18nString name="wi_org_title">Organisation</i18nString>
+		<i18nString name="wi_title_title">What needs doing</i18nString>
+		<i18nString name="wi_title_desc">One sentence. This is what the specialist sees in their work item list.</i18nString>
+		<i18nString name="wi_type_title">Kind of work</i18nString>
+		<i18nString name="wi_type_opt_analysis">Analysis</i18nString>
+		<i18nString name="wi_type_opt_fix">Fix</i18nString>
+		<i18nString name="wi_type_opt_test">Test</i18nString>
+		<i18nString name="wi_type_opt_deploy">Deployment</i18nString>
+		<i18nString name="wi_type_opt_other">Other</i18nString>
+		<i18nString name="wi_assignee_id_title">Specialist ID</i18nString>
+		<i18nString name="wi_assignee_id_desc">Technical field. The ticket writes a person's id into it and the work item fills its Specialist field from it.</i18nString>
+		<i18nString name="wi_assignee_title">Specialist</i18nString>
+		<i18nString name="wi_assignee_desc">Who will carry the work item out. Only this person sees it and can work on it.</i18nString>
+		<i18nString name="wi_estimate_title">Estimate in hours</i18nString>
+		<i18nString name="wi_estimate_desc">Internal planning. Nothing to do with the SLA.</i18nString>
+		<i18nString name="wi_due_title">Due date</i18nString>
+		<i18nString name="wi_due_desc">The work item's own due date, independent of the ticket SLA.</i18nString>
+		<i18nString name="wi_note_title">Full brief</i18nString>
+		<i18nString name="wi_state_title">Status code</i18nString>
+		<i18nString name="wi_state_label_title">Status</i18nString>
+		<i18nString name="wi_done_title">Done</i18nString>
+		<i18nString name="wi_started_at_title">Started</i18nString>
+		<i18nString name="wi_finished_at_title">Completed</i18nString>
+		<i18nString name="wi_spent_title">Hours worked</i18nString>
+		<i18nString name="wi_spent_desc">Filled in by the specialist on completion.</i18nString>
+		<i18nString name="wi_result_title">What was done</i18nString>
+		<i18nString name="wi_created_by_title">Created by</i18nString>
+		<i18nString name="btn_start_placeholder">Start working</i18nString>
+		<i18nString name="btn_done_placeholder">Mark as done</i18nString>
+		<i18nString name="btn_cancel_placeholder">Cancel the work item</i18nString>
+		<i18nString name="t_define_label">Work item brief</i18nString>
+		<i18nString name="t_wi_work_label">My work item</i18nString>
+	</i18n>
 	<icon>assignment_ind</icon>
 	<defaultRole>true</defaultRole>
 	<anonymousRole>false</anonymousRole>
@@ -103,15 +151,15 @@ changeCaseProperty("title").about { "Nová úloha" }
 	</userRef>
 	<role>
 		<id>agent</id>
-		<title>Operátor podpory</title>
+		<title name="agent_title">Operátor podpory</title>
 	</role>
 	<role>
 		<id>specialist</id>
-		<title>Riešiteľ</title>
+		<title name="specialist_title">Riešiteľ</title>
 	</role>
 	<role>
 		<id>manager</id>
-		<title>Vedúci podpory</title>
+		<title name="manager_title">Vedúci podpory</title>
 	</role>
 	<data type="i18n">
 		<id>div_context</id>
@@ -148,24 +196,24 @@ changeCaseProperty("title").about { "Nová úloha" }
 	</data>
 	<data type="text">
 		<id>wi_ticket_id</id>
-		<title>ID ticketu</title>
+		<title name="wi_ticket_id_title">ID ticketu</title>
 	</data>
 	<data type="text">
 		<id>wi_ticket_no</id>
-		<title>Číslo požiadavky</title>
+		<title name="wi_ticket_no_title">Číslo požiadavky</title>
 	</data>
 	<data type="text">
 		<id>wi_ticket_title</id>
-		<title>Požiadavka</title>
+		<title name="wi_ticket_title_title">Požiadavka</title>
 	</data>
 	<data type="text">
 		<id>wi_org</id>
-		<title>Organizácia</title>
+		<title name="wi_org_title">Organizácia</title>
 	</data>
 	<data type="text">
 		<id>wi_title</id>
-		<title>Čo treba urobiť</title>
-		<desc>Jedna veta. Toto vidí riešiteľ v zozname svojich úloh.</desc>
+		<title name="wi_title_title">Čo treba urobiť</title>
+		<desc name="wi_title_desc">Jedna veta. Toto vidí riešiteľ v zozname svojich úloh.</desc>
 		<event type="set">
 			<id>wi_title_set</id>
 			<actions phase="post">
@@ -184,20 +232,20 @@ if (t) {
 	</data>
 	<data type="enumeration_map" immediate="true">
 		<id>wi_type</id>
-		<title>Druh práce</title>
+		<title name="wi_type_title">Druh práce</title>
 		<init>analysis</init>
 		<options>
-			<option key="analysis">Analýza</option>
-			<option key="fix">Oprava</option>
-			<option key="test">Test</option>
-			<option key="deploy">Nasadenie</option>
-			<option key="other">Iné</option>
+			<option key="analysis" name="wi_type_opt_analysis">Analýza</option>
+			<option key="fix" name="wi_type_opt_fix">Oprava</option>
+			<option key="test" name="wi_type_opt_test">Test</option>
+			<option key="deploy" name="wi_type_opt_deploy">Nasadenie</option>
+			<option key="other" name="wi_type_opt_other">Iné</option>
 		</options>
 	</data>
 	<data type="text" immediate="true">
 		<id>wi_assignee_id</id>
-		<title>ID riešiteľa</title>
-		<desc>Technické pole. Ticket doň zapíše id človeka a úloha si z neho naplní pole Riešiteľ.</desc>
+		<title name="wi_assignee_id_title">ID riešiteľa</title>
+		<desc name="wi_assignee_id_desc">Technické pole. Ticket doň zapíše id človeka a úloha si z neho naplní pole Riešiteľ.</desc>
 		<event type="set">
 			<id>wi_assignee_id_set</id>
 			<actions phase="post">
@@ -217,37 +265,37 @@ if (id) {
 	</data>
 	<data type="userList">
 		<id>wi_assignee</id>
-		<title>Riešiteľ</title>
-		<desc>Kto úlohu vykoná. Iba táto osoba ju uvidí a môže na nej pracovať.</desc>
+		<title name="wi_assignee_title">Riešiteľ</title>
+		<desc name="wi_assignee_desc">Kto úlohu vykoná. Iba táto osoba ju uvidí a môže na nej pracovať.</desc>
 	</data>
 	<data type="number">
 		<id>wi_estimate</id>
-		<title>Odhad v hodinách</title>
-		<desc>Interné plánovanie. So SLA to nemá nič.</desc>
+		<title name="wi_estimate_title">Odhad v hodinách</title>
+		<desc name="wi_estimate_desc">Interné plánovanie. So SLA to nemá nič.</desc>
 	</data>
 	<data type="date">
 		<id>wi_due</id>
-		<title>Termín</title>
-		<desc>Interný termín úlohy, nezávislý od SLA ticketu.</desc>
+		<title name="wi_due_title">Termín</title>
+		<desc name="wi_due_desc">Interný termín úlohy, nezávislý od SLA ticketu.</desc>
 	</data>
 	<data type="text">
 		<id>wi_note</id>
-		<title>Zadanie podrobne</title>
+		<title name="wi_note_title">Zadanie podrobne</title>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>wi_state</id>
-		<title>Kód stavu</title>
+		<title name="wi_state_title">Kód stavu</title>
 	</data>
 	<data type="text">
 		<id>wi_state_label</id>
-		<title>Stav</title>
+		<title name="wi_state_label_title">Stav</title>
 	</data>
 	<data type="boolean">
 		<id>wi_done</id>
-		<title>Hotová</title>
+		<title name="wi_done_title">Hotová</title>
 		<component>
 			<name>toggle</name>
 			<properties>
@@ -260,16 +308,16 @@ if (id) {
 	</data>
 	<data type="dateTime">
 		<id>wi_started_at</id>
-		<title>Začaté</title>
+		<title name="wi_started_at_title">Začaté</title>
 	</data>
 	<data type="dateTime">
 		<id>wi_finished_at</id>
-		<title>Dokončené</title>
+		<title name="wi_finished_at_title">Dokončené</title>
 	</data>
 	<data type="number">
 		<id>wi_spent</id>
-		<title>Odpracované hodiny</title>
-		<desc>Vyplní riešiteľ pri dokončení.</desc>
+		<title name="wi_spent_title">Odpracované hodiny</title>
+		<desc name="wi_spent_desc">Vyplní riešiteľ pri dokončení.</desc>
 	</data>
 	<!--
 		immediate="true" nie je kozmetika: btn_done cita wi_result.value vo
@@ -280,19 +328,19 @@ if (id) {
 	-->
 	<data type="text" immediate="true">
 		<id>wi_result</id>
-		<title>Čo sa urobilo</title>
+		<title name="wi_result_title">Čo sa urobilo</title>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>wi_created_by</id>
-		<title>Zadal</title>
+		<title name="wi_created_by_title">Zadal</title>
 	</data>
 	<data type="button">
 		<id>btn_start</id>
 		<title/>
-		<placeholder>Začať pracovať</placeholder>
+		<placeholder name="btn_start_placeholder">Začať pracovať</placeholder>
 		<component>
 			<name>raised</name>
 		</component>
@@ -316,7 +364,7 @@ make btn_done, editable on transitions when { return true }
 	<data type="button">
 		<id>btn_done</id>
 		<title/>
-		<placeholder>Označiť ako hotové</placeholder>
+		<placeholder name="btn_done_placeholder">Označiť ako hotové</placeholder>
 		<component>
 			<name>raised</name>
 		</component>
@@ -353,7 +401,7 @@ if (result.length() < 3) {
 	<data type="button">
 		<id>btn_cancel</id>
 		<title/>
-		<placeholder>Zrušiť úlohu</placeholder>
+		<placeholder name="btn_cancel_placeholder">Zrušiť úlohu</placeholder>
 		<component>
 			<name>stroked</name>
 		</component>
@@ -385,7 +433,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 		<id>t_define</id>
 		<x>112</x>
 		<y>80</y>
-		<label>Zadanie úlohy</label>
+		<label name="t_define_label">Zadanie úlohy</label>
 		<icon>edit_note</icon>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
@@ -642,7 +690,7 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 		<id>t_wi_work</id>
 		<x>304</x>
 		<y>80</y>
-		<label>Moja úloha</label>
+		<label name="t_wi_work_label">Moja úloha</label>
 		<icon>build</icon>
 		<assignPolicy>auto</assignPolicy>
 		<!--

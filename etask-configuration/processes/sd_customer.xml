@@ -2,7 +2,40 @@
 	<id>service_desk/sd_customer</id>
 	<version>1.0.0</version>
 	<initials>SDC</initials>
-	<title>Zákazník</title>
+	<title name="net_title">Zákazník</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Customer</i18nString>
+		<i18nString name="agent_title">Support operator</i18nString>
+		<i18nString name="specialist_title">Specialist</i18nString>
+		<i18nString name="manager_title">Support manager</i18nString>
+		<i18nString name="c_name_title">Organisation name</i18nString>
+		<i18nString name="c_name_desc">Must match what the customer types into the form. That is what the ticket is matched on.</i18nString>
+		<i18nString name="c_alias_title">Other names</i18nString>
+		<i18nString name="c_alias_desc">Variants of the same name, one per line. People write "Netgrif", "Netgrif s.r.o." and "netgrif".</i18nString>
+		<i18nString name="c_code_title">Code</i18nString>
+		<i18nString name="c_code_desc">Short code for reports, for example NGF.</i18nString>
+		<i18nString name="c_contact_title">Contact at the customer</i18nString>
+		<i18nString name="c_active_title">Active contract</i18nString>
+		<i18nString name="c_active_desc">An inactive customer is not matched onto tickets.</i18nString>
+		<i18nString name="c_agents_title">Operators for this customer</i18nString>
+		<i18nString name="c_agents_desc">They pick up and triage this customer's tickets. The list is for people with the Support operator role.</i18nString>
+		<i18nString name="c_specialists_title">Specialists for this customer</i18nString>
+		<i18nString name="c_specialists_desc">They work this customer's tickets. The list is for people with the Specialist role.</i18nString>
+		<i18nString name="c_sla_a_title">Priority A - hours</i18nString>
+		<i18nString name="c_sla_a_desc">Leave empty if the ticket process default applies.</i18nString>
+		<i18nString name="c_sla_b_title">Priority B - hours</i18nString>
+		<i18nString name="c_sla_c_title">Priority C - hours</i18nString>
+		<i18nString name="c_note_title">Contract note</i18nString>
+		<i18nString name="t_customer_label">Customer</i18nString>
+		<i18nString name="t_customer_read_label">Customer - overview</i18nString>
+	</i18n>
 	<icon>domains</icon>
 	<defaultRole>false</defaultRole>
 	<anonymousRole>false</anonymousRole>
@@ -59,15 +92,15 @@ changeCaseProperty("title").about { "Nový zákazník" }
 	</roleRef>
 	<role>
 		<id>agent</id>
-		<title>Operátor podpory</title>
+		<title name="agent_title">Operátor podpory</title>
 	</role>
 	<role>
 		<id>specialist</id>
-		<title>Riešiteľ</title>
+		<title name="specialist_title">Riešiteľ</title>
 	</role>
 	<role>
 		<id>manager</id>
-		<title>Vedúci podpory</title>
+		<title name="manager_title">Vedúci podpory</title>
 	</role>
 	<data type="i18n">
 		<id>div_identity</id>
@@ -86,8 +119,8 @@ changeCaseProperty("title").about { "Nový zákazník" }
 	</data>
 	<data type="text">
 		<id>c_name</id>
-		<title>Názov organizácie</title>
-		<desc>Musí sedieť s tým, čo zákazník napíše do formulára. Podľa toho sa tiket priradí.</desc>
+		<title name="c_name_title">Názov organizácie</title>
+		<desc name="c_name_desc">Musí sedieť s tým, čo zákazník napíše do formulára. Podľa toho sa tiket priradí.</desc>
 		<event type="set">
 			<id>c_name_set</id>
 			<actions phase="post">
@@ -104,53 +137,53 @@ if (n) {
 	</data>
 	<data type="text">
 		<id>c_alias</id>
-		<title>Ďalšie názvy</title>
-		<desc>Varianty toho istého názvu, každý na vlastný riadok. Ľudia píšu "Netgrif", "Netgrif s.r.o." aj "netgrif".</desc>
+		<title name="c_alias_title">Ďalšie názvy</title>
+		<desc name="c_alias_desc">Varianty toho istého názvu, každý na vlastný riadok. Ľudia píšu "Netgrif", "Netgrif s.r.o." aj "netgrif".</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>c_code</id>
-		<title>Kód</title>
-		<desc>Krátky kód pre výkazy, napríklad NGF.</desc>
+		<title name="c_code_title">Kód</title>
+		<desc name="c_code_desc">Krátky kód pre výkazy, napríklad NGF.</desc>
 	</data>
 	<data type="text">
 		<id>c_contact</id>
-		<title>Kontakt u zákazníka</title>
+		<title name="c_contact_title">Kontakt u zákazníka</title>
 	</data>
 	<data type="boolean">
 		<id>c_active</id>
-		<title>Aktívna zmluva</title>
-		<desc>Neaktívny zákazník sa na tikety neparuje.</desc>
+		<title name="c_active_title">Aktívna zmluva</title>
+		<desc name="c_active_desc">Neaktívny zákazník sa na tikety neparuje.</desc>
 		<init>true</init>
 	</data>
 	<data type="userList">
 		<id>c_agents</id>
-		<title>Operátori pre tohto zákazníka</title>
-		<desc>Preberajú a triedia jeho tikety. Do zoznamu patria ľudia s rolou Operátor podpory.</desc>
+		<title name="c_agents_title">Operátori pre tohto zákazníka</title>
+		<desc name="c_agents_desc">Preberajú a triedia jeho tikety. Do zoznamu patria ľudia s rolou Operátor podpory.</desc>
 	</data>
 	<data type="userList">
 		<id>c_specialists</id>
-		<title>Riešitelia pre tohto zákazníka</title>
-		<desc>Riešia jeho tikety. Do zoznamu patria ľudia s rolou Riešiteľ.</desc>
+		<title name="c_specialists_title">Riešitelia pre tohto zákazníka</title>
+		<desc name="c_specialists_desc">Riešia jeho tikety. Do zoznamu patria ľudia s rolou Riešiteľ.</desc>
 	</data>
 	<data type="number">
 		<id>c_sla_a</id>
-		<title>Priorita A – hodiny</title>
-		<desc>Nechajte prázdne, ak platí štandard z procesu tiketu.</desc>
+		<title name="c_sla_a_title">Priorita A – hodiny</title>
+		<desc name="c_sla_a_desc">Nechajte prázdne, ak platí štandard z procesu tiketu.</desc>
 	</data>
 	<data type="number">
 		<id>c_sla_b</id>
-		<title>Priorita B – hodiny</title>
+		<title name="c_sla_b_title">Priorita B – hodiny</title>
 	</data>
 	<data type="number">
 		<id>c_sla_c</id>
-		<title>Priorita C – hodiny</title>
+		<title name="c_sla_c_title">Priorita C – hodiny</title>
 	</data>
 	<data type="text">
 		<id>c_note</id>
-		<title>Poznámka k zmluve</title>
+		<title name="c_note_title">Poznámka k zmluve</title>
 		<component>
 			<name>textarea</name>
 		</component>
@@ -159,7 +192,7 @@ if (n) {
 		<id>t_customer</id>
 		<x>112</x>
 		<y>80</y>
-		<label>Zákazník</label>
+		<label name="t_customer_label">Zákazník</label>
 		<icon>domain</icon>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
@@ -384,7 +417,7 @@ if (n) {
 		<id>t_customer_read</id>
 		<x>304</x>
 		<y>80</y>
-		<label>Zákazník – prehľad</label>
+		<label name="t_customer_read_label">Zákazník – prehľad</label>
 		<icon>visibility</icon>
 		<assignPolicy>auto</assignPolicy>
 		<!--

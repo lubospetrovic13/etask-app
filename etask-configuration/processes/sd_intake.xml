@@ -2,7 +2,92 @@
 	<id>service_desk/sd_intake</id>
 	<version>1.0.0</version>
 	<initials>SDI</initials>
-	<title>Podanie požiadavky</title>
+	<title name="net_title">Podanie požiadavky</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Request submission</i18nString>
+		<i18nString name="agent_title">Support operator</i18nString>
+		<i18nString name="system_title">System</i18nString>
+		<i18nString name="wiz_step_title">Step</i18nString>
+		<i18nString name="btn_back_placeholder">Back</i18nString>
+		<i18nString name="btn_next_placeholder">Continue</i18nString>
+		<i18nString name="btn_submit_placeholder">Send the request</i18nString>
+		<i18nString name="req_type_title">Request type</i18nString>
+		<i18nString name="req_type_opt_incident">Report an incident</i18nString>
+		<i18nString name="req_type_opt_service">Service task</i18nString>
+		<i18nString name="req_type_opt_change">Change request</i18nString>
+		<i18nString name="req_type_opt_access">System access</i18nString>
+		<i18nString name="req_type_opt_question">Question</i18nString>
+		<i18nString name="card_chosen_title">You chose</i18nString>
+		<i18nString name="card_incident_title">Something is not working</i18nString>
+		<i18nString name="card_incident_placeholder">Report an incident</i18nString>
+		<i18nString name="card_incident_desc">The application reports an error, an action cannot be completed, something is stuck.</i18nString>
+		<i18nString name="card_service_title">Something needs to be set up</i18nString>
+		<i18nString name="card_service_placeholder">Service task</i18nString>
+		<i18nString name="card_service_desc">A setting change, a data restore, a one-off task with no change to the application.</i18nString>
+		<i18nString name="card_change_title">I want something new or different</i18nString>
+		<i18nString name="card_change_placeholder">Change request</i18nString>
+		<i18nString name="card_change_desc">A new feature or a change to an existing one. Estimated separately.</i18nString>
+		<i18nString name="card_access_title">I need access</i18nString>
+		<i18nString name="card_access_placeholder">System access</i18nString>
+		<i18nString name="card_access_desc">A new account, a permission change, unlocking a login.</i18nString>
+		<i18nString name="card_question_title">I just want to ask</i18nString>
+		<i18nString name="card_question_placeholder">Question</i18nString>
+		<i18nString name="card_question_desc">You do not know how to do something, or want to check the procedure.</i18nString>
+		<i18nString name="req_service_title">Which service it concerns</i18nString>
+		<i18nString name="req_service_desc">If you are not sure, leave Not sure. The operator will fill it in.</i18nString>
+		<i18nString name="req_service_opt_portal">Customer portal</i18nString>
+		<i18nString name="req_service_opt_core">Main application</i18nString>
+		<i18nString name="req_service_opt_integration">Integration with another system</i18nString>
+		<i18nString name="req_service_opt_reports">Reports and exports</i18nString>
+		<i18nString name="req_service_opt_account">Account and login</i18nString>
+		<i18nString name="req_service_opt_unknown">Not sure</i18nString>
+		<i18nString name="req_title_title">Short name</i18nString>
+		<i18nString name="req_title_desc">One sentence. For example: The monthly report cannot be generated.</i18nString>
+		<i18nString name="req_description_title">Describe what is happening</i18nString>
+		<i18nString name="req_description_desc">What you were doing, what you expected, and what happened instead.</i18nString>
+		<i18nString name="req_severity_title">How urgent it is</i18nString>
+		<i18nString name="req_severity_desc">This is your suggestion. The operator may change it and will tell you why.</i18nString>
+		<i18nString name="req_severity_opt_A">A - cannot work at all, everyone is blocked</i18nString>
+		<i18nString name="req_severity_opt_B">B - it limits me, but I can carry on</i18nString>
+		<i18nString name="req_severity_opt_C">C - can wait, reporting it for the record</i18nString>
+		<i18nString name="req_affects_more_title">Who is affected</i18nString>
+		<i18nString name="req_affects_more_desc">On means more people have the problem, not just you.</i18nString>
+		<i18nString name="req_started_title">Since when</i18nString>
+		<i18nString name="req_started_desc">Optional. Helps us tie several reports together.</i18nString>
+		<i18nString name="req_attachment_title">Attachment</i18nString>
+		<i18nString name="req_attachment_desc">A screenshot, an export, a log. Optional, but usually the most helpful thing.</i18nString>
+		<i18nString name="req_more_title">Additional details</i18nString>
+		<i18nString name="req_more_desc">Optional. Expands the fields for progress and workaround.</i18nString>
+		<i18nString name="req_steps_title">How to reproduce it</i18nString>
+		<i18nString name="req_steps_desc">The steps that lead to it. Even an incomplete list helps.</i18nString>
+		<i18nString name="req_workaround_title">Did you try a workaround</i18nString>
+		<i18nString name="req_workaround_desc">If you found a workaround, write it down.</i18nString>
+		<i18nString name="req_name_title">Full name</i18nString>
+		<i18nString name="req_email_title">E-mail</i18nString>
+		<i18nString name="req_email_desc">This is where we send the request number and every further message.</i18nString>
+		<i18nString name="req_phone_title">Phone</i18nString>
+		<i18nString name="req_phone_desc">Optional. We will use it only if something needs clarifying quickly.</i18nString>
+		<i18nString name="req_org_title">Organisation</i18nString>
+		<i18nString name="req_org_desc">The company or department you are filing on behalf of.</i18nString>
+		<i18nString name="req_consent_title">I agree to the processing of the data above in order to resolve this request</i18nString>
+		<i18nString name="submitted_ok_title">Status</i18nString>
+		<i18nString name="ticket_number_title">Request number</i18nString>
+		<i18nString name="ticket_number_desc">Quote it whenever you refer to the request.</i18nString>
+		<i18nString name="ticket_case_id_title">Internal ticket ID</i18nString>
+		<i18nString name="t_form_label">Request submission</i18nString>
+		<i18nString name="t_s_category_label">Category</i18nString>
+		<i18nString name="t_s_detail_label">Description</i18nString>
+		<i18nString name="t_s_contact_label">Contact</i18nString>
+		<i18nString name="t_s_summary_label">Summary</i18nString>
+		<i18nString name="t_s_receipt_label">Confirmation</i18nString>
+	</i18n>
 	<icon>support_agent</icon>
 	<defaultRole>true</defaultRole>
 	<anonymousRole>true</anonymousRole>
@@ -141,15 +226,15 @@ make btn_submit, editable on transitions when { return 1 == 4 }
 	</roleRef>
 	<role>
 		<id>agent</id>
-		<title>Operátor podpory</title>
+		<title name="agent_title">Operátor podpory</title>
 	</role>
 	<role>
 		<id>system</id>
-		<title>Systém</title>
+		<title name="system_title">Systém</title>
 	</role>
 	<data type="number">
 		<id>wiz_step</id>
-		<title>Krok</title>
+		<title name="wiz_step_title">Krok</title>
 		<init>1</init>
 	</data>
 	<data type="text">
@@ -175,7 +260,7 @@ make btn_submit, editable on transitions when { return 1 == 4 }
 	<data type="button">
 		<id>btn_back</id>
 		<title/>
-		<placeholder>Späť</placeholder>
+		<placeholder name="btn_back_placeholder">Späť</placeholder>
 		<component>
 			<name>stroked</name>
 			<properties>
@@ -221,7 +306,7 @@ make btn_submit, editable on transitions when { return target == 4 }
 	<data type="button">
 		<id>btn_next</id>
 		<title/>
-		<placeholder>Pokračovať</placeholder>
+		<placeholder name="btn_next_placeholder">Pokračovať</placeholder>
 		<component>
 			<name>raised</name>
 			<properties>
@@ -313,7 +398,7 @@ make btn_submit, editable on transitions when { return target == 4 }
 	<data type="button">
 		<id>btn_submit</id>
 		<title/>
-		<placeholder>Odoslať požiadavku</placeholder>
+		<placeholder name="btn_submit_placeholder">Odoslať požiadavku</placeholder>
 		<component>
 			<name>raised</name>
 			<properties>
@@ -403,24 +488,24 @@ if (s == 4) {
 	</data>
 	<data type="enumeration_map">
 		<id>req_type</id>
-		<title>Typ požiadavky</title>
+		<title name="req_type_title">Typ požiadavky</title>
 		<options>
-			<option key="incident">Nahlásiť poruchu</option>
-			<option key="service">Servisný zásah</option>
-			<option key="change">Žiadosť o zmenu</option>
-			<option key="access">Prístup do systému</option>
-			<option key="question">Otázka</option>
+			<option key="incident" name="req_type_opt_incident">Nahlásiť poruchu</option>
+			<option key="service" name="req_type_opt_service">Servisný zásah</option>
+			<option key="change" name="req_type_opt_change">Žiadosť o zmenu</option>
+			<option key="access" name="req_type_opt_access">Prístup do systému</option>
+			<option key="question" name="req_type_opt_question">Otázka</option>
 		</options>
 	</data>
 	<data type="text">
 		<id>card_chosen</id>
-		<title>Vybrali ste</title>
+		<title name="card_chosen_title">Vybrali ste</title>
 	</data>
 	<data type="button">
 		<id>card_incident</id>
-		<title>Niečo nefunguje</title>
-		<placeholder>Nahlásiť poruchu</placeholder>
-		<desc>Aplikácia hlási chybu, nedá sa dokončiť úkon, niečo sa zaseklo.</desc>
+		<title name="card_incident_title">Niečo nefunguje</title>
+		<placeholder name="card_incident_placeholder">Nahlásiť poruchu</placeholder>
+		<desc name="card_incident_desc">Aplikácia hlási chybu, nedá sa dokončiť úkon, niečo sa zaseklo.</desc>
 		<component>
 			<name>stroked</name>
 			<properties>
@@ -460,9 +545,9 @@ make btn_submit, hidden on transitions when { return true }
 	</data>
 	<data type="button">
 		<id>card_service</id>
-		<title>Treba niečo nastaviť</title>
-		<placeholder>Servisný zásah</placeholder>
-		<desc>Zmena nastavenia, obnova dát, jednorazový zásah bez zmeny v aplikácii.</desc>
+		<title name="card_service_title">Treba niečo nastaviť</title>
+		<placeholder name="card_service_placeholder">Servisný zásah</placeholder>
+		<desc name="card_service_desc">Zmena nastavenia, obnova dát, jednorazový zásah bez zmeny v aplikácii.</desc>
 		<component>
 			<name>stroked</name>
 			<properties>
@@ -502,9 +587,9 @@ make btn_submit, hidden on transitions when { return true }
 	</data>
 	<data type="button">
 		<id>card_change</id>
-		<title>Chcem niečo nové alebo inak</title>
-		<placeholder>Žiadosť o zmenu</placeholder>
-		<desc>Nová funkcia alebo úprava existujúcej. Odhaduje sa samostatne.</desc>
+		<title name="card_change_title">Chcem niečo nové alebo inak</title>
+		<placeholder name="card_change_placeholder">Žiadosť o zmenu</placeholder>
+		<desc name="card_change_desc">Nová funkcia alebo úprava existujúcej. Odhaduje sa samostatne.</desc>
 		<component>
 			<name>stroked</name>
 			<properties>
@@ -544,9 +629,9 @@ make btn_submit, hidden on transitions when { return true }
 	</data>
 	<data type="button">
 		<id>card_access</id>
-		<title>Potrebujem prístup</title>
-		<placeholder>Prístup do systému</placeholder>
-		<desc>Nový účet, zmena práv, odomknutie prihlásenia.</desc>
+		<title name="card_access_title">Potrebujem prístup</title>
+		<placeholder name="card_access_placeholder">Prístup do systému</placeholder>
+		<desc name="card_access_desc">Nový účet, zmena práv, odomknutie prihlásenia.</desc>
 		<component>
 			<name>stroked</name>
 			<properties>
@@ -586,9 +671,9 @@ make btn_submit, hidden on transitions when { return true }
 	</data>
 	<data type="button">
 		<id>card_question</id>
-		<title>Len sa chcem spýtať</title>
-		<placeholder>Otázka</placeholder>
-		<desc>Neviete, ako niečo urobiť, alebo si chcete overiť postup.</desc>
+		<title name="card_question_title">Len sa chcem spýtať</title>
+		<placeholder name="card_question_placeholder">Otázka</placeholder>
+		<desc name="card_question_desc">Neviete, ako niečo urobiť, alebo si chcete overiť postup.</desc>
 		<component>
 			<name>stroked</name>
 			<properties>
@@ -628,46 +713,46 @@ make btn_submit, hidden on transitions when { return true }
 	</data>
 	<data type="enumeration_map" immediate="true">
 		<id>req_service</id>
-		<title>Ktorej služby sa to týka</title>
-		<desc>Ak si nie ste istí, nechajte Neviem určiť. Operátor to doplní.</desc>
+		<title name="req_service_title">Ktorej služby sa to týka</title>
+		<desc name="req_service_desc">Ak si nie ste istí, nechajte Neviem určiť. Operátor to doplní.</desc>
 		<init>unknown</init>
 		<options>
-			<option key="portal">Zákaznícky portál</option>
-			<option key="core">Hlavná aplikácia</option>
-			<option key="integration">Integrácia s iným systémom</option>
-			<option key="reports">Reporty a exporty</option>
-			<option key="account">Účet a prihlásenie</option>
-			<option key="unknown">Neviem určiť</option>
+			<option key="portal" name="req_service_opt_portal">Zákaznícky portál</option>
+			<option key="core" name="req_service_opt_core">Hlavná aplikácia</option>
+			<option key="integration" name="req_service_opt_integration">Integrácia s iným systémom</option>
+			<option key="reports" name="req_service_opt_reports">Reporty a exporty</option>
+			<option key="account" name="req_service_opt_account">Účet a prihlásenie</option>
+			<option key="unknown" name="req_service_opt_unknown">Neviem určiť</option>
 		</options>
 	</data>
 	<data type="text" immediate="true">
 		<id>req_title</id>
-		<title>Krátky názov</title>
-		<desc>Jedna veta. Napríklad: Nedá sa vygenerovať mesačný report.</desc>
+		<title name="req_title_title">Krátky názov</title>
+		<desc name="req_title_desc">Jedna veta. Napríklad: Nedá sa vygenerovať mesačný report.</desc>
 	</data>
 	<data type="text" immediate="true">
 		<id>req_description</id>
-		<title>Popíšte, čo sa deje</title>
-		<desc>Čo ste robili, čo ste očakávali a čo sa stalo namiesto toho.</desc>
+		<title name="req_description_title">Popíšte, čo sa deje</title>
+		<desc name="req_description_desc">Čo ste robili, čo ste očakávali a čo sa stalo namiesto toho.</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="enumeration_map" immediate="true">
 		<id>req_severity</id>
-		<title>Ako je to súrne</title>
-		<desc>Toto je váš návrh. Operátor ho môže upraviť a napíše vám prečo.</desc>
+		<title name="req_severity_title">Ako je to súrne</title>
+		<desc name="req_severity_desc">Toto je váš návrh. Operátor ho môže upraviť a napíše vám prečo.</desc>
 		<init>B</init>
 		<options>
-			<option key="A">A — nedá sa pracovať, blokuje to všetkých</option>
-			<option key="B">B — obmedzuje ma to, ale viem pokračovať</option>
-			<option key="C">C — počká, hlásim to pre poriadok</option>
+			<option key="A" name="req_severity_opt_A">A — nedá sa pracovať, blokuje to všetkých</option>
+			<option key="B" name="req_severity_opt_B">B — obmedzuje ma to, ale viem pokračovať</option>
+			<option key="C" name="req_severity_opt_C">C — počká, hlásim to pre poriadok</option>
 		</options>
 	</data>
 	<data type="boolean" immediate="true">
 		<id>req_affects_more</id>
-		<title>Koho sa to týka</title>
-		<desc>Zapnuté znamená, že problém má viac ľudí, nie len vy.</desc>
+		<title name="req_affects_more_title">Koho sa to týka</title>
+		<desc name="req_affects_more_desc">Zapnuté znamená, že problém má viac ľudí, nie len vy.</desc>
 		<component>
 			<name>toggle</name>
 			<properties>
@@ -678,18 +763,18 @@ make btn_submit, hidden on transitions when { return true }
 	</data>
 	<data type="dateTime">
 		<id>req_started</id>
-		<title>Odkedy to trvá</title>
-		<desc>Nepovinné. Pomôže nám spojiť viac hlásení dokopy.</desc>
+		<title name="req_started_title">Odkedy to trvá</title>
+		<desc name="req_started_desc">Nepovinné. Pomôže nám spojiť viac hlásení dokopy.</desc>
 	</data>
 	<data type="file">
 		<id>req_attachment</id>
-		<title>Príloha</title>
-		<desc>Screenshot, export, log. Nepovinné, ale zvyčajne pomôže najviac.</desc>
+		<title name="req_attachment_title">Príloha</title>
+		<desc name="req_attachment_desc">Screenshot, export, log. Nepovinné, ale zvyčajne pomôže najviac.</desc>
 	</data>
 	<data type="boolean" immediate="true">
 		<id>req_more</id>
-		<title>Doplňujúce údaje</title>
-		<desc>Nepovinné. Rozbalí polia pre postup a dočasné riešenie.</desc>
+		<title name="req_more_title">Doplňujúce údaje</title>
+		<desc name="req_more_desc">Nepovinné. Rozbalí polia pre postup a dočasné riešenie.</desc>
 		<component>
 			<name>toggle</name>
 			<properties>
@@ -714,42 +799,42 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</data>
 	<data type="text" immediate="true">
 		<id>req_steps</id>
-		<title>Ako sa to dá zopakovať</title>
-		<desc>Kroky, po ktorých to nastane. Aj neúplné pomôže.</desc>
+		<title name="req_steps_title">Ako sa to dá zopakovať</title>
+		<desc name="req_steps_desc">Kroky, po ktorých to nastane. Aj neúplné pomôže.</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text" immediate="true">
 		<id>req_workaround</id>
-		<title>Skúsili ste niečo obísť</title>
-		<desc>Ak ste našli dočasné riešenie, napíšte ho.</desc>
+		<title name="req_workaround_title">Skúsili ste niečo obísť</title>
+		<desc name="req_workaround_desc">Ak ste našli dočasné riešenie, napíšte ho.</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text" immediate="true">
 		<id>req_name</id>
-		<title>Meno a priezvisko</title>
+		<title name="req_name_title">Meno a priezvisko</title>
 	</data>
 	<data type="text" immediate="true">
 		<id>req_email</id>
-		<title>E-mail</title>
-		<desc>Sem pošleme číslo požiadavky a všetky ďalšie správy.</desc>
+		<title name="req_email_title">E-mail</title>
+		<desc name="req_email_desc">Sem pošleme číslo požiadavky a všetky ďalšie správy.</desc>
 	</data>
 	<data type="text" immediate="true">
 		<id>req_phone</id>
-		<title>Telefón</title>
-		<desc>Nepovinné. Použijeme ho, len ak bude treba doplniť niečo rýchlo.</desc>
+		<title name="req_phone_title">Telefón</title>
+		<desc name="req_phone_desc">Nepovinné. Použijeme ho, len ak bude treba doplniť niečo rýchlo.</desc>
 	</data>
 	<data type="text" immediate="true">
 		<id>req_org</id>
-		<title>Organizácia</title>
-		<desc>Firma alebo oddelenie, za ktoré požiadavku podávate.</desc>
+		<title name="req_org_title">Organizácia</title>
+		<desc name="req_org_desc">Firma alebo oddelenie, za ktoré požiadavku podávate.</desc>
 	</data>
 	<data type="boolean" immediate="true">
 		<id>req_consent</id>
-		<title>Súhlasím so spracovaním uvedených údajov na vyriešenie tejto požiadavky</title>
+		<title name="req_consent_title">Súhlasím so spracovaním uvedených údajov na vyriešenie tejto požiadavky</title>
 		<component>
 			<name>toggle</name>
 			<properties>
@@ -767,7 +852,7 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</data>
 	<data type="boolean">
 		<id>submitted_ok</id>
-		<title>Stav</title>
+		<title name="submitted_ok_title">Stav</title>
 		<component>
 			<name>toggle</name>
 			<properties>
@@ -780,12 +865,12 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</data>
 	<data type="text">
 		<id>ticket_number</id>
-		<title>Číslo požiadavky</title>
-		<desc>Uveďte ho, keď sa budete na požiadavku odvolávať.</desc>
+		<title name="ticket_number_title">Číslo požiadavky</title>
+		<desc name="ticket_number_desc">Uveďte ho, keď sa budete na požiadavku odvolávať.</desc>
 	</data>
 	<data type="text">
 		<id>ticket_case_id</id>
-		<title>Interné ID ticketu</title>
+		<title name="ticket_case_id_title">Interné ID ticketu</title>
 	</data>
 	<data type="text">
 		<id>receipt_note</id>
@@ -798,7 +883,7 @@ make req_workaround, hidden on transitions when { return !showIt }
 		<id>t_form</id>
 		<x>112</x>
 		<y>80</y>
-		<label>Podanie požiadavky</label>
+		<label name="t_form_label">Podanie požiadavky</label>
 		<icon>support_agent</icon>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
@@ -935,7 +1020,7 @@ make req_workaround, hidden on transitions when { return !showIt }
 		<id>t_s_category</id>
 		<x>304</x>
 		<y>80</y>
-		<label>Kategória</label>
+		<label name="t_s_category_label">Kategória</label>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
 			<id>system</id>
@@ -1037,7 +1122,7 @@ make req_workaround, hidden on transitions when { return !showIt }
 		<id>t_s_detail</id>
 		<x>304</x>
 		<y>208</y>
-		<label>Popis</label>
+		<label name="t_s_detail_label">Popis</label>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
 			<id>system</id>
@@ -1197,7 +1282,7 @@ make req_workaround, hidden on transitions when { return !showIt }
 		<id>t_s_contact</id>
 		<x>304</x>
 		<y>336</y>
-		<label>Kontakt</label>
+		<label name="t_s_contact_label">Kontakt</label>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
 			<id>system</id>
@@ -1285,7 +1370,7 @@ make req_workaround, hidden on transitions when { return !showIt }
 		<id>t_s_summary</id>
 		<x>304</x>
 		<y>464</y>
-		<label>Súhrn</label>
+		<label name="t_s_summary_label">Súhrn</label>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
 			<id>system</id>
@@ -1317,7 +1402,7 @@ make req_workaround, hidden on transitions when { return !showIt }
 		<id>t_s_receipt</id>
 		<x>304</x>
 		<y>592</y>
-		<label>Potvrdenie</label>
+		<label name="t_s_receipt_label">Potvrdenie</label>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
 			<id>system</id>

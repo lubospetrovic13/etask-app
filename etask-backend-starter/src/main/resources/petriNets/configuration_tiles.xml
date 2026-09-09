@@ -2,7 +2,17 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
     <id>configuration_tiles</id>
     <initials>TIL</initials>
-    <title>Configuration tiles</title>
+    <title name="net_title">Configuration tiles</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Configuration tiles</i18nString>
+	</i18n>
     <defaultRole>false</defaultRole>
     <anonymousRole>false</anonymousRole>
     <transitionRole>false</transitionRole>
@@ -20,12 +30,12 @@
                             "processIdentifier:\"impersonation_users_select\" OR " +
                             "processIdentifier:\"preference_filter_item\")",
                             "folder",
-                            "All cases", [])
+                            i18n("Všetky prípady", ["en": "All cases"]), [])
 
                     createOrUpdateMenuItem("general_system", "general", "Case",
                             "_exists_:processIdentifier",
                             "settings",
-                            "All system cases", [])
+                            i18n("Všetky systémové prípady", ["en": "All system cases"]), [])
 
                     setUriNodeData("general", "General", null, "folder")
                     setUriNodeDataFilters("general", ["general"])

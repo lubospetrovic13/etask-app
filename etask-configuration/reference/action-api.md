@@ -20,27 +20,21 @@ kde sú dnes dve polia pre to isté, lebo som nevedel o existujúcom
 stacku, takže bývajú správnejšie než ekvivalent v enginu.
 
 ### `createOrUpdateMenuItem(String id, String uri, String type, String query, String icon, String title, List<String> allowedNets, Map<String, String> roles = [:], Map<String, String> bannedRoles = [:])`
-create or update menu item of specified type
+Zaloz alebo uprav polozku menu.
+
+### `createOrUpdateMenuItem(String id, String uri, String type, String query, String icon, I18nString title, List<String> allowedNets, Map<String, String> roles = [:], Map<String, String> bannedRoles = [:])`
+To iste s dvojjazycnym nazvom polozky menu.
 
 ### `updateMenuItemSection(String id, String section = "settings")`
-update menu item property
+Nahrada za private `ActionDelegate.updateMenuItemRoles`. */
 
 ### `updateMenuItemSection(Case menuItem, String section = "settings")`
-
-### `setUriNodeDataRolesByPaths(String uri, List<String> uriPaths)`
-set roles to uri node based on uriPaths
-
-### `setUriNodeDataRoles(String uri, Map<String, List<String>> netRoles)`
-set roles to uri node
 
 ### `setUriNodeDataFilters(String uri, List<String> menuItemIdentifiers)`
 set filters to uri node
 
-### `setUriNodeDataRoles(String uri, List<String> roleIds)`
-set roles to uri node for counters
-
-### `setUriNodeData(String uri, String title, String section, String icon, boolean isSvgIcon = false, boolean isHidden = false, List<String> roleIds = null)`
-set custom uri node data
+### `setUriNodeData(String uri, String title, String section, String icon, boolean isSvgIcon = false, boolean isHidden = false)`
+Ikona, sekcia a viditelnost karty uzla URI.
 
 ### `canUserAccessMenuItem(Case menuItem, IUser user)`
 

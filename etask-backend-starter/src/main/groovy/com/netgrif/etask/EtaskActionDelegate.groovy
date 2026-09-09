@@ -31,38 +31,119 @@ class EtaskActionDelegate extends ActionDelegate {
     @Autowired
     private IAuthorityService authorityService
 
+    // Id poli na `preference_filter_item` a prechod na `filter`, kde sa data
+    // zapisuju. V engine su to `private static final` na `ActionDelegate`, takze
+    // z podtriedy sa na ne za behu nedostaneme (rovnaky dovod ako pri metodach
+    // nizsie) - preto tu stoja ako literaly. Ked ich engine premenuje, prasknu
+    // testy `pfcheck`, nie kompilacia; preto su na jednom mieste a s tymto
+    // komentarom.
+    private static final String MENU_FIELD_ALLOWED_ROLES = "allowed_roles"
+    private static final String MENU_FIELD_BANNED_ROLES = "banned_roles"
+    private static final String MENU_FIELD_NEW_FILTER_ID = "new_filter_id"
+    private static final String FILTER_DETAILS_TRANSITION = "t2"
+    private static final String FILTER_FIELD = "filter"
+    private static final String FILTER_I18N_TITLE_FIELD = "i18n_filter_name"
+
     /**
-     * create or update menu item of specified type
-     * @param id
-     * @param uri
-     * @param type
-     * @param query
-     * @param icon
-     * @param title
-     * @param allowedNets
-     * @param roles
-     * @param bannedRoles
-     * @return
+     * Zaloz alebo uprav polozku menu.
+     *
+     * `title` prijme `String` aj `I18nString` - su na to dve pretazenia (viz
+     * komentar pri tom druhom), takze polozka menu sa da mat dvojjazycne:
+     * `i18n("Vsetky pripady", ["en": "All cases"])` je metoda delegata
+     * a `createFilter` uz `I18nString` zvlada sama. Bez toho by nazov karty
+     * v lavom menu zostal jednojazycny aj v appke, ktora ma cely zvysok
+     * prelozeny - a to je prvy riadok, ktory clovek v portali vidi.
+     *
+     * UPDATE CESTA NEIDE CEZ `changeFilter` ANI `changeMenuItem`. Obe volaju
+     * metody, ktore su na `ActionDelegate` **private**:
+     *
+     *     private void updateFilter(Case, Map)                 // ActionDelegate:1884
+     *     private void updateMenuItemRoles(Case, Closure, String)  // :1648
+     *
+     * Uzavery v `changeFilter`/`changeMenuItem` ich volaju dynamicky, takze
+     * volanie sa riesi cez metaclass instancie - a tou je nasa podtrieda, ktora
+     * private metody predka nevystavuje. Vysledok:
+     *
+     *     groovy.lang.MissingMethodException: No signature of method:
+     *     com.netgrif.etask.EtaskActionDelegate.updateFilter() is applicable
+     *     for argument types: (Case, LinkedHashMap)
+     *
+     * Chyba je v engine (ENGINE_ISSUES E6), ale dotyka sa kazdej appky, ktora si
+     * delegata rozsiruje - teda kazdej, lebo rozsirenie delegata je dokumentovany
+     * sposob, ako pridat vlastne akcie. Dovtedy sa to obchadza tak, ze sa tie
+     * dva zapisy urobia priamo; oba su len `setData` alebo zapis do `dataSet`
+     * a `save`, teda presne to, co robia tie private metody.
+     *
+     * Priznak, ked to niekto vrati na `changeFilter`: prvy import prejde
+     * (polozka neexistuje, ide sa create cestou), druhy vrati HTTP 500. V logu
+     * je `MissingMethodException`, v odpovedi hole `{"status":500}`.
      */
     Case createOrUpdateMenuItem(String id, String uri, String type, String query, String icon, String title, List<String> allowedNets, Map<String, String> roles = [:], Map<String, String> bannedRoles = [:]) {
+        return doCreateOrUpdateMenuItem(id, uri, type, query, icon, title, allowedNets, roles, bannedRoles)
+    }
+
+    /**
+     * To iste s dvojjazycnym nazvom polozky menu.
+     *
+     * Musi to byt SAMOSTATNE preťaženie s typom `I18nString`, nie jedna metoda
+     * s `def title`. Groovy vybera podla najspecifickejsieho parametra a engine
+     * ma vlastne `createOrUpdateMenuItem(..., String title, ...)`; nasa metoda
+     * s `def title` je vseobecnejsia, takze pri volani so `String`-om by vyhrala
+     * TA ENGINOVA a nase prekrytie by prestalo platit - bez chyby pri kompilacii
+     * aj pri importe. Prejavi sa to az druhym importom siete, ktora polozku uz
+     * ma: spadne na `MissingMethodException: updateFilter()`, teda presne na tu
+     * chybu, ktoru mala nasa metoda obchadzat.
+     */
+    Case createOrUpdateMenuItem(String id, String uri, String type, String query, String icon, I18nString title, List<String> allowedNets, Map<String, String> roles = [:], Map<String, String> bannedRoles = [:]) {
+        return doCreateOrUpdateMenuItem(id, uri, type, query, icon, title, allowedNets, roles, bannedRoles)
+    }
+
+    private Case doCreateOrUpdateMenuItem(String id, String uri, String type, String query, String icon, def title, List<String> allowedNets, Map<String, String> roles, Map<String, String> bannedRoles) {
         collectRolesForPreferenceItem(roles)
         Case menuItem = findMenuItem(id)
         if (!menuItem) {
             Case filter = createFilter(title, query, type, allowedNets, icon, "private", null)
             createUri(uri, UriContentType.DEFAULT)
             return createMenuItem(uri, id, filter, roles, bannedRoles)
-        } else {
-            Case filter = getFilterFromMenuItem(menuItem)
-            changeFilter filter query { query }
-            changeFilter filter allowedNets { allowedNets }
-            changeFilter filter title { title }
-            changeFilter filter icon { icon }
-            changeMenuItem menuItem allowedRoles { roles }
-            changeMenuItem menuItem bannedRoles { bannedRoles }
-            changeMenuItem menuItem uri { uri }
-            changeMenuItem menuItem filter { filter }
-            return workflowService.findOne(menuItem.stringId)
         }
+
+        Case filter = getFilterFromMenuItem(menuItem)
+
+        // Dopyt a allowedNets naraz. Engine ich ma v dvoch uzaveroch, pricom ta
+        // pre `query` zapisuje `"type": "enumeration_map"` a allowedNets
+        // zahodi - preto sa tu pise tvar, ktory pouziva `createFilter`.
+        setData(FILTER_DETAILS_TRANSITION, filter, [
+                (FILTER_FIELD): [
+                        "type"       : "filter",
+                        "value"      : query,
+                        "allowedNets": allowedNets,
+                ],
+        ])
+
+        filter = workflowService.findOne(filter.stringId)
+        filter.setTitle(title as String)
+        filter.dataSet[FILTER_I18N_TITLE_FIELD].value =
+                (title instanceof I18nString) ? title : new I18nString(title as String)
+        filter.setIcon(icon)
+        filter = workflowService.save(filter)
+
+        setMenuItemRoles(menuItem, MENU_FIELD_ALLOWED_ROLES, roles)
+        setMenuItemRoles(menuItem, MENU_FIELD_BANNED_ROLES, bannedRoles)
+
+        menuItem = workflowService.findOne(menuItem.stringId)
+        menuItem.setUriNodeId(uriService.findByUri(uri).id)
+        workflowService.save(menuItem)
+        setData("change_filter", menuItem, [
+                (MENU_FIELD_NEW_FILTER_ID): ["type": "text", "value": filter.stringId],
+        ])
+        return workflowService.findOne(menuItem.stringId)
+    }
+
+    /** Nahrada za private `ActionDelegate.updateMenuItemRoles`. */
+    private void setMenuItemRoles(Case item, String fieldId, Map<String, String> roles) {
+        Case fresh = workflowService.findOne(item.stringId)
+        fresh.dataSet[fieldId].options = collectRolesForPreferenceItem(roles)
+        workflowService.save(fresh)
     }
 
     private Map<String, I18nString> collectRolesForPreferenceItem(Map<String, String> roles) {
@@ -100,34 +181,25 @@ class EtaskActionDelegate extends ActionDelegate {
         return workflowService.save(menuItem)
     }
 
-    /**
-     * set roles to uri node based on uriPaths
-     * all roles of all processes from provided uriPaths will be able to see the node
-     * @param uri
-     * @param uriPaths
-     */
-    void setUriNodeDataRolesByPaths(String uri, List<String> uriPaths) {
-        List<PetriNet> nets = uriPaths.collect {
-            UriNode node = getUri(it) as UriNode
-            if (!node) return null
-            return petriNetService.findAllByUri(node.id)
-        }.findAll { it != null }.flatten() as List<PetriNet>
-        List<String> roleIds = nets.collect { it.roles.keySet() as List }.flatten() as List<String>
-        setUriNodeDataRoles(uri, roleIds)
-    }
-
-    /**
-     * set roles to uri node
-     * @param uri
-     * @param netRoles [net_identifier: [admin, system, ...]
-     */
-    void setUriNodeDataRoles(String uri, Map<String, List<String>> netRoles) {
-        List<ProcessRole> roles = netRoles.collect { entry ->
-            def net = petriNetService.getNewestVersionByIdentifier(entry.key)
-            return net.roles.values().findAll { role -> entry.value.any { roleImportId -> roleImportId == role.importId } }
-        }.flatten() as List<ProcessRole>
-        setUriNodeDataRoles(uri, roles.stringId as List)
-    }
+    // Tri metody, ktore tu boli - `setUriNodeDataRoles(String, List)`,
+    // `setUriNodeDataRoles(String, Map)` a `setUriNodeDataRolesByPaths` - su
+    // zmazane. Vsetky tri zapisovali do `UriNodeData.processRolesIds`, co je
+    // pole, ktore:
+    //
+    //   * uz sa tak nevola. Bolo premenovane na `legacyProcessRolesIds`
+    //     s `@Field("processRolesIds")`, takze Lombok generuje
+    //     `setLegacyProcessRolesIds` a povodne volanie padne na
+    //     `MissingMethodException: setProcessRolesIds()`. A padne az na DRUHE
+    //     volanie: pri prvom sa uzol este nema kam najst, takze sa ide else
+    //     vetvou cez konstruktor. Prvy import teda prejde a druhy vrati 500.
+    //   * ani predtym nefungovalo. Drzalo `stringId` roly, ktore engine razi
+    //     per verzia siete, takze zoznam sa po kazdom re-importe rozpadol.
+    //
+    // Viditelnost karty v lavom menu urcuje `processes.json` (sekcia
+    // `uriNodes`, `requiredAuthorities` a `requiredProcessRoles` cez
+    // `UriNodeDataRunner`) - a to je jedno miesto, kde to ma stat. Nastavovat
+    // to aj z akcie by znamenalo dva zdroje pravdy, ktore si pri kazdom starte
+    // prepisuju vysledok.
 
     /**
      * set filters to uri node
@@ -145,31 +217,15 @@ class EtaskActionDelegate extends ActionDelegate {
     }
 
     /**
-     * set roles to uri node for counters
-     * @param uri
-     * @param roleIds role stringIds
+     * Ikona, sekcia a viditelnost karty uzla URI.
+     *
+     * Parameter `roleIds` je zmazany. Zapisoval do pola, ktore uz nema setter
+     * (viz komentar vyssie), a hlavne: kto uzol vidi, urcuje `processes.json`.
+     * Dva zdroje pravdy na tu istu vec sa pri kazdom starte prepisovali.
+     *
+     * @param section "settings" alebo "archive" pre koren, inak null
      */
-    void setUriNodeDataRoles(String uri, List<String> roleIds) {
-        UriNode uriNode = getUri(uri) as UriNode
-        uriNodeDataRepository.findByUriNodeId(uriNode.getId()).ifPresentOrElse(data -> {
-            data.setProcessRolesIds(roleIds as Set)
-            uriNodeDataRepository.save(data)
-        }, () -> {
-            uriNodeDataRepository.save(new UriNodeData(uriNode.getId(), null, null, false, false, roleIds as Set, null))
-        })
-    }
-
-    /**
-     * set custom uri node data
-     * @param uri
-     * @param title
-     * @param section - "settings" or "archive" if root, else null
-     * @param icon
-     * @param isSvgIcon
-     * @param isHidden
-     * @param roleIds - if null, no restriction
-     */
-    void setUriNodeData(String uri, String title, String section, String icon, boolean isSvgIcon = false, boolean isHidden = false, List<String> roleIds = null) {
+    void setUriNodeData(String uri, String title, String section, String icon, boolean isSvgIcon = false, boolean isHidden = false) {
         UriNode uriNode = getUri(uri) as UriNode
         uriNode.setName(title)
         uriService.save(uriNode)
@@ -177,11 +233,10 @@ class EtaskActionDelegate extends ActionDelegate {
             data.setIcon(icon)
             data.setSection(section)
             data.setIconSvg(isSvgIcon)
-            data.setProcessRolesIds(roleIds as Set)
             data.setHidden(isHidden)
             uriNodeDataRepository.save(data)
         }, () -> {
-            uriNodeDataRepository.save(new UriNodeData(uriNode.getId(), section, icon, isSvgIcon, isHidden, roleIds as Set, null))
+            uriNodeDataRepository.save(new UriNodeData(uriNode.getId(), section, icon, isSvgIcon, isHidden, null, null))
         })
     }
 

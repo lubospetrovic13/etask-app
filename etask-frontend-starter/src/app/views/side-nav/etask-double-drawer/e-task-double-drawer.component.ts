@@ -5,6 +5,7 @@ import {ActivatedRoute, Router} from '@angular/router';
 import {NavigationDoubleDrawerComponent} from '@netgrif/components';
 import {
   AccessService,
+  Case,
   ConfigurationService,
   DynamicNavigationRouteProviderService,
   FILTER_IDENTIFIERS,
@@ -17,11 +18,12 @@ import {
   UserService,
   ViewNavigationItem,
 } from '@netgrif/components-core';
-import {forkJoin, of} from 'rxjs';
+import {forkJoin, of, Subscription} from 'rxjs';
 import {map} from 'rxjs/operators';
 import icons from '../../../../assets/uriNodeIcons.json';
 import {ETaskUriNodeResource} from '../../dashboard/service/etask-uri-resource.service';
 import {ThemeService} from '../../../theme.service';
+import {localisedViewTitle} from '../view-title';
 
 @Component({
   selector: 'app-e-task-double-drawer',
@@ -69,6 +71,7 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
 
   public archiveNodes: Array<UriNodeResource>;
   public archiveViews: Array<ViewNavigationItem>;
+  private _languageSub: Subscription;
 
   constructor(router: Router,
               activatedRoute: ActivatedRoute,
@@ -87,6 +90,20 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
       impersonationUserSelect, impersonation, dynamicRouteProviderService);
     this._impersonation.impersonating$.subscribe(() => {
       this._router.navigate(['dashboard']);
+    });
+    // Rebuild the tree when the language changes.
+    //
+    // View names are resolved once, when the right side loads, so without this the
+    // menu keeps the names from whichever language was active at load time - the
+    // library's own labels ("Views", "Settings") switch immediately through the
+    // translate pipe and the app's own view names do not, which looks like the
+    // translations are missing rather than stale. Folder names go through a pipe and
+    // are fine either way.
+    this._languageSub = languageService.getLangChange$().subscribe(() => {
+      // The node guard matters: the language can change before the drawer has one
+      // (the app sets a default in its own constructor), and `loadRightSide` reads
+      // `currentNode.uriPath` straight away.
+      if (this.currentNode) this.loadRightSide();
     });
     this.isSectionOpen.settings = false;
     this.isSectionOpen.archive = false;
@@ -221,5 +238,33 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
 
   public isRoot(): boolean {
     return this.currentNode.name === 'root';
+  }
+
+  /**
+   * Same as the library's, except the view name follows the portal's language.
+   *
+   * The library takes `entry_name.value.defaultValue` and therefore always shows the
+   * language the menu item was created in. `localisedViewTitle` prefers the matching
+   * entry in `translations` and keeps the same fallbacks, so a menu item created with
+   * a plain string is unaffected. Why it matters and what the payload looks like is
+   * in `view-title.ts`.
+   *
+   * Only the title is touched; everything else, the access check included, comes from
+   * `super`. Copying the library's body instead would have meant carrying its access
+   * check along by hand, and a copy that loses it turns a view somebody may not open
+   * into a visible menu entry that 403s on click.
+   */
+  public ngOnDestroy(): void {
+    super.ngOnDestroy();
+    this._languageSub?.unsubscribe();
+  }
+
+  protected resolveFilterCaseToViewNavigationItem(filter: Case): ViewNavigationItem | undefined {
+    const item = super.resolveFilterCaseToViewNavigationItem(filter);
+    // `navigation` is typed `boolean | {title?, icon?, ...}` - the boolean form means
+    // "no navigation entry", and writing a title into that would be meaningless.
+    if (!item || typeof item.navigation !== 'object' || !item.navigation) return item;
+    item.navigation.title = localisedViewTitle(filter, this.getLang());
+    return item;
   }
 }

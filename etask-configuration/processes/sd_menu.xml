@@ -2,7 +2,19 @@
 	<id>service_desk/sd_menu</id>
 	<version>1.0.0</version>
 	<initials>SDM</initials>
-	<title>Menu Service Desku</title>
+	<title name="net_title">Menu Service Desku</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Service Desk menu</i18nString>
+		<i18nString name="manager_title">Support manager</i18nString>
+		<i18nString name="t_menu_label">Menu state</i18nString>
+	</i18n>
 	<icon>menu</icon>
 	<defaultRole>false</defaultRole>
 	<anonymousRole>false</anonymousRole>
@@ -33,34 +45,57 @@ def created = []
 def unchanged = []
 def failed = []
 
+// `name` je I18nString, nie String. `createFilterInMenu` berie `def title`
+// a ulozi ho do `entry_name`, ktore ide ku klientovi ako
+// {defaultValue, translations} - takze polozka menu vie byt dvojjazycna.
+//
+// Knizica si z toho ale sama vyberie `defaultValue`, takze bez prekrytia na
+// frontende (view-title.ts) by tu bola slovencina aj v anglickom portali.
 def views = [
-        [id: "sd_tickets", name: "Tikety", type: "Case", icon: "confirmation_number",
+        [id: "sd_tickets", name: i18n("Tikety", ["en": "Tickets"]),
+         type: "Case", icon: "confirmation_number",
          query: "processIdentifier:\"service_desk/sd_ticket\""],
         // Zamerne `t_wi_work`, nie `t_work`: task dokument v indexe nesie
         // processId (stringId siete, meni sa pri kazdom re-importe), nie
         // processIdentifier - takze filter sa da spolahlivo zuzit len na
         // unikatny id prechodu. Preto ma prechod pracovnej ulohy vlastne id.
-        [id: "sd_my_work", name: "Moje úlohy", type: "Task", icon: "build",
+        [id: "sd_my_work", name: i18n("Moje úlohy", ["en": "My work"]),
+         type: "Task", icon: "build",
          query: "transitionId:\"t_wi_work\""],
-        [id: "sd_customers", name: "Zákazníci", type: "Case", icon: "domain",
+        [id: "sd_customers", name: i18n("Zákazníci", ["en": "Customers"]),
+         type: "Case", icon: "domain",
          query: "processIdentifier:\"service_desk/sd_customer\""],
-        [id: "sd_submissions", name: "Podania z formulára", type: "Case", icon: "inbox",
+        [id: "sd_submissions", name: i18n("Podania z formulára", ["en": "Form submissions"]),
+         type: "Case", icon: "inbox",
          query: "processIdentifier:\"service_desk/sd_intake\""],
 ]
 
 views.each { v ->
     def id = v.id as String
     try {
-        // Idempotencia rucne: `createOrUpdate*MenuItem` v 6.3.1 na update pada
-        // (vola neexistujuce updateFilter). Takze zhodne zobrazenie necháme
-        // byt, ale ked sa dopyt zmenil, polozku zahodíme a postavíme znova -
-        // inak by v nasadenej instancii navzdy zostal stary dopyt a nikto by
-        // nevedel, preco zoznam zobrazuje nespravne veci.
+        // Idempotencia rucne. Update cesta enginovych `createOrUpdate*MenuItem`
+        // pada, lebo `changeFilter` vola `updateFilter`, ktore je na
+        // `ActionDelegate` private, a z nasej podtriedy sa na privatnu metodu
+        // predka dynamicky nedostane (ENGINE_ISSUES E6). Nas vlastny
+        // `createOrUpdateMenuItem` to uz obchadza, ale `createFilterInMenu`
+        // - ktore tu treba kvoli `visibility` a `defaultHeaders` - nie.
+        // Takze zhodne zobrazenie necháme byt, a ked sa dopyt zmenil, polozku
+        // zahodíme a postavíme znova; inak by v nasadenej instancii navzdy
+        // zostal stary dopyt a nikto by nevedel, preco zoznam zobrazuje
+        // nespravne veci.
         def existing = menu_item(id)
         if (existing != null) {
             def current = getFilterFromMenuItem(existing)
             def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
-            if (currentQuery == (v.query as String)) {
+            // Porovnava sa dopyt AJ nazov, vratane prekladov. Keby sa porovnaval
+            // len dopyt, uz nasadena instancia by preklady nikdy nedostala:
+            // polozky v nej existuju s tym istym dopytom, takze by sa vzdy
+            // vyhodnotili ako nezmenene a zostali by jednojazycne navzdy.
+            def currentName = current?.dataSet?."i18n_filter_name"?.value
+            def sameName = currentName != null &&
+                    (currentName.defaultValue as String) == (v.name.defaultValue as String) &&
+                    (currentName.translations ?: [:]) == (v.name.translations ?: [:])
+            if (currentQuery == (v.query as String) && sameName) {
                 unchanged << id
                 return
             }
@@ -69,7 +104,7 @@ views.each { v ->
         def item = createFilterInMenu(
                 "service_desk",     // URI cesta - POZOR, je prva, nie identifikator
                 id,                 // menu_item_identifier
-                v.name as String,   // nazov v menu aj nazov filtra
+                v.name,             // nazov v menu aj nazov filtra (I18nString)
                 v.query as String,  // dopyt
                 v.type as String,   // "Case" alebo "Task"
                 [],                 // (nie allowed_nets - to sa tu nastavit neda)
@@ -119,13 +154,13 @@ changeCaseProperty("title").about { summary }
 	</roleRef>
 	<role>
 		<id>manager</id>
-		<title>Vedúci podpory</title>
+		<title name="manager_title">Vedúci podpory</title>
 	</role>
 	<transition>
 		<id>t_menu</id>
 		<x>112</x>
 		<y>80</y>
-		<label>Stav menu</label>
+		<label name="t_menu_label">Stav menu</label>
 		<icon>menu</icon>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
