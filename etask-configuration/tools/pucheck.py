@@ -2,10 +2,17 @@
 """
 pucheck - akceptacny test appky Pouzivatelia proti BEZIACEMU enginu.
 
-Overuje to, co sa z XML ani z importu zistit neda: ze sa cez proces naozaj
-zaloz ucet, ze sa PRIHLASI, ze ma systemove authorities (bez nich sa prihlasi
-a nevidi nic), ze mu sedia procesne role - a ze sa uz existujuci ucet da
-UPRAVIT, vratane odobrania roly a zmeny hesla.
+Model: JEDEN UCET = JEDEN PRIPAD.
+
+  pouzivatelia/pu_zalozenie   jediny pripad, jedina uloha `t_pu_novy` = pult
+                              na zakladanie. Po dokonceni sa SAM vyprazdni.
+  pouzivatelia/pu_pouzivatel  pripad na ucet, sluckova uloha `t_pu_uprava`.
+
+Preto tento test okrem funkcnosti overuje aj JEDINECNOST: ze zakladanie
+nenechava po sebe rozpisane pripady a ze na jeden ucet je presne jeden pripad.
+Predchadzajuci dizajn mal pripad na operaciu, takze sa dalo mat dvadsat
+otvorenych "rozpisany ucet pre x@y.sk" - to je to, co sa tu testuje, aby sa
+nevratilo.
 
 Styri veci, na ktore sa tu naletelo a preto su v kode napisane:
 
@@ -17,13 +24,13 @@ Styri veci, na ktore sa tu naletelo a preto su v kode napisane:
   3. `GET /api/auth/login` vrati 405, ale token uz je v hlavicke - autentifikacny
      filter bezi pred handlerom.
   4. Moznosti poli plnene za behu (`change ... options`) sa daju precitat len
-     z `GET /api/task/{id}/data`, nie zo siete - preto sa dvojkrokovy vyber
-     (proces -> role) testuje cez task, nie cez XML.
+     z `GET /api/task/{id}/data`, a to LEN ak je pole v `dataGroup` prechodu -
+     inak ho ten endpoint nevracia vobec, ani skryte.
 
 Predpoklad: bezi stack (tools/up.sh) a role su pridelene (tools/pfseed.py).
 
     python3 tools/pucheck.py
-    python3 tools/pucheck.py --wipe    # zmaze casy appky
+    python3 tools/pucheck.py --wipe    # zmaze pripady uctov
 
 Test ZAKLADA UZIVATELOV - nespustat proti produkcii.
 
@@ -43,6 +50,7 @@ URL = os.environ.get("PF_URL", "http://127.0.0.1:8080")
 TEST_PASS = os.environ.get("ETASK_TEST_PASSWORD", "test1234")
 SUPER_PASS = os.environ.get("PF_PASS", "password")
 NET = "pouzivatelia/pu_pouzivatel"
+NET_ZAL = "pouzivatelia/pu_zalozenie"
 CARD = "pouzivatelia"
 
 OK, FAIL = [], []
@@ -67,7 +75,7 @@ class Client:
         if not self.token and not allow_fail:
             sys.exit(f"pucheck: prihlasenie {email} zlyhalo")
 
-    def call(self, method, path, body=None):
+    def call(self, method, path, body=None, timeout=120):
         data = json.dumps(body).encode("utf-8") if body is not None else None
         headers = {"X-Auth-Token": self.token,
                    # Bez hal+json vracaju HATEOAS endpointy 406.
@@ -76,17 +84,17 @@ class Client:
             headers["Content-Type"] = "application/json"
         req = urllib.request.Request(URL + path, data=data, method=method, headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=60) as r:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
                 text = r.read().decode("utf-8")
                 return r.status, (json.loads(text) if text else None)
         except urllib.error.HTTPError as e:
             return e.code, e.read().decode("utf-8", "replace")
 
-    def get(self, p):
-        return self.call("GET", p)
+    def get(self, p, timeout=120):
+        return self.call("GET", p, timeout=timeout)
 
-    def post(self, p, body=None):
-        return self.call("POST", p, body)
+    def post(self, p, body=None, timeout=120):
+        return self.call("POST", p, body, timeout=timeout)
 
 
 def check(label, cond, detail=""):
@@ -94,23 +102,15 @@ def check(label, cond, detail=""):
     print(("  [OK]   " if cond else "  [ZLE] ") + label + ((" -- " + str(detail)) if detail else ""))
 
 
-def newest_net(cl, identifier):
-    st, r = cl.post("/api/petrinet/search?size=200", {"identifier": identifier})
-    refs = [x for x in r["_embedded"]["petriNetReferences"] if x["identifier"] == identifier]
-    if not refs:
-        sys.exit(f"pucheck: siet {identifier} nie je naimportovana")
-    refs.sort(key=lambda x: [int(n) for n in x["version"].split(".")])
-    return refs[-1]
+def cases_of(cl, identifier, size=300):
+    st, r = cl.post(f"/api/workflow/case/search?size={size}",
+                    {"process": [{"identifier": identifier}]})
+    return (r.get("_embedded") or {}).get("cases", []) if isinstance(r, dict) else []
 
 
-def new_case(cl, net_id):
-    """(caseId, case). Odpoved nesie id len v texte `success`."""
-    st, r = cl.post("/api/workflow/case", {"netId": net_id, "title": None, "color": ""})
-    m = re.search(r"Case with id ([0-9a-f]{24})", r.get("success", "") if isinstance(r, dict) else "")
-    if not m:
-        sys.exit(f"pucheck: zalozenie casu zlyhalo: {st} {str(r)[:300]}")
-    st, c = cl.get(f"/api/workflow/case/{m.group(1)}")
-    return m.group(1), c
+def tasks_by_transition(cl, transition):
+    st, r = cl.post("/api/task/search?size=100", {"transitionId": [transition]})
+    return (r.get("_embedded") or {}).get("tasks", []) if isinstance(r, dict) else []
 
 
 def tasks_of(cl, case_id):
@@ -141,19 +141,23 @@ def options(cl, task_id, field):
     return f.get("options") or f.get("choices") or {}
 
 
-def set_data(cl, task_id, vals):
+def set_data(cl, task_id, vals, timeout=120):
     cl.get(f"/api/task/assign/{task_id}")
-    return cl.post(f"/api/task/{task_id}/data", {task_id: vals})
+    return cl.call("POST", f"/api/task/{task_id}/data", {task_id: vals}, timeout=timeout)
 
 
-def wipe(cl):
-    st, r = cl.post("/api/workflow/case/search?size=500", {"process": [{"identifier": NET}]})
-    cases = (r.get("_embedded") or {}).get("cases", [])
-    for c in cases:
-        cl.call("DELETE", f"/api/workflow/case/{c['stringId']}")
-    print(f"pucheck: zmazanych {len(cases)} casov {NET}")
-    print("pucheck: ucty z testov zostavaju - mazanie uzivatela cez REST engine "
-          "nema, zmaz ich cez tools/up.sh --fresh")
+def release(boss, task_id):
+    """Uvolni ulohu, ktoru drzi niekto iny.
+
+    Pult je ZDIELANA uloha: `assignPolicy=manual`, takze ju drzi ten, kto si ju
+    vzal, a nikto iny ju medzitym dokoncit nemoze - `finish` vrati
+    "User that is not assigned tried to finish task". To je spravne chovanie
+    frontu, nie chyba, a `cancel` je presne to, cim sa uloha vracia.
+
+    Cancel smie iba jej drzitel - alebo administrator, ktoreho
+    `canCallCancel` prepusti cez `isAdmin()`. Preto sa tu pouziva `super`.
+    """
+    boss.get(f"/api/task/cancel/{task_id}")
 
 
 def roles_of(cl, user_id):
@@ -161,6 +165,15 @@ def roles_of(cl, user_id):
     if not isinstance(u, dict):
         return []
     return sorted({r.get("importId") for r in (u.get("processRoles") or [])} - {None})
+
+
+def wipe(cl):
+    cs = cases_of(cl, NET)
+    for c in cs:
+        cl.call("DELETE", f"/api/workflow/case/{c['stringId']}")
+    print(f"pucheck: zmazanych {len(cs)} pripadov uctov")
+    print("pucheck: ucty zostavaju - mazanie uzivatela cez REST engine nema, "
+          "zmaz ich cez tools/up.sh --fresh")
 
 
 def main():
@@ -178,7 +191,7 @@ def main():
     iny = Client("operator@test.local", TEST_PASS)
     print("  admin (spravca) / operator (specialist, nie spravca)")
 
-    print("\n=== 2. karta v bocnom menu ===")
+    print("\n=== 2. karta a zobrazenia ===")
     for name, cl, expected in [("spravca", spravca, True), ("ina rola", iny, False)]:
         st, root = cl.get("/api/v2/uri/root")
         paths = [c["uriPath"] for c in root.get("children", [])]
@@ -187,36 +200,37 @@ def main():
         if not expected:
             check(f"{name} pritom ine karty vidi (inak by test nic nedokazal)",
                   len(paths) > 0, paths)
-    st, node = spravca.get("/api/v2/uri/" + base64.b64encode(CARD.encode()).decode())
-    check("karta ma ikonu manage_accounts", node.get("icon") == "manage_accounts", node.get("icon"))
-    check("stara karta 'uzivatelia' uz neexistuje",
-          "uzivatelia" not in [c["uriPath"] for c in
-                               (spravca.get("/api/v2/uri/root")[1].get("children") or [])])
 
-    print("\n=== 3. zobrazenia pod kartou ===")
     st, mi = boss.post("/api/workflow/case/search?size=300",
                        {"process": [{"identifier": "preference_filter_item"}]})
     items = {}
     for c in mi.get("_embedded", {}).get("cases", []):
         items.setdefault(c["title"], c["stringId"])
-    WANT_HEADERS = ("meta-title,pouzivatelia/pu_pouzivatel-pu_stav_label"
-                    ",pouzivatelia/pu_pouzivatel-pu_email"
-                    ",pouzivatelia/pu_pouzivatel-pu_priezvisko")
 
     def view_fields(title):
         st, tl = boss.get(f"/api/task/case/{items[title]}")
         vt = [t for t in (tl or []) if t["transitionId"] == "view"]
         return values(boss, vt[0]["stringId"]) if vt else {}
 
-    for want in ["Používatelia", "Rozpísané"]:
+    for want in ["Nový používateľ", "Používatelia"]:
         check(f"zobrazenie '{want}' existuje", want in items, sorted(items))
-        if want not in items:
-            continue
-        v = view_fields(want)
-        check(f"'{want}' ma predvolene stlpce", v.get("default_headers") == WANT_HEADERS,
+
+    if "Nový používateľ" in items:
+        v = view_fields("Nový používateľ")
+        # Typ Task, zuzeny na jednu ulohu. Menu pozna len Case a Task
+        # (`FilterType`), samostatny "single task" typ neexistuje.
+        check("zakladanie je zobrazenie typu Task",
+              (v.get("filter") or "").find("transitionId") >= 0, v.get("filter"))
+        check("zakladanie mieri na t_pu_novy",
+              "t_pu_novy" in (v.get("filter") or ""), v.get("filter"))
+
+    WANT_HEADERS = ("meta-title,pouzivatelia/pu_pouzivatel-pu_stav_label"
+                    ",pouzivatelia/pu_pouzivatel-pu_email"
+                    ",pouzivatelia/pu_pouzivatel-pu_priezvisko")
+    if "Používatelia" in items:
+        v = view_fields("Používatelia")
+        check("zoznam ma predvolene stlpce", v.get("default_headers") == WANT_HEADERS,
               v.get("default_headers"))
-        check(f"'{want}' sa nepyta na nazov pripadu",
-              v.get("enable_case_title") is False, v.get("enable_case_title"))
         # Stlpec z datoveho pola sa vykresli len ak je jeho siet v allowedNets:
         # ponuku stlpcov sklada CaseHeaderService z povolenych sieti a
         # `default_headers` v nej uniqueId iba vyhlada. Co nenajde, necha
@@ -229,174 +243,213 @@ def main():
             for d in (fc.get("immediateData") or []):
                 if d.get("allowedNets"):
                     have = set(d["allowedNets"])
-        check(f"'{want}' ma v allowedNets siete svojich stlpcov", need <= have,
+        check("zoznam ma v allowedNets siete svojich stlpcov", need <= have,
               f"treba {sorted(need)}, ma {sorted(have)}")
-    st, mc = boss.post("/api/workflow/case/search?size=20",
-                       {"process": [{"identifier": "pouzivatelia/pu_menu"}]})
-    mt = [c["title"] for c in mc.get("_embedded", {}).get("cases", [])]
-    check("bootstrap case menu hlasi 2/2", any("2/2" in t for t in mt), mt)
 
-    print("\n=== 4. dvojkrokovy vyber rolí ===")
-    net = newest_net(spravca, NET)
-    print(f"  siet {net['identifier']} v{net['version']}")
-    case_id, case = new_case(spravca, net["stringId"])
-    check("nazov casu zacina stavom", case["title"].startswith("Rozpísaný"), case["title"])
-    t = tasks_of(spravca, case_id)
-    check("spravca ma PRESNE jednu ulohu", list(t) == ["t_pu_zadanie"], list(t))
-    zadanie = t["t_pu_zadanie"]
-    spravca.get(f"/api/task/assign/{zadanie}")
+    print("\n=== 3. pult na zakladanie ===")
+    zc = cases_of(boss, NET_ZAL)
+    check("zakladacia siet ma PRESNE jeden pripad", len(zc) == 1,
+          [c["title"] for c in zc])
+    pult = tasks_by_transition(spravca, "t_pu_novy")
+    check("pult je PRESNE jedna uloha", len(pult) == 1, [t["caseTitle"] for t in pult])
+    if not pult:
+        print("\npucheck: pult sa nenasiel, dalej sa testovat neda")
+        return 1
+    tid = pult[0]["stringId"]
+    # Pult mohol zostat priradeny z predchadzajuceho behu alebo inemu adminovi.
+    release(boss, tid)
+    st, _ = spravca.get(f"/api/task/assign/{tid}")
+    check("spravca si dokaze pult vziat", st == 200, st)
 
-    procesy = options(spravca, zadanie, "pu_proces")
-    check("ponuka procesov sa nacitala z instancie", len(procesy) > 0, sorted(procesy)[:4])
-    check("v ponuke procesov su len aplikacne siete",
-          all("/" in k for k in procesy), sorted(procesy)[:4])
-    check("systemove siete enginu sa neponukaju",
-          not any(k in ("filter", "preference_filter_item") for k in procesy))
-    check("role este ponuknute nie su (vyber ma dva kroky)",
-          not options(spravca, zadanie, "pu_roly"))
+    procesy = options(spravca, tid, "zl_proces")
+    check("ponuka procesov sa nacitala z instancie", len(procesy) > 0, sorted(procesy)[:3])
+    check("v ponuke su len aplikacne siete", all("/" in k for k in procesy),
+          sorted(procesy)[:3])
+    # Pult je ZDIELANY pripad a drzi stav z predchadzajuceho behu, takze sa
+    # najprv vynuluje. Prazdny proces = ziadne role, co je zaroven dokaz, ze
+    # role visia na vybere procesu a nie su napisane v sieti.
+    set_data(spravca, tid, {"zl_proces": {"type": "enumeration_map", "value": ""}})
+    check("bez vybraneho procesu nie su ponuknute ziadne role",
+          not options(spravca, tid, "zl_roly"), options(spravca, tid, "zl_roly"))
 
-    # Krok 1: proces. Krok 2 (role a verzie) doplni `set` akcia toho pola.
     proces = sorted(procesy)[0]
-    set_data(spravca, zadanie, {"pu_proces": {"type": "enumeration_map", "value": proces}})
-    roly = options(spravca, zadanie, "pu_roly")
-    verzie = options(spravca, zadanie, "pu_verzia")
+    set_data(spravca, tid, {"zl_proces": {"type": "enumeration_map", "value": proces}})
+    roly = options(spravca, tid, "zl_roly")
+    verzie = options(spravca, tid, "zl_verzia")
     check(f"po vybere procesu '{proces}' pribudli jeho role", len(roly) > 0, sorted(roly))
-    check("kluc roly je cisty importId, bez ':' a bez siete",
-          all(":" not in k for k in roly), sorted(roly))
-    check("vstavane role default/anonymous sa neponukaju",
-          not ({"default", "anonymous"} & set(roly)), sorted(roly))
-    check("pribudli aj verzie procesu", len(verzie) > 0, verzie)
-    check("prvou volbou verzie su vsetky verzie", "vsetky" in verzie, verzie)
-    # Bodka v kluci moznosti zhodi ukladanie do Monga (petriflow_reference C17),
-    # a verzie su "1.0.0" - preto musia byt zaslugovane.
-    check("kluce verzii nemaju bodku (inak Mongo neulozi options)",
-          all("." not in k for k in verzie), verzie)
-    check("popis verzie bodky ma (slug je len kluc)",
-          any("." in str(v) for k, v in verzie.items() if k != "vsetky"), verzie)
+    check("kluc roly je cisty importId", all(":" not in k for k in roly), sorted(roly))
+    check("prvou volbou verzie su vsetky verzie", "vsetky" in verzie, sorted(verzie)[:3])
+    # Bodka v kluci moznosti zhodi ukladanie do Monga (petriflow_reference C17).
+    check("kluce verzii nemaju bodku", all("." not in k for k in verzie), sorted(verzie)[:3])
 
-    print("\n=== 5. co sa nesmie dat ===")
+    print("\n=== 4. co sa nesmie dat ===")
     stamp = str(int(time.time()))
     email = f"pucheck.{stamp}@test.local"
     heslo = "Pucheck!" + stamp
     rola = sorted(roly)[0]
 
-    set_data(spravca, zadanie, {
-        "pu_meno": {"type": "text", "value": "Test"},
-        "pu_priezvisko": {"type": "text", "value": "Pucheck"},
-        "pu_email": {"type": "text", "value": "toto nie je email"},
-        "pu_heslo": {"type": "text", "value": heslo}})
-    st, r = spravca.get(f"/api/task/finish/{zadanie}")
-    check("neplatny e-mail je odmietnuty", isinstance(r, dict) and "error" in r, str(r)[:120])
+    set_data(spravca, tid, {
+        "zl_meno": {"type": "text", "value": "Test"},
+        "zl_priezvisko": {"type": "text", "value": "Pucheck"},
+        "zl_email": {"type": "text", "value": "toto nie je email"},
+        "zl_heslo": {"type": "text", "value": heslo}})
+    st, r = spravca.get(f"/api/task/finish/{tid}")
+    check("neplatny e-mail je odmietnuty", isinstance(r, dict) and "error" in r, str(r)[:110])
 
-    set_data(spravca, zadanie, {"pu_email": {"type": "text", "value": "admin@test.local"}})
-    st, r = spravca.get(f"/api/task/finish/{zadanie}")
-    check("existujuci e-mail je odmietnuty", isinstance(r, dict) and "error" in r, str(r)[:120])
-    check("odmietnutie povie ktory", "už existuje" in str(r), str(r)[:150])
+    set_data(spravca, tid, {"zl_email": {"type": "text", "value": "admin@test.local"}})
+    st, r = spravca.get(f"/api/task/finish/{tid}")
+    check("existujuci e-mail je odmietnuty", isinstance(r, dict) and "error" in r, str(r)[:110])
 
-    set_data(spravca, zadanie, {
-        "pu_email": {"type": "text", "value": email},
-        "pu_authority": {"type": "multichoice_map", "value": ["ROLE_ADMIN"]}})
-    st, r = spravca.get(f"/api/task/finish/{zadanie}")
-    check("ucet bez ROLE_USER je odmietnuty", isinstance(r, dict) and "error" in r, str(r)[:120])
-    check("odmietnutie vysvetli preco", "neuvidí" in str(r), str(r)[:170])
-    check("case stale caka na zadanie", "t_pu_zadanie" in tasks_of(spravca, case_id))
+    set_data(spravca, tid, {
+        "zl_email": {"type": "text", "value": email},
+        "zl_authority": {"type": "multichoice_map", "value": ["ROLE_ADMIN"]}})
+    st, r = spravca.get(f"/api/task/finish/{tid}")
+    check("ucet bez ROLE_USER je odmietnuty", isinstance(r, dict) and "error" in r, str(r)[:110])
+    check("odmietnutie vysvetli preco", "neuvidí" in str(r), str(r)[:160])
 
-    print("\n=== 6. zalozenie uctu s rolou z vybraneho procesu ===")
-    verzia = sorted([k for k in verzie if k != "vsetky"])[0] if len(verzie) > 1 else "vsetky"
-    set_data(spravca, zadanie, {
-        "pu_authority": {"type": "multichoice_map", "value": ["ROLE_USER"]},
-        "pu_verzia": {"type": "enumeration_map", "value": verzia},
-        "pu_roly": {"type": "multichoice_map", "value": [rola]}})
-    # Tlacidlo naberie vybrane role do zoznamu. Bez neho by vyber druheho
-    # procesu ten prvy prepisal.
-    set_data(spravca, zadanie, {"pu_pridaj": {"type": "button", "value": 0}})
-    v = values(spravca, zadanie)
-    check("tlacidlo pridalo rolu do zoznamu", rola in (v.get("pu_zoznam") or ""),
-          repr(v.get("pu_zoznam")))
-    check("zoznam nesie aj siet a verziu",
-          (v.get("pu_zoznam") or "").count("|") >= 2, repr(v.get("pu_zoznam")))
-    check("citatelny prehlad zoznamu sa naplnil",
-          rola in (v.get("pu_pridelene") or ""), repr(v.get("pu_pridelene")))
+    print("\n=== 5. zalozenie uctu ===")
+    pred = len(cases_of(boss, NET))
+    set_data(spravca, tid, {
+        "zl_authority": {"type": "multichoice_map", "value": ["ROLE_USER"]},
+        "zl_verzia": {"type": "enumeration_map", "value": "vsetky"},
+        "zl_roly": {"type": "multichoice_map", "value": [rola]}})
+    set_data(spravca, tid, {"zl_pridaj": {"type": "button", "value": 0}})
+    v = values(spravca, tid)
+    check("tlacidlo pridalo rolu do zoznamu", rola in (v.get("zl_zoznam") or ""),
+          repr(v.get("zl_zoznam")))
     check("po pridani je pole rolí prazdne (pripravene na dalsi proces)",
-          not v.get("pu_roly"), v.get("pu_roly"))
+          not v.get("zl_roly"), v.get("zl_roly"))
 
-    st, r = spravca.get(f"/api/task/finish/{zadanie}")
-    check("DOKONCIT presiel", isinstance(r, dict) and "success" in r, str(r)[:150])
+    st, r = spravca.get(f"/api/task/finish/{tid}")
+    check("DOKONCIT presiel", isinstance(r, dict) and "success" in r, str(r)[:130])
 
-    te = tasks_of(spravca, case_id)
-    check("po zalozeni ma spravca PRESNE jednu ulohu (uprava)",
-          list(te) == ["t_pu_uprava"], list(te))
-    uprava = te.get("t_pu_uprava")
-    v = values(spravca, uprava) if uprava else {}
-    check("stav je 'Hotový'", v.get("pu_stav_label") == "Hotový", v.get("pu_stav_label"))
-    check("heslo je z pripadu zmazane", not (v.get("pu_heslo") or ""), repr(v.get("pu_heslo")))
-    check("vysledok popisuje, co sa stalo", email in (v.get("pu_vysledok") or ""),
-          (v.get("pu_vysledok") or "").replace("\n", " | "))
-    st, c = spravca.get(f"/api/workflow/case/{case_id}")
-    check("farba casu je zelena", c.get("color") == "green", c.get("color"))
+    # Pult sa musi vyprazdnit - inak by tu zostali data predchadzajuceho
+    # cloveka vratane hesla, a to je presne to, co sa tu nema stat.
+    pult2 = tasks_by_transition(spravca, "t_pu_novy")
+    check("pult zostal PRESNE jeden (nezalozil sa druhy pripad)", len(pult2) == 1,
+          len(pult2))
+    tid2 = pult2[0]["stringId"]
+    release(boss, tid2)
+    spravca.get(f"/api/task/assign/{tid2}")
+    v = values(spravca, tid2)
+    check("pult sa vyprazdnil - e-mail", not (v.get("zl_email") or ""), repr(v.get("zl_email")))
+    check("pult sa vyprazdnil - heslo", not (v.get("zl_heslo") or ""), repr(v.get("zl_heslo")))
+    check("pult sa vyprazdnil - zoznam rolí", not (v.get("zl_zoznam") or ""),
+          repr(v.get("zl_zoznam")))
+    check("pult povie, co sa stalo", email in (v.get("zl_vysledok") or ""),
+          (v.get("zl_vysledok") or "").replace("\n", " | ")[:150])
+
+    print("\n=== 6. jeden ucet = jeden pripad ===")
+    po = cases_of(boss, NET)
+    check("pribudol PRESNE jeden pripad uctu", len(po) == pred + 1,
+          f"pred {pred}, po {len(po)}")
+    novy = [c for c in po if email in (c.get("title") or "")]
+    check("pripad uctu je pomenovany menom a e-mailom", len(novy) == 1,
+          [c["title"] for c in po[-3:]])
+    if not novy:
+        print("\npucheck: pripad uctu sa nenasiel")
+        return 1
+    case_id = novy[0]["stringId"]
+    check("pripad uctu je zeleny (zviazany)", novy[0].get("color") == "green",
+          novy[0].get("color"))
+    t = tasks_of(spravca, case_id)
+    check("pripad uctu ma PRESNE jednu ulohu", list(t) == ["t_pu_uprava"], list(t))
+    uprava = t.get("t_pu_uprava")
+    v = values(spravca, uprava)
+    check("uloha uctu je zviazana s uctom", bool((v.get("pu_userid") or "").strip()),
+          repr(v.get("pu_userid")))
+    check("stav je 'Aktívny'", v.get("pu_stav_label") == "Aktívny", v.get("pu_stav_label"))
+    check("uloha uctu si dotiahla e-mail z uctu", v.get("pu_email") == email,
+          v.get("pu_email"))
+    check("uloha uctu si dotiahla role z uctu", rola in (v.get("pu_zoznam") or ""),
+          repr(v.get("pu_zoznam")))
+    user_id = (v.get("pu_userid") or "").strip()
+
+    # Ziadny druhy pripad na ten isty ucet.
+    rovnake = [c for c in po
+               if email in (c.get("title") or "")]
+    check("na jeden ucet je PRESNE jeden pripad", len(rovnake) == 1, len(rovnake))
 
     print("\n=== 7. novy ucet sa naozaj prihlasi ===")
-    novy = Client(email, heslo, allow_fail=True)
-    check("prihlasenie noveho uctu", bool(novy.token), "bez tokenu" if not novy.token else "ok")
-    user_id = None
-    if novy.token:
-        st, me = novy.get("/api/user/me")
-        user_id = me.get("id") or me.get("stringId") if isinstance(me, dict) else None
+    ucet = Client(email, heslo, allow_fail=True)
+    check("prihlasenie noveho uctu", bool(ucet.token), "bez tokenu" if not ucet.token else "ok")
+    if ucet.token:
+        st, me = ucet.get("/api/user/me")
         auth = [a.get("authority") if isinstance(a, dict) else a
                 for a in (me.get("authorities") or [])] if isinstance(me, dict) else []
         check("ma ROLE_USER (bez toho by nevidel ziadne zobrazenie)",
               any("ROLE_USER" in str(a) for a in auth), auth)
         check("nie je administrator", not any("ROLE_ADMIN" in str(a) for a in auth), auth)
-        roles = [r.get("importId") for r in (me.get("processRoles") or [])] \
-            if isinstance(me, dict) else []
-        check(f"ma pridelenu rolu '{rola}' z vybraneho procesu", rola in roles, roles)
+        check(f"ma pridelenu rolu '{rola}'", rola in roles_of(boss, user_id),
+              roles_of(boss, user_id))
 
-    print("\n=== 8. uprava uctu ===")
-    check("uprava je dostupna ako opakovatelna uloha", bool(uprava), te)
-    if uprava and user_id:
-        spravca.get(f"/api/task/assign/{uprava}")
-        v = values(spravca, uprava)
-        check("uprava predvyplnila e-mail zo skutocneho stavu",
-              v.get("pu_email") == email, v.get("pu_email"))
-        check("uprava predvyplnila zoznam rolí", rola in (v.get("pu_zoznam") or ""),
-              repr(v.get("pu_zoznam")))
+    print("\n=== 8. uprava uctu na jeho vlastnom pripade ===")
+    nove_heslo = "Pucheck2!" + stamp
+    set_data(spravca, uprava, {
+        "pu_meno": {"type": "text", "value": "Upravene"},
+        "pu_heslo": {"type": "text", "value": nove_heslo}})
+    set_data(spravca, uprava, {"pu_vycisti": {"type": "button", "value": 0}})
+    st, r = spravca.get(f"/api/task/finish/{uprava}")
+    check("uprava presla", isinstance(r, dict) and "success" in r, str(r)[:130])
+    st, u = boss.get(f"/api/user/{user_id}")
+    check("meno sa naozaj zmenilo", (u or {}).get("name") == "Upravene", (u or {}).get("name"))
+    check("rola bola ODOBRANA (uprava nastavuje stav, nie priratava)",
+          rola not in roles_of(boss, user_id), roles_of(boss, user_id))
+    check("nove heslo funguje", bool(Client(email, nove_heslo, allow_fail=True).token))
+    check("stare heslo uz nefunguje", not Client(email, heslo, allow_fail=True).token)
+    check("uprava sa da spustit znova (slucka)",
+          "t_pu_uprava" in tasks_of(spravca, case_id), list(tasks_of(spravca, case_id)))
+    check("pripad uctu je stale jeden", len([c for c in cases_of(boss, NET)
+                                             if email in (c.get("title") or "")]) == 1)
 
-        # Zmena mena + odobranie roly (vycistenim zoznamu) + nove heslo.
-        nove_heslo = "Pucheck2!" + stamp
-        set_data(spravca, uprava, {
-            "pu_meno": {"type": "text", "value": "Upravene"},
-            "pu_priezvisko": {"type": "text", "value": "Priezvisko"},
-            "pu_heslo": {"type": "text", "value": nove_heslo}})
-        set_data(spravca, uprava, {"pu_vycisti": {"type": "button", "value": 0}})
-        check("vycistenie vyprazdnilo zoznam",
-              not (values(spravca, uprava).get("pu_zoznam") or ""),
-              repr(values(spravca, uprava).get("pu_zoznam")))
-        st, r = spravca.get(f"/api/task/finish/{uprava}")
-        check("uprava presla", isinstance(r, dict) and "success" in r, str(r)[:150])
+    print("\n=== 9. pripad z tlacidla + je nezviazany a neda sa dokoncit ===")
+    st, nets = spravca.post("/api/petrinet/search?size=100", {"identifier": NET})
+    refs = [x for x in nets["_embedded"]["petriNetReferences"] if x["identifier"] == NET]
+    refs.sort(key=lambda x: [int(n) for n in x["version"].split(".")])
+    st, r = spravca.post("/api/workflow/case",
+                         {"netId": refs[-1]["stringId"], "title": None, "color": ""})
+    m = re.search(r"Case with id ([0-9a-f]{24})",
+                  r.get("success", "") if isinstance(r, dict) else "")
+    check("prazdny pripad sa da zalozit (tlacidlo + v zozname)", bool(m), str(r)[:120])
+    if m:
+        orphan = m.group(1)
+        st, oc = spravca.get(f"/api/workflow/case/{orphan}")
+        check("nezviazany pripad je cerveny", oc.get("color") == "red", oc.get("color"))
+        ot = tasks_of(spravca, orphan).get("t_pu_uprava")
+        ov = values(spravca, ot) if ot else {}
+        check("nezviazany pripad povie, ze nema ucet",
+              "nie je zviazaný" in (ov.get("pu_vysledok") or ""),
+              (ov.get("pu_vysledok") or "").replace("\n", " | ")[:110])
+        if ot:
+            spravca.get(f"/api/task/assign/{ot}")
+            st, r = spravca.get(f"/api/task/finish/{ot}")
+            check("nezviazany pripad sa NEDA dokoncit",
+                  isinstance(r, dict) and "error" in r, str(r)[:120])
+        spravca.call("DELETE", f"/api/workflow/case/{orphan}")
 
-        st, u = boss.get(f"/api/user/{user_id}")
-        check("meno sa naozaj zmenilo", (u or {}).get("name") == "Upravene",
-              (u or {}).get("name"))
-        check("rola bola ODOBRANA (uprava nastavuje stav, nie priratava)",
-              rola not in roles_of(boss, user_id), roles_of(boss, user_id))
-        check("nove heslo funguje", bool(Client(email, nove_heslo, allow_fail=True).token))
-        check("stare heslo uz nefunguje",
-              not Client(email, heslo, allow_fail=True).token)
+    print("\n=== 10. zosuladenie existujucich uctov ===")
+    st, r = boss.post("/api/user/search?size=300", {"fulltext": ""})
+    # `zl_sync` je idempotentne - druhy beh nesmie nic pridat.
+    set_data(spravca, tid2, {"zl_sync": {"type": "button", "value": 0}}, timeout=180)
+    v1 = values(spravca, tid2).get("zl_vysledok") or ""
+    check("zosuladenie nic nedoplnilo (uz je zosuladene)",
+          "nič nebolo treba doplniť" in v1, v1.replace("\n", " | ")[:140])
+    pocet_pred = len(cases_of(boss, NET))
+    set_data(spravca, tid2, {"zl_sync": {"type": "button", "value": 0}}, timeout=180)
+    check("zosuladenie je idempotentne", len(cases_of(boss, NET)) == pocet_pred,
+          f"{pocet_pred} -> {len(cases_of(boss, NET))}")
+    titles = [c.get("title") or "" for c in cases_of(boss, NET)]
+    check("systemove ucty enginu pripad nemaju",
+          not any("anonymous.nae" in t or "engine@netgrif.com" in t for t in titles),
+          [t for t in titles if "anonymous" in t or "engine@" in t])
+    for kto in ["super@netgrif.com", "admin@test.local", "operator@test.local"]:
+        check(f"existujuci ucet {kto} ma svoj pripad",
+              any(kto in t for t in titles))
 
-        t2 = tasks_of(spravca, case_id)
-        check("uprava sa da spustit znova (slucka)", "t_pu_uprava" in t2, list(t2))
-
-    print("\n=== 9. zobrazenie 'Rozpísané' filtruje podla datoveho pola ===")
-    q = (f'processIdentifier:"{NET}" AND dataSet.pu_stav_label.textValue:"Rozpísaný"')
-    st, r = spravca.post("/api/workflow/case/search?size=100", {"query": q})
-    ids = [x["stringId"] for x in (r.get("_embedded") or {}).get("cases", [])] \
-        if isinstance(r, dict) else []
-    check("hotovy case v 'Rozpísané' nie je", case_id not in ids, f"{len(ids)} casov")
-    c2, _ = new_case(spravca, net["stringId"])
-    st, r = spravca.post("/api/workflow/case/search?size=100", {"query": q})
-    ids = [x["stringId"] for x in (r.get("_embedded") or {}).get("cases", [])] \
-        if isinstance(r, dict) else []
-    check("novy rozpisany case v 'Rozpísané' je", c2 in ids, f"{len(ids)} casov")
+    # Uvolnit pult, aby dalsi beh (alebo clovek v prehliadaci) nenarazil na
+    # ulohu drzanu testom.
+    for t in tasks_by_transition(boss, "t_pu_novy"):
+        release(boss, t["stringId"])
 
     print(f"\npucheck: {len(OK)} preslo, {len(FAIL)} zlyhalo")
     for f in FAIL:

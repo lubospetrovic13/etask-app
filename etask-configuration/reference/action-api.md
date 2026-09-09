@@ -82,6 +82,12 @@ Volba "vsetky verzie" v `processVersionOptions`. */
 ### `userOptions()`
 Pouzivatelia instancie, ako mapa id -> "Meno Priezvisko (e-mail)".
 
+### `isRealUser(IUser user)`
+Je to ucet cloveka, alebo sluzobny ucet enginu?
+
+### `authorityOptions()`
+Systemove authorities instancie, ako mapa nazov -> popis.
+
 ### `userSnapshot(String userId)`
 Aktualny stav uctu, na predvyplnenie formulara pri uprave.
 
@@ -92,7 +98,7 @@ Zmena mena a priezviska existujuceho uctu.
 Nastavi systemove authorities uctu na presne tento zoznam.
 
 ### `callAIToolByConfig(Map params)`
-"1.0.0" -> Version. Trieda `Version` ma len @AllArgsConstructor, ziadne
+`stringId` roly -> identifikator siete, pre vsetky aplikacne siete
 
 > **Pozor na `createOrUpdateMenuItem`.** Existuje dvakrát: tu (7–9 argumentov,
 > funkčná update cesta cez `changeFilter`/`changeMenuItem`) a v enginu

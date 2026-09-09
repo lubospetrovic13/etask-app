@@ -33,10 +33,12 @@
     "sd_menu.xml",
 
     "pu_pouzivatel.xml",
+    "pu_zalozenie.xml",
     "pu_menu.xml"
   ],
   "bootstrapCase": [
     "service_desk/sd_menu",
+    "pouzivatelia/pu_zalozenie",
     "pouzivatelia/pu_menu"
   ],
   "uriNodes": {
