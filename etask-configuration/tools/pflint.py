@@ -279,7 +279,7 @@ def lint(path):
     # `AbstractUserService.removeRole(IUser, String roleStringId)` hlada rolu
     # cez `findByImportId`, teda podla importId, hoci parameter je stringId.
     # Nenajde nic, neodoberie nic, ulozi nezmeneny dokument - bez chyby a bez
-    # logu. (PETRIFLOW_LEARNINGS.md, B9.)
+    # logu. (PETRIFLOW_LEARNINGS.md B18, ENGINE_ISSUES.md E1.)
     for a in findall(root, "action"):
         body = strip_comments(strip_strings(a.text or ""))
         if re.search(r"\bremoveRole\s*\(", body):

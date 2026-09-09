@@ -14,7 +14,7 @@
 		     ("Map key 1.0.0 contains dots but no replacement was configured")
 		  2. `removeRole(...)`        -> v 6.3.1 rolu NEODOBERIE a nic nepovie
 		     (AbstractUserService hlada rolu podla importId, hoci parameter je
-		     stringId; PETRIFLOW_LEARNINGS B9)
+		     stringId; PETRIFLOW_LEARNINGS B18)
 		  3. URI cesta polozky menu, ktora nie je v `uriNodes` v processes.json
 		     -> polozka vznikne, ale nema kartu, na ktorej by bola vidno
 	-->

@@ -1,6 +1,16 @@
 # Čo `petriflow_reference.md` nepokrýva alebo pokrýva nesprávne
 
 Zistené počas jedného POC na Netgrif Platform 6.3.1, single-tenant, lokálne nasadenie.
+
+**Toto je druhá z dvoch kôp.** Sú tu veci, ktoré platia — engine sa správa
+korektne, len to nikde nestojí, alebo to príručka tvrdí inak. Znalosť z tejto
+kopy je trvalá a patrí do dokumentácie. Prvá kopa — **defekty**, kde sa engine
+alebo knižnica odlišuje od vlastného modelu — je v `ENGINE_ISSUES.md`; každý
+riadok tam prestane platiť v momente, keď sa to opraví, a to je aj cieľ.
+
+Záznamy, ktoré patria do oboch, sú označené `→ ENGINE_ISSUES E*`: tu je napísané,
+ako sa tomu vyhnúť dnes, tam ako to opraviť.
+
 Zdroje sú tri a je dobré ich odlíšiť:
 
 - **Za behu** — chyba alebo správanie, ktoré sme videli v aplikácii
@@ -219,6 +229,8 @@ transition**, nie jedného miesta do viacerých transition.
 
 ### B8b. Read arc na KONZUMOVANOM miesta nepreži odmietnuté `finish`
 
+→ `ENGINE_ISSUES.md` **E8**. Návrat tokenu by mal zmazané úlohy obnoviť.
+
 Trvale otvorený read-only pohľad sa dá zavesiť na read arc z ktoréhokoľvek miesta.
 Kým to miesto nikto nekonzumuje (`p_alive` v `sd_ticket`), je to bezpečné. Keď ho
 konzumuje iný prechod, je to **mína**:
@@ -382,10 +394,13 @@ Tri pasce navyše:
 * **`createOrUpdateCaseMenuItem` má iné poradie** (identifikátor je prvý, URI druhé)
   a ak URI neexistuje, **vytvorí ho** — takže omylom pribudnú uzly ako `sd_tickets`
   na úrovni rootu. Uzly žijú v Elasticsearch (`etask_uri`), nie v Mongu, takže sa
-  potom musí zmazať aj dokument uzla aj `childrenId` v rodičovi.
+  potom musí zmazať aj dokument uzla aj `childrenId` v rodičovi — a REST na to
+  neexistuje (→ `ENGINE_ISSUES.md` **E7**, recept v `RUNBOOK.md` časť 2).
 * **Update cesta je v 6.3.1 rozbitá**: `createOrUpdate*MenuItem` na existujúcej
   položke volá neexistujúce `updateFilter(Case, Map)` a spadne. Idempotenciu si preto
   treba spraviť ručne: `if (findMenuItem(id) != null) return`.
+  (→ `ENGINE_ISSUES.md` **E6**; tam je aj to, že `deleteMenuItem` nechá osirelý filter,
+  takže poradie zahodenia je `deleteMenuItem` → `deleteFilter`.)
 * **`allowed_nets` sa cez `createFilterInMenu` nastaviť nedá** — ani identifikátormi
   sietí, ani ich stringId. Ovplyvňuje to len tlačidlo „nový prípad" v zobrazení.
 
@@ -428,7 +443,9 @@ preklep spadne až za behu. To nie je argument proti rozširovaniu — je to
 argument za to, aby bol inventár aktuálny (`pfapi --check` v `pftest.sh`).
 
 
-### B9. `removeRole` z ActionDelegate procesnú rolu NEODOBERIE (engine 6.3.1)
+### B18. `removeRole` z ActionDelegate procesnú rolu NEODOBERIE (engine 6.3.1)
+
+→ `ENGINE_ISSUES.md` **E1**. `findByImportId` tam, kde má byť `findById`.
 
 Pridelenie funguje, odobranie nie — a mlčí. Príčina je v engine:
 
@@ -471,7 +488,7 @@ context. Bez toho si prihlásená session odobranú rolu podrží až do odhlás
 *Nájdené tak, že akcia nahlásila „odobraná rola" a rola tam po nej stále bola.
 Regresia je v `tools/pucheck.py`.*
 
-### B10. Účet sa nesmie držať ako objekt cez viac zmien
+### B19. Účet sa nesmie držať ako objekt cez viac zmien
 
 Každá zmena používateľa je `read – mutuj – save` **celého** dokumentu. Kto si
 `IUser` podrží a spraví cez neho dve zmeny za sebou, druhou prepíše výsledok
@@ -486,7 +503,9 @@ sa im podal.
 
 Pravidlo: primitíva na zmenu účtu berú `userId` a účet si načítajú samy.
 
-### B11. `change <pole> options { }` v `create` udalosti prípadu sa neuchová
+### B20. `change <pole> options { }` v `create` udalosti prípadu sa neuchová
+
+→ `ENGINE_ISSUES.md` **E4**. Zmena z `create` udalosti sa zahodí bez slova.
 
 Na čerstvo založenom prípade sú `options` toho poľa **prázdne**. Overené:
 prípad založený cez `POST /api/workflow/case` má po `create` akcii, ktorá
@@ -506,7 +525,7 @@ Could not parse value of field [pu_authority], value [[ROLE_ADMIN, ROLE_USER]]
 
 Pravidlo: **možnosti nastavuj tam, kde zapisuješ hodnotu**, nie v `create`.
 
-### B12. `assignPolicy=auto` na zdieľanej úlohe priradí úlohu tomu, kto ju vyrobil
+### B21. `assignPolicy=auto` na zdieľanej úlohe priradí úlohu tomu, kto ju vyrobil
 
 A pri `bootstrapCase` je to `engine@netgrif.com`. Všetci ostatní potom na
 `finish` dostanú:
@@ -525,7 +544,9 @@ a úlohu **uvoľní** — nezruší ju ani nezmaže. Zákaz `cancel` znamená, �
 priradenú úlohu nemá kto pustiť. Zrušiť ju smie len jej držiteľ, alebo
 `ROLE_ADMIN`, ktorého `canCallCancel` prepustí cez `isAdmin()`.
 
-### B13. `immediate` na `multichoice_map` s runtime možnosťami zhodí indexáciu
+### B22. `immediate` na `multichoice_map` s runtime možnosťami zhodí indexáciu
+
+→ `ENGINE_ISSUES.md` **E5**. NPE v `collectTranslations` na možnosti bez prekladu.
 
 ```
 ERROR WorkflowService : Indexing failed [<caseId>]
@@ -630,3 +651,38 @@ príručky by znamenalo vydávať domnienky za pravidlá.
 Výnimka, ktorá by si doplnenie zaslúžila, keď sa overí: **B7** (ikonu buttonu sa z akcie
 zmeniť nedá, takže jednotlačidlový prepínač neprepne strelku) — to je reálne obmedzenie,
 len sme netestovali všetky tri varianty riešenia.
+
+---
+
+## E. Kde skončila ktorá kopa
+
+Rozdelenie nie je poriadkumilovnosť. Tieto dve kopy majú **iného adresáta a inú
+životnosť**, a kým boli v jednom súbore, čítalo sa to ako jeden dlhý zoznam
+dôvodov, prečo si dávať pozor — takže sa podľa toho nedalo nič urobiť.
+
+| | druhá kopa (tu) | prvá kopa (`ENGINE_ISSUES.md`) |
+|---|---|---|
+| čo to je | správanie, ktoré platí | defekt oproti vlastnému modelu |
+| adresát | kto na platforme stavia | kto platformu vyvíja |
+| životnosť | trvalá | zanikne opravou |
+| čo s tým | naučiť sa, dať do príručky, dať do `pflint` | nahlásiť s reprodukciou |
+
+**V prvej kope je 14 záznamov** (E1–E14). Štyri z nich sú aj tu, lebo dokým
+oprava nie je, treba ich obchádzať: E1 (`removeRole`, tu B18), E4 (`change
+options` v `create`, tu B20), E5 (`immediate` na `multichoice_map`, tu B22),
+E8 (read arc na konzumovanom miesta, tu B8b) a dve podčasti E6/E7 v B15.
+
+Zvyšok prvej kopy sa tu nikdy neobjavil, lebo to nie sú pasce Petriflow —
+sú to chyby vrstiev pod ním a nájdete ich v `FRONTEND_LEARNINGS.md`,
+`RUNBOOK.md` alebo len v tomto commite: Task zobrazenia obchádzajú vlastné
+komponenty appky, titulky udalostí sa nedostanú ku klientovi, `password`
+komponent posiela base64 bez serverového protikusu, `GET /api/task/case/{id}`
+neoveruje `view`, import vracia holé `{"status":500}`, `GET /api/auth/login`
+vracia 405, sieť s diakritikou pri JVM bez UTF-8 nemá uložené XML, `PdfRunner`
+asserts na relatívne cesty.
+
+**Čo z toho vzniklo v nástrojoch.** Každý záznam z ktorejkoľvek kopy, ktorý sa
+dá skontrolovať staticky, má byť pravidlo, nie odsek — inak sa naň spolieha
+pamäť. Zatiaľ takto skončili B1 (`option-key-mongo`), B18 (`engine-remove-role`),
+B15 (`menu-uri-unknown`) a B5 (poradie `desc`). To je stále menšina; ostatné
+sa staticky skontrolovať nedajú a jediná obrana je import do bežiaceho enginu.

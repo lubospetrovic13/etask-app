@@ -208,6 +208,7 @@ etask-configuration/
   docs/
     petriflow_reference.md    jazyková referencia
     PETRIFLOW_LEARNINGS.md    čo referencia nepokrýva alebo tvrdí zle
+    ENGINE_ISSUES.md          defekty enginu/knižnice — obídenie + návrh opravy
     SERVICE_DESK.md           worked example: eForm, SLA, per-org oprávnenia
     AI_STARTER_ANALYSIS.md    prečo je repozitár takto postavený
   tools/                up.sh, pflint, pfgroovy, pfview, pfcheck, pftest, pfapi, pfseed

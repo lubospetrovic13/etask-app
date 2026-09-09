@@ -532,9 +532,9 @@ A ešte tri, ktoré nie sú o používateľoch, ale bijú práve tu:
   videl — `GET /api/task/{id}/data` vracia len polia z dataGroup, takže inak ho
   nevidí ani test, ani nikto, kto sa prípadu pýta cez API.
 * **Zdieľaná úloha nesmie mať `assignPolicy=auto`** a nesmie mať zakázaný
-  `cancel` (`PETRIFLOW_LEARNINGS.md`, B12).
+  `cancel` (`PETRIFLOW_LEARNINGS.md`, B21).
 * **Možnosti poľa nastavuj tam, kde zapisuješ hodnotu**, nie v `create`
-  udalosti prípadu — tam sa neuchovajú (B11).
+  udalosti prípadu — tam sa neuchovajú (B20).
 
 **Entita verzus úkon.** Keď appka spravuje niečo, čo existuje aj bez nej —
 používateľské účty, zariadenia, zmluvy — prípad má byť **na tú entitu**, nie na

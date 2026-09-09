@@ -153,7 +153,7 @@ changeCaseProperty("color").about { "grey" }
 		<!--
 			`auto` je v poriadku na OSOBNU ulohu jedneho aktera. Na zdielanu
 			(pult, front, prepazka) patri `manual` - auto ju priradi tomu, kto
-			ju vyrobil (PETRIFLOW_LEARNINGS B12).
+			ju vyrobil (PETRIFLOW_LEARNINGS B21).
 		-->
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
