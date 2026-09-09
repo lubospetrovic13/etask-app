@@ -602,6 +602,47 @@ iný, takže „Podať" / „Submit" je jeden riadok v bloku `<i18n>`. Prázdny 
 potrebuje prázdny preklad v každom jazyku, inak sa tlačidlo v druhom jazyku
 vráti.
 
+### B24. Bez `Accept-Language` odpovedá engine v jazyku JVM, nie default hodnotou
+
+Intuícia hovorí, že bez hlavičky sa vráti to, čo je v XML. Nevráti.
+
+```java
+public String getTranslation(Locale locale) {
+    if (locale == null) return defaultValue;
+    return getTranslation(locale.getLanguage());      // translations.getOrDefault(...)
+}
+```
+
+Spring `Locale` z požiadavky bez hlavičky **nie je `null`** — je to locale JVM.
+Na tomto stroji `en`, takže engine vráti anglický preklad. Namerané na
+`/api/petrinet/{id}/roles`:
+
+| `Accept-Language` | `name` |
+|---|---|
+| (žiadna) | `User administrator` |
+| `sk` | `Správca používateľov` |
+| `en` | `User administrator` |
+| `zz`, `und`, `qq-QQ`, `x-default` | `Správca používateľov` |
+
+**Dôsledok pre nástroje a testy:** čokoľvek, čo porovnáva reťazec z modelu
+s lokálnym XML, musí locale **pripnúť** — a nie na `sk`, lebo to predpokladá,
+že default hodnota je slovenská. Pripnúť treba **neznámy jazyk**: `getOrDefault`
+potom spadne na `defaultValue`, teda presne na to, čo je v XML, bez ohľadu na
+to, akým jazykom je napísané.
+
+```python
+req.add_header("Accept-Language", "zz")     # => defaultValue
+```
+
+Ako sa to prejavilo: `pfseed` páruje procesné role podľa názvu. Po doplnení
+prekladov prestalo párovanie sedieť, `pfseed` ohlásil „cieľový stav platí"
+a rolu z najnovšej verzie siete nikomu nepridelil. Prihlásenie fungovalo, karta
+appky bola vidno, len zoznam úloh bol prázdny. Zachytil to `pucheck.py`.
+
+Platí to aj naopak: appka, ktorá vyzerá anglicky bez toho, aby si to niekto
+zapol, nie je pokazená — len klient neposiela hlavičku. V portáli ju posiela
+`TranslateInterceptor` knižnice.
+
 ## C. Mimo Petriflow, ale stálo to čas
 
 ### C1. Groovy nekontroluje volania metód pri kompilácii

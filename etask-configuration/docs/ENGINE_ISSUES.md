@@ -449,6 +449,31 @@ ostáva rovnaká, takže je to spätne kompatibilné.
 
 ---
 
+## E17. Nabídka stĺpcov sa pri zmene jazyka neobnoví
+
+**Príznak.** Portál sa prepne do angličtiny, ale hlavičky stĺpcov postavené
+z dátových polí zostanú v pôvodnom jazyku. Po načítaní stránky sú správne.
+
+**Príčina.** `AbstractHeaderService` si `fieldsGroup` — nabídku stĺpcov
+odvodenú z polí povolených sietí — načíta raz a drží. Preklad prichádza zo
+servera podľa `Accept-Language`, takže po prepnutí by stačilo znova sa spýtať,
+ale servis na to nemá verejné miesto: `initializeHeaderState` a
+`initializeDefaultHeaderState` pracujú nad už načítaným `fieldsGroup`.
+
+**Dôkaz.** Namerané na zobrazení dovoleniek: po prepnutí `Stav | Dátum od |
+Dátum do`, po reloade `Status | Date from | Date to`. Meta stĺpec `Názov` ↔
+`Title` sa pritom prepne hneď — ten ide cez `translate` pipe.
+
+**Obídenie.** Načítať stránku. `location.reload()` z prepínača by to vyriešilo
+jednou riadkou, ale zahodí rozpísaný formulár v otvorenej úlohe, takže sa to
+nerobí.
+
+**Návrh opravy.** Buď verejná metóda, ktorá nabídku znova načíta, alebo
+odber `LanguageService.getLangChange$()` v samotnom servise — rovnako, ako to
+musí robiť každý komponent, ktorý drží preložený reťazec.
+
+---
+
 ## Čo s tým
 
 Najviac stojí **E1** — znemožňuje celú jednu operáciu — a **E2**, ktoré robí

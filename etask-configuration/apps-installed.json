@@ -1,0 +1,22 @@
+{
+  "dovolenky": {
+    "source": "C:\\Users\\petro\\IdeaProjects\\etask-app-dovolenky",
+    "title": "Dovolenky",
+    "processes": [
+      "dv_ziadost.xml",
+      "dv_menu.xml"
+    ],
+    "tools": [
+      "dvcheck.py"
+    ],
+    "bootstrapCase": [
+      "dovolenky/dv_menu"
+    ],
+    "uriNodes": [
+      "dovolenky"
+    ],
+    "netScope": [
+      "dovolenky/*"
+    ]
+  }
+}

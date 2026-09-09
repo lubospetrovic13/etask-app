@@ -672,6 +672,33 @@ bloku napíše slovenskú hodnotu s prefixom `TODO `. Tie `TODO` hlási kontrola
 ako upozornenie — preklad, ktorý nikto nepreložil, má byť vidno, inak sa
 „dvojjazyčná" appka odlišuje od jednojazyčnej len tým, že má dvakrát to isté.
 
+### Čo sa pri prepnutí neprekreslí hneď
+
+Prepnutie jazyka prekreslí chróm portálu, názvy priečinkov aj názvy zobrazení
+v ľavom menu. **Hlavičky stĺpcov z dátových polí sa prepnú až po načítaní
+stránky.** Knižnica si nabídku stĺpcov (`AbstractHeaderService.fieldsGroup`)
+načíta raz a nemá verejný spôsob, ako ju obnoviť; namerané — po prepnutí
+zostalo „Stav | Dátum od", po reloade bolo „Status | Date from".
+
+Nechané tak zámerne. Alternatívy sú horšie: `location.reload()` pri prepnutí
+zahodí rozpísaný formulár v otvorenej úlohe, a prebiť knižničný servis by
+znamenalo držať kópiu jeho stavu. Zastaraná hlavička stĺpca je menšia škoda než
+stratené dáta. Zapísané ako `ENGINE_ISSUES.md` E17.
+
+### Nástroje a testy musia pripnúť locale
+
+Bez hlavičky `Accept-Language` engine **neodpovedá default hodnotou z XML** —
+odpovedá v jazyku JVM (tu `en`). Každý nástroj alebo test, ktorý porovnáva
+reťazec z modelu s lokálnym XML, preto posiela locale, ktoré engine nepozná:
+
+```python
+req.add_header("Accept-Language", "zz")     # => defaultValue
+```
+
+Nie `sk` — to by predpokladalo, že default hodnota je slovenská. Neznámy jazyk
+funguje bez toho predpokladu. Detail a ako sa to prejavilo je
+v `PETRIFLOW_LEARNINGS.md` B24; `pfseed` a `pucheck` to už robia.
+
 ### Čo prekladať netreba
 
 `<label>` na `<place>`. Engine ho preloží rovnako, ale klientovi ho neposiela
