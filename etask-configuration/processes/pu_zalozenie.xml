@@ -1,0 +1,585 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>pouzivatelia/pu_zalozenie</id>
+	<version>1.0.0</version>
+	<initials>PUN</initials>
+	<title name="net_title">Nový používateľ</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">New user</i18nString>
+		<i18nString name="spravca_title">User administrator</i18nString>
+		<i18nString name="div_ucet_init">New account</i18nString>
+		<i18nString name="div_pristup_init">System access</i18nString>
+		<i18nString name="div_roly_init">Process roles</i18nString>
+		<i18nString name="div_sprava_init">Message</i18nString>
+		<i18nString name="zl_meno_title">First name</i18nString>
+		<i18nString name="zl_priezvisko_title">Surname</i18nString>
+		<i18nString name="zl_email_title">E-mail</i18nString>
+		<i18nString name="zl_email_desc">The login name. Must be unique in this instance.</i18nString>
+		<i18nString name="zl_heslo_title">Initial password</i18nString>
+		<i18nString name="zl_heslo_desc">Erased from the case once the account exists. Hand it over in person.</i18nString>
+		<i18nString name="zl_authority_title">System authorities</i18nString>
+		<i18nString name="zl_authority_desc">Without ROLE_USER the person can log in but will see no views at all.</i18nString>
+		<i18nString name="zl_proces_title">Process</i18nString>
+		<i18nString name="zl_proces_desc">Pick one process, then its roles. Type to search.</i18nString>
+		<i18nString name="zl_verzia_title">Process version</i18nString>
+		<i18nString name="zl_verzia_desc">"All versions" is what you want almost every time.</i18nString>
+		<i18nString name="zl_roly_title">Roles of the selected process</i18nString>
+		<i18nString name="zl_roly_desc">Filled in once a process is picked. Type to search.</i18nString>
+		<i18nString name="zl_pridaj_placeholder">Add</i18nString>
+		<i18nString name="zl_vycisti_placeholder">Clear</i18nString>
+		<i18nString name="zl_zoznam_title">Role list (internal)</i18nString>
+		<i18nString name="zl_pridelene_title">Roles they will hold</i18nString>
+		<i18nString name="zl_sync_placeholder">Reconcile accounts with no case</i18nString>
+		<i18nString name="zl_vysledok_title">What happened</i18nString>
+		<i18nString name="t_pu_novy_label">Create the user</i18nString>
+	</i18n>
+	<icon>person_add</icon>
+	<defaultCaseName>Nový používateľ</defaultCaseName>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		JEDINÝ PRÍPAD, JEDINÁ ÚLOHA — pult na zakladanie účtov.
+
+		  p_pult <.....> t_pu_novy
+
+		Prípad vzniká raz pri štarte (`bootstrapCase` v processes.json) a úloha
+		je slučka, takže sa dá použiť opakovane. Po dokončení sa formulár SÁM
+		vyprázdni a je pripravený na ďalší účet — preto tu nevznikajú rozpísané
+		prípady, na ktoré sa dalo naraziť pri predchádzajúcom dizajne.
+
+		Zobrazenie „Nový používateľ" je typu **Task** s dopytom
+		`transitionId:"t_pu_novy"`. Menu pozná len typy Case a Task
+		(`FilterType`), samostatný „single task" typ neexistuje — ale keďže táto
+		sieť má jediný prípad, Task zoznam má jediný riadok a chová sa presne
+		tak. `ElasticTask` nemá `processIdentifier`, len `processId` (razené per
+		verziu), takže dopyt musí ísť na `transitionId` — a preto je ten
+		identifikátor zámerne jedinečný.
+
+		Účet samotný je entita a má vlastný prípad v `pouzivatelia/pu_pouzivatel`.
+		Ten sa zakladá tu, hneď po vytvorení účtu, a naplní sa cez `setData` —
+		názov prípadu si dopočíta jeho vlastná dátová udalosť na `pu_email`.
+
+		ZOSÚLADENIE: účty vznikajú aj mimo tejto appky (`application.properties`,
+		`EtaskUserCreator`, staršie instancie). Tlačidlo „Zosúladiť" im doplní
+		prípad. Je idempotentné — porovnáva sa podľa `pu_userid`.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>zl_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+zl_proces: f.zl_proces, zl_pridelene: f.zl_pridelene, zl_authority: f.zl_authority;
+
+change zl_proces options { processOptions() }
+change zl_authority options { authorityOptions() }
+change zl_authority value { ["ROLE_USER"] }
+change zl_pridelene value { "(zatiaľ nič)" }
+changeCaseProperty("title").about { "Nový používateľ" }
+changeCaseProperty("color").about { "blue" }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="je_email"><![CDATA[
+{ def hodnota ->
+    def mail = ((hodnota ?: "") as String).trim()
+    return mail ==~ /^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/
+}
+	]]></function>
+	<function scope="process" name="ako_zoznam"><![CDATA[
+{ def pole ->
+    def raw = pole.value
+    if (raw == null) return []
+    if (raw instanceof Collection) return raw.collect { it as String }
+    if (raw.hasProperty("value") && raw.value instanceof Collection) {
+        return raw.value.collect { it as String }
+    }
+    def s = (raw as String).trim()
+    return s ? [s] : []
+}
+	]]></function>
+	<function scope="process" name="rozbor_zoznamu"><![CDATA[
+{ def zl_zoznam ->
+    def out = []
+    ((zl_zoznam.value ?: "") as String).split("\n").each { String riadok ->
+        def r = riadok.trim()
+        if (!r) return
+        def casti = r.split("\\|", -1)
+        if (casti.length < 2) return
+        out << [rola: casti[0], siet: casti[1], verzia: (casti.length > 2 ? casti[2] : "vsetky")]
+    }
+    return out
+}
+	]]></function>
+	<function scope="process" name="popis_zoznamu"><![CDATA[
+{ def polozky ->
+    if (!polozky) return "(zatiaľ nič)"
+    return polozky.collect { p ->
+        def v = (p.verzia == null || p.verzia == "" || p.verzia == "vsetky")
+                ? "všetky verzie" : ("verzia " + (p.verzia as String).replace("_", "."))
+        return "• " + p.rola + " — " + p.siet + " (" + v + ")"
+    }.join("\n")
+}
+	]]></function>
+	<function scope="process" name="zviazane_ucty"><![CDATA[
+{ ->
+    // Množina `pu_userid`, ktoré už majú prípad — načítaná JEDNÝM prechodom.
+    // `findCases { it.dataSet... }` nefunguje (petriflow_reference, gotcha 40),
+    // takže sa filtruje v Groovy.
+    //
+    // Pôvodne to bola funkcia `pripad_uctu(id)` volaná pre každý účet, čo je
+    // jeden úplný prechod prípadmi na účet. Spolu s vtedy kvadratickým
+    // `userSnapshot` na tom zosúladenie vytimeoutovalo.
+    def out = [] as Set
+    findCases({ it.processIdentifier.eq("pouzivatelia/pu_pouzivatel") }).each {
+        def v = ((it.getFieldValue("pu_userid") ?: "") as String).trim()
+        if (v) out << v
+    }
+    return out
+}
+	]]></function>
+	<function scope="process" name="zaloz_pripad"><![CDATA[
+{ def id ->
+    // Prípad účtu.
+    // Stačí zviazať. Meno, e-mail, oprávnenia aj role si prípad dotiahne z účtu
+    // sám - má na to dátovú udalosť na `pu_userid`. Účet je zdroj pravdy.
+    def c = createCase("pouzivatelia/pu_pouzivatel")
+    setData("t_pu_uprava", c, ["pu_userid": ["value": id as String, "type": "text"]])
+    return c
+}
+	]]></function>
+	<roleRef>
+		<id>spravca</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>spravca</id>
+		<title name="spravca_title">Správca používateľov</title>
+	</role>
+	<data type="i18n">
+		<id>div_ucet</id>
+		<title/>
+		<init name="div_ucet_init">Nový účet</init>
+	</data>
+	<data type="i18n">
+		<id>div_pristup</id>
+		<title/>
+		<init name="div_pristup_init">Systémový prístup</init>
+	</data>
+	<data type="i18n">
+		<id>div_roly</id>
+		<title/>
+		<init name="div_roly_init">Procesné role</init>
+	</data>
+	<data type="i18n">
+		<id>div_sprava</id>
+		<title/>
+		<init name="div_sprava_init">Správa</init>
+	</data>
+	<data type="text">
+		<id>zl_meno</id>
+		<title name="zl_meno_title">Meno</title>
+	</data>
+	<data type="text">
+		<id>zl_priezvisko</id>
+		<title name="zl_priezvisko_title">Priezvisko</title>
+	</data>
+	<data type="text">
+		<id>zl_email</id>
+		<title name="zl_email_title">E-mail</title>
+		<desc name="zl_email_desc">Prihlasovacie meno. Musí byť v instancii jedinečný.</desc>
+	</data>
+	<data type="text">
+		<id>zl_heslo</id>
+		<title name="zl_heslo_title">Počiatočné heslo</title>
+		<desc name="zl_heslo_desc">Po vytvorení sa z prípadu zmaže. Odovzdajte ho osobne.</desc>
+		<component>
+			<name>password</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>zl_authority</id>
+		<title name="zl_authority_title">Systémové oprávnenia</title>
+		<desc name="zl_authority_desc">Bez ROLE_USER sa používateľ prihlási, ale neuvidí žiadne zobrazenie.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>zl_proces</id>
+		<title name="zl_proces_title">Proces</title>
+		<desc name="zl_proces_desc">Vyberte jeden proces, potom z neho role. Píšte pre vyhľadanie.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>zl_verzia</id>
+		<title name="zl_verzia_title">Verzia procesu</title>
+		<desc name="zl_verzia_desc">„Všetky verzie" je to, čo chcete skoro vždy.</desc>
+	</data>
+	<data type="multichoice_map">
+		<id>zl_roly</id>
+		<title name="zl_roly_title">Role vybraného procesu</title>
+		<desc name="zl_roly_desc">Naplní sa po výbere procesu. Píšte pre vyhľadanie.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="button">
+		<id>zl_pridaj</id>
+		<title/>
+		<placeholder name="zl_pridaj_placeholder">Pridať</placeholder>
+		<init>1</init>
+	</data>
+	<data type="button">
+		<id>zl_vycisti</id>
+		<title/>
+		<placeholder name="zl_vycisti_placeholder">Vyprázdniť</placeholder>
+		<init>1</init>
+	</data>
+	<data type="text">
+		<id>zl_zoznam</id>
+		<title name="zl_zoznam_title">Zoznam rolí (interné)</title>
+	</data>
+	<data type="text">
+		<id>zl_pridelene</id>
+		<title name="zl_pridelene_title">Role, ktoré bude mať</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="button">
+		<id>zl_sync</id>
+		<title/>
+		<placeholder name="zl_sync_placeholder">Zosúladiť účty bez prípadu</placeholder>
+		<init>1</init>
+	</data>
+	<data type="text">
+		<id>zl_vysledok</id>
+		<title name="zl_vysledok_title">Čo sa stalo</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<transition>
+		<id>t_pu_novy</id>
+		<x>180</x>
+		<y>80</y>
+		<label name="t_pu_novy_label">Založiť používateľa</label>
+		<icon>person_add</icon>
+		<assignPolicy>manual</assignPolicy>
+		<!--
+			`manual`, nie `auto`. Auto-priradenie priradi ulohu tomu, kto ju
+			VYROBIL - a pri zdielanej administracii to je bud systemovy ucet
+			(bootstrap case vznika ako engine@netgrif.com), alebo prvy admin,
+			ktory spustil zosuladenie. Vsetci ostatni potom na `finish` dostanu
+			"User that is not assigned tried to finish task". Auto sa hodi na
+			osobne ulohy jedneho aktera, nie na pult, ktory obsluhuje kazdy
+			so spravnou rolou.
+
+			A `cancel` sa NEZAKAZUJE. `cancelTask` vracia tokeny a ulohu
+			UVOLNI - nezrusi ju. Zakazat ho znamena, ze raz priradenu ulohu
+			nema kto pustit, a to je presne ta situacia, do ktorej sa clovek
+			nema ako dostat spat. `perform` uz `cancel` obsahuje.
+		-->
+		<roleRef>
+			<id>spravca</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_novy</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_ucet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>zl_meno</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>zl_priezvisko</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>zl_email</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>zl_heslo</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_pristup</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>zl_authority</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_roly</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>zl_proces</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>zl_proces_set</id>
+					<actions phase="post">
+						<action id="2"><![CDATA[
+zl_proces: f.zl_proces, zl_roly: f.zl_roly, zl_verzia: f.zl_verzia;
+
+def siet = (zl_proces.value ?: "") as String
+change zl_roly options { processRoleOptions(siet) }
+change zl_roly value { [] }
+change zl_verzia options { processVersionOptions(siet) }
+change zl_verzia value { "vsetky" }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>zl_verzia</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>zl_roly</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>zl_pridaj</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>zl_pridaj_set</id>
+					<actions phase="pre">
+						<action id="3"><![CDATA[
+zl_proces: f.zl_proces, zl_roly: f.zl_roly, zl_verzia: f.zl_verzia,
+zl_zoznam: f.zl_zoznam, zl_pridelene: f.zl_pridelene;
+
+def siet = (zl_proces.value ?: "") as String
+def verzia = ((zl_verzia.value ?: "vsetky") as String)
+def vybrane = ako_zoznam(zl_roly)
+if (siet && vybrane) {
+    def riadky = rozbor_zoznamu(zl_zoznam).collect { it.rola + "|" + it.siet + "|" + it.verzia }
+    vybrane.each { String rola ->
+        def r = rola + "|" + siet + "|" + verzia
+        if (!riadky.contains(r)) { riadky << r }
+    }
+    change zl_zoznam value { riadky.join("\n") }
+    change zl_roly value { [] }
+}
+change zl_pridelene value { popis_zoznamu(rozbor_zoznamu(zl_zoznam)) }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>zl_vycisti</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>5</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>zl_vycisti_set</id>
+					<actions phase="pre">
+						<action id="4"><![CDATA[
+zl_zoznam: f.zl_zoznam, zl_pridelene: f.zl_pridelene;
+
+change zl_zoznam value { "" }
+change zl_pridelene value { "(zatiaľ nič)" }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>zl_pridelene</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>zl_zoznam</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_sprava</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>zl_sync</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>zl_sync_set</id>
+					<actions phase="pre">
+						<action id="5"><![CDATA[
+zl_vysledok: f.zl_vysledok;
+
+// Ucty vznikaju aj mimo tejto appky. Tlacidlo im doplni pripad; je idempotentne.
+def pridane = []
+def uz = 0
+def maju = zviazane_ucty()
+userOptions().each { String id, String popis ->
+    if (maju.contains(id)) { uz++; return }
+    def snap = userSnapshot(id)
+    if (!snap || !snap.email) return
+    zaloz_pripad(id)
+    pridane << (snap.email as String)
+}
+change zl_vysledok value {
+    "Zosúladenie účtov:\n" +
+    "• prípad už mali: " + uz + "\n" +
+    (pridane ? ("• prípad doplnený (" + pridane.size() + "): " + pridane.join(", "))
+             : "• nič nebolo treba doplniť")
+}
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>zl_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_pu_novy_assign</id>
+			<actions phase="post">
+				<action id="6"><![CDATA[
+zl_proces: f.zl_proces;
+
+// Pri kazdom otvoreni znova - inak by novo naimportovana appka v ponuke nebola.
+change zl_proces options { processOptions() }
+change zl_authority options { authorityOptions() }
+				]]></action>
+			</actions>
+		</event>
+		<event type="finish">
+			<id>t_pu_novy_finish</id>
+			<actions phase="pre">
+				<action id="7"><![CDATA[
+zl_email: f.zl_email, zl_heslo: f.zl_heslo, zl_authority: f.zl_authority;
+
+def mail = ((zl_email.value ?: "") as String).trim()
+if (!je_email(mail)) {
+    throw new java.lang.IllegalStateException("E-mail nemá platný tvar: " + mail)
+}
+if (findUserByEmail(mail) != null) {
+    throw new java.lang.IllegalStateException("Používateľ s e-mailom " + mail + " už existuje.")
+}
+if (!registrationService.isPasswordSufficient(formPassword(zl_heslo.value))) {
+    throw new java.lang.IllegalStateException("Heslo nespĺňa požiadavky instancie.")
+}
+if (!ako_zoznam(zl_authority).contains("ROLE_USER")) {
+    throw new java.lang.IllegalStateException(
+            "Bez ROLE_USER sa používateľ prihlási a neuvidí žiadne zobrazenie.")
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="8"><![CDATA[
+zl_meno: f.zl_meno, zl_priezvisko: f.zl_priezvisko, zl_email: f.zl_email,
+zl_heslo: f.zl_heslo, zl_authority: f.zl_authority, zl_zoznam: f.zl_zoznam,
+zl_pridelene: f.zl_pridelene, zl_vysledok: f.zl_vysledok, zl_proces: f.zl_proces,
+zl_roly: f.zl_roly, zl_verzia: f.zl_verzia;
+
+def mail = ((zl_email.value ?: "") as String).trim()
+def meno = ((zl_meno.value ?: "") as String).trim()
+def priezvisko = ((zl_priezvisko.value ?: "") as String).trim()
+def authorities = ako_zoznam(zl_authority)
+
+def novy = createNewUser(meno, priezvisko, mail, formPassword(zl_heslo.value), authorities)
+def id = novy.stringId as String
+def riadky = ["účet vytvorený: " + mail,
+              "systémové oprávnenia: " + (authorities ? authorities.join(", ") : "žiadne")]
+
+def pridelene = []
+def zlyhane = []
+rozbor_zoznamu(zl_zoznam).each { p ->
+    if (setProcessRole(id, p.rola as String, p.siet as String, p.verzia as String, true)) {
+        pridelene << (p.rola + " (" + p.siet + ")")
+    } else {
+        zlyhane << (p.rola + " (" + p.siet + ")")
+    }
+}
+riadky << (pridelene ? "procesné role: " + pridelene.join(", ") : "procesné role: žiadne")
+if (zlyhane) {
+    riadky << ("NEPODARILO SA prideliť: " + zlyhane.join(", "))
+}
+
+// Ucet je entita - dostane vlastny pripad. Jeden ucet, jeden pripad.
+def c = zaloz_pripad(id)
+riadky << ("prípad účtu: " + c.stringId)
+
+// Pult sa vyprazdni a je pripraveny na dalsi ucet. Bez tohto by tu zostali
+// vypisane data predchadzajuceho cloveka - a heslo medzi nimi.
+change zl_meno value { "" }
+change zl_priezvisko value { "" }
+change zl_email value { "" }
+change zl_heslo value { "" }
+change zl_authority value { ["ROLE_USER"] }
+change zl_proces value { "" }
+change zl_roly value { [] }
+change zl_verzia value { "" }
+change zl_zoznam value { "" }
+change zl_pridelene value { "(zatiaľ nič)" }
+change zl_vysledok value { riadky.join("\n") }
+
+changeCaseProperty("title").about { "Nový používateľ" }
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<place>
+		<id>p_pult</id>
+		<x>60</x>
+		<y>80</y>
+		<label>Pult</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_novy_in</id>
+		<type>regular</type>
+		<sourceId>p_pult</sourceId>
+		<destinationId>t_pu_novy</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_novy_out</id>
+		<type>regular</type>
+		<sourceId>t_pu_novy</sourceId>
+		<destinationId>p_pult</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

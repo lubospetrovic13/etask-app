@@ -9,6 +9,7 @@ import {
   FilterExtractionService,
   LanguageService,
   LoadingEmitter,
+  LoggerService,
   RoleAccess,
   TaskResourceService,
   User,
@@ -50,6 +51,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private _accessService: AccessService,
     private _nodeTitle: UriNodeTitlePipe,
     private _language: LanguageService,
+    private _log: LoggerService,
   ) {
     this._loading = new LoadingEmitter();
   }
@@ -89,9 +91,51 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this._uri.getCachedNodeCount(name);
   }
 
+  /**
+   * Open a dashboard card: land inside the folder, on its first view.
+   *
+   * This used to be `activeNode = node` + `navigate(['portal'])`, and it left
+   * the user at the root of the tree - measured: the drawer's `currentNode` was
+   * `root` right after the click. The reason is that `activeNode` does not mean
+   * "navigate here". In the library it means "the folder the currently open view
+   * belongs to" and it is written in exactly one place, `onViewClick`; tree
+   * navigation goes through `onNodeClick`, which sets the drawer's own
+   * `currentNode` and never touches the service. Writing into that channel and
+   * hoping the drawer treats it as a destination is a category error.
+   *
+   * So the card does what the user means by clicking it: opens the folder's
+   * first view. `activeNode` is still set, because that is what tells the drawer
+   * which folder the opened view lives in - which is its actual purpose.
+   *
+   * A folder with no views (or one the user may not access) falls back to
+   * `/portal`; there is nothing to open, and that is not an error.
+   */
   public openNode(node: ETaskUriNodeResource) {
     this._uri.activeNode = node;
-    this._router.navigate(['portal']);
+    this._uri.getCasesOfNode(node, FILTER_IDENTIFIERS).subscribe(
+      page => this._router.navigate([this.firstViewPath(page?.content ?? [])]),
+      error => {
+        this._log.error('Nepodarilo sa načítať zobrazenia priečinka', error);
+        this._router.navigate(['portal']);
+      });
+  }
+
+  /**
+   * Path of the alphabetically first view the user may open, or `portal`.
+   *
+   * Sorted by title so the card is predictable: the same folder opens the same
+   * view every time, regardless of the order the server happened to return.
+   */
+  private firstViewPath(cases: Array<Case>): string {
+    // `navigation` je v type `boolean | {title?, icon?, ...}` - bez tejto
+    // stráže build neprejde.
+    const title = (v: ViewNavigationItem): string =>
+      (typeof v.navigation === 'object' && !!v.navigation ? (v.navigation.title ?? '') : '');
+    const views = cases
+      .map(c => this.resolveFilterCaseToViewNavigationItem(c))
+      .filter(v => !!v)
+      .sort((a, b) => title(a).localeCompare(title(b)));
+    return views.length ? views[0].routing.path : 'portal';
   }
 
   /**

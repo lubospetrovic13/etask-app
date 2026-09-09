@@ -19,6 +19,8 @@ import com.netgrif.etask.petrinet.domain.UriNodeDataRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
+import java.nio.charset.StandardCharsets
+
 @Component
 class EtaskActionDelegate extends ActionDelegate {
 
@@ -605,14 +607,104 @@ class EtaskActionDelegate extends ActionDelegate {
     Map<String, String> userOptions() {
         Map<String, String> out = [:]
         userService.findAll(true).each { IUser u ->
-            String email = u.email as String
-            if (!email || email.startsWith("anonymous") || email == "system@netgrif.com") {
+            if (!isRealUser(u)) {
                 return
             }
             out.put(u.stringId as String,
-                    "${u.name} ${u.surname} (${email})" as String)
+                    "${u.name} ${u.surname} (${u.email})" as String)
         }
         return out.sort { it.value }
+    }
+
+    /**
+     * Je to ucet cloveka, alebo sluzobny ucet enginu?
+     *
+     * Anonymne sessiony sa ukladaju ako uzivatelia s e-mailom
+     * `<hash>@anonymous.nae` (`PublicAuthenticationFilter`), takze filter na
+     * PREFIX "anonymous" ich neodfiltruje - domena, nie zaciatok. Systemovy
+     * ucet enginu je `engine@netgrif.com` (`SystemUserRunner.SYSTEM_USER_EMAIL`),
+     * nie `system@netgrif.com`, ako som najprv predpokladal.
+     *
+     * Kym to bolo napisane zle, `userOptions()` ponukalo tri anonymne sessiony
+     * a systemovy ucet ako uzivatelov na upravu.
+     */
+    boolean isRealUser(IUser user) {
+        String email = ((user?.email ?: "") as String).trim().toLowerCase()
+        if (!email) {
+            return false
+        }
+        if (email.endsWith("@anonymous.nae")) {
+            return false
+        }
+        return !(email in ["engine@netgrif.com", "system@netgrif.com"])
+    }
+
+    /**
+     * Heslo tak, ako ho poslal FORMULAR - teda dekoduje base64.
+     *
+     * Textove pole s `<component><name>password</name></component>` frontend
+     * pred odoslanim ZAKODUJE do base64:
+     *
+     *     // FieldConverterService.formatValueForBackend
+     *     if (resolveType(field) === TEXT && field.component.name === 'password') {
+     *         return encodeBase64(value);
+     *     }
+     *
+     * Kto to nevie, zahashuje base64 namiesto hesla a ucet sa potom NEDA
+     * prihlasit tym, co clovek napisal - da sa prihlasit base64 z toho. Presne
+     * toto sa stalo pri ucte zalozenom cez formular, kym akceptacny test presiel:
+     * test posielal surovu hodnotu na oboch stranach, takze bol sam so sebou
+     * konzistentny a chybu neuvidel.
+     *
+     * Pozor: rozhodnut sa "je to base64?" podla obsahu NEJDE - `password` je
+     * platny base64 retazec. Preto je to pravidlo, nie hadanie: toto pole plni
+     * formular, takze hodnota JE zakodovana, a kto ho plni cez REST, musi
+     * zakodovat rovnako.
+     */
+    String formPassword(Object value) {
+        String raw = ((value ?: "") as String)
+        if (!raw) {
+            return ""
+        }
+        try {
+            return new String(Base64.decoder.decode(raw), StandardCharsets.UTF_8)
+        } catch (IllegalArgumentException ignored) {
+            // Neplatny base64 - hodnota nepresla frontendom. Beriem ju ako je.
+            return raw
+        }
+    }
+
+    /**
+     * Systemove authorities instancie, ako mapa nazov -> popis.
+     *
+     * NATVRDO SA TO NAPISAT NEDA, a stalo to jedno 500: pole s dvomi moznostami
+     * (`ROLE_USER`, `ROLE_ADMIN`) nedokaze zobrazit ucet, ktory ma aj
+     * `ROLE_ANONYMOUS` alebo `ROLE_SYSTEMADMIN` - engine hodnotu mimo `options`
+     * neprijme a vrati "Could not parse value of field". A `super@netgrif.com`
+     * ma vsetky styri, takze na prvom skutocnom ucte to spadlo.
+     *
+     * Popis odlisuje to, co sa bezne prideluje, od systemovych - ktore su
+     * v zozname preto, aby sa dal zobrazit existujuci stav, nie aby sa
+     * rozdavali.
+     */
+    Map<String, String> authorityOptions() {
+        Map<String, String> out = [:]
+        authorityService.findAll().each { Authority a ->
+            String name = a.name as String
+            if (!name) {
+                return
+            }
+            String popis
+            switch (name) {
+                case "ROLE_USER": popis = "ROLE_USER — bežný používateľ"; break
+                case "ROLE_ADMIN": popis = "ROLE_ADMIN — administrátor"; break
+                case "ROLE_ANONYMOUS": popis = "ROLE_ANONYMOUS — anonymná session (systémová)"; break
+                case "ROLE_SYSTEMADMIN": popis = "ROLE_SYSTEMADMIN — systémová"; break
+                default: popis = name
+            }
+            out.put(name, popis)
+        }
+        return out.sort { it.key }
     }
 
     /**
@@ -626,23 +718,23 @@ class EtaskActionDelegate extends ActionDelegate {
         if (user == null) {
             return [:]
         }
+        // ProcessRole nenesie identifikator siete, takze sa hlada spatne podla
+        // `stringId`. Index sa stavia RAZ - povodna verzia prechadzala vsetky
+        // verzie vsetkych sieti pre KAZDU rolu uctu, co je pri ucte so 70
+        // rolami a 30 sietach 2100 prehladani a `zl_sync` na tom vytimeoutoval.
         Map<String, List<String>> roles = [:]
+        Map<String, String> netByRoleId = roleIdToNetIndex()
         (user.processRoles ?: []).each { ProcessRole role ->
             if (role.importId in ["default", "anonymous"]) {
                 return
             }
-            // ProcessRole nenesie identifikator siete, takze sa hlada spatne:
-            // rovnaky stringId musi byt v roles niektorej naimportovanej siete.
-            petriNetService.getAll().each { PetriNet net ->
-                if (net.identifier == null || !net.identifier.contains("/")) {
-                    return
-                }
-                if (net.roles.values().any { it.stringId == role.stringId }) {
-                    roles.computeIfAbsent(net.identifier, { [] as List<String> })
-                    if (!roles[net.identifier].contains(role.importId)) {
-                        roles[net.identifier] << (role.importId as String)
-                    }
-                }
+            String identifier = netByRoleId.get(role.stringId as String)
+            if (identifier == null) {
+                return
+            }
+            roles.computeIfAbsent(identifier, { [] as List<String> })
+            if (!roles[identifier].contains(role.importId)) {
+                roles[identifier] << (role.importId as String)
             }
         }
         return [
@@ -695,6 +787,23 @@ class EtaskActionDelegate extends ActionDelegate {
     }
 
     // ---- pomocne, nepouzivat priamo z akcie -------------------------------
+
+    /**
+     * `stringId` roly -> identifikator siete, pre vsetky aplikacne siete
+     * a vsetky ich verzie. Jeden prechod namiesto prehladavania per rola.
+     */
+    private Map<String, String> roleIdToNetIndex() {
+        Map<String, String> out = [:]
+        petriNetService.getAll().each { PetriNet net ->
+            if (net.identifier == null || !net.identifier.contains("/")) {
+                return
+            }
+            net.roles.values().each { ProcessRole role ->
+                out.put(role.stringId as String, net.identifier as String)
+            }
+        }
+        return out
+    }
 
     private List<String> applicationNetIdentifiers() {
         // Systemove siete enginu (`filter`, `preference_filter_item`, ...) maju

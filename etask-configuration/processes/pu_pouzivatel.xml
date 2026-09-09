@@ -1,0 +1,684 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>pouzivatelia/pu_pouzivatel</id>
+	<version>1.0.0</version>
+	<initials>PUZ</initials>
+	<title name="net_title">Používateľ</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">User</i18nString>
+		<i18nString name="spravca_title">User administrator</i18nString>
+		<i18nString name="div_ucet_init">Account</i18nString>
+		<i18nString name="div_pristup_init">System access</i18nString>
+		<i18nString name="div_roly_init">Process roles</i18nString>
+		<i18nString name="div_vysledok_init">Result</i18nString>
+		<i18nString name="pu_userid_title">Account id</i18nString>
+		<i18nString name="pu_userid_desc">Binds the case to the account. Set when the case is created.</i18nString>
+		<i18nString name="pu_email_title">E-mail</i18nString>
+		<i18nString name="pu_email_desc">The login name. It cannot be changed - it is the key for seed.json and for the tests as well.</i18nString>
+		<i18nString name="pu_meno_title">First name</i18nString>
+		<i18nString name="pu_priezvisko_title">Surname</i18nString>
+		<i18nString name="pu_heslo_title">New password</i18nString>
+		<i18nString name="pu_heslo_desc">Leave empty if the password is not to change.</i18nString>
+		<i18nString name="pu_authority_title">System authorities</i18nString>
+		<i18nString name="pu_authority_desc">Without ROLE_USER the person can log in but will see no views at all.</i18nString>
+		<i18nString name="pu_proces_title">Process</i18nString>
+		<i18nString name="pu_proces_desc">Pick one process, then its roles. Type to search.</i18nString>
+		<i18nString name="pu_verzia_title">Process version</i18nString>
+		<i18nString name="pu_verzia_desc">A role is minted per net version. "All versions" is what you want almost every time.</i18nString>
+		<i18nString name="pu_roly_title">Roles of the selected process</i18nString>
+		<i18nString name="pu_roly_desc">Filled in once a process is picked. Type to search.</i18nString>
+		<i18nString name="pu_pridaj_placeholder">Add</i18nString>
+		<i18nString name="pu_vycisti_placeholder">Clear</i18nString>
+		<i18nString name="pu_zoznam_title">Role list (internal)</i18nString>
+		<i18nString name="pu_pridelene_title">Roles they will hold</i18nString>
+		<i18nString name="pu_stav_label_title">Status</i18nString>
+		<i18nString name="pu_vysledok_title">What happened</i18nString>
+		<i18nString name="pu_zmenil_title">Last changed by</i18nString>
+		<i18nString name="pu_zmenene_o_title">Last changed</i18nString>
+		<i18nString name="t_pu_uprava_label">Account</i18nString>
+	</i18n>
+	<icon>manage_accounts</icon>
+	<defaultCaseName>Nezviazaný prípad</defaultCaseName>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		JEDEN PRÍPAD = JEDEN ÚČET. Nie jedna administratívna operácia.
+
+		  p_ucet <.....> t_pu_uprava
+
+		Predchádzajúca verzia mala prípad na operáciu, takže sa dalo mať dvadsať
+		otvorených „Rozpísaný · nový účet pre x@y.sk" naraz a žiadny z nich
+		nebol ten pravý. Účet je entita, nie úkon - preto je prípad na účet
+		a úprava je slučka, ktorá sa dá spustiť opakovane.
+
+		Prípady zakladá `pouzivatelia/pu_zalozenie` (zobrazenie „Nový
+		používateľ") a jeho tlačidlo na zosúladenie doplní prípad aj účtom,
+		ktoré vznikli inak - z `application.properties` alebo pred touto appkou.
+
+		TU SA ÚČET NEZAKLADÁ. Zoznamové zobrazenie typu Case má tlačidlo „+"
+		vždy, keď má `allowedNets` - a `allowedNets` musí mať, inak sa nevykreslia
+		stĺpce z dátových polí (RUNBOOK 4). Prípad z „+" preto nemá účet, povie
+		to o sebe a dá sa len zmazať; `finish` ho bez `pu_userid` nepustí.
+
+		Iná úloha na `p_ucet` zámerne nevisí - odmietnuté DOKONČIŤ zmaže ostatné
+		úlohy toho miesta a už ich neobnoví (PETRIFLOW_LEARNINGS B8b).
+
+		Priradenie je `manual` a `cancel` sa nezakazuje - dôvod je pri prechode.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>pu_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+pu_proces: f.pu_proces, pu_stav_label: f.pu_stav_label, pu_pridelene: f.pu_pridelene,
+pu_vysledok: f.pu_vysledok;
+
+// Ponuka procesov sa cita z instancie, nie z tohto XML - nova appka sa tu
+// objavi sama. Obnovuje sa aj pri kazdom otvoreni ulohy (assign).
+change pu_proces options { processOptions() }
+change pu_authority options { authorityOptions() }
+change pu_stav_label value { "Nezviazaný" }
+change pu_pridelene value { "(zatiaľ nič)" }
+change pu_vysledok value {
+    "Tento prípad nie je zviazaný so žiadnym účtom.\n" +
+    "Účty sa zakladajú v zobrazení „Nový používateľ“. Tento prípad zmažte."
+}
+changeCaseProperty("color").about { "red" }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="kto"><![CDATA[
+{ def u ->
+    // `?.` chráni pred null, nie pred chýbajúcou property.
+    return (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+}
+	]]></function>
+	<function scope="process" name="nazov"><![CDATA[
+{ def pu_meno, def pu_priezvisko, def pu_email ->
+    def cele = (((pu_meno.value ?: "") as String).trim() + " " +
+                ((pu_priezvisko.value ?: "") as String).trim()).trim()
+    def mail = ((pu_email.value ?: "") as String).trim()
+    if (!mail) return "Nezviazaný prípad"
+    return (cele ? (cele + " · ") : "") + mail
+}
+	]]></function>
+	<function scope="process" name="ako_zoznam"><![CDATA[
+{ def pole ->
+    // Hodnota multichoice_map je zoznam klucov, ale cez REST aj z UI prichadza
+    // v roznych obalkach. Bez tohto by sa `each` prehnal po znakoch retazca.
+    def raw = pole.value
+    if (raw == null) return []
+    if (raw instanceof Collection) return raw.collect { it as String }
+    if (raw.hasProperty("value") && raw.value instanceof Collection) {
+        return raw.value.collect { it as String }
+    }
+    def s = (raw as String).trim()
+    return s ? [s] : []
+}
+	]]></function>
+	<function scope="process" name="rozbor_zoznamu"><![CDATA[
+{ def pu_zoznam ->
+    // Akumulator je text, jeden riadok = "importId|siet|verzia". Tabulator by
+    // sa cez REST aj cez formular stratil, zvisla ciara nie.
+    def out = []
+    ((pu_zoznam.value ?: "") as String).split("\n").each { String riadok ->
+        def r = riadok.trim()
+        if (!r) return
+        def casti = r.split("\\|", -1)
+        if (casti.length < 2) return
+        out << [rola: casti[0], siet: casti[1], verzia: (casti.length > 2 ? casti[2] : "vsetky")]
+    }
+    return out
+}
+	]]></function>
+	<function scope="process" name="popis_zoznamu"><![CDATA[
+{ def polozky ->
+    if (!polozky) return "(zatiaľ nič)"
+    return polozky.collect { p ->
+        def v = (p.verzia == null || p.verzia == "" || p.verzia == "vsetky")
+                ? "všetky verzie" : ("verzia " + (p.verzia as String).replace("_", "."))
+        return "• " + p.rola + " — " + p.siet + " (" + v + ")"
+    }.join("\n")
+}
+	]]></function>
+	<function scope="process" name="do_zoznamu"><![CDATA[
+{ def polozky ->
+    return polozky.collect { it.rola + "|" + it.siet + "|" + it.verzia }.join("\n")
+}
+	]]></function>
+	<function scope="process" name="roly_uctu"><![CDATA[
+{ def snap ->
+    // Zo skutocneho stavu uctu na riadky akumulatora. Berie UZ NACITANY
+    // snapshot - `userSnapshot` stavi index rol vsetkych sieti, takze druhe
+    // volanie na tom istom ucte je zbytocna praca; pri zosuladeni 15 uctov to
+    // bola polovica casu.
+    //
+    // Verzia je "vsetky": snapshot verzie nerozlisuje a plosne pridelenie je
+    // aj tak to, co clovek chce skoro vzdy.
+    def out = []
+    ((snap?.roly ?: [:]) as Map).each { siet, zoznamRoli ->
+        (zoznamRoli ?: []).each { rola -> out << (rola + "|" + siet + "|vsetky") }
+    }
+    return out.join("\n")
+}
+	]]></function>
+	<roleRef>
+		<id>spravca</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>spravca</id>
+		<title name="spravca_title">Správca používateľov</title>
+	</role>
+	<data type="i18n">
+		<id>div_ucet</id>
+		<title/>
+		<init name="div_ucet_init">Účet</init>
+	</data>
+	<data type="i18n">
+		<id>div_pristup</id>
+		<title/>
+		<init name="div_pristup_init">Systémový prístup</init>
+	</data>
+	<data type="i18n">
+		<id>div_roly</id>
+		<title/>
+		<init name="div_roly_init">Procesné role</init>
+	</data>
+	<data type="i18n">
+		<id>div_vysledok</id>
+		<title/>
+		<init name="div_vysledok_init">Výsledok</init>
+	</data>
+	<data type="text" immediate="true">
+		<id>pu_userid</id>
+		<title name="pu_userid_title">Id účtu</title>
+		<desc name="pu_userid_desc">Zviazanie prípadu s účtom. Nastavuje sa pri zakladaní.</desc>
+	</data>
+	<data type="text" immediate="true">
+		<id>pu_email</id>
+		<title name="pu_email_title">E-mail</title>
+		<desc name="pu_email_desc">Prihlasovacie meno. Zmeniť sa nedá — je to kľúč aj pre seed.json a testy.</desc>
+	</data>
+	<data type="text" immediate="true">
+		<id>pu_meno</id>
+		<title name="pu_meno_title">Meno</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>pu_priezvisko</id>
+		<title name="pu_priezvisko_title">Priezvisko</title>
+	</data>
+	<data type="text">
+		<id>pu_heslo</id>
+		<title name="pu_heslo_title">Nové heslo</title>
+		<desc name="pu_heslo_desc">Nechajte prázdne, ak sa heslo meniť nemá.</desc>
+		<component>
+			<name>password</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>pu_authority</id>
+		<title name="pu_authority_title">Systémové oprávnenia</title>
+		<desc name="pu_authority_desc">Bez ROLE_USER sa používateľ prihlási, ale neuvidí žiadne zobrazenie.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>pu_proces</id>
+		<title name="pu_proces_title">Proces</title>
+		<desc name="pu_proces_desc">Vyberte jeden proces, potom z neho role. Píšte pre vyhľadanie.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>pu_verzia</id>
+		<title name="pu_verzia_title">Verzia procesu</title>
+		<desc name="pu_verzia_desc">Rola sa razí per verziu siete. „Všetky verzie" je to, čo chcete skoro vždy.</desc>
+	</data>
+	<data type="multichoice_map">
+		<id>pu_roly</id>
+		<title name="pu_roly_title">Role vybraného procesu</title>
+		<desc name="pu_roly_desc">Naplní sa po výbere procesu. Píšte pre vyhľadanie.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="button">
+		<id>pu_pridaj</id>
+		<title/>
+		<placeholder name="pu_pridaj_placeholder">Pridať</placeholder>
+		<init>1</init>
+	</data>
+	<data type="button">
+		<id>pu_vycisti</id>
+		<title/>
+		<placeholder name="pu_vycisti_placeholder">Vyprázdniť</placeholder>
+		<init>1</init>
+	</data>
+	<data type="text">
+		<id>pu_zoznam</id>
+		<title name="pu_zoznam_title">Zoznam rolí (interné)</title>
+	</data>
+	<data type="text">
+		<id>pu_pridelene</id>
+		<title name="pu_pridelene_title">Role, ktoré bude mať</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text" immediate="true">
+		<id>pu_stav_label</id>
+		<title name="pu_stav_label_title">Stav</title>
+	</data>
+	<data type="text">
+		<id>pu_vysledok</id>
+		<title name="pu_vysledok_title">Čo sa stalo</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>pu_zmenil</id>
+		<title name="pu_zmenil_title">Naposledy zmenil</title>
+	</data>
+	<data type="dateTime">
+		<id>pu_zmenene_o</id>
+		<title name="pu_zmenene_o_title">Naposledy zmenené</title>
+	</data>
+	<transition>
+		<id>t_pu_uprava</id>
+		<x>180</x>
+		<y>80</y>
+		<label name="t_pu_uprava_label">Účet</label>
+		<icon>manage_accounts</icon>
+		<assignPolicy>manual</assignPolicy>
+		<!--
+			`manual`, nie `auto`. Auto-priradenie priradi ulohu tomu, kto ju
+			VYROBIL - a pri zdielanej administracii to je bud systemovy ucet
+			(bootstrap case vznika ako engine@netgrif.com), alebo prvy admin,
+			ktory spustil zosuladenie. Vsetci ostatni potom na `finish` dostanu
+			"User that is not assigned tried to finish task". Auto sa hodi na
+			osobne ulohy jedneho aktera, nie na pult, ktory obsluhuje kazdy
+			so spravnou rolou.
+
+			A `cancel` sa NEZAKAZUJE. `cancelTask` vracia tokeny a ulohu
+			UVOLNI - nezrusi ju. Zakazat ho znamena, ze raz priradenu ulohu
+			nema kto pustit, a to je presne ta situacia, do ktorej sa clovek
+			nema ako dostat spat. `perform` uz `cancel` obsahuje.
+		-->
+		<roleRef>
+			<id>spravca</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_ucet</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_ucet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pu_stav_label</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pu_email</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pu_meno</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pu_priezvisko</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pu_heslo</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pu_userid</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>3</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>pu_userid_set</id>
+					<actions phase="post">
+						<action id="2"><![CDATA[
+pu_userid: f.pu_userid, pu_meno: f.pu_meno, pu_priezvisko: f.pu_priezvisko,
+pu_email: f.pu_email, pu_authority: f.pu_authority, pu_zoznam: f.pu_zoznam,
+pu_pridelene: f.pu_pridelene, pu_stav_label: f.pu_stav_label, pu_vysledok: f.pu_vysledok;
+
+// ZVIAZANIE PRIPADU S UCTOM je tu, na jednom mieste. `pu_zalozenie` teda
+// nastavi len `pu_userid` a zvysok si pripad dotiahne sam z uctu - ucet je
+// zdroj pravdy, nie to, co niekto poslal.
+//
+// Preco na `pu_userid` a nie na `pu_email`: pri jednom `setData` s viacerymi
+// polami nie je poradie klucov zarucene, takze udalost na e-maile by mohla
+// bezat este pred nastavenim id a nemala by z coho citat.
+def id = ((pu_userid.value ?: "") as String).trim()
+if (!id) {
+    return
+}
+def snap = userSnapshot(id)
+if (!snap || !snap.email) {
+    change pu_stav_label value { "Účet neexistuje" }
+    changeCaseProperty("color").about { "red" }
+    return
+}
+// Moznosti PRED hodnotou - inak ju engine odmietne.
+change pu_proces options { processOptions() }
+change pu_authority options { authorityOptions() }
+change pu_meno value { snap.meno }
+change pu_priezvisko value { snap.priezvisko }
+change pu_email value { snap.email }
+change pu_authority value { (snap.authorities ?: []) as List }
+change pu_zoznam value { roly_uctu(snap) }
+change pu_pridelene value { popis_zoznamu(rozbor_zoznamu(pu_zoznam)) }
+change pu_stav_label value { "Aktívny" }
+change pu_vysledok value { "" }
+changeCaseProperty("title").about { nazov(pu_meno, pu_priezvisko, pu_email) }
+changeCaseProperty("color").about { "green" }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>div_pristup</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pu_authority</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_roly</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pu_proces</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>pu_proces_set</id>
+					<actions phase="post">
+						<action id="3"><![CDATA[
+pu_proces: f.pu_proces, pu_roly: f.pu_roly, pu_verzia: f.pu_verzia;
+
+// Druhy krok vyberu: z vybraneho procesu sa doplnia JEHO role a JEHO verzie.
+def siet = (pu_proces.value ?: "") as String
+change pu_roly options { processRoleOptions(siet) }
+change pu_roly value { [] }
+change pu_verzia options { processVersionOptions(siet) }
+change pu_verzia value { "vsetky" }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>pu_verzia</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pu_roly</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pu_pridaj</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>pu_pridaj_set</id>
+					<actions phase="pre">
+						<action id="4"><![CDATA[
+pu_proces: f.pu_proces, pu_roly: f.pu_roly, pu_verzia: f.pu_verzia,
+pu_zoznam: f.pu_zoznam, pu_pridelene: f.pu_pridelene;
+
+// Bez tlacidla by vyber druheho procesu prepisal ten prvy: `pu_roly` drzi
+// role len prave vybraneho procesu.
+def siet = (pu_proces.value ?: "") as String
+def verzia = ((pu_verzia.value ?: "vsetky") as String)
+def vybrane = ako_zoznam(pu_roly)
+if (siet && vybrane) {
+    def riadky = rozbor_zoznamu(pu_zoznam).collect { it.rola + "|" + it.siet + "|" + it.verzia }
+    vybrane.each { String rola ->
+        def r = rola + "|" + siet + "|" + verzia
+        if (!riadky.contains(r)) { riadky << r }
+    }
+    change pu_zoznam value { riadky.join("\n") }
+    change pu_roly value { [] }
+}
+change pu_pridelene value { popis_zoznamu(rozbor_zoznamu(pu_zoznam)) }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>pu_vycisti</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>5</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>pu_vycisti_set</id>
+					<actions phase="pre">
+						<action id="5"><![CDATA[
+pu_zoznam: f.pu_zoznam, pu_pridelene: f.pu_pridelene;
+
+change pu_zoznam value { "" }
+change pu_pridelene value { "(zatiaľ nič)" }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>pu_pridelene</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pu_zoznam</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pu_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pu_zmenil</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>17</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pu_zmenene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>17</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_pu_uprava_assign</id>
+			<actions phase="post">
+				<action id="6"><![CDATA[
+pu_proces: f.pu_proces, pu_userid: f.pu_userid, pu_zoznam: f.pu_zoznam,
+pu_pridelene: f.pu_pridelene, pu_authority: f.pu_authority, pu_meno: f.pu_meno,
+pu_priezvisko: f.pu_priezvisko, pu_email: f.pu_email, pu_stav_label: f.pu_stav_label;
+
+// Pri KAZDOM otvoreni sa stav uctu nacita znova. Bez toho by uprava pracovala
+// s tym, co platilo pri zalozeni pripadu - a keby niekto medzitym zmenil rolu
+// inde, admin by to prepisal starym stavom.
+change pu_proces options { processOptions() }
+change pu_authority options { authorityOptions() }
+
+def id = ((pu_userid.value ?: "") as String).trim()
+if (!id) {
+    return
+}
+def snap = userSnapshot(id)
+if (!snap || !snap.email) {
+    change pu_stav_label value { "Účet neexistuje" }
+    changeCaseProperty("color").about { "red" }
+    return
+}
+change pu_meno value { snap.meno }
+change pu_priezvisko value { snap.priezvisko }
+change pu_email value { snap.email }
+change pu_authority value { (snap.authorities ?: []) as List }
+change pu_zoznam value { roly_uctu(snap) }
+change pu_pridelene value { popis_zoznamu(rozbor_zoznamu(pu_zoznam)) }
+change pu_stav_label value { "Aktívny" }
+changeCaseProperty("title").about { nazov(pu_meno, pu_priezvisko, pu_email) }
+changeCaseProperty("color").about { "green" }
+				]]></action>
+			</actions>
+		</event>
+		<event type="finish">
+			<id>t_pu_uprava_finish</id>
+			<actions phase="pre">
+				<action id="7"><![CDATA[
+pu_userid: f.pu_userid, pu_heslo: f.pu_heslo, pu_authority: f.pu_authority;
+
+def id = ((pu_userid.value ?: "") as String).trim()
+if (!id) {
+    throw new java.lang.IllegalStateException(
+            "Tento prípad nie je zviazaný so žiadnym účtom. Účty sa zakladajú " +
+            "v zobrazení „Nový používateľ“; tento prípad zmažte.")
+}
+if (findUserById(id) == null) {
+    throw new java.lang.IllegalStateException("Účet sa nenašiel: " + id)
+}
+def heslo = formPassword(pu_heslo.value)
+if (heslo && !registrationService.isPasswordSufficient(heslo)) {
+    throw new java.lang.IllegalStateException("Nové heslo nespĺňa požiadavky instancie.")
+}
+if (!ako_zoznam(pu_authority).contains("ROLE_USER")) {
+    throw new java.lang.IllegalStateException(
+            "Bez ROLE_USER sa používateľ prihlási a neuvidí žiadne zobrazenie.")
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="8"><![CDATA[
+pu_userid: f.pu_userid, pu_meno: f.pu_meno, pu_priezvisko: f.pu_priezvisko,
+pu_email: f.pu_email, pu_heslo: f.pu_heslo, pu_authority: f.pu_authority,
+pu_zoznam: f.pu_zoznam, pu_pridelene: f.pu_pridelene, pu_stav_label: f.pu_stav_label,
+pu_vysledok: f.pu_vysledok, pu_zmenil: f.pu_zmenil, pu_zmenene_o: f.pu_zmenene_o;
+
+// Ucet sa NEDRZI ako objekt - kazda zmena uklada cely dokument, takze dve
+// zmeny cez ten isty objekt by sa navzajom prepisali (PETRIFLOW_LEARNINGS B10).
+def id = ((pu_userid.value ?: "") as String).trim()
+def predtym = userSnapshot(id)
+def authorities = ako_zoznam(pu_authority)
+def heslo = formPassword(pu_heslo.value)
+def riadky = []
+
+updateUserProfile(id, ((pu_meno.value ?: "") as String).trim(),
+                      ((pu_priezvisko.value ?: "") as String).trim())
+setUserAuthorities(id, authorities)
+if (heslo) {
+    changeUserPassword(id, heslo)
+    riadky << "heslo zmenené"
+}
+riadky << ("systémové oprávnenia: " + (authorities ? authorities.join(", ") : "žiadne"))
+
+// Uprava je NASTAVENIE stavu, nie pridavanie - co v zozname nie je, sa odoberie,
+// inak by sa rola nedala nikdy zrusit.
+def chceme = rozbor_zoznamu(pu_zoznam).collect { it.rola + "|" + it.siet } as Set
+((predtym.roly ?: [:]) as Map).each { siet, zoznamRoli ->
+    (zoznamRoli ?: []).each { rola ->
+        if (!chceme.contains((rola as String) + "|" + (siet as String))) {
+            setProcessRole(id, rola as String, siet as String, "", false)
+            riadky << ("odobraná rola: " + rola + " (" + siet + ")")
+        }
+    }
+}
+
+def pridelene = []
+def zlyhane = []
+rozbor_zoznamu(pu_zoznam).each { p ->
+    if (setProcessRole(id, p.rola as String, p.siet as String, p.verzia as String, true)) {
+        pridelene << (p.rola + " (" + p.siet + ")")
+    } else {
+        zlyhane << (p.rola + " (" + p.siet + ")")
+    }
+}
+riadky << (pridelene ? "procesné role: " + pridelene.join(", ") : "procesné role: žiadne")
+if (zlyhane) {
+    riadky << ("NEPODARILO SA prideliť: " + zlyhane.join(", "))
+}
+
+change pu_stav_label value { zlyhane ? "Aktívny s výhradou" : "Aktívny" }
+change pu_vysledok value { riadky.join("\n") }
+change pu_pridelene value { popis_zoznamu(rozbor_zoznamu(pu_zoznam)) }
+change pu_zmenil value { kto(loggedUser()) }
+change pu_zmenene_o value { java.time.LocalDateTime.now() }
+
+// Heslo z pripadu prec. Zostalo by v datach citatelne pre kazdeho, kto ma
+// na case `view` - a to je pri sprave uzivatelov to posledne, co chceme.
+change pu_heslo value { "" }
+
+changeCaseProperty("title").about { nazov(pu_meno, pu_priezvisko, pu_email) }
+changeCaseProperty("color").about { zlyhane ? "orange" : "green" }
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<place>
+		<id>p_ucet</id>
+		<x>60</x>
+		<y>80</y>
+		<label>Účet</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_uprava_in</id>
+		<type>regular</type>
+		<sourceId>p_ucet</sourceId>
+		<destinationId>t_pu_uprava</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_uprava_out</id>
+		<type>regular</type>
+		<sourceId>t_pu_uprava</sourceId>
+		<destinationId>p_ucet</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

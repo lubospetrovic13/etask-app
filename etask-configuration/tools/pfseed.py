@@ -49,10 +49,29 @@ PROCESSES = ROOT / "processes"
 CONFIG = ROOT / "seed.json"
 
 
+# Locale, ktore engine NEPOZNA - a preto vrati `defaultValue`.
+#
+# `I18nString.getTranslation(Locale)` je `translations.getOrDefault(
+# locale.getLanguage(), defaultValue)`, takze pri neznamom jazyku dostaneme
+# presne to, co je v XML ako hodnota elementu. To je jedina hodnota, ktoru
+# nastroj vie porovnat s lokalnym XML.
+#
+# Preco to nemoze zostat nevyplnene: BEZ hlavicky `Accept-Language` pouzije
+# Spring locale JVM, co je tu `en` - takze `/api/petrinet/{id}/roles` vratil
+# `name: "User administrator"`, kym v XML stalo `Správca používateľov`. Parovanie
+# podla nazvu prestalo sediet a `pfseed` ohlasil "cielovy stav plati", pricom
+# rolu z najnovsej verzie siete nikomu nepridelil. Ticho: prihlasenie fungovalo,
+# karta appky bola vidno, len zoznam uloh bol prazdny.
+#
+# A preco nie `sk`: to by predpokladalo, ze default value je slovensky. Je -
+# taka je tu konvencia - ale neznamy jazyk funguje bez toho predpokladu.
+NEUTRAL_LOCALE = "zz"
+
 def http(url, token=None, method="GET", body=None, basic=None):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Content-Type", "application/json")
+    req.add_header("Accept-Language", NEUTRAL_LOCALE)
     if token:
         req.add_header("X-Auth-Token", token)
     if basic:

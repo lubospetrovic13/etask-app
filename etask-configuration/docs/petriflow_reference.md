@@ -296,7 +296,7 @@ change children allowedNets { [pid.value] }
 
 - Behaviors: `editable` `visible` `required` `optional` `hidden` `forbidden`
 - Events are direct children of `<transition>` — no `<transitionEvents>` wrapper
-- `<roleRef><logic>`: only `<perform>`, `<cancel>`, `<delegate>` — never `<view>`
+- `<roleRef><logic>` on a transition: `<perform>` `<assign>` `<finish>` `<cancel>` `<delegate>` `<view>` — see the permission table below; `<view>` IS allowed
 - System tasks: `system` roleRef, no dataGroup, fired via `async.run`
 - `<priority>1` = shown first in UI; detail/status tasks use higher number (e.g. `2`)
 - **`<initials>` must be EXACTLY 3 uppercase letters** — e.g. `ABC`, never `AB` or `ABCD`
@@ -1447,10 +1447,109 @@ change applicant value { [loggedUser().id] }
 | | `caseLogic` | task `logic` |
 |-|---|---|
 | Scope | Case list visibility | Task access |
-| Values | `create`, `view`, `delete` | `perform`, `cancel`, `delegate` |
+| Values | `create`, `view`, `delete` | `perform`, `assign`, `finish`, `cancel`, `delegate`, `view` |
 | Placement | Top-level `<roleRef>`/`<userRef>` | Inside `<transition>` |
 
 > ⚠️ Role scope = ALL cases. UserList scope = per-case only. Use `userList` + `userRef` for owner-only access.
+
+### Task permissions are atomic, and `false` is not the same as absent
+
+`perform` is a **shorthand**, not a permission. `RoleFactory` expands it FIRST and the
+named permissions then overwrite it, so combining them works and the order is what
+makes it work:
+
+```
+<perform>      -> assign + cancel + finish + view + set     (NOT delegate)
+<assign> <finish> <cancel> <view> <delegate>  -> that one key, overriding perform
+```
+
+So this is a valid and useful combination — perform everything **except** cancel:
+
+```xml
+<roleRef>
+    <id>zamestnanec</id>
+    <logic><perform>true</perform><cancel>false</cancel></logic>
+</roleRef>
+```
+
+Three states, not two — verified on a running engine (stored transition `roles` map):
+
+| XML | stored | meaning |
+|---|---|---|
+| `<perform>true</perform>` | `{assign,cancel,finish,view,set: true}` | granted |
+| `<perform>true</perform><cancel>false</cancel>` | `{cancel: false, rest: true}` | cancel explicitly DENIED |
+| `<view>true</view>` alone | `{view: true}` | atomic — no assign, no finish |
+| `<view>false</view><finish>false</finish>` | `{view,finish: false}` + `negativeViewRoles` | purely negative role |
+
+How the engine evaluates it (`AbstractAuthorizationService`, `TaskAuthorizationService`):
+
+* absent = `null` = no opinion; `true` = grant; `false` = **restrict**.
+* Permissions of all the user's roles are aggregated with **AND**, and a single
+  `false` short-circuits to deny. A negative role therefore **beats** a positive one —
+  that is how you take a button away from someone who has it from elsewhere.
+* `<userRef>` permissions **replace** role permissions entirely for that user
+  (`userPerm == null ? rolePerm : userPerm`), they do not merge.
+* `ROLE_ADMIN` bypasses all of it.
+* `finish` additionally requires being the assignee.
+* `<view>false</view>` also lands in the transition's `negativeViewRoles`, which is
+  what Elastic uses to hide the task from lists.
+
+**This is how you remove a button** — `<cancel>false</cancel>` and the Cancel button
+is gone for that role, purely in Petriflow. Together with `<assignPolicy>auto` it is
+the whole toolkit for shaping which task buttons a given role sees.
+
+### Renaming a task button — and hiding it with an empty title (6.3.1)
+
+`<event type="finish"><title name="submit_title">Podať</title></event>` parses,
+imports, is stored **and reaches the browser translated**. `EventType` is exactly
+`ASSIGN` · `CANCEL` · `FINISH` · `DELEGATE`, and each contributes one key to the
+task payload:
+
+| payload key | `Accept-Language: sk` | `Accept-Language: en` |
+|---|---|---|
+| `title` | `Vyplňte` | `Fill it in` |
+| `assignTitle` | `Prevziať` | `Take` |
+| `cancelTitle` | `Vrátiť` | `Give back` |
+| `finishTitle` | `Podať` | `Submit` |
+| `delegateTitle` | `''` | `''` |
+
+The library reads them and falls back to the global i18n key when a title is
+absent:
+
+```js
+getFinishTitle() {
+    return (task.finishTitle === '' || task.finishTitle)
+        ? task.finishTitle : 'tasks.view.finish';
+}
+canFinish() { return this._permissionService.canFinish(task) && this.getFinishTitle() !== ''; }
+```
+
+Which gives the second, undocumented half: **an empty title hides the button.**
+
+```xml
+<event type="delegate">
+    <id>no_delegate</id>
+    <title name="no_delegate_title"></title>
+</event>
+```
+
+That removes Delegate from the panel without touching permissions — so it changes
+what the user *sees*, not what they *may do*. `canReassign()` is the one exception;
+it does not check a title.
+
+Consequence:
+
+* per-task rename — one `<title>` per event, translatable like any other,
+* per-task removal — empty `<title>`, one line, no permission change,
+* per-role removal — the permission table above, when the user must genuinely be
+  barred rather than merely not offered the button,
+* app-wide rename — i18n override of those four global keys.
+
+> **Correction.** This section previously said the title "never reaches the
+> browser", based on a payload dump in which the four keys were absent. The net
+> measured defined no event titles at all, and Jackson omits null fields — so that
+> was a measurement of an empty input, not of the API. An absent key in a JSON
+> payload is not evidence that the server never sends it.
 
 ---
 

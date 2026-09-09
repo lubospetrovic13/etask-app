@@ -10,14 +10,26 @@
     "              vznikne až importom prvej siete, ktorej identifikátor tú cestu",
     "              nesie, takže sieť odkazujúca na uzol (typicky menu) patrí za ňu.",
     "              Identifikátor sa NEUVÁDZA - NetRunner ho číta z <id> v XML.",
-    "bootstrapCase identifikátory sietí, ktorých má pri štarte existovať práve",
-    "              jeden case. Typicky sieť stavajúca zobrazenia menu: uzol URI",
-    "              sám o sebe žiadne nenesie a menu API enginu je na action",
-    "              delegate, teda dosiahnuteľné len z akcie - a akcia chce case.",
+    "bootstrapCase siete, ktorých má pri štarte existovať bootstrap case.",
+    "              Položka je identifikátor, alebo {\"net\": ...,",
+    "              \"rebuildOnNewVersion\": true}. Sú to dva rôzne druhy:",
+    "              - identifikátor = jeden case NAVŽDY. Pre pracujúci singleton",
+    "                (pult, počítadlo); druhý case = druhá trvale otvorená úloha.",
+    "              - rebuildOnNewVersion = jeden case NA VERZIU siete. Pre sieť",
+    "                stavajúcu menu: jej akcia je v udalosti create, teda beží raz",
+    "                za case, a case si drží verziu siete - takže bez nového casu",
+    "                sa po re-importe zmena zobrazení nikdy neprejaví.",
+    "              Prečo to menu vôbec potrebuje: uzol URI sám žiadne zobrazenia",
+    "              nenesie a menu API enginu je na action delegate, teda",
+    "              dosiahnuteľné len z akcie - a akcia chce case.",
     "uriNodes      ikona a viditeľnosť karty v bočnom menu. requiredProcessRoles",
     "              sú importId rolí (z <role><id> v sieti), nie stringId -",
     "              stringId sa razí per verziu siete a re-import by zoznam vyprázdnil.",
     "              Prázdne oboje = uzol vidí každý prihlásený.",
+    "",
+    "Používatelia (pu_*) sú súčasť starteru, nie príklad: správa účtov a rolí",
+    "je to, čo potrebuje každá inštancia, a bez nej sa nový používateľ zakladá",
+    "cez API. Jej kartu vidí rola spravca.",
     "",
     "Service Desk (sd_*) je príkladová aplikácia, nie časť frameworku.",
     "Odstránenie: zmaž processes/sd_*.xml, ich riadky v \"import\", položku",
@@ -41,10 +53,16 @@
     "sd_work_item.xml",
     "sd_ticket.xml",
     "sd_intake.xml",
-    "sd_menu.xml"
+    "sd_menu.xml",
+
+    "pu_pouzivatel.xml",
+    "pu_zalozenie.xml",
+    "pu_menu.xml"
   ],
   "bootstrapCase": [
-    "service_desk/sd_menu"
+    {"net": "service_desk/sd_menu", "rebuildOnNewVersion": true},
+    "pouzivatelia/pu_zalozenie",
+    {"net": "pouzivatelia/pu_menu", "rebuildOnNewVersion": true}
   ],
   "uriNodes": {
     "general": {
@@ -56,6 +74,11 @@
       "icon": "support_agent",
       "requiredAuthorities": ["ROLE_ADMIN"],
       "requiredProcessRoles": []
+    },
+    "pouzivatelia": {
+      "icon": "manage_accounts",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": ["spravca"]
     }
   }
 }

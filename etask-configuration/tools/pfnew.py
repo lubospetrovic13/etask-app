@@ -838,8 +838,15 @@ def patch_manifest(app, prefix, entity, icon, role, dry):
         todo.append(("import", net_file))
     if menu_file not in data.get("import", []):
         todo.append(("import", menu_file))
-    if menu_id not in data.get("bootstrapCase", []):
-        todo.append(("bootstrapCase", menu_id))
+    # Menu siet sa zapisuje v objektovej forme s `rebuildOnNewVersion`. Jej
+    # akcia je v udalosti `create`, teda bezi raz za case, a case si drzi verziu
+    # siete - bez toho by sa po re-importe menu siete zmena zobrazeni nikdy
+    # neprejavila a vyzeralo by to, ze re-import nefunguje.
+    menu_entry = {"net": menu_id, "rebuildOnNewVersion": True}
+    have = data.get("bootstrapCase", [])
+    if not any((e == menu_id) or (isinstance(e, dict) and e.get("net") == menu_id)
+               for e in have):
+        todo.append(("bootstrapCase", menu_entry))
     if app not in (data.get("uriNodes") or {}):
         todo.append(("uriNodes", app))
 
@@ -860,11 +867,14 @@ def patch_manifest(app, prefix, entity, icon, role, dry):
             "requiredProcessRoles": [role],
         }
 
+    def label(k, v):
+        return f"{k}:{v['net'] if isinstance(v, dict) else v}"
+
     if dry:
-        print("  processes.json: doplnil by som " + ", ".join(f"{k}:{v}" for k, v in todo))
+        print("  processes.json: doplnil by som " + ", ".join(label(k, v) for k, v in todo))
         return
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print("  processes.json: doplnene " + ", ".join(f"{k}:{v}" for k, v in todo))
+    print("  processes.json: doplnene " + ", ".join(label(k, v) for k, v in todo))
 
 
 def patch_seed(app, dry):

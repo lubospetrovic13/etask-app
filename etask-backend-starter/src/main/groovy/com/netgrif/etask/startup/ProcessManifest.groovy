@@ -40,8 +40,31 @@ class ProcessManifest {
      * zobrazenia nenesie a menu API enginu (`createFilterInMenu`) je na action
      * delegate, teda dosiahnutelne len z akcie - a akcia potrebuje case.
      */
-    List<String> bootstrapCases() {
-        return (manifest()["bootstrapCase"] ?: []).collect { it as String }
+    /**
+     * Siete, ktorych ma pri starte existovat bootstrap case.
+     *
+     * Polozka je bud identifikator, alebo objekt
+     * `{"net": "...", "rebuildOnNewVersion": true}`. Vracia sa
+     * `[identifikator: rebuildOnNewVersion]`.
+     *
+     * To rozlisenie nie je kozmetika - su to dva rozne druhy bootstrap casu:
+     *
+     *   * **Singleton, ktory pracuje** (pult, pocitadlo, konfiguracia). Ma
+     *     existovat presne jeden, navzdy. Druhy case znamena druhu trvale
+     *     otvorenu ulohu, teda dva riadky v zozname tam, kde ma byt jeden.
+     *   * **Artefakt buildu** (siet stavajuca menu). Jeho jedina uloha je
+     *     spustit akciu z udalosti `create`. Akcia bezi RAZ ZA CASE a case si
+     *     drzi verziu siete, takze po re-importe menu siete sa nova verzia
+     *     akcie nespusti, kym nevznikne novy case - zmena zobrazeni sa v
+     *     nasadenej instancii neprejavi a nikde sa to neohlasi.
+     */
+    Map<String, Boolean> bootstrapCases() {
+        return (manifest()["bootstrapCase"] ?: []).collectEntries { entry ->
+            if (entry instanceof Map) {
+                return [(entry["net"] as String), (entry["rebuildOnNewVersion"] as boolean)]
+            }
+            return [(entry as String), false]
+        } as Map<String, Boolean>
     }
 
     /** uriPath -> {icon, requiredAuthorities, requiredProcessRoles}. */

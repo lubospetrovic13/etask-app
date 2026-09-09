@@ -1,0 +1,206 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>pouzivatelia/pu_menu</id>
+	<version>1.0.0</version>
+	<initials>PUM</initials>
+	<title name="net_title">Menu Používateľov</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Users menu</i18nString>
+		<i18nString name="spravca_title">User administrator</i18nString>
+		<i18nString name="t_pu_menu_label">Menu state</i18nString>
+	</i18n>
+	<icon>menu</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Karta "Používatelia" a jej zobrazenia. Vzor je dv_menu.xml vrátane oboch
+		pascí, ktoré tam stáli za ladenie:
+
+		  * `createOrUpdateMenuItem` sa volá s DEVIATIMI argumentmi. Existuje
+		    dvakrát - projektová (7-9) a enginová (11) - a rozlišujú sa len
+		    aritou. Pri ôsmich si Groovy vybral enginovú a padlo to.
+		  * Jej UPDATE cesta nefunguje ani v projektovej variante (`changeFilter`
+		    sa prekladá na neexistujúce `updateFilter`), takže zmenená položka sa
+		    vždy zahodí a postaví znova - aj s jej `filter` casom, ktorý
+		    `deleteMenuItem` necháva osirelý.
+
+		`default_headers` sú predvolené stĺpce zoznamu: comma-separated
+		`HeaderColumn.uniqueId`, ktoré resolver vloží ako `NAE_DEFAULT_HEADERS` do
+		injektora práve tohto zobrazenia. Dátové pole tam smie byť len ak má
+		`immediate="true"`.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>pu_menu_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+def created = []
+def unchanged = []
+def failed = []
+
+def siet = "pouzivatelia/pu_pouzivatel"
+def vsetky = "processIdentifier:\"" + siet + "\""
+def stlpce = "meta-title" +
+        ",pouzivatelia/pu_pouzivatel-pu_stav_label" +
+        ",pouzivatelia/pu_pouzivatel-pu_email" +
+        ",pouzivatelia/pu_pouzivatel-pu_priezvisko"
+
+def views = [
+        // 1. ZAKLADANIE - typ Task, zuzeny na jednu ulohu. Menu pozna len typy
+        //    Case a Task (`FilterType`), samostatny "single task" typ nie je -
+        //    ale zakladacia siet ma jediny pripad, takze Task zoznam ma jediny
+        //    riadok a chova sa presne tak.
+        //    `ElasticTask` nema `processIdentifier`, len `processId` razene per
+        //    verziu siete - dopyt preto ide na `transitionId`.
+        [id: "pu_novy", name: i18n("Nový používateľ", ["en": "New user"]),
+         type: "Task", icon: "person_add",
+         query: "transitionId:\"t_pu_novy\"", nets: [], roles: [:], headers: ""],
+        // 2. ZOZNAM UCTOV - jeden pripad = jeden ucet.
+        //    `nets` tu MUSI byt, inak sa nevykreslia stlpce z datovych poli
+        //    (RUNBOOK 4). Vedlajsim ucinkom je tlacidlo "+", ktore vyrobi pripad
+        //    bez uctu - ten o sebe povie, ze je nezviazany, a `finish` ho
+        //    nepusti. Zakladat sa ma v prvom zobrazeni.
+        [id: "pu_vsetci", name: i18n("Používatelia", ["en": "Users"]),
+         type: "Case", icon: "group",
+         query: vsetky, nets: [siet], roles: [:], headers: stlpce],
+]
+
+views.each { v ->
+    def id = v.id as String
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            // Porovnava sa dopyt A allowedNets - oboje ide do konstruktora
+            // a na existujucej polozke sa zmenit neda. Kym sa porovnaval len
+            // dopyt, pridanie siete sa ticho zahodilo: podmienka vyhlasila
+            // polozku za nezmenenu a stlpce z datovych poli sa nezobrazili.
+            def current = getFilterFromMenuItem(existing)
+            def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
+            def currentNets = ((current?.dataSet?."filter"?.allowedNets ?: []) as List)
+                    .collect { it as String } as Set
+            def wantNets = (v.nets as List).collect { it as String } as Set
+            // A NAZOV, vratane prekladov. Bez toho by uz nasadena instancia
+            // doplneny preklad nikdy nedostala: polozka tam je s tym istym
+            // dopytom aj sietami, takze by sa vzdy vyhlasila za nezmenenu.
+            def currentName = current?.dataSet?."i18n_filter_name"?.value
+            def sameName = currentName != null &&
+                    (currentName.defaultValue as String) == (v.name.defaultValue as String) &&
+                    (currentName.translations ?: [:]) == (v.name.translations ?: [:])
+            if (currentQuery == (v.query as String) && currentNets == wantNets && sameName) {
+                nastav_zobrazenie(existing, v.nets as List, v.headers)
+                unchanged << id
+                return
+            }
+            // PORADIE JE POVINNE: najprv polozka, potom filter. Naopak to padne
+            // na `IllegalArgumentException: Could not find Case with id [...]`,
+            // lebo `deleteMenuItem` si filter este raz nacita podla id na polozke.
+            deleteMenuItem(existing)
+            if (current != null) {
+                deleteFilter(current)
+            }
+        }
+        def item = createOrUpdateMenuItem(
+                id,                 // menu_item_identifier
+                "pouzivatelia",     // URI cesta - MUSI sedet s uriNodes v processes.json
+                v.type as String,
+                v.query as String,
+                v.icon as String,
+                v.name,             // I18nString - polozka menu je dvojjazycna
+                v.nets as List,     // allowedNets - bez toho "+" nefunguje
+                v.roles as Map,
+                [:]                 // bannedRoles - dourcuje aritu na projektovu
+        )
+        if (item) { created << id } else { failed << id }
+        nastav_zobrazenie(item, v.nets as List, v.headers)
+    } catch (Exception e) {
+        failed << (id + " (" + e.getClass().simpleName + ": " + e.message + ")")
+    }
+}
+
+def summary = "Menu Používateľov – " + (created.size() + unchanged.size()) + "/" + views.size()
+if (failed) {
+    summary = "CHYBA menu Používateľov – nepodarilo sa: " + failed.join(", ")
+}
+changeCaseProperty("title").about { summary }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="nastav_zobrazenie"><![CDATA[
+{ def menuItem, def nets, def headers ->
+    // enable_case_title  - vypnutý dialóg "Vyplňte názov prípadu" pri "+".
+    // default_headers    - predvolené stĺpce zoznamu.
+    // Ani jedno nie je argument `createOrUpdateMenuItem`.
+    if (menuItem == null) return
+    def payload = [:]
+    if (nets) {
+        payload.put("enable_case_title", ["value": false, "type": "boolean"])
+        payload.put("case_require_title_in_creation", ["value": false, "type": "boolean"])
+    }
+    if (headers) {
+        payload.put("default_headers", ["value": headers as String, "type": "text"])
+    }
+    if (payload) {
+        setData("view", menuItem, payload)
+    }
+}
+	]]></function>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def identifier ->
+    // `findMenuItem(id)` z ActionDelegate existujucu polozku nenajde (hlada
+    // v inom rozsahu), takze by sa pri kazdom spusteni zalozila druha sada.
+    def id = ((identifier ?: "") as String).trim()
+    if (!id) return null
+    def items = findCases { it.processIdentifier.eq("preference_filter_item") }
+    return items?.find { ((it.dataSet["menu_item_identifier"]?.value ?: "") as String) == id }
+}
+	]]></function>
+	<roleRef>
+		<id>spravca</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>spravca</id>
+		<title name="spravca_title">Správca používateľov</title>
+	</role>
+	<transition>
+		<id>t_pu_menu</id>
+		<x>112</x>
+		<y>80</y>
+		<label name="t_pu_menu_label">Stav menu</label>
+		<icon>menu</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>spravca</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_pu_menu</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_pu_menu</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

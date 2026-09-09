@@ -22,9 +22,15 @@ import org.springframework.stereotype.Component
  * (`createFilterInMenu`) je na action delegate a z runnera sa zavolat neda.
  * Runner teda len zabezpeci, ze existuje case, z ktoreho sa akcia spusti.
  *
- * Idempotentne dvojmo: preskoci siet, ktorej case pre TUTO VERZIU uz je, a siete
- * samotne preskakuju polozky menu s uz existujucim identifikatorom. Per verzia,
- * nie per identifikator - dovod je v tele metody.
+ * Idempotentne dvojmo: preskoci siet, ktorej case uz je, a siete samotne
+ * preskakuju polozky menu s uz existujucim identifikatorom.
+ *
+ * Co znamena "uz je", zavisi od polozky manifestu. `{"net": "...",
+ * "rebuildOnNewVersion": true}` znamena jeden case NA VERZIU siete - to je pre
+ * siete stavajuce menu, ktorych akcia je v udalosti `create` a bez noveho casu
+ * by sa po re-importe nespustila. Obycajny identifikator znamena jeden case
+ * navzdy - to je pre pracujuce singletony (pult, pocitadlo), kde druhy case
+ * znamena druhu trvale otvorenu ulohu.
  *
  * Zamerne to nevie meno konkretnej aplikacie: ked bol tento runner
  * `SdMenuRunner` s natvrdo zapisanym `service_desk/sd_menu`, znamenala nova
@@ -50,10 +56,12 @@ class BootstrapCaseRunner extends AbstractOrderedCommandLineRunner {
     @Override
     void run(String... args) throws Exception {
         log.info("Calling bootstrap case runner")
-        manifest.bootstrapCases().each { String identifier -> bootstrap(identifier) }
+        manifest.bootstrapCases().each { String identifier, boolean perVersion ->
+            bootstrap(identifier, perVersion)
+        }
     }
 
-    private void bootstrap(String identifier) {
+    private void bootstrap(String identifier, boolean perVersion) {
         PetriNet net = petriNetService.getNewestVersionByIdentifier(identifier)
         if (net == null) {
             // NetRunner ju nenaimportoval (alebo import zlyhal). Nie je z coho
@@ -62,31 +70,28 @@ class BootstrapCaseRunner extends AbstractOrderedCommandLineRunner {
             return
         }
 
-        // Case sa hlada pre TUTO VERZIU siete, nie len pre identifikator.
+        // `perVersion` rozhoduje, ci sa hlada case pre TUTO VERZIU alebo
+        // hocijaky. Preco to nemoze byt jedno pravidlo pre vsetkych, je
+        // v `ProcessManifest.bootstrapCases`.
         //
-        // Predtym tu stalo `processIdentifier.eq(identifier)`, teda "existuje
-        // aspon jeden case?", a to malo tichy dosledok: case si drzi verziu
-        // siete, v ktorej vznikol, a akcia stavajuca menu je v udalosti
-        // `create` - teda bezi presne raz za case. Po re-importe menu siete
-        // teda runner nasiel stary case, preskocil - a NOVA verzia akcie sa
-        // nespustila nikdy. Zmena zobrazeni v menu sa v nasadenej instancii
-        // neprejavila a nikde sa to neohlasilo; vyzeralo to, ze re-import
-        // nefunguje.
+        // Historia: chvilu tu bolo `perVersion` pre vsetkych a hned to zhodilo
+        // invariant zakladacej siete pouzivatelov - "presne jeden case" - lebo
+        // tá je pult, nie artefakt buildu, a druhy case znamena druhu trvale
+        // otvorenu ulohu, teda dva riadky v zozname tam, kde ma byt jeden.
+        // Zachytil to `pucheck.py`, nie clovek.
         //
-        // Prejavilo sa to az pri prekladoch: siet zacala nazvy zobrazeni
-        // posielat dvojjazycne, import presiel, a v menu bola dalej
-        // jednojazycna verzia z casu, ktory vznikol pred tou zmenou.
-        //
-        // Stare casy sa zamerne nemazu. Su to artefakty buildu menu, ale
-        // mazanie casu je nevratne a runner na starte nie je miesto, kde to
-        // robit; siete samotne su idempotentne (polozku s existujucim
-        // identifikatorom preskocia alebo ju prepisu), takze druhy case
-        // menu nepokazi.
-        long existing = workflowService.searchAll(
-                QCase.case$.processIdentifier.eq(identifier)
-                        .and(QCase.case$.petriNetObjectId.eq(net.getObjectId()))).totalElements
-        if (existing > 0) {
-            log.debug("Bootstrap case pre ${identifier} v${net.version} uz existuje")
+        // Stare casy sa zamerne nemazu ani v `perVersion` rezime. Mazanie casu
+        // je nevratne a runner na starte nie je miesto, kde to robit; siete
+        // stavajuce menu su idempotentne (polozku s existujucim identifikatorom
+        // preskocia alebo prepisu), takze druhy case menu nepokazi - a jeho
+        // nazov je zhrnutie buildu, takze zopar starych je citatelna historia.
+        def query = QCase.case$.processIdentifier.eq(identifier)
+        if (perVersion) {
+            query = query.and(QCase.case$.petriNetObjectId.eq(net.getObjectId()))
+        }
+        if (workflowService.searchAll(query).totalElements > 0) {
+            log.debug("Bootstrap case pre ${identifier}" +
+                    (perVersion ? " v${net.version}" : "") + " uz existuje")
             return
         }
 

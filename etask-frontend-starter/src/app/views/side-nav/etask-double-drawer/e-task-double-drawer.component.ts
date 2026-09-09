@@ -232,8 +232,27 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
     return this.folderIcon;
   }
 
+  /**
+   * Log out.
+   *
+   * `UserService.logout()` returns an `Observable<object>` and an HTTP observable
+   * is cold: without a subscriber nothing is sent and nothing happens. This used
+   * to be a bare `this._userService.logout()`, so the item in the left menu did
+   * literally nothing - no request, no redirect, no error. The dashboard's own
+   * logout button subscribes, which is why one of them worked and the other
+   * didn't.
+   *
+   * The redirect is part of logging out: the guard would eventually bounce the
+   * user, but only on the next navigation, so without it the app keeps showing
+   * a session that no longer exists.
+   */
   public logout(): void {
-    this._userService.logout();
+    this._userService.logout().subscribe(
+      () => this._router.navigate(['login']),
+      error => {
+        this._log.error('Logout failed', error);
+        this._router.navigate(['login']);
+      });
   }
 
   public isRoot(): boolean {

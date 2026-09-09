@@ -27,6 +27,7 @@ import {
   TaskViewService,
 } from '@netgrif/components-core';
 import {TranslateService} from '@ngx-translate/core';
+import {EtaskAssignPolicyService} from './etask-assign-policy.service';
 import {EtaskTaskContentComponent} from '../../task-content/etask-task-content.component';
 import {EtaskSingleTaskContentService} from '../../task-content/services/etask-single-task-content.service';
 
@@ -44,7 +45,7 @@ import {EtaskSingleTaskContentService} from '../../task-content/services/etask-s
     FinishTaskService,
     TaskRequestStateService,
     DataFocusPolicyService,
-    AssignPolicyService,
+    {provide: AssignPolicyService, useClass: EtaskAssignPolicyService},
     FinishPolicyService,
     ChangedFieldsService,
     {provide: NAE_TASK_OPERATIONS, useClass: SubjectTaskOperations},
