@@ -1,0 +1,95 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>fixtures/bad_lint4</id>
+	<version>1.0.0</version>
+	<initials>BL4</initials>
+	<title>Fixture - tri tiche chyby, ktore engine prijme</title>
+	<defaultRole>true</defaultRole>
+	<!--
+		Toto nie je ukazka, je to TEST. `pflint` na tejto sieti MUSI zlyhat.
+
+		Engine ju naimportuje bez namietky a `pfgroovy` na nej neuvidi nic -
+		vsetky tri chyby sa prejavia az za behu, a dve z nich uplne ticho:
+
+		  1. kluc moznosti s bodkou   -> Mongo zahodi ulozenie options
+		     ("Map key 1.0.0 contains dots but no replacement was configured")
+		  2. `removeRole(...)`        -> v 6.3.1 rolu NEODOBERIE a nic nepovie
+		     (AbstractUserService hlada rolu podla importId, hoci parameter je
+		     stringId; PETRIFLOW_LEARNINGS B9)
+		  3. URI cesta polozky menu, ktora nie je v `uriNodes` v processes.json
+		     -> polozka vznikne, ale nema kartu, na ktorej by bola vidno
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>c</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+verzia: f.verzia;
+
+// 3. `neexistujuca_karta` nie je v uriNodes
+createOrUpdateMenuItem(
+        "zle_zobrazenie",
+        "neexistujuca_karta",
+        "Case",
+        "processIdentifier:\"fixtures/bad_lint4\"",
+        "list",
+        "Zlé zobrazenie",
+        [],
+        [:],
+        [:]
+)
+
+// 2. odobranie roly, ktore nefunguje
+def u = findUserByEmail("nikto@example.com")
+if (u != null) {
+    removeRole("nejake_string_id", u)
+}
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<role><id>ktosi</id><title>Ktosi</title></role>
+	<data type="enumeration_map">
+		<id>verzia</id>
+		<title>Verzia</title>
+		<!-- 1. bodka v kluci moznosti -->
+		<options>
+			<option key="1.0.0">1.0.0</option>
+			<option key="2.0.0">2.0.0</option>
+		</options>
+	</data>
+	<transition>
+		<id>t</id>
+		<x>100</x>
+		<y>80</y>
+		<label>T</label>
+		<roleRef>
+			<id>ktosi</id>
+			<logic><perform>true</perform></logic>
+		</roleRef>
+		<dataGroup>
+			<id>g</id>
+			<cols>4</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>verzia</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p</id>
+		<x>30</x>
+		<y>80</y>
+		<label>P</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a</id>
+		<type>read</type>
+		<sourceId>p</sourceId>
+		<destinationId>t</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

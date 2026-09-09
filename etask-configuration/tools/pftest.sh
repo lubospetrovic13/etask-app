@@ -67,6 +67,15 @@ else
   ok "pflint chytil bad-call.xml"
 fi
 
+# pflint: styri tiche pasce, ktore engine prijme a pfgroovy neuvidi - bodka
+# v kluci moznosti (Mongo zahodi ulozenie), `removeRole` (v 6.3.1 nefunguje
+# a mlci) a URI cesta polozky menu mimo `uriNodes` (polozka bez karty).
+if $PY tools/pflint.py tools/fixtures/bad-lint4.xml >/dev/null 2>&1; then
+  bad "pflint neoznacil bad-lint4.xml (kluc s bodkou, removeRole, URI cesta)"
+else
+  ok "pflint chytil bad-lint4.xml"
+fi
+
 # pfgroovy: musi chytit rozbite Groovy
 if $PY tools/pfgroovy.py tools/fixtures/bad-groovy.xml >/dev/null 2>&1; then
   bad "pfgroovy neoznacil bad-groovy.xml"
