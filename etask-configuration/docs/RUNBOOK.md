@@ -526,10 +526,24 @@ Tri veci, ktoré na takom procese treba spraviť vedome:
   Miesto, ktoré nejaký prechod konzumuje, na to nestačí — odmietnuté `finish` tú
   úlohu zmaže a už ju neobnoví (`PETRIFLOW_LEARNINGS.md`, B8b).
 
-A ešte jedna, ktorá nie je o používateľoch, ale bije práve tu: **skryté pole musí
-byť v `dataGroup` prechodu.** Nie preto, aby ho niekto videl —
-`GET /api/task/{id}/data` vracia len polia z dataGroup, takže inak ho nevidí ani
-test, ani nikto, kto sa prípadu pýta cez API.
+A ešte tri, ktoré nie sú o používateľoch, ale bijú práve tu:
+
+* **Skryté pole musí byť v `dataGroup` prechodu.** Nie preto, aby ho niekto
+  videl — `GET /api/task/{id}/data` vracia len polia z dataGroup, takže inak ho
+  nevidí ani test, ani nikto, kto sa prípadu pýta cez API.
+* **Zdieľaná úloha nesmie mať `assignPolicy=auto`** a nesmie mať zakázaný
+  `cancel` (`PETRIFLOW_LEARNINGS.md`, B12).
+* **Možnosti poľa nastavuj tam, kde zapisuješ hodnotu**, nie v `create`
+  udalosti prípadu — tam sa neuchovajú (B11).
+
+**Entita verzus úkon.** Keď appka spravuje niečo, čo existuje aj bez nej —
+používateľské účty, zariadenia, zmluvy — prípad má byť **na tú entitu**, nie na
+úkon. Prípad na úkon znamená, že o tej istej entite máš päť otvorených
+rozpísaných prípadov a žiadny z nich nie je ten pravý. Z toho vyplýva aj to,
+že entity, ktoré vznikli inak, potrebujú **zosúladenie** (idempotentné
+doplnenie prípadu) — a že zviazanie prípadu s entitou má byť na jednom mieste,
+odkiaľ si prípad zvyšok dotiahne sám. Zdrojom pravdy je entita, nie to, čo
+niekto poslal do formulára.
 
 Hotová sieť, ktorá toto celé robí — validácie v `pre`, založenie aj úprava účtu,
 dvojkrokový výber rolí s `autocomplete`, voľba verzie procesu a karta v menu
