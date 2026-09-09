@@ -21,7 +21,18 @@
     "",
     "Service Desk (sd_*) je príkladová aplikácia, nie časť frameworku.",
     "Odstránenie: zmaž processes/sd_*.xml, ich riadky v \"import\", položku",
-    "\"service_desk\" nižšie a netScope v seed.json."
+    "\"service_desk\" nižšie a netScope v seed.json.",
+    "",
+    "Jeho kartu vidí LEN admin (requiredAuthorities ROLE_ADMIN). Je to príklad,",
+    "nie appka, ktorú niekto v tejto instancii používa - a karta príkladu v menu",
+    "bežného používateľa je šum, ktorý sa nedá odlíšiť od skutočnej aplikácie.",
+    "Kto ho chce dať do prevádzky, vymení to za requiredProcessRoles",
+    "[\"agent\", \"specialist\", \"manager\"].",
+    "",
+    "Pozor: uzol URI riadi len VIDITEĽNOSŤ KARTY. Zobrazenia pod ňou stavia",
+    "sd_menu s visibility \"public\", takže kto pozná URL, otvorí ich aj tak;",
+    "čo v nich uvidí, riadia oprávnenia v sietiach. Skrytie karty nie je",
+    "prístupové opatrenie."
   ],
   "import": [
     "configuration_tiles.xml",
@@ -43,8 +54,8 @@
     },
     "service_desk": {
       "icon": "support_agent",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": ["agent", "specialist", "manager"]
+      "requiredAuthorities": ["ROLE_ADMIN"],
+      "requiredProcessRoles": []
     }
   }
 }
