@@ -1,6 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {
+  LanguageService,
   LoggerService,
   NAE_VIEW_ID_SEGMENT,
   SnackBarService,
@@ -28,7 +29,13 @@ export class LoginComponent implements OnInit {
               private _userService: UserService,
               private _snackbar: SnackBarService,
               private _translate: TranslateService,
+              private _language: LanguageService,
               private _log: LoggerService) {
+  }
+
+  /** Which flag the switcher shows. Read on each change detection, so it follows a switch. */
+  public get currentLanguage(): string {
+    return this._language.getLanguage();
   }
 
   ngOnInit(): void {

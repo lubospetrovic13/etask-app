@@ -36,5 +36,9 @@
       "toDark": "Tmavý režim",
       "toLight": "Svetlý režim"
     }
+  },
+  "uriNode": {
+    "general": "Všeobecné",
+    "service_desk": "Service Desk"
   }
 }

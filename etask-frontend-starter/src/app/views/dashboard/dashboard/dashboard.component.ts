@@ -17,6 +17,7 @@ import {
 import {Subscription} from 'rxjs';
 import {map} from 'rxjs/operators';
 import custom_views from '../../../../assets/custom_views.json';
+import {UriNodeTitlePipe} from '../../side-nav/uri-node-title.pipe';
 import icons from '../../../../assets/uriNodeIcons.json';
 import {ETaskUriNodeResource} from '../service/etask-uri-resource.service';
 import {EtaskUriService} from '../service/etask-uri.service';
@@ -26,6 +27,7 @@ import {EtaskUriService} from '../service/etask-uri.service';
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
+  providers: [UriNodeTitlePipe],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   public nodes: Array<ETaskUriNodeResource> = [];
@@ -44,6 +46,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private _filterExtraction: FilterExtractionService,
     private _dynamicRoutingService: DynamicNavigationRouteProviderService,
     private _accessService: AccessService,
+    private _nodeTitle: UriNodeTitlePipe,
   ) {
     this._loading = new LoadingEmitter();
   }
@@ -110,13 +113,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * "Service Desk".
    */
   public getNodeTitle(node: ETaskUriNodeResource): string {
-    return (node?.name ?? '')
-      .replace(/_/g, ' ')
-      .trim()
-      .split(/\s+/)
-      .filter(word => word.length > 0)
-      .map(word => word.charAt(0).toLocaleUpperCase() + word.slice(1))
-      .join(' ');
+    return this._nodeTitle.transform(node?.name);
   }
 
   private static iconKey(name: string): string {

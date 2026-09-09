@@ -105,35 +105,48 @@ inými dverami. Statická kontrola `pfview` ju nezachytí, lebo nemá čo označ
 
 ---
 
-## E3. `title` a `message` udalosti sa nikdy nedostanú ku klientovi
+## E3. ~~`title` udalosti sa nedostane ku klientovi~~ — STAŽENÉ, bolo to nesprávne
 
-**Príznak.** `<event type="finish"><title>Podať</title></event>` sa naimportuje,
-uloží — a v appke je na tlačidle ďalej „Dokončiť".
+**Toto nie je chyba enginu.** Zapísal som to ako chybu a bolo to zmerané zle;
+nechávam to tu ako stiahnutý záznam, nie ako prázdne miesto, aby sa tvrdenie
+nedalo znova prevziať z niečoho, čo naň medzitým odkazuje.
 
-**Príčina.** Model to má, API to neposiela. Task payload neobsahuje o udalostiach
-**nič**:
+**Ako to skončilo v katalógu.** Zmeral som payload tasku, nenašiel v ňom
+o udalostiach nič a z tej **absencie** som usúdil, že API titulky neposiela.
+Sieť, na ktorej som to meral, ale žiadny titulok udalosti nedefinovala —
+a Jackson `null` položky vynecháva. Meral som teda vlastný prázdny vstup.
 
+**Ako to je.** Funguje to celé, vrátane prekladu. Namerané na 6.3.1 na sieti,
+ktorá definuje všetky štyri udalosti:
+
+| kľúč v payloade tasku | `Accept-Language: sk` | `Accept-Language: en` |
+|---|---|---|
+| `title` | `Vyplňte` | `Fill it in` |
+| `assignTitle` | `Prevziať` | `Take` |
+| `cancelTitle` | `Vrátiť` | `Give back` |
+| `finishTitle` | `Podať` | `Submit` |
+| `delegateTitle` | `''` | `''` |
+
+Knižnica ich číta a pri chýbajúcom titulku padne na globálny kľúč:
+
+```js
+getFinishTitle() {
+    return (task.finishTitle === '' || task.finishTitle)
+        ? task.finishTitle : 'tasks.view.finish';
+}
+canFinish() { return this._permissionService.canFinish(task) && this.getFinishTitle() !== ''; }
 ```
-assignPolicy, assignedUserPolicy, caseColor, caseId, caseTitle, dataFocusPolicy,
-finishPolicy, icon, immediateData, layout, roles, stringId, title, transitionId, users
-```
 
-Payload siete je len referencia (bez prechodov) a knižnica popisuje tlačidlá
-globálnymi i18n kľúčmi `tasks.view.finish` · `.cancel` · `.assign` · `.delegate`.
+Z čoho vyplýva druhá polovica, ktorá nie je nikde napísaná: **prázdny titulok
+tlačidlo skryje.** `<title></title>` na udalosti je teda spôsob, ako z panela
+odobrať `delegate` alebo `cancel` bez zásahu do oprávnení. Jediná výnimka je
+`canReassign()`, ktorý titulok nekontroluje.
 
-**Dôkaz.** V Mongu uložené:
+Ako sa to píše, je v `PETRIFLOW_LEARNINGS.md` B23.
 
-```json
-"events": {"FINISH": {"type": "FINISH", "title": {"defaultValue": "Podať žiadosť"},
-                      "message": {"defaultValue": "Žiadosť bola podaná"}}}
-```
-
-V `GET /api/task/search` ani v `GET /api/petrinet/{id}` po tom niet stopy.
-
-**Obídenie.** Len celoaplikačné premenovanie cez i18n. Per-task nie.
-
-**Návrh opravy.** Priložiť titulky udalostí k tasku (stačia štyri reťazce)
-a nechať panel uprednostniť ich pred globálnym kľúčom.
+**Čo si z toho odniesť.** Absencia kľúča v JSON payloade nie je dôkaz, že ho
+server nikdy neposiela — je to dôkaz, že ho neposlal pre **tento** vstup.
+Merať treba na vstupe, ktorý tú vlastnosť naozaj používa.
 
 ---
 
@@ -337,11 +350,46 @@ PowerAssertionError: assert resource.fontTitleResource.exists()
 
 ---
 
+## E15. `<i18n locale="en-US">` sa naimportuje a nikdy sa nepoužije
+
+**Príznak.** Preklady sú v XML, import prejde bez slova — a appka ich nezobrazí.
+Ten istý súbor s `locale="en"` funguje.
+
+**Príčina.** Importer uloží kľúč **verbatim** z atribútu:
+
+```java
+protected void addTranslation(I18NStringType i18NStringType, String locale) {
+    translation.addTranslation(locale, i18NStringType.getValue());   // "en-US"
+}
+```
+
+Vyhľadanie ide vždy cez `Locale`, teda cez **dvojpísmenový** jazyk:
+
+```java
+public String getTranslation(Locale locale) {
+    return getTranslation(locale.getLanguage());                     // "en"
+}
+```
+
+`en-US` sa teda nemá ako trafiť. XSD atribút nijako neomedzuje, importer
+nekontroluje nič a v logu nie je nič.
+
+**Dôkaz.** Sieť s oboma blokmi naraz — `locale="en"` s hodnotou `Your name`
+a `locale="en-US"` s hodnotou `FULL LOCALE en-US` na tom istom kľúči. Na
+`Accept-Language: en-US` vrátil engine `Your name`. Blok `en-US` je mŕtvy kód.
+
+**Obídenie.** Písať v `<i18n>` len dvojpísmenový kód: `sk`, `en`, `de`.
+
+**Návrh opravy.** Kľúč pri importe normalizovať na `Locale.forLanguageTag(...)
+.getLanguage()`, alebo pri neznámom tvare odmietnuť import.
+
+---
+
 ## Čo s tým
 
-Prvé tri stoja najviac: **E1** znemožňuje celú jednu operáciu, **E2** robí
-z Task zobrazení druhotriedne a **E3** je funkcia, ktorá je v modeli hotová
-a chýba jej posledný krok. Ostatné sú jednotlivé ladenia.
+Najviac stojí **E1** — znemožňuje celú jednu operáciu — a **E2**, ktoré robí
+z Task zobrazení druhotriedne. Ostatné sú jednotlivé ladenia. **E3 je
+stiahnuté**: to sa ukázalo ako moja chyba merania, nie chyba enginu.
 
 Čo v tejto kope **nie je**: správanie, ktoré je v poriadku a treba ho len
 poznať — oprávnenia a `perform` ako skratka, `assignPolicy` a jeho dva okamihy,

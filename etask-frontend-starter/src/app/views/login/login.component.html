@@ -1,4 +1,15 @@
 <nc-authentication-overlay>
+  <!--
+      The language switcher belongs on the login screen, not only inside the portal.
+
+      Everything behind the login is reachable only after you have read this form, so a
+      switcher that lives in the drawer is useless to anyone who cannot read the form's
+      language - they would have to guess which field is the username. It is placed in
+      the corner rather than next to the form so it does not read as part of the login.
+  -->
+  <div class="login-language" fxLayout="row" fxLayoutAlign="end center">
+    <app-etask-language-selector [language]="currentLanguage"></app-etask-language-selector>
+  </div>
   <div class="fill-all-space" fxLayout="row" fxLayoutAlign="center center">
     <nc-login-form (login)="onLogin($event)"></nc-login-form>
   </div>

@@ -63,8 +63,18 @@
         <mat-icon>account_circle</mat-icon>
       </button>
 
-      <div *ngIf="includeLanguage && false" fxLayout="row" class="icon-container" fxLayoutAlign="center center">
-        <nc-language-selector fxLayout="row" [language]="getLang()"></nc-language-selector>
+      <!--
+          The `&& false` that used to be on this ngIf is gone.
+
+          The library's own template has plain `*ngIf="includeLanguage"` and the input
+          defaults to true, so this copy had switched the language button off by hand.
+          Together with the switcher at line ~215 being behind `isRoot()`, that left the
+          portal with no reachable way to change language on any screen except the root
+          of the drawer tree - while the app hardcoded Slovak on every load anyway, so
+          nobody noticed it was missing.
+      -->
+      <div *ngIf="includeLanguage" fxLayout="row" class="icon-container" fxLayoutAlign="center center">
+        <app-etask-language-selector fxLayout="row" [language]="getLang()"></app-etask-language-selector>
       </div>
 
       <mat-menu #railMenu="matMenu">
@@ -132,7 +142,7 @@
 
   <div class="margin-top-x2"></div>
   <button *ngFor='let node of leftNodes; trackBy: uriNodeTrackBy' mat-icon-button (click)="onNodeClick(node)"
-          class="menu-button mat-typography" [matTooltip]="node.name" [matTooltipPosition]="'right'"
+          class="menu-button mat-typography" [matTooltip]="node.name | uriNodeTitle" [matTooltipPosition]="'right'"
           [ngClass]="node.id === currentNode.id ? 'rail-selected-color' : 'menu-font-color'">
     <mat-icon>{{ getLeftNodeIcon(node) }}</mat-icon>
   </button>
@@ -160,7 +170,7 @@
            class="tree-node mat-typography mat-body-2" fxLayoutAlign="start center"
            routerLinkActive="active-tree-node">
         <mat-icon class="tree-node-icon">{{ getRightFolderIcon(node) }}</mat-icon>
-        <span>{{ node.name }}</span>
+        <span>{{ node.name | uriNodeTitle }}</span>
         <span class="menu-item-focus-overlay"></span>
       </div>
     </div>
@@ -200,7 +210,7 @@
            class="tree-node mat-typography mat-body-2" fxLayoutAlign="start center"
            routerLinkActive="active-tree-node">
         <mat-icon class="tree-node-icon">{{ getRightFolderIcon(node) }}</mat-icon>
-        <span>{{ node.name }}</span>
+        <span>{{ node.name | uriNodeTitle }}</span>
         <span class="menu-item-focus-overlay"></span>
       </div>
       <div *ngFor='let view of settingsViews; trackBy: viewsTrackBy' class="tree-node mat-typography"
@@ -210,7 +220,7 @@
         <span class="menu-item-focus-overlay"></span>
       </div>
       <div *ngIf='isRoot()' class="tree-node-lang-select mat-typography" fxLayoutAlign="start center">
-        <nc-language-selector fxLayout="row" [language]="getLang()"></nc-language-selector>
+        <app-etask-language-selector fxLayout="row" [language]="getLang()"></app-etask-language-selector>
         <span class="lang-select-text">{{ 'dataField.i18n.languageSelect' | translate }}</span>
       </div>
       <div *ngIf='isRoot()' class="tree-node mat-typography" fxLayoutAlign="start center"
@@ -237,7 +247,7 @@
            class="tree-node mat-typography mat-body-2" fxLayoutAlign="start center"
            routerLinkActive="active-tree-node">
         <mat-icon class="tree-node-icon">{{ getRightFolderIcon(node) }}</mat-icon>
-        <span>{{ node.name }}</span>
+        <span>{{ node.name | uriNodeTitle }}</span>
         <span class="menu-item-focus-overlay"></span>
       </div>
       <div *ngFor='let view of archiveViews; trackBy: viewsTrackBy' class="tree-node mat-typography"

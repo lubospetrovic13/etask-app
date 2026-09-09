@@ -36,5 +36,9 @@
       "toDark": "Dark mode",
       "toLight": "Light mode"
     }
+  },
+  "uriNode": {
+    "general": "General",
+    "service_desk": "Service Desk"
   }
 }

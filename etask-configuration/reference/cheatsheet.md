@@ -134,7 +134,7 @@ istý Groovy píšeš v druhej sieti, presuň ho tam a regeneruj inventár
 | recept na bežnú úlohu (appka, menu, používatelia, vizuál, verejný prístup) | `docs/RUNBOOK.md` |
 | Petriflow ako jazyk, vzory, gotchas C1–C18 | `docs/petriflow_reference.md` |
 | čo príručka tvrdí zle alebo nepokrýva (A, B, C) | `docs/PETRIFLOW_LEARNINGS.md` |
-| chyby enginu a knižnice — čo nahlásiť upstream (E1–E14) | `docs/ENGINE_ISSUES.md` |
+| chyby enginu a knižnice — čo nahlásiť upstream (E1–E15) | `docs/ENGINE_ISSUES.md` |
 | metódy volateľné z akcie | `reference/action-api.md` |
 | rozhodovací postup pre agenta | `.claude/skills/petriflow/SKILL.md` |
 | worked example (eForm, SLA, oprávnenia per organizácia) | `docs/SERVICE_DESK.md` |
