@@ -85,6 +85,9 @@ Pouzivatelia instancie, ako mapa id -> "Meno Priezvisko (e-mail)".
 ### `isRealUser(IUser user)`
 Je to ucet cloveka, alebo sluzobny ucet enginu?
 
+### `formPassword(Object value)`
+Heslo tak, ako ho poslal FORMULAR - teda dekoduje base64.
+
 ### `authorityOptions()`
 Systemove authorities instancie, ako mapa nazov -> popis.
 

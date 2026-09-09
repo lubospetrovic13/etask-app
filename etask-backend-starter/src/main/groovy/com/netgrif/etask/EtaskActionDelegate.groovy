@@ -19,6 +19,8 @@ import com.netgrif.etask.petrinet.domain.UriNodeDataRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
+import java.nio.charset.StandardCharsets
+
 @Component
 class EtaskActionDelegate extends ActionDelegate {
 
@@ -580,6 +582,41 @@ class EtaskActionDelegate extends ActionDelegate {
             return false
         }
         return !(email in ["engine@netgrif.com", "system@netgrif.com"])
+    }
+
+    /**
+     * Heslo tak, ako ho poslal FORMULAR - teda dekoduje base64.
+     *
+     * Textove pole s `<component><name>password</name></component>` frontend
+     * pred odoslanim ZAKODUJE do base64:
+     *
+     *     // FieldConverterService.formatValueForBackend
+     *     if (resolveType(field) === TEXT && field.component.name === 'password') {
+     *         return encodeBase64(value);
+     *     }
+     *
+     * Kto to nevie, zahashuje base64 namiesto hesla a ucet sa potom NEDA
+     * prihlasit tym, co clovek napisal - da sa prihlasit base64 z toho. Presne
+     * toto sa stalo pri ucte zalozenom cez formular, kym akceptacny test presiel:
+     * test posielal surovu hodnotu na oboch stranach, takze bol sam so sebou
+     * konzistentny a chybu neuvidel.
+     *
+     * Pozor: rozhodnut sa "je to base64?" podla obsahu NEJDE - `password` je
+     * platny base64 retazec. Preto je to pravidlo, nie hadanie: toto pole plni
+     * formular, takze hodnota JE zakodovana, a kto ho plni cez REST, musi
+     * zakodovat rovnako.
+     */
+    String formPassword(Object value) {
+        String raw = ((value ?: "") as String)
+        if (!raw) {
+            return ""
+        }
+        try {
+            return new String(Base64.decoder.decode(raw), StandardCharsets.UTF_8)
+        } catch (IllegalArgumentException ignored) {
+            // Neplatny base64 - hodnota nepresla frontendom. Beriem ju ako je.
+            return raw
+        }
     }
 
     /**

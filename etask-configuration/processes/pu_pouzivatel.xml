@@ -543,7 +543,7 @@ if (!id) {
 if (findUserById(id) == null) {
     throw new java.lang.IllegalStateException("Účet sa nenašiel: " + id)
 }
-def heslo = (pu_heslo.value ?: "") as String
+def heslo = formPassword(pu_heslo.value)
 if (heslo && !registrationService.isPasswordSufficient(heslo)) {
     throw new java.lang.IllegalStateException("Nové heslo nespĺňa požiadavky instancie.")
 }
@@ -565,7 +565,7 @@ pu_vysledok: f.pu_vysledok, pu_zmenil: f.pu_zmenil, pu_zmenene_o: f.pu_zmenene_o
 def id = ((pu_userid.value ?: "") as String).trim()
 def predtym = userSnapshot(id)
 def authorities = ako_zoznam(pu_authority)
-def heslo = (pu_heslo.value ?: "") as String
+def heslo = formPassword(pu_heslo.value)
 def riadky = []
 
 updateUserProfile(id, ((pu_meno.value ?: "") as String).trim(),

@@ -146,6 +146,21 @@ def set_data(cl, task_id, vals, timeout=120):
     return cl.call("POST", f"/api/task/{task_id}/data", {task_id: vals}, timeout=timeout)
 
 
+def as_form_password(plain):
+    """Heslo tak, ako ho posiela FORMULAR - teda v base64.
+
+    Textove pole s `<component><name>password</name></component>` frontend pred
+    odoslanim zakoduje (`FieldConverterService.formatValueForBackend`). Test,
+    ktory posiela surovu hodnotu, je sam so sebou konzistentny a tuto chybu
+    NEUVIDI - presne to sa stalo: test presiel a ucet zalozeny cez formular sa
+    nedal prihlasit tym, co clovek napisal.
+
+    Preto sa tu heslo posiela zakodovane a prihlasuje sa NEZAKODOVANYM - inak
+    ten test nedokazuje to, na com zalezi.
+    """
+    return base64.b64encode(plain.encode("utf-8")).decode()
+
+
 def release(boss, task_id):
     """Uvolni ulohu, ktoru drzi niekto iny.
 
@@ -292,7 +307,7 @@ def main():
         "zl_meno": {"type": "text", "value": "Test"},
         "zl_priezvisko": {"type": "text", "value": "Pucheck"},
         "zl_email": {"type": "text", "value": "toto nie je email"},
-        "zl_heslo": {"type": "text", "value": heslo}})
+        "zl_heslo": {"type": "text", "value": as_form_password(heslo)}})
     st, r = spravca.get(f"/api/task/finish/{tid}")
     check("neplatny e-mail je odmietnuty", isinstance(r, dict) and "error" in r, str(r)[:110])
 
@@ -387,7 +402,7 @@ def main():
     nove_heslo = "Pucheck2!" + stamp
     set_data(spravca, uprava, {
         "pu_meno": {"type": "text", "value": "Upravene"},
-        "pu_heslo": {"type": "text", "value": nove_heslo}})
+        "pu_heslo": {"type": "text", "value": as_form_password(nove_heslo)}})
     set_data(spravca, uprava, {"pu_vycisti": {"type": "button", "value": 0}})
     st, r = spravca.get(f"/api/task/finish/{uprava}")
     check("uprava presla", isinstance(r, dict) and "success" in r, str(r)[:130])
@@ -397,6 +412,9 @@ def main():
           rola not in roles_of(boss, user_id), roles_of(boss, user_id))
     check("nove heslo funguje", bool(Client(email, nove_heslo, allow_fail=True).token))
     check("stare heslo uz nefunguje", not Client(email, heslo, allow_fail=True).token)
+    # Bez tejto kontroly by prehliadlo, ze sa zahashovalo base64 namiesto hesla.
+    check("base64 podoba hesla sa prihlasit NEDA",
+          not Client(email, as_form_password(nove_heslo), allow_fail=True).token)
     check("uprava sa da spustit znova (slucka)",
           "t_pu_uprava" in tasks_of(spravca, case_id), list(tasks_of(spravca, case_id)))
     check("pripad uctu je stale jeden", len([c for c in cases_of(boss, NET)
