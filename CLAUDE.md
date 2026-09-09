@@ -84,11 +84,40 @@ manifestu. Toto je celý postup. **Žiadny zásah do Javy ani do `pom.xml`** —
 protirečil vlastnému pravidlu, že aplikačná logika patrí do Petriflow. `NetRunner`
 číta `processes.json` a identifikátor si berie z `<id>` v XML.
 
-Manifest nesie aj `bootstrapCase` (siete, ktorých má pri štarte existovať jeden
-case — typicky tá, čo stavia zobrazenia menu) a `uriNodes` (ikona a viditeľnosť
-karty v bočnom menu). Service Desk je príkladová aplikácia postavená len na
-týchto troch sekciách; runtime ho nepozná po mene a odstráni sa zmazaním sietí
-a ich riadkov v manifeste.
+Manifest nesie aj `bootstrapCase` a `uriNodes` (ikona a viditeľnosť karty
+v bočnom menu). `bootstrapCase` má dva tvary a nie je to kozmetika: obyčajný
+identifikátor znamená **jeden case navždy** (pracujúci singleton — pult,
+počítadlo; druhý case = druhá trvale otvorená úloha), kým
+`{"net": ..., "rebuildOnNewVersion": true}` znamená **jeden case na verziu
+siete**. To druhé je pre siete stavajúce menu: ich akcia je v udalosti `create`,
+teda beží raz za case, a case si drží verziu siete — takže bez nového casu sa po
+re-importe zmena zobrazení nikdy neprejaví a vyzerá to, že re-import nefunguje.
+
+Service Desk je príkladová aplikácia postavená len na týchto sekciách; runtime
+ho nepozná po mene a odstráni sa zmazaním sietí a ich riadkov v manifeste.
+**Jeho kartu vidí len admin** — príklad v menu bežného používateľa sa nedá
+odlíšiť od skutočnej appky.
+
+## Appka z iného repozitára
+
+Appka je len siete plus riadky v manifeste, takže môže mať vlastný repozitár
+(vzor: `../etask-app-dovolenky`). Do checkoutu starteru sa dostane nástrojom,
+nie ručne:
+
+```bash
+python3 tools/pfapp.py install /cesta/k/etask-app-mojaapp
+python3 tools/pfapp.py status      # nerozišla sa nasadená kópia so zdrojom?
+python3 tools/pfapp.py remove mojaapp
+```
+
+Repo appky nesie `app.json` s tými istými sekciami ako manifest starteru
+(`import`, `bootstrapCase`, `uriNodes`, `netScope`) a súbory v `processes/`
+a `tools/`. **Role nikomu nepridelí** — kto ktorú rolu dostane, je rozhodnutie
+nasadenia, a dopisuje sa do `seed.json`.
+
+Ručné zliepanie manifestu je tu zakázané nie z čistoty: každá zo štyroch sekcií
+vie chýbať tak, že to **nič nepovie** — sieť sa nenaimportuje a karta vedie do
+prázdna, alebo karta je a role nikto nemá.
 
 ## Overovanie
 
