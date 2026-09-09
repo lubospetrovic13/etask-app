@@ -486,6 +486,62 @@ sa im podal.
 
 Pravidlo: primitíva na zmenu účtu berú `userId` a účet si načítajú samy.
 
+### B11. `change <pole> options { }` v `create` udalosti prípadu sa neuchová
+
+Na čerstvo založenom prípade sú `options` toho poľa **prázdne**. Overené:
+prípad založený cez `POST /api/workflow/case` má po `create` akcii, ktorá
+options nastavuje, `options: {}`.
+
+Prečo to väčšinou nevidno: rovnaká akcia býva aj v `assign` udalosti prechodu,
+a hocikto, kto úlohu otvorí, si ju priradí — takže options sa doplnia a vyzerá
+to, že to funguje. Praskne to až vtedy, keď hodnotu do poľa zapíše **niekto
+zvonka** cez `setData(transition, case, map)` z akcie inej siete: to úlohu
+nepriraďuje, `assign` udalosť nebeží a hodnota ide do poľa bez možností.
+
+Engine ju potom odmietne a request skončí na **500**:
+
+```
+Could not parse value of field [pu_authority], value [[ROLE_ADMIN, ROLE_USER]]
+```
+
+Pravidlo: **možnosti nastavuj tam, kde zapisuješ hodnotu**, nie v `create`.
+
+### B12. `assignPolicy=auto` na zdieľanej úlohe priradí úlohu tomu, kto ju vyrobil
+
+A pri `bootstrapCase` je to `engine@netgrif.com`. Všetci ostatní potom na
+`finish` dostanú:
+
+```
+User that is not assigned tried to finish task
+```
+
+Auto-priradenie je pre **osobné** úlohy jedného aktéra. Na pult, prepážku alebo
+frontu, ktorú obsluhuje každý s príslušnou rolou, patrí `manual`: úloha čaká
+nepriradená, kto ju otvorí, ten ju má, a po `finish` slučka vyrobí novú —
+zase nepriradenú.
+
+**A `cancel` sa v takom prípade nesmie zakázať.** `cancelTask` vracia tokeny
+a úlohu **uvoľní** — nezruší ju ani nezmaže. Zákaz `cancel` znamená, že raz
+priradenú úlohu nemá kto pustiť. Zrušiť ju smie len jej držiteľ, alebo
+`ROLE_ADMIN`, ktorého `canCallCancel` prepustí cez `isAdmin()`.
+
+### B13. `immediate` na `multichoice_map` s runtime možnosťami zhodí indexáciu
+
+```
+ERROR WorkflowService : Indexing failed [<caseId>]
+java.lang.NullPointerException
+  at ElasticCaseMappingService.collectTranslations(ElasticCaseMappingService.java:182)
+  at ElasticCaseMappingService.transformMultichoiceMapField(...)
+```
+
+Mapper očakáva na možnostiach preklady, ktoré možnosti nastavené za behu
+(`change ... options`) nemajú. Prípad sa uloží, ale **neindexuje** — takže
+z Elasticu zmizne a v zoznamoch ho nevidno.
+
+`immediate` má na poli zmysel len vtedy, keď ho naozaj potrebuješ ako stĺpec
+alebo na vyhľadávanie (RUNBOOK 4). Na `multichoice_map` s dynamickými
+možnosťami ho nedávaj.
+
 ---
 
 ## C. Mimo Petriflow, ale stálo to čas
