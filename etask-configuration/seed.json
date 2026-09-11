@@ -10,14 +10,19 @@
   ],
   "netScope": [
     "service_desk/*",
-    "pouzivatelia/*"
+    "pouzivatelia/*",
+    "onboarding/*"
   ],
   "users": [
     {
       "email": "super@netgrif.com",
       "roles": [
         "agent",
+        "hr",
+        "it",
+        "majetok",
         "manager",
+        "nadriadeny",
         "riaditel",
         "schv_hotel",
         "schv_marketing",
@@ -36,6 +41,7 @@
       "email": "admin@test.local",
       "roles": [
         "agent",
+        "hr",
         "riaditel",
         "schv_restauracia",
         "schv_wellness",
@@ -48,6 +54,8 @@
     {
       "email": "operator@test.local",
       "roles": [
+        "it",
+        "nadriadeny",
         "schv_wellness",
         "schvalovatel",
         "specialist",
@@ -59,9 +67,10 @@
     {
       "email": "druhy@test.local",
       "roles": [
+        "majetok",
         "specialist",
-        "zamestnanec",
-        "zadavatel"
+        "zadavatel",
+        "zamestnanec"
       ]
     },
     {
