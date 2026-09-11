@@ -7,6 +7,8 @@ import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
+import com.netgrif.etask.doc.DocumentTextService
+
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -37,6 +39,9 @@ import java.util.zip.ZipInputStream
 @Slf4j
 @Service
 class MailPayloadService {
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private DocumentTextService documentTextService
 
     private final IWorkflowService workflowService
 
@@ -187,8 +192,14 @@ class MailPayloadService {
     }
 
     /**
-     * Prevod obsahu súboru na text. Textové formáty sú pokryté rovno; PDF, DOCX
-     * a skeny potrebujú extraktor alebo OCR, ktoré si zvolíte.
+     * Prevod obsahu súboru na text. Textové formáty rovno, PDF cez textovú
+     * vrstvu a skeny cez OCR — všetko v {@link DocumentTextService}, teda to
+     * isté, čo číta faktúry v procese `schvalovanie/fa_faktura`. Zámerne jedna
+     * cesta pre oboje: keď sa OCR doladí pre faktúry, prílohy mailu ho majú
+     * tiež, a nie sú to dve implementácie, ktoré sa rozídu.
+     *
+     * DOCX zatiaľ nie — potreboval by ďalšiu závislosť (poi-ooxml), kým PDFBox
+     * je v classpath tranzitívne z `application-engine`.
      */
     protected String extractText(String entryName, byte[] bytes) {
         String lower = entryName.toLowerCase()
@@ -197,10 +208,8 @@ class MailPayloadService {
                 || lower.endsWith(".eml")) {
             return new String(bytes, StandardCharsets.UTF_8)
         }
-        // TODO PDF: pridať org.apache.pdfbox:pdfbox a vrátiť
-        //   new PDFTextStripper().getText(Loader.loadPDF(bytes))
-        // TODO skeny: napojiť to isté OCR, ktoré pôjde na produkčné faktúry
-        return null
+        DocumentTextService.Extracted ex = documentTextService.extract(bytes, entryName)
+        return ex.isEmpty() ? null : ex.text
     }
 
     // ------------------------------------------------------------------

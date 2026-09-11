@@ -22,6 +22,16 @@
 #   tools/up.sh --frontend       # popri backende spusti aj ng serve
 #   tools/up.sh --db mojadb      # ina databaza (default etask)
 #
+#   tools/up.sh --docker         # CELY stack v Dockeri (backend aj frontend)
+#
+# `--docker` je iny rezim, nie prepinac: nestava sa `mvn`om na hostitelovi
+# a nespusta java ani `ng serve`, ale postavi obrazy a zdvihne
+# deploy/docker-compose.dev.yml. Vyhoda je, ze v Docker Desktope je vidno
+# vsetko, co appka pouziva (Mongo, Elastic, Redis, SMTP, backend, frontend),
+# a ze OCR (tesseract) je v obraze, takze netreba nic instalovat na hostitela.
+# Kombinuje sa s --build (rebuild obrazov), --stop (zastavit) a --fresh
+# (ZAHODI aj data vo volumes).
+#
 # Ked sa stavalo (novy jar), backend sa restartuje sam - inak by si pozeral
 # na appku bez sieti, ktore si prave pridal.
 #
@@ -35,6 +45,7 @@ DB="${DATABASE_NAME:-etask}"
 DO_BUILD=0
 DO_FRESH=0
 DO_FRONTEND=0
+DO_DOCKER=0
 DO_RESTART=0
 DO_STOP=0
 LOG_DIR="${ETASK_LOG_DIR:-$ROOT/.run}"
@@ -46,6 +57,7 @@ while [ $# -gt 0 ]; do
     --stop)     DO_STOP=1; shift ;;
     --fresh)    DO_FRESH=1; shift ;;
     --frontend) DO_FRONTEND=1; shift ;;
+    --docker)   DO_DOCKER=1; shift ;;
     --db)       DB="$2"; shift 2 ;;
     -h|--help)  sed -n '2,30p' "$0"; exit 0 ;;
     *)          echo "up: neznamy argument $1" >&2; exit 2 ;;
@@ -54,6 +66,22 @@ done
 
 step() { printf '\n== %s\n' "$1"; }
 die()  { printf 'up: %s\n' "$1" >&2; exit 1; }
+
+# `python3` je na Windowse (Git Bash) WindowsApps alias, ktory len vypise
+# "Python was not found" a skonci s uspechom - preto sa skusa aj `python`
+# a `py -3`, a kazdy kandidat sa overi skutocnym spustenim.
+find_python() {
+  local cand
+  for cand in python3 python; do
+    if command -v "$cand" >/dev/null 2>&1 && "$cand" -c "import sys" >/dev/null 2>&1; then
+      printf '%s' "$cand"; return 0
+    fi
+  done
+  if command -v py >/dev/null 2>&1 && py -3 -c "import sys" >/dev/null 2>&1; then
+    printf 'py -3'; return 0
+  fi
+  return 1
+}
 
 mkdir -p "$LOG_DIR"
 
@@ -76,6 +104,116 @@ stop_backend() {
   kill -9 $(backend_pids) 2>/dev/null
   return 0
 }
+
+# ============================================================================
+# Rezim --docker: cely stack v kontejneroch
+# ============================================================================
+DC="deploy/docker-compose.dev.yml"
+
+dc() { docker compose -f "$DC" "$@"; }
+
+# Stary compose (etask-backend-starter/docker-compose.yml) drzi porty 27017,
+# 9200 a 6379. Nove sluzby by sa na ne nenavazali a compose by skoncil na
+# "port is already allocated" - co nevyzera ako dva stacky, ale ako obsadeny
+# port neznamym procesom. `down` bez -v data vo starych volumes NECHAVA.
+legacy_down() {
+  if docker ps --format '{{.Names}}' | grep -q '^etask-backend-starter-'; then
+    echo "vypinam stary infra stack (etask-backend-starter/docker-compose.yml)"
+    (cd etask-backend-starter && docker compose down) || true
+  fi
+}
+
+# Nieco na porte, co nie je nase? Compose by to nahlasil az po builde.
+port_free_or_ours() {
+  local port="$1" svc="$2"
+  if ! curl -sf -m 2 -o /dev/null "http://localhost:$port" \
+     && ! curl -s -m 2 -o /dev/null "http://localhost:$port"; then
+    return 0   # nikto neodpoveda
+  fi
+  if dc ps --status running --services 2>/dev/null | grep -qx "$svc"; then
+    return 0   # odpoveda nas vlastny kontejner
+  fi
+  echo "up: na porte $port uz nieco bezi a nie je to kontejner tohto stacku." >&2
+  echo "    Ked je to lokalny backend alebo 'ng serve', zastav ich najprv:" >&2
+  echo "      tools/up.sh --stop         # lokalny backend (potrebuje pgrep)" >&2
+  echo "    Na Windowse: Get-Process java,node | Stop-Process" >&2
+  return 1
+}
+
+if [ "$DO_DOCKER" = 1 ]; then
+  step "Docker"
+  docker info >/dev/null 2>&1 || die "docker daemon nebezi (spusti Docker Desktop)"
+  echo "ok"
+
+  if [ "$DO_STOP" = 1 ]; then
+    step "Zastavujem stack (data vo volumes zostavaju)"
+    dc stop
+    exit 0
+  fi
+
+  if [ "$DO_FRESH" = 1 ]; then
+    step "--fresh: zahadzujem kontejnery AJ data"
+    dc down -v
+  fi
+
+  legacy_down
+  port_free_or_ours 8080 backend  || exit 1
+  port_free_or_ours "${FRONTEND_PORT:-4200}" frontend || exit 1
+
+  step "Obrazy a sluzby"
+  if [ "$DO_BUILD" = 1 ]; then
+    dc build || die "docker compose build zlyhal"
+  fi
+  # `up -d` postavi obrazy, ktore este neexistuju; --build ich vynuti.
+  dc up -d || die "docker compose up zlyhal"
+
+  step "Cakam na backend"
+  ok=0
+  for _ in $(seq 1 90); do
+    code=$(curl -s -o /dev/null -w '%{http_code}' -m 3 http://localhost:8080/api/auth/login || true)
+    case "$code" in 200|401|405) ok=1; break ;; esac
+    printf .
+    sleep 3
+  done
+  echo
+  if [ "$ok" != 1 ]; then
+    echo "--- posledne riadky logu backendu:"
+    dc logs --tail 40 backend || true
+    die "backend v kontejneri nenabehol"
+  fi
+  echo "ok"
+
+  # Siete: `NetRunner` importuje siet len ked v databaze CHYBA, takze po zmene
+  # existujuceho XML sa pri starte NESTANE NIC (viz krok 6b nizsie). V Dockeri
+  # to plati rovnako - obraz nesie siete v jare, ale engine drzi tie z databazy.
+  step "Siete vs. engine"
+  if [ "${ETASK_NO_SYNC:-0}" = "1" ]; then
+    echo "preskocene (ETASK_NO_SYNC=1)"
+  elif SYNC_PY=$(find_python); then
+    (cd etask-configuration && PYTHONIOENCODING=utf-8 $SYNC_PY tools/pfsync.py --sync) \
+      || echo "POZOR: zosuladenie sieti zlyhalo, engine moze drzat stary model"
+  else
+    echo "python sa nenasiel - preskocene."
+    echo "  Rucne: cd etask-configuration && python3 tools/pfsync.py --sync"
+  fi
+
+  step "Hotovo"
+  dc ps --format 'table {{.Service}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null || dc ps
+  cat <<EOF
+
+  portal     http://localhost:${FRONTEND_PORT:-4200}
+  backend    http://localhost:8080
+  maily      http://localhost:8025     (Mailpit - notifikacie appky)
+  databaza   $DB   (mongosh: localhost:27017)
+
+Prihlasenie: super@netgrif.com / password
+
+  logy       docker compose -f $DC logs -f backend
+  zastavit   tools/up.sh --docker --stop
+  od nuly    tools/up.sh --docker --fresh --build     (ZMAZE data)
+EOF
+  exit 0
+fi
 
 if [ "$DO_STOP" = 1 ]; then
   step "Zastavujem backend"
@@ -239,17 +377,7 @@ step "Siete vs. engine"
 if [ "${ETASK_NO_SYNC:-0}" = "1" ]; then
   echo "preskocene (ETASK_NO_SYNC=1)"
 else
-  # `python3` na Windows (Git Bash) je WindowsApps alias, ktory len vypise
-  # "Python was not found" - preto sa skusa aj `python` a `py -3`.
-  SYNC_PY=""
-  for cand in python3 python; do
-    if command -v "$cand" >/dev/null 2>&1 && "$cand" -c "import sys" >/dev/null 2>&1; then
-      SYNC_PY="$cand"; break
-    fi
-  done
-  if [ -z "$SYNC_PY" ] && command -v py >/dev/null 2>&1 && py -3 -c "import sys" >/dev/null 2>&1; then
-    SYNC_PY="py -3"
-  fi
+  SYNC_PY=$(find_python || true)
   if [ -n "$SYNC_PY" ]; then
     (cd etask-configuration && PYTHONIOENCODING=utf-8 $SYNC_PY tools/pfsync.py --sync) ||       echo "POZOR: zosuladenie sieti zlyhalo, engine moze drzat stary model"
   else
@@ -302,5 +430,5 @@ nahlasi ako NENAJDENY. Ak ich chces:
   ETASK_TEST_PASSWORD=test1234 tools/up.sh --fresh
 
 Procesne roly po (re)importe:  cd etask-configuration && python3 tools/pfseed.py
-Bezne ulohy krok po kroku:     etask-configuration/docs/RUNBOOK.md
+Bezne ulohy krok po kroku:     docs/RUNBOOK.md
 EOF

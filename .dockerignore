@@ -1,0 +1,30 @@
+# Build kontext backendu je ROOT repozitara (Dockerfile potrebuje aj
+# deploy/vendor-deps.sh a etask-configuration/processes), takze bez tohto
+# suboru by sa do daemonu posielal cely repozitar vratane node_modules
+# frontendu a .git - stovky MB pri kazdom builde.
+#
+# Co Dockerfile backendu naozaj potrebuje:
+#   deploy/vendor-deps.sh
+#   etask-backend-starter/pom.xml, src, docker-entrypoint.sh
+#   etask-configuration/processes
+# Nic z toho tu nesmie byt vylucene.
+
+.git
+.gitignore
+.run
+**/node_modules
+**/dist
+**/target
+**/.angular
+**/.idea
+*.log
+*.iml
+
+# Frontend ma vlastny build kontext (etask-frontend-starter/) a vlastny
+# .dockerignore; do backendoveho obrazu nepatri.
+etask-frontend-starter
+
+# Kluce a lokalne nastavenia nepatria do obrazu - entrypoint si JWT kluc
+# vygeneruje sam do volume.
+certificates
+deploy/.env

@@ -10,6 +10,16 @@ GitHub Actions ──build──> GHCR ──pull──> tvoj server
        └──────────── ssh: compose up ─────────┘
 ```
 
+Na **vývoj a demo** je v tom istom priečinku `docker-compose.dev.yml`, ktorý
+obrazy nebuildí z GHCR, ale z tohto checkoutu, a pridáva SMTP server (Mailpit)
+a testovacie účty. Nasadenie s ním nemá nič spoločné, spúšťa sa cez
+
+```bash
+etask-configuration/tools/up.sh --docker
+```
+
+a je opísaný v `docs/RUNBOOK.md`, kapitola 12.
+
 ---
 
 ## Jednorazová príprava

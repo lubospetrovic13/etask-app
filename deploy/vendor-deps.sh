@@ -26,32 +26,42 @@ JITPACK="https://jitpack.io"
 
 log() { printf '  %s\n' "$*"; }
 
-# --- 1. JitPack ako repozitár pre qrgen -------------------------------------
+# --- 1. Sanity check nastrojov ----------------------------------------------
+#
+# JitPack tu ZAMERNE NIE JE ako Maven repozitár, hoci to tak bolo.
+#
+# Dôvod je zmeraný: JitPack odpovedá Mavenu na neznámy artefakt 403 s HTML
+# telom, a Maven to telo uloží pod menom .jar. Prvý build, ktorý na taký súbor
+# narazí, padne až v Groovy stub compileri na
+#
+#   ZipException opening "xml-apis-ext-1.3.04.jar": zip END header not found
+#   cannot access java / cannot access groovy
+#
+# čo vyzerá ako pokazený JDK alebo Groovy, nie ako pokazený download úplne
+# iného artefaktu. Maven nemá spôsob, ako repozitár obmedziť na jednu
+# groupId, takže jediná obrana je nemať tam repozitár, ktorý si vymýšľa
+# odpovede - a qrgen aj tak ťaháme priamo cez curl (krok 3).
 
-if [ ! -f "${M2}/settings.xml" ]; then
-  log "zapisujem ${M2}/settings.xml s JitPack repozitárom"
-  mkdir -p "${M2}"
-  cat > "${M2}/settings.xml" <<'XML'
-<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
-  <profiles>
-    <profile>
-      <id>etask-extra-repos</id>
-      <repositories>
-        <repository>
-          <id>jitpack</id>
-          <url>https://jitpack.io</url>
-        </repository>
-      </repositories>
-    </profile>
-  </profiles>
-  <activeProfiles>
-    <activeProfile>etask-extra-repos</activeProfile>
-  </activeProfiles>
-</settings>
-XML
-else
-  log "settings.xml už existuje, nechávam ho"
-fi
+command -v mvn  >/dev/null || { echo "vendor-deps: mvn nie je v PATH" >&2; exit 2; }
+command -v curl >/dev/null || { echo "vendor-deps: curl nie je v PATH" >&2; exit 2; }
+
+# Overi, ze stiahnuty subor je citatelny zip. Bez toho sa pokazeny download
+# nainstaluje do .m2 a chyba sa objavi az o niekolko minut inde.
+zip_ok() {
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -tqq "$1" >/dev/null 2>&1
+  else
+    # bez unzip aspon magicke bajty: kazdy jar zacina "PK"
+    [ "$(head -c 2 "$1")" = "PK" ]
+  fi
+}
+
+overit_jar() {
+  zip_ok "$1" || {
+    echo "vendor-deps: $1 nie je platny jar (stiahlo sa HTML alebo skratena odpoved)" >&2
+    exit 1
+  }
+}
 
 # --- 2. quartz-mongodb zo zrkadla pod pôvodnými súradnicami ------------------
 
@@ -64,6 +74,7 @@ else
   BASE="${CENTRAL}/io/fluidsonic/mirror/quartz-mongodb/2.2.0-rc2/quartz-mongodb-2.2.0-rc2"
   curl -fsSL --retry 3 -o "${TMP}/qm.pom" "${BASE}.pom"
   curl -fsSL --retry 3 -o "${TMP}/qm.jar" "${BASE}.jar"
+  overit_jar "${TMP}/qm.jar"
 
   # Prepíšeme groupId na pôvodný, aby to Maven našiel pod súradnicami,
   # ktoré žiada pom enginu. Zvyšok pomu (tranzitívne závislosti) ostáva.
@@ -96,6 +107,8 @@ else
   curl -fsSL --retry 3 -o "${TMP}/core.jar"        "${JITPACK}/com/github/kenglxn/qrgen/core/2.6.0/core-2.6.0.jar"
   curl -fsSL --retry 3 -o "${TMP}/javase.pom"      "${JITPACK}/com/github/kenglxn/qrgen/javase/2.6.0/javase-2.6.0.pom"
   curl -fsSL --retry 3 -o "${TMP}/javase.jar"      "${JITPACK}/com/github/kenglxn/qrgen/javase/2.6.0/javase-2.6.0.jar"
+  overit_jar "${TMP}/core.jar"
+  overit_jar "${TMP}/javase.jar"
 
   mvn -q -B install:install-file -Dfile="${TMP}/qrgen-parent.pom" -DpomFile="${TMP}/qrgen-parent.pom" -Dpackaging=pom
   mvn -q -B install:install-file -Dfile="${TMP}/core.jar"         -DpomFile="${TMP}/core.pom"

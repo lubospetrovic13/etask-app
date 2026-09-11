@@ -103,6 +103,19 @@ jobs:
           [ "$NETS" -ge 5 ] \
             || { echo "CHYBA: v jare chýbajú siete Service Desku (čakám 5, mám $NETS)."; exit 1; }
 
+          # A manifest. Siete bez neho nestačia: `NetRunner` aj
+          # `BootstrapCaseRunner` čítajú `petriNets/processes.json` - zoznam
+          # importu, `bootstrapCase` a `uriNodes`. Keď chýba, kontejner nabehne,
+          # v logu je len "ziadne siete na import" a appka je prázdna: bez menu,
+          # bez konfigurácie, bez jedinej chybovej správy. Stalo sa to preto, že
+          # Dockerfile kopíroval `processes` a nie `processes.json`, a Maven
+          # chýbajúci resource mlčky preskočí.
+          MANIFEST=$(docker run --rm --entrypoint sh "$IMG" -c \
+            "unzip -l /app.jar | grep -c 'BOOT-INF/classes/petriNets/processes.json' || true")
+          echo "manifest v jare: $MANIFEST"
+          [ "$MANIFEST" -ge 1 ] \
+            || { echo "CHYBA: v jare chýba petriNets/processes.json (manifest)."; exit 1; }
+
   build-frontend:
     needs: plan
     if: needs.plan.outputs.build == 'true'

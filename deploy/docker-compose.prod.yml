@@ -47,7 +47,7 @@ services:
     volumes:
       - elastic-data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9200/_cluster/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 20
@@ -89,8 +89,16 @@ services:
       ELASTIC_URL: elastic
       ELASTIC_PORT: 9300
 
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PORT: 6379
+      # POZOR: NIE `SPRING_REDIS_HOST`. Engine si Jedis factory stavia sam
+      # a cita `spring.session.redis.host` cez `@Value` (SessionConfiguration),
+      # co application.properties plni z `${REDIS_HOST:localhost}`. Relaxed
+      # binding zo `SPRING_REDIS_HOST` na to nesiahne, takze s nim appka bezi
+      # na `localhost` a spadne pri starte na
+      #   JedisConnectionException: Could not get a resource from the pool
+      #   Caused by: java.net.ConnectException: Connection refused
+      # co vyzera ako nefunkcny redis kontejner, hoci ten je zdravy.
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
 
       NAE_SERVER_URL: ${PUBLIC_URL}
       NAE_MAIL_FROM: ${MAIL_FROM:-}
@@ -110,7 +118,7 @@ services:
     healthcheck:
       # /api/auth/login odpovedá 401 bez prihlásenia - to je zdravý stav.
       # Testujeme, že servlet vôbec odpovedá, nie že sme prihlásení.
-      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/auth/login | grep -qE '401|405|200'"]
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/auth/login | grep -qE '401|405|200'"]
       interval: 15s
       timeout: 5s
       retries: 20
@@ -139,7 +147,12 @@ services:
     ports:
       - "${FRONTEND_PORT:-8081}:80"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null || exit 1"]
+      # 127.0.0.1, nie `localhost`: v kontejneri sa `localhost` rozlozi najprv
+      # na ::1, nginx ale posluchá len na IPv4 0.0.0.0:80 - healthcheck potom
+      # hlasi "Connection refused" a sluzba je `unhealthy`, hoci z hostitela
+      # odpoveda 200. Sluzby, ktore na nu cakaju (`depends_on`), sa potom
+      # nespustia vobec.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 10

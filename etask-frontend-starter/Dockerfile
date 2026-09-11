@@ -5,7 +5,7 @@ RUN npm install --legacy-peer-deps
 RUN npm run build
 
 FROM nginx:alpine
-MAINTAINER Netgrif <devops@netgrif.com>
+LABEL maintainer="Netgrif <devops@netgrif.com>"
 COPY default.nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/etask/ /usr/share/nginx/html/
 EXPOSE 80
