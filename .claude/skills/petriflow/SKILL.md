@@ -77,8 +77,9 @@ python3 tools/pfnew.py mojaapp ziadost "Žiadosť o niečo" --role pracovnik
 ```
 
 Generátor už nesie vzory, ktoré sa inak vymyslia zle (preložiteľný stav, názov
-prípadu bez stavu, `pripoj_do_uzla`, `allowedNets`). **Do Javy ani do `pom.xml`
-sa nesiaha.** Manifest sa needituje ručne — `pfnew` alebo `pfapp`, lebo každá
+prípadu bez stavu, `pripoj_do_uzla`, `allowedNets`). **Pridanie appky Javu
+nevyžaduje** (rozšíriť platformu kvôli schopnosti, ktorú engine nemá, je iná vec
+a je v poriadku — [delegat.md](delegat.md)). Manifest sa needituje ručne — `pfnew` alebo `pfapp`, lebo každá
 z jeho štyroch sekcií vie chýbať tak, že to nič nepovie.
 Podrobne: [nova-appka.md](nova-appka.md).
 

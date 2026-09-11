@@ -95,8 +95,18 @@ ako `enumeration_map` (`text` sa neprekladá), názov prípadu **bez** stavu
 `allowedNets` kvôli stĺpcom, `pripoj_do_uzla` v idempotentnej vetve menu, read
 arc zo sinku. Dopisuje sa doménová logika, nie appka. Podrobne RUNBOOK 2.
 
-**Žiadny zásah do Javy ani do `pom.xml`** — inak by stack protirečil vlastnému
-pravidlu, že aplikačná logika patrí do Petriflow.
+**Pridanie appky Javu nevyžaduje** — `pom.xml` kopíruje `processes/*.xml`
+hromadne a `NetRunner` si identifikátor prečíta z `<id>` v XML. Keď sa pri
+*pridávaní appky* chystáš editovať Javu, robíš pravdepodobne niečo iné, než si
+myslíš.
+
+To **nie je zákaz siahať do Javy.** Appka pre klienta často potrebuje schopnosť,
+ktorú platforma nemá — čítanie príloh, odoslanie mailu, cudzie API, nová
+závislosť. Vtedy sa platforma rozšíri: nové primitívum v delegáte (vrstva 2),
+prípadne servis a závislosť v `pom.xml` (vrstva 3). Podmienka je jediná a je to
+tá istá ako pri vrstvách: **vetu, ktoré primitívum na vyššej vrstve chýba, musíš
+vedieť napísať**. Tento repozitár tak vznikol `precitajFakturu`, `notifikuj`
+aj tesseract v obraze.
 
 Manifest má štyri sekcie v dvoch súboroch (`import`, `bootstrapCase`,
 `uriNodes`, `netScope`) a **každá vie chýbať tak, že to nič nepovie**. Preto sa

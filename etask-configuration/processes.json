@@ -3,7 +3,7 @@
     "Jediný zoznam toho, čo runtime robí so sieťami. Číta ho ProcessManifest.",
     "",
     "Pridanie novej aplikácie: hoď XML do processes/ a dopíš sem riadok do",
-    "\"import\". Žiadny zásah do Javy ani do pom.xml - to by protirečilo tomu,",
+    "\"import\". Pridanie appky zásah do Javy nevyžaduje - to by protirečilo tomu,", 
     "že aplikačná logika patrí do Petriflow.",
     "",
     "import        súbory sietí, v poradí importu. Poradie záleží: uzol URI",

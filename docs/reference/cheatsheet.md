@@ -30,7 +30,9 @@ python3 tools/pfview.py                   # 2 s    vykreslí to frontend?
 python3 tools/pfsync.py --sync            #        import do enginu + role
 ```
 
-Do Javy ani do `pom.xml` sa nesiaha. Pri zmene **manifestu** treba prestaviť jar
+Pridanie appky Javu nevyžaduje (rozšírenie platformy o schopnosť, ktorú engine
+nemá, je iná vec a je v poriadku — vtedy pribudne primitívum v delegáte,
+prípadne servis a závislosť v `pom.xml`). Pri zmene **manifestu** treba prestaviť jar
 (pakuje sa doň); pri zmene len XML stačí `pfsync --sync`.
 
 Pred písaním vlastnej metódy otvor `docs/reference/action-api.md` — 200+ metód,

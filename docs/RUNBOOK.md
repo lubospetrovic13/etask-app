@@ -93,7 +93,7 @@ cp examples/skeleton.xml processes/mojaapp.xml   # prepíš <id>, <initials>, <t
 python3 tools/pflint.py processes/mojaapp.xml
 ```
 
-**Do Javy ani do `pom.xml` sa nesiaha.** `NetRunner` číta manifest a identifikátor
+**Pridanie appky Javu nevyžaduje.** `NetRunner` číta manifest a identifikátor
 si berie z `<id>` v XML.
 
 Overenie po každej zmene siete, v tomto poradí:

@@ -34,8 +34,13 @@ cp examples/skeleton.xml processes/mojaapp.xml   # prepíš <id>, <initials>, <t
 python3 tools/pflint.py processes/mojaapp.xml
 ```
 
-Do Javy ani do `pom.xml` sa nesiaha. Ak sa pri pridávaní appky chystáš editovať
-framework, je to signál, že robíš niečo iné, než si myslíš.
+**Pridanie appky Javu nevyžaduje.** Keď sa pri pridávaní appky chystáš editovať
+framework, robíš pravdepodobne niečo iné, než si myslíš.
+
+Rozšíriť platformu je však legitímne a bežné: appka pre klienta často potrebuje
+schopnosť, ktorú engine nemá (čítanie príloh, maily, cudzie API, nová
+závislosť). Vtedy pribudne primitívum v `EtaskActionDelegate`, prípadne servis
+a závislosť v `pom.xml` — s vetou, **ktoré primitívum na vyššej vrstve chýba**.
 
 ## Štruktúra
 

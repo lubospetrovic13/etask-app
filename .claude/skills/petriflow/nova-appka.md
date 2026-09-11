@@ -7,9 +7,13 @@ python3 tools/pfnew.py mojaapp ziadost "Žiadosť o niečo" --role pracovnik
 
 Vygeneruje sieť, menu sieť so zobrazeniami a stĺpcami, doplní manifest a napíše
 akceptačný test. Ručne je to `cp examples/skeleton.xml processes/mojaapp.xml`
-plus zápis do manifestu — a to je celý postup. **Do Javy ani do `pom.xml` sa
-nesiaha:** `pom.xml` kopíruje `processes/*.xml` hromadne a `NetRunner` si
+plus zápis do manifestu — a to je celý postup. **Pridanie appky Javu
+nevyžaduje:** `pom.xml` kopíruje `processes/*.xml` hromadne a `NetRunner` si
 identifikátor prečíta z `<id>` v XML, takže sa nedá rozísť so sieťou.
+
+Rozšírenie platformy je iná vec: keď appka potrebuje schopnosť, ktorú engine
+nemá, pribudne primitívum v delegáte, prípadne servis a závislosť v `pom.xml`.
+To je legitímne — podmienkou je veta, ktoré primitívum na vyššej vrstve chýba.
 
 ## Manifest má štyri sekcie a každá vie chýbať ticho
 
