@@ -187,8 +187,15 @@ def render():
     engine = parse_signatures(lines)
     project = parse_project_delegate(PROJECT_DELEGATE)
     project_names = {n for n, _, _ in project}
-    version = re.search(r"application-engine-([\d.]+)\.jar", jar)
-    version = version.group(1) if version else "?"
+    # Verzia je v nazve jaru, ale ked jar pride zvonku (`PF_ENGINE_JAR`, CI),
+    # moze sa volat hocijako. Vtedy plati pom.xml - a to je aj spravnejsi zdroj:
+    # inventar ma zodpovedat verzii, ktoru appka naozaj pouziva.
+    #
+    # Bez tohto fallbacku sa do hlavicky zapisalo "application-engine-?.jar",
+    # `--check` to porovnal s commitnutym suborom a hlasil "inventar je
+    # neaktualny" - co je nepravda a posle cloveka regenerovat nieco, co sedi.
+    m_ver = re.search(r"application-engine-([\d.]+)\.jar", jar)
+    version = m_ver.group(1) if m_ver else (engine_version_from_pom() or "?")
 
     o = []
     o.append("# Extension pointy volateľné z Petriflow akcie")
