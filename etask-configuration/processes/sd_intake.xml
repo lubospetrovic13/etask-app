@@ -99,9 +99,22 @@
 				<action id="1"><![CDATA[
 wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
 wiz_hint: f.wiz_hint, wiz_error: f.wiz_error, inner: f.inner,
-btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
+btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit,
+req_name: f.req_name, req_email: f.req_email;
 
 changeCaseProperty("title").about { "Nová požiadavka" }
+
+// Prihlasenemu cloveku netreba pisat, kto je. `isRealUser` odlisi skutocny
+// ucet od anonyma a od systemoveho uctu - anonymna session ma tiez `loggedUser`,
+// takze bez tejto podmienky by sa do kontaktu zapisalo "anonymous@netgrif.com"
+// a operator by mal komu odpovedat len teoreticky.
+def u = loggedUser()
+if (isRealUser(u)) {
+    change req_name value {
+        (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+    }
+    change req_email value { u.email as String }
+}
 
 change wiz_step value { 1 }
 change wiz_stepper value { stepper_label(1) }
@@ -211,6 +224,22 @@ make btn_submit, editable on transitions when { return 1 == 4 }
 	]]></function>
 	<roleRef>
 		<id>anonymous</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<!--
+		Prihlaseny zamestnanec podava tym istym formularom ako anonym z verejneho
+		odkazu. `default` je systemova rola, ktoru ma KAZDY prihlaseny - nemusi
+		sa deklarovat v `<role>` a `pflint` ju pozna ako zabudovanu.
+
+		Preco nie vlastna siet na interne podania: bol by to druhy formular
+		s tou istou logikou, ktory sa po prvej zmene katalogu rozide s tym
+		verejnym. Rozdiel je len v tom, ze prihlasenemu sa kontakt predplni.
+	-->
+	<roleRef>
+		<id>default</id>
 		<caseLogic>
 			<create>true</create>
 			<view>true</view>
@@ -736,6 +765,23 @@ make btn_submit, hidden on transitions when { return true }
 		<desc name="req_description_desc">Čo ste robili, čo ste očakávali a čo sa stalo namiesto toho.</desc>
 		<component>
 			<name>textarea</name>
+			<properties>
+				<!--
+					Uklada sa POCAS PISANIA, nie az po odkliknuti z pola.
+					Toto je VEREJNY formular a toto pole je jeho najdlhsi
+					text - clovek doň pise minutu aj dve a moze ho zavriet
+					alebo poslat bez toho, aby z neho odklikol. Na blur by sa
+					vtedy neuložilo nič.
+
+					Nezapinaj to na pole, ktore nejaka akcia PREPISUJE
+					(normalizuje, formatuje, prepocitava): odpoved servera sa
+					zapisuje spat do inputu, takze by prepisala to, co clovek
+					prave pise. Cenu a ostatne kompromisy popisuje
+					etask-frontend-starter/src/app/views/task-content/etask-field-component-resolver.component.ts
+					a RUNBOOK 6.
+				-->
+				<property key="saveWhileTyping">true</property>
+			</properties>
 		</component>
 	</data>
 	<data type="enumeration_map" immediate="true">
@@ -888,6 +934,12 @@ make req_workaround, hidden on transitions when { return !showIt }
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
 			<id>anonymous</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>default</id>
 			<logic>
 				<perform>true</perform>
 			</logic>

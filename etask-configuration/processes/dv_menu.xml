@@ -153,6 +153,12 @@ views.each { v ->
                     (currentName.translations ?: [:]) == (v.name.translations ?: [:])
             if (currentQuery == (v.query as String) && currentNets == wantNets && sameName) {
                 nastav_zobrazenie(existing, v.nets as List, v.headers)
+                // Uzol dorovnaj AJ pri nezmenenej polozke: URI uzly zije
+                // Elasticsearch, polozky menu Mongo. Po vymene ES indexu maju
+                // uzly nove id, polozka visi na starom a priecinok je PRAZDNY -
+                // bez chyby a bez logu. `createOrUpdateMenuItem` to riesi, ale
+                // sem sa nedostane, lebo dopyt ani nazov sa nezmenili.
+                pripoj_do_uzla(existing, "dovolenky")
                 unchanged << id
                 return
             }

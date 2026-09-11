@@ -51,24 +51,75 @@ def failed = []
 //
 // Knizica si z toho ale sama vyberie `defaultValue`, takze bez prekrytia na
 // frontende (view-title.ts) by tu bola slovencina aj v anglickom portali.
+// Karta Service Desku je viditelna KAZDEMU prihlasenemu - zamestnanec musi mat
+// kde podat poziadavku. To, co je za nou, filtruje `allowed_roles` na polozkach:
+// tikety, zakaznikov a podania vidi len `agent`, "Podat poziadavku" kazdy.
+// Skrytie karty by podanie znemoznilo, a skrytie polozky nie je bezpecnostna
+// hranica - tou su opravnenia v sietiach.
 def views = [
         [id: "sd_tickets", name: i18n("Tikety", ["en": "Tickets"]),
          type: "Case", icon: "confirmation_number",
-         query: "processIdentifier:\"service_desk/sd_ticket\""],
+         query: "processIdentifier:\"service_desk/sd_ticket\"",
+         nets: ["service_desk/sd_ticket"],
+         roles: ["agent": "service_desk/sd_ticket"]],
         // Zamerne `t_wi_work`, nie `t_work`: task dokument v indexe nesie
         // processId (stringId siete, meni sa pri kazdom re-importe), nie
         // processIdentifier - takze filter sa da spolahlivo zuzit len na
         // unikatny id prechodu. Preto ma prechod pracovnej ulohy vlastne id.
         [id: "sd_my_work", name: i18n("Moje úlohy", ["en": "My work"]),
          type: "Task", icon: "build",
-         query: "transitionId:\"t_wi_work\""],
+         query: "transitionId:\"t_wi_work\"",
+         nets: ["service_desk/sd_work_item"],
+         roles: ["agent": "service_desk/sd_ticket"]],
         [id: "sd_customers", name: i18n("Zákazníci", ["en": "Customers"]),
          type: "Case", icon: "domain",
-         query: "processIdentifier:\"service_desk/sd_customer\""],
+         query: "processIdentifier:\"service_desk/sd_customer\"",
+         nets: ["service_desk/sd_customer"],
+         roles: ["agent": "service_desk/sd_ticket"]],
         [id: "sd_submissions", name: i18n("Podania z formulára", ["en": "Form submissions"]),
          type: "Case", icon: "inbox",
-         query: "processIdentifier:\"service_desk/sd_intake\""],
+         query: "processIdentifier:\"service_desk/sd_intake\"",
+         nets: ["service_desk/sd_intake"],
+         roles: ["agent": "service_desk/sd_ticket"]],
 ]
+
+// Podanie poziadavky pre PRIHLASENEHO cloveka. Stavia sa zvlast, lebo
+// potrebuje `allowedNets` - bez nich tlacidlo "+" vrati "Ziadne povolene siete"
+// a zamestnanec nema ako zacat. `createFilterInMenu` vyssie `allowedNets`
+// nastavit nevie, projektovy `createOrUpdateMenuItem` ano (to je cely dovod,
+// preco existuje).
+try {
+    def intake = "service_desk/sd_intake"
+    def podanie = "sd_new_request"
+    def existing = menu_item(podanie)
+    if (existing != null) {
+        def current = getFilterFromMenuItem(existing)
+        deleteMenuItem(existing)
+        if (current != null) deleteFilter(current)
+    }
+    def item = createOrUpdateMenuItem(
+            podanie,
+            "service_desk",
+            "Case",
+            "processIdentifier:\"" + intake + "\"",
+            "add_comment",
+            i18n("Podať požiadavku", ["en": "Submit a request"]),
+            [intake],
+            [:],          // vidi kazdy prihlaseny - podat poziadavku ma moct kazdy
+            [:])
+    if (item != null) {
+        // Bez `enable_case_title = false` vyskoci pri "+" dialog na nazov
+        // pripadu - a nazov si sklada siet sama ("Nová požiadavka").
+        setData("view", item, [
+                "enable_case_title"              : ["value": false, "type": "boolean"],
+                "case_require_title_in_creation" : ["value": false, "type": "boolean"]])
+        created << podanie
+    } else {
+        failed << podanie
+    }
+} catch (Exception e) {
+    failed << ("sd_new_request (" + e.getClass().simpleName + ": " + e.message + ")")
+}
 
 views.each { v ->
     def id = v.id as String
@@ -95,24 +146,48 @@ views.each { v ->
             def sameName = currentName != null &&
                     (currentName.defaultValue as String) == (v.name.defaultValue as String) &&
                     (currentName.translations ?: [:]) == (v.name.translations ?: [:])
-            if (currentQuery == (v.query as String) && sameName) {
+            // Do porovnania patria aj ROLY: bez toho by sa uz nasadena polozka
+            // vyhodnotila ako nezmenena a zostala by viditelna vsetkym.
+            def currentRoles = [] as Set
+            (existing.immediateData ?: []).each { d ->
+                if (d.importId == "allowed_roles") {
+                    currentRoles = ((d.options ?: [:]).keySet() as Set)
+                }
+            }
+            def wantRoles = (v.roles ?: [:]).collect { r, n -> (r as String) + ":" + (n as String) } as Set
+            if (currentQuery == (v.query as String) && sameName && currentRoles == wantRoles) {
+                // Uzol dorovnaj AJ pri nezmenenej polozke: URI uzly zije
+                // Elasticsearch, polozky menu Mongo. Po vymene ES indexu maju
+                // uzly nove id, polozka visi na starom a priecinok je PRAZDNY -
+                // bez chyby a bez logu. `createOrUpdateMenuItem` to riesi, ale
+                // sem sa nedostane, lebo dopyt ani nazov sa nezmenili.
+                pripoj_do_uzla(existing, "service_desk")
                 unchanged << id
                 return
             }
             deleteMenuItem(existing)
+            def stary = getFilterFromMenuItem(existing)
+            if (stary != null) deleteFilter(stary)
         }
-        def item = createFilterInMenu(
-                "service_desk",     // URI cesta - POZOR, je prva, nie identifikator
-                id,                 // menu_item_identifier
-                v.name,             // nazov v menu aj nazov filtra (I18nString)
-                v.query as String,  // dopyt
-                v.type as String,   // "Case" alebo "Task"
-                [],                 // (nie allowed_nets - to sa tu nastavit neda)
-                [:],                // allowed_roles
-                [:],                // banned_roles
-                [],
+        // PROJEKTOVY `createOrUpdateMenuItem` (9 argumentov), nie enginovy
+        // `createFilterInMenu`.
+        //
+        // Dovod je meraný: `createFilterInMenu` ma 11 pretazeni a mapa
+        // `allowed_roles` v nom neprejde - polozka vznikne, ale zostane
+        // viditelna kazdemu. Odkedy je karta Service Desku otvorena vsetkym
+        // prihlasenym (aby mal zamestnanec kde podat poziadavku), by to
+        // znamenalo, ze kazdy vidi aj Tikety a Zakaznikov. Projektova metoda
+        // roly nastavi a zaroven vie `allowedNets`, takze zoznamy maju stlpce.
+        def item = createOrUpdateMenuItem(
+                id,                     // menu_item_identifier
+                "service_desk",         // URI cesta
+                v.type as String,       // "Case" alebo "Task"
+                v.query as String,
                 v.icon as String,
-                "public"
+                v.name,                 // I18nString - polozka je dvojjazycna
+                (v.nets ?: []),         // allowedNets - bez toho ziadne stlpce
+                (v.roles ?: [:]),       // allowed_roles: kto polozku v menu vidi
+                [:]                     // bannedRoles - dourcuje aritu
         )
         if (item) { created << id } else { failed << id }
     } catch (Exception e) {
