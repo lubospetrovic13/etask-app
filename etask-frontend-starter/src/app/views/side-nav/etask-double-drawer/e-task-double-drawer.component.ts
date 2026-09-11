@@ -59,18 +59,13 @@ import {localisedViewTitle} from '../view-title';
 export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent {
 
   static readonly SETTINGS_SECTION = 'settings';
-  static readonly ARCHIVE_SECTION = 'archive';
   public isSectionOpen: {
     folders: boolean;
     views: boolean;
     settings: boolean;
-    archive: boolean;
   };
   public settingsNodes: Array<UriNodeResource>;
   public settingsViews: Array<ViewNavigationItem>;
-
-  public archiveNodes: Array<UriNodeResource>;
-  public archiveViews: Array<ViewNavigationItem>;
   private _languageSub: Subscription;
 
   constructor(router: Router,
@@ -106,11 +101,8 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
       if (this.currentNode) this.loadRightSide();
     });
     this.isSectionOpen.settings = false;
-    this.isSectionOpen.archive = false;
     this.settingsViews = [];
     this.settingsNodes = [];
-    this.archiveViews = [];
-    this.archiveNodes = [];
   }
 
   protected loadLeftSide() {
@@ -155,17 +147,16 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
         this.views = [];
         this.settingsNodes = [];
         this.settingsViews = [];
-        this.archiveNodes = [];
-        this.archiveViews = [];
         this.isSectionOpen.views = true;
         this.isSectionOpen.folders = true;
         allNodes.forEach(node => {
           if (node.hidden) return;
           if (node.section === ETaskDoubleDrawerComponent.SETTINGS_SECTION) {
             this.settingsNodes.push(node);
-          } else if (node.section === ETaskDoubleDrawerComponent.ARCHIVE_SECTION) {
-            this.archiveNodes.push(node);
           } else {
+            // Sekcia Archív je z menu odobraná - uzol, ktorý sa do nej hlásil,
+            // patrí medzi bežné priečinky. Zahodiť ho by znamenalo, že zmizne
+            // z menu a nikde sa to nedozvieš.
             this.rightNodes.push(node);
           }
         });
@@ -174,12 +165,14 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
           const convertedViewItem = this.resolveFilterCaseToViewNavigationItem(vf);
           if (!convertedViewItem) return;
           const sectionImmediate = vf.immediateData.find(f => f.stringId === 'custom_drawer_section')?.value;
-          if (!sectionImmediate) {
-            this.views.push(convertedViewItem);
-          } else if (sectionImmediate === ETaskDoubleDrawerComponent.SETTINGS_SECTION) {
+          if (sectionImmediate === ETaskDoubleDrawerComponent.SETTINGS_SECTION) {
             this.settingsViews.push(convertedViewItem);
           } else {
-            this.archiveViews.push(convertedViewItem);
+            // Všetko ostatné (vrátane neznámej sekcie) ide do bežných
+            // zobrazení. Predtým tu bola vetva do Archívu, takže zobrazenie
+            // s preklepom v `custom_drawer_section` sa ticho stratilo v sekcii,
+            // ktorú nikto neotvára.
+            this.views.push(convertedViewItem);
           }
         });
         if (!!this._childCustomViews[this.currentNode.uriPath]) {
@@ -202,12 +195,15 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
     });
   }
 
+  /**
+   * Je sekcia Nastavenia prázdna?
+   *
+   * Pozor na to, čo tu stálo predtým: `!this.settingsNodes && !this.settingsViews`
+   * je **vždy false** - prázdne pole je v JS truthy. Nadpis sekcie sa preto
+   * zobrazoval aj nad ničím, a presne tak vznikol prázdny „Archív" v menu.
+   */
   public isSettingsEmpty(): boolean {
-    return !this.settingsNodes && !this.settingsViews;
-  }
-
-  public isArchiveEmpty(): boolean {
-    return !this.archiveNodes && !this.archiveViews;
+    return !this.settingsNodes?.length && !this.settingsViews?.length;
   }
 
   public getLeftNodeIcon(node: UriNodeResource): string {

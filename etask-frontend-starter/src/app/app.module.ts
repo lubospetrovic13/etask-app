@@ -32,6 +32,7 @@ import {
   TaskResourceService,
   TranslateLibModule,
   UriResourceService,
+  UriService,
   ViewService,
 } from '@netgrif/components-core';
 import {PieChartModule} from '@swimlane/ngx-charts';
@@ -42,6 +43,7 @@ import {EtaskFrontendConfigurationService} from './etask-frontend-configuration.
 import {EtaskFrontendViewService} from './etask-frontend-view.service';
 import {DashboardComponent} from './views/dashboard/dashboard/dashboard.component';
 import {EtaskUriResourceService} from './views/dashboard/service/etask-uri-resource.service';
+import {EtaskUriService} from './views/dashboard/service/etask-uri.service';
 import {LoginComponent} from './views/login/login.component';
 import {
   EtaskTaskListPaginationComponent,
@@ -142,6 +144,18 @@ import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-vie
     {provide: ViewService, useClass: EtaskFrontendViewService},
     {provide: TaskResourceService, useClass: ETaskTaskResourceService},
     {provide: UriResourceService, useClass: EtaskUriResourceService},
+    // Dashboard aj lave menu musia mat TU ISTU instanciu.
+    //
+    // `EtaskUriService` je `providedIn: 'root'`, takze existuje - ale je to iny
+    // token nez kniznicny `UriService`. Angular preto vyrobil DVE instancie,
+    // kazdu s vlastnym `_activeNode$`. Dashboard zapisoval `activeNode` do
+    // svojej, drawer bol prihlaseny na druhu - a klik na kartu preto lave menu
+    // neprepol. Zobrazenie sa otvorilo spravne, len strom zostal tam, kde bol,
+    // co vyzeralo ako chyba navigacie.
+    //
+    // `useExisting`, nie `useClass`: `useClass` by vyrobil DRUHU instanciu
+    // `EtaskUriService` a chyba by zostala, len by sa presunula.
+    {provide: UriService, useExisting: EtaskUriService},
     {provide: GroupNavigationComponentResolverService, useClass: EtaskGroupNavigationComponentResolverService},
   ],
 })

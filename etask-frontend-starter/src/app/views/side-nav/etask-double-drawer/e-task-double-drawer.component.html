@@ -230,34 +230,8 @@
         <span class="menu-item-focus-overlay"></span>
       </div>
     </div>
-
-    <div class="margin-auto" *ngIf='!isArchiveEmpty() && isRoot()' fxLayout="column" fxFlexAlign="center start">
-      <div *ngIf="!isRightNodesEmpty()" class="line margin-top">
-        <mat-divider></mat-divider>
-      </div>
-      <div class="cursor-pointer headline-padding" (click)="toggleSection('archive')" fxLayout="row"
-           fxFlexAlign="start center"
-           fxFlex>
-        <span class="headline-text" fxFlex>{{ 'menu.archive' | translate }}</span>
-        <mat-icon>{{ isSectionOpen.archive ? 'expand_more' : 'expand_less' }}</mat-icon>
-      </div>
-    </div>
-    <div [@sectionExpansion]="isSectionOpen.archive ? 'expanded' : 'collapsed'" class="box-container">
-      <div *ngFor='let node of archiveNodes; trackBy: uriNodeTrackBy' (click)="onNodeClick(node)"
-           class="tree-node mat-typography mat-body-2" fxLayoutAlign="start center"
-           routerLinkActive="active-tree-node">
-        <mat-icon class="tree-node-icon">{{ getRightFolderIcon(node) }}</mat-icon>
-        <span>{{ node.name | uriNodeTitle }}</span>
-        <span class="menu-item-focus-overlay"></span>
-      </div>
-      <div *ngFor='let view of archiveViews; trackBy: viewsTrackBy' class="tree-node mat-typography"
-           fxLayoutAlign="start center" [routerLink]='view.routing.path' routerLinkActive="active-tree-node">
-        <mat-icon class="tree-node-icon">{{ view.navigation.icon }}</mat-icon>
-        <span>{{ view.navigation.title }}</span>
-        <span class="menu-item-focus-overlay"></span>
-      </div>
-    </div>
   </div>
+
   <div *ngIf="(rightLoading$ | async)" fxLayout="column" fxLayoutAlign="center center" class="margin-top-default">
     <mat-spinner color="primary" diameter="40" mode="indeterminate"></mat-spinner>
   </div>

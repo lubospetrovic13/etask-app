@@ -16,8 +16,8 @@ import {
   UserService,
   ViewNavigationItem,
 } from '@netgrif/components-core';
-import {Subscription} from 'rxjs';
-import {map} from 'rxjs/operators';
+import {Observable, Subscription, from, of} from 'rxjs';
+import {concatMap, first, map, switchMap} from 'rxjs/operators';
 import custom_views from '../../../../assets/custom_views.json';
 import {UriNodeTitlePipe} from '../../side-nav/uri-node-title.pipe';
 import {localisedViewTitle} from '../../side-nav/view-title';
@@ -92,32 +92,84 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Open a dashboard card: land inside the folder, on its first view.
+   * Open a dashboard card: land on the first view the folder can offer.
    *
    * This used to be `activeNode = node` + `navigate(['portal'])`, and it left
    * the user at the root of the tree - measured: the drawer's `currentNode` was
-   * `root` right after the click. The reason is that `activeNode` does not mean
-   * "navigate here". In the library it means "the folder the currently open view
-   * belongs to" and it is written in exactly one place, `onViewClick`; tree
-   * navigation goes through `onNodeClick`, which sets the drawer's own
-   * `currentNode` and never touches the service. Writing into that channel and
-   * hoping the drawer treats it as a destination is a category error.
+   * `root` right after the click. Two things were wrong and both are fixed:
    *
-   * So the card does what the user means by clicking it: opens the folder's
-   * first view. `activeNode` is still set, because that is what tells the drawer
-   * which folder the opened view lives in - which is its actual purpose.
+   *   1. `activeNode` was written into a *different instance* of the service.
+   *      `EtaskUriService` and the library's `UriService` were two tokens, so
+   *      Angular built two objects, each with its own `_activeNode$`. The
+   *      drawer listened to the other one. `app.module.ts` now aliases them
+   *      (`useExisting`), so setting `activeNode` really does move the drawer.
+   *   2. A folder that only holds other folders has no views of its own, so
+   *      `firstViewPath` fell back to `portal` - a valid route with an empty
+   *      content area. The card "worked" and looked like it did nothing.
+   *      Hence `entryFor`: descend into child folders and open the first view
+   *      that actually exists.
    *
-   * A folder with no views (or one the user may not access) falls back to
-   * `/portal`; there is nothing to open, and that is not an error.
+   * `activeNode` is set to the node that OWNS the opened view, because that is
+   * what it means in the library - the folder the open view belongs to - and
+   * that is what the drawer shows.
    */
   public openNode(node: ETaskUriNodeResource) {
-    this._uri.activeNode = node;
-    this._uri.getCasesOfNode(node, FILTER_IDENTIFIERS).subscribe(
-      page => this._router.navigate([this.firstViewPath(page?.content ?? [])]),
+    this.entryFor(node).subscribe(
+      entry => {
+        if (!entry) {
+          // Priecinok bez zobrazeni a bez deti: otvorit sa nema co. Aspon
+          // prepneme strom na neho, aby bolo vidno, ze je prazdny.
+          this._uri.activeNode = node;
+          this._router.navigate(['portal']);
+          return;
+        }
+        this._uri.activeNode = entry.node;
+        this._router.navigate([entry.path]);
+      },
       error => {
         this._log.error('Nepodarilo sa načítať zobrazenia priečinka', error);
         this._router.navigate(['portal']);
       });
+  }
+
+  /**
+   * First openable view in this folder, or in its subfolders.
+   *
+   * Depth is capped: the URI tree is a tree, and a bug in the data (a node
+   * whose child is its own ancestor) would otherwise turn this into an
+   * infinite walk instead of a wrong answer.
+   */
+  private entryFor(node: ETaskUriNodeResource, depth: number = 0):
+    Observable<{ node: ETaskUriNodeResource, path: string } | undefined> {
+    return this._uri.getCasesOfNode(node, FILTER_IDENTIFIERS).pipe(
+      switchMap(page => {
+        const path = this.firstViewPath(page?.content ?? []);
+        if (path !== 'portal') {
+          return of({node, path});
+        }
+        if (depth >= 3) {
+          return of(undefined);
+        }
+        return this._uri.getChildNodes(node).pipe(
+          switchMap(children => {
+            const sorted = ((children ?? []) as Array<ETaskUriNodeResource>)
+              .filter(child => !child.hidden)
+              .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+            if (!sorted.length) {
+              return of(undefined);
+            }
+            // `concatMap` a nie `mergeMap`: priecinky sa maju prehladat
+            // v poradi, v akom ich vidi clovek, nie v poradi, v akom stihne
+            // odpovedat server - inak by ta karta otvarala raz Faktury,
+            // raz Objednavky.
+            return from(sorted).pipe(
+              concatMap(child => this.entryFor(child, depth + 1)),
+              first(entry => !!entry, undefined),
+            );
+          }),
+        );
+      }),
+    );
   }
 
   /**

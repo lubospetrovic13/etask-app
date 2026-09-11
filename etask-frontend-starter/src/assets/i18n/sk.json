@@ -17,7 +17,6 @@
   },
   "menu": {
     "views": "Zobrazenia",
-    "archive": "Archív",
     "settings": "Nastavenia",
     "root-folders": "Kategórie"
   },
@@ -38,7 +37,10 @@
     }
   },
   "uriNode": {
+    "faktury": "Faktúry",
     "general": "Všeobecné",
+    "objednavky": "Objednávky",
+    "schvalovanie": "Objednávky a faktúry",
     "service_desk": "Service Desk"
   }
 }
