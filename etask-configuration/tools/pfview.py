@@ -97,6 +97,18 @@ def library_templates():
     return out
 
 
+# Priecinok zdrojakov kniznice -> typ `<data type=>`. Sluzi na prislusnost mien
+# komponentov, ktore sa citaju v kode a nie v sablone.
+FOLDER_TO_TYPE = {
+    "text-field": "text", "number-field": "number", "enumeration-field": "enumeration",
+    "multichoice-field": "multichoice", "boolean-field": "boolean",
+    "button-field": "button", "date-field": "date", "date-time-field": "dateTime",
+    "user-field": "user", "user-list-field": "userList", "file-field": "file",
+    "file-list-field": "fileList", "i18n-field": "i18n", "task-ref-field": "taskRef",
+    "filter-field": "filter",
+}
+
+
 def library_component_names(templates):
     """(per_type, any_name) - mena `<component><name>`, na ktore kniznica reaguje.
 
@@ -159,6 +171,32 @@ def library_component_names(templates):
                     add("text", n)
             for n in re.findall(r"component\??\.name ?===? ?'([^']+)'", text):
                 add(None, n)
+
+    # Stvrty zdroj: porovnanie `component.name === KONSTANTA` v zdrojaku
+    # konkretneho field komponentu.
+    #
+    # Bez neho tento nastroj tvrdil, ze `<component><name>preview</name></component>
+    # na `file` poli nikto nerenderuje - a pritom `abstract-file-field.component`
+    # ma `const preview = 'preview'` a porovnava sa s tou premennou, nie
+    # s literalom. Regex vyssie hlada len literal, takze cele meno prepadlo.
+    # Prislusnost k typu sa tu na rozdiel od zbaleneho balika ZISTIT DA -
+    # zdrojaky su po jednom v priecinku podla typu pola.
+    for pkg in ("components", "components-core"):
+        base = NM / pkg / "esm2020" / "lib" / "data-fields"
+        if not base.is_dir():
+            continue
+        for folder in base.iterdir():
+            if not folder.is_dir():
+                continue
+            t = FOLDER_TO_TYPE.get(folder.name)
+            for src in folder.rglob("*.mjs"):
+                text = src.read_text(encoding="utf-8", errors="replace")
+                consts = dict(re.findall(r"const (\w+) = '([^']+)'", text))
+                for n in re.findall(r"component\??\.name ?===? ?'([^']+)'", text):
+                    add(t, n)
+                for var in re.findall(r"component\??\.name ?===? ?([A-Za-z_]\w*)", text):
+                    if var in consts:
+                        add(t, consts[var])
     return per_type, any_name
 
 
@@ -194,6 +232,30 @@ def library_property_keys():
         for bundle in (d.glob("*.mjs") if d.is_dir() else []):
             keys |= prop_keys(bundle.read_text(encoding="utf-8", errors="replace"))
     return keys
+
+
+def resolver_property_keys():
+    """Kluce `<property key=>`, ktore cita nas resolver poli.
+
+    Resolver (`app-etask-field-component-resolver`) renderuje KAZDY typ pola,
+    takze property, ktoru cita on, je platna na kazdom type - na rozdiel od
+    komponentu jedneho typu. Bez tejto vynimky by `pfview` hlasil
+    `saveWhileTyping` ako "property, ktoru nikto necita", hoci ju cita.
+
+    Zamerne sa scanuje LEN resolver, nie cely `src/`: keby stacilo, ze sa
+    `properties.x` niekde v appke vyskytuje, kontrola by prestala chytat
+    preklepy - a to je jediny dovod, preco existuje.
+    """
+    for ts in SRC.rglob("*.ts"):
+        if ts.name.endswith(".spec.ts"):
+            continue
+        text = ts.read_text(encoding="utf-8", errors="replace")
+        if "selector: 'app-etask-field-component-resolver'" not in text:
+            continue
+        html = ts.parent / (ts.name[:-3] + ".html")
+        tpl = html.read_text(encoding="utf-8", errors="replace") if html.exists() else ""
+        return prop_keys(text) | prop_keys(tpl)
+    return set()
 
 
 def project_field_components():
@@ -312,7 +374,7 @@ def check_overrides():
 # --------------------------------------------- C. siete proti frontendu
 
 def check_nets(per_type, any_name, field_types, resolver_types,
-               lib_prop_keys, project):
+               lib_prop_keys, project, resolver_keys=frozenset()):
     """Siet si vypyta komponent alebo property, ktoru nikto nerenderuje.
 
     Kto typ pola vlastni, urcuje, co sa da overit:
@@ -370,6 +432,9 @@ def check_nets(per_type, any_name, field_types, resolver_types,
                 key = (prop.get("key") or "").strip()
                 if not key:
                     continue
+                if key in resolver_keys:
+                    # Property cita resolver, ktory renderuje kazdy typ.
+                    continue
                 if own is not None:
                     if key not in own["keys"]:
                         err(f"{where}: property '{key}' nikde v {own['file']} "
@@ -422,6 +487,7 @@ def main():
     field_types = library_field_types()
     res_types = resolver_field_types(field_types)
     lib_prop_keys = library_property_keys()
+    resolver_keys = resolver_property_keys()
     project = project_field_components()
 
     if "--inventory" in sys.argv:
@@ -446,7 +512,8 @@ def main():
           f"{len(any_name)} mien komponentov, resolver appky {len(res_types)} typov poli")
     check_copies(templates)
     check_overrides()
-    check_nets(per_type, any_name, field_types, res_types, lib_prop_keys, project)
+    check_nets(per_type, any_name, field_types, res_types, lib_prop_keys, project,
+               resolver_keys)
 
     print(f"\npfview: {len(errors)} chyb, {len(warnings)} upozorneni, {len(notes)} poznamok")
     return 1 if errors else 0

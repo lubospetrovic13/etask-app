@@ -51,6 +51,15 @@ else
   ok "pflint chytil bad-role.xml"
 fi
 
+# pflint: musi chytit prekryv v gride. Engine takú siet prijme, `pfcheck`
+# prejde - a uloha sa v appke nikdy nevykresli, lebo Angular grid vyhodi
+# vynimku do konzoly prehliadaca. Zvonku to vyzera na zaseknuty server.
+if $PY tools/pflint.py tools/fixtures/bad-grid.xml >/dev/null 2>&1; then
+  bad "pflint neoznacil bad-grid.xml (prekryv v gride)"
+else
+  ok "pflint chytil bad-grid.xml"
+fi
+
 # pflint: nesmie oznacit platne siete
 if $PY tools/pflint.py processes/ >/dev/null 2>&1; then
   ok "pflint neoznacil platne siete"
@@ -126,7 +135,7 @@ fi
 if $PY tools/pfapi.py --check >/dev/null 2>&1; then
   ok "pfapi inventar je aktualny"
 else
-  bad "reference/action-api.md je neaktualny - spusti: $PY tools/pfapi.py > reference/action-api.md"
+  bad "docs/reference/action-api.md je neaktualny - spusti: $PY tools/pfapi.py > docs/reference/action-api.md"
 fi
 
 # pfview: kontroly frontendovej vrstvy. Fixtures nesu presne tri tiche chyby -
@@ -149,6 +158,105 @@ if [ -d ../etask-frontend-starter/node_modules/@netgrif ]; then
   fi
 else
   skip "pfview: etask-frontend-starter/node_modules chyba (npm ci)"
+fi
+
+# --- pfdoc: kapitola musi byt vyrazne lacnejsia nez cely subor -------------
+#
+# Cely zmysel nastroja je, ze "kapitola 4" stoji zlomok toho, co cely RUNBOOK.
+# Ked sa raz rozbije parsovanie nadpisov, vypise sa bud nic (a agent si nacita
+# cely subor) alebo vsetko (a neusetri sa nic) - ani jedno sa neprejavi ako chyba.
+kap=$($PY tools/pfdoc.py runbook 4 2>/dev/null | wc -c)
+cely=$(wc -c < ../docs/RUNBOOK.md)
+if [ "$kap" -gt 200 ] && [ "$kap" -lt $((cely / 3)) ]; then
+  ok "pfdoc vrati kapitolu (${kap} z ${cely} znakov)"
+else
+  bad "pfdoc: kapitola ma ${kap} znakov z ${cely} - parsovanie nadpisov je rozbite"
+fi
+
+# Dokumentacia je po slovensky, takze hladanie MUSI ist aj bez diakritiky -
+# inak nastroj odpovie "nie je to tu" na vec, ktora tam je.
+if $PY tools/pfdoc.py hladaj "polozka menu" 2>/dev/null | grep -q 'runbook'; then
+  ok "pfdoc hlada bez diakritiky"
+else
+  bad "pfdoc: 'polozka menu' nenaslo 'položka menu' - hladanie je citlive na diakritiku"
+fi
+
+# Neznamy dokument nesmie skoncit tichym uspechom.
+if $PY tools/pfdoc.py neexistuje 4 >/dev/null 2>&1; then
+  bad "pfdoc: neznamy dokument vratil uspech"
+else
+  ok "pfdoc odmietne neznamy dokument"
+fi
+
+# --- pfnew: skelet, ktory generuje, musi prejst vlastnou retazou ------------
+#
+# Preco to tu je: `pfnew` je sablona pre kazdu dalsiu appku, takze chyba v nej
+# sa rozmnozi. A stalo sa oboje - iniciály odvodene zo slovenskeho nazvu
+# ("Skúšobná žiadosť" -> `SŽX`) neprešli vlastnou kontrolou generatora, a skelet
+# ucil vzor, ktory sa medzitym ukazal ako nespravny (stav ako `text` a stav
+# v nazve pripadu sa NEPREKLADAJU). Ani jedno by ziadny existujuci test
+# nezachytil: generator sa nespusta, siete v repozitari su uz opravene.
+#
+# Generuje sa do docasneho checkoutu, aby to nesahalo na `processes/`
+# ani na manifest.
+tmp_new=$(mktemp -d)
+trap 'rm -rf "$tmp_new"' EXIT
+mkdir -p "$tmp_new/tools" "$tmp_new/processes" "$tmp_new/reference"
+cp tools/pfnew.py tools/pfi18n.py tools/pflint.py tools/pfgroovy.py tools/pfapi.py \
+   tools/pftestlib.py "$tmp_new/tools/"
+cp ../docs/reference/action-api.md "$tmp_new/reference/"
+printf '{"import":[],"bootstrapCase":[],"uriNodes":{}}\n' > "$tmp_new/processes.json"
+printf '{"netScope":[],"users":[]}\n' > "$tmp_new/seed.json"
+
+if (cd "$tmp_new" && $PY tools/pfnew.py skuska ziadost "Skúšobná žiadosť" \
+      --role pracovnik >/dev/null 2>&1); then
+  ok "pfnew vygeneroval appku aj zo slovenskeho nazvu"
+  bad_new=0
+  for nastroj in pflint pfgroovy pfi18n; do
+    if ! (cd "$tmp_new" && $PY "tools/$nastroj.py" processes/ >/dev/null 2>&1); then
+      bad "pfnew: vygenerovana siet neprejde cez $nastroj"
+      bad_new=1
+    fi
+  done
+  [ "$bad_new" -eq 0 ] && ok "vygenerovana siet prejde pflint, pfgroovy aj pfi18n"
+
+  # Skelet nesmie ucit vzory, ktore su uz vyvratene: stav ako `text` a stav
+  # v nazve pripadu sa neprelozia (RUNBOOK 9).
+  siet="$tmp_new/processes/sk_ziadost.xml"
+  if grep -q 'type="enumeration_map"[^>]*>' "$siet" \
+     && grep -q '<option key="rozpisane"' "$siet"; then
+    ok "skelet ma stav ako enumeration_map (prelozitelny)"
+  else
+    bad "skelet ma stav ako text - v anglickom portali zostane slovensky"
+  fi
+  if grep -q 'nazov(sk_predmet)' "$siet" && ! grep -q 'nazov(sk_predmet, "' "$siet"; then
+    ok "skelet nedava stav do nazvu pripadu"
+  else
+    bad "skelet dava stav do nazvu pripadu - Case.title sa neprekladá"
+  fi
+  # Vygenerovany akceptacny test stavia na `pftestlib`. Ked sa rozide sablona
+  # s kniznicou (premenovana funkcia, iny podpis), prejavi sa to az u toho, kto
+  # si novu appku zalozi - a prejavi sa to ako "test nejde spustit".
+  if (cd "$tmp_new/tools" && $PY -c "
+import importlib.util, sys
+sys.path.insert(0, '.')
+spec = importlib.util.spec_from_file_location('gen', 'skuskacheck.py')
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+sys.exit(0 if hasattr(m, 'main') else 1)
+" >/dev/null 2>&1); then
+    ok "vygenerovany test sa importuje a sedi s pftestlib"
+  else
+    bad "vygenerovany test sa nedá naimportovat - sablona v pfnew sa rozisla s pftestlib"
+  fi
+
+  if grep -q 'pripoj_do_uzla' "$tmp_new/processes/sk_menu.xml"; then
+    ok "skelet menu dorovnava URI uzol aj pri nezmenenej polozke"
+  else
+    bad "skelet menu nedorovnava URI uzol - po vymene ES indexu bude priecinok prazdny"
+  fi
+else
+  bad "pfnew zlyhal na slovenskom nazve appky"
 fi
 
 if [ ${#LOG_ARG[@]} -gt 0 ]; then

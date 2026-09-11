@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Vzorova e-faktura v syntaxi UBL 2.1 nad semantickym modelom EN 16931.
+  Pouziva ju tools/sccheck.py: overuje, ze `precitajFakturu` polia CITA
+  a nie hada - vratane toho, ze IcO vytiahne dodavatelovo a nie odberatelovo.
+
+  Preto su v nej obe strany vyplnene: `cac:AccountingSupplierParty`
+  a `cac:AccountingCustomerParty` nesu ten isty element `cbc:CompanyID`,
+  takze parser, ktory hlada po celom dokumente, si vyberie nespravnu stranu
+  a nikto si toho nevsimne - hodnota tam bude, len bude cudzia.
+-->
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+    <cbc:CustomizationID>urn:cen.eu:en16931:2017</cbc:CustomizationID>
+    <cbc:ID>2026-0457</cbc:ID>
+    <cbc:IssueDate>2026-09-01</cbc:IssueDate>
+    <cbc:DueDate>2026-09-15</cbc:DueDate>
+    <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+    <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+
+    <cac:AccountingSupplierParty>
+        <cac:Party>
+            <cac:PartyName>
+                <cbc:Name>Kaskády Gastro s.r.o.</cbc:Name>
+            </cac:PartyName>
+            <cac:PostalAddress>
+                <cbc:StreetName>Priemyselná 12</cbc:StreetName>
+                <cbc:CityName>Banská Bystrica</cbc:CityName>
+                <cbc:PostalZone>97401</cbc:PostalZone>
+                <cac:Country>
+                    <cbc:IdentificationCode>SK</cbc:IdentificationCode>
+                </cac:Country>
+            </cac:PostalAddress>
+            <cac:PartyTaxScheme>
+                <cbc:CompanyID>SK2020123456</cbc:CompanyID>
+                <cac:TaxScheme>
+                    <cbc:ID>VAT</cbc:ID>
+                </cac:TaxScheme>
+            </cac:PartyTaxScheme>
+            <cac:PartyLegalEntity>
+                <cbc:RegistrationName>Kaskády Gastro s.r.o.</cbc:RegistrationName>
+                <cbc:CompanyID>36123456</cbc:CompanyID>
+            </cac:PartyLegalEntity>
+        </cac:Party>
+    </cac:AccountingSupplierParty>
+
+    <cac:AccountingCustomerParty>
+        <cac:Party>
+            <cac:PartyName>
+                <cbc:Name>Hotel Kaskády, s.r.o.</cbc:Name>
+            </cac:PartyName>
+            <cac:PartyLegalEntity>
+                <cbc:RegistrationName>Hotel Kaskády, s.r.o.</cbc:RegistrationName>
+                <cbc:CompanyID>31999888</cbc:CompanyID>
+            </cac:PartyLegalEntity>
+        </cac:Party>
+    </cac:AccountingCustomerParty>
+
+    <cac:PaymentMeans>
+        <cbc:PaymentMeansCode>58</cbc:PaymentMeansCode>
+        <cbc:PaymentID>20260457</cbc:PaymentID>
+        <cac:PayeeFinancialAccount>
+            <cbc:ID>SK3112000000198742637541</cbc:ID>
+        </cac:PayeeFinancialAccount>
+    </cac:PaymentMeans>
+
+    <cac:TaxTotal>
+        <cbc:TaxAmount currencyID="EUR">242.10</cbc:TaxAmount>
+    </cac:TaxTotal>
+
+    <cac:LegalMonetaryTotal>
+        <cbc:LineExtensionAmount currencyID="EUR">1210.50</cbc:LineExtensionAmount>
+        <cbc:TaxExclusiveAmount currencyID="EUR">1210.50</cbc:TaxExclusiveAmount>
+        <cbc:TaxInclusiveAmount currencyID="EUR">1452.60</cbc:TaxInclusiveAmount>
+        <cbc:PayableAmount currencyID="EUR">1452.60</cbc:PayableAmount>
+    </cac:LegalMonetaryTotal>
+
+    <cac:InvoiceLine>
+        <cbc:ID>1</cbc:ID>
+        <cbc:InvoicedQuantity unitCode="KGM">120</cbc:InvoicedQuantity>
+        <cbc:LineExtensionAmount currencyID="EUR">1210.50</cbc:LineExtensionAmount>
+        <cac:Item>
+            <cbc:Name>Mäso a mliečne výrobky, september</cbc:Name>
+        </cac:Item>
+    </cac:InvoiceLine>
+</Invoice>

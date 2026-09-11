@@ -70,7 +70,7 @@ a je zdokumentované v `docs/PETRIFLOW_LEARNINGS.md`.
 
 **Poradie podelementov `<data>`.** Existujú tri zdroje pravdy a odporujú si:
 
-1. oficiálna XSD v1.1.0 (`reference/petriflow.schema.v1.1.0.xsd`):
+1. oficiálna XSD v1.1.0 (`docs/reference/petriflow.schema.v1.1.0.xsd`):
    `placeholder` → `desc` → … → `init` → … → `component`
 2. NAE 6.3.1 za behu: prijme aj `component` pred `init` — všetky siete v tomto
    repozitári to tak majú a importujú sa
@@ -85,7 +85,7 @@ ground truth import do enginu.
 **Naopak jedna vec je tu a v `pfcheck` NIE JE:** kontrola, že volaná metóda
 delegáta existuje. Delegát je dynamický, takže engine sieť s preklepom
 naimportuje bez námietky. `pflint` porovnáva nahé volania s
-`reference/action-api.md`, s funkciami tej siete a s lokálnymi closures; hlási
+`docs/reference/action-api.md`, s funkciami tej siete a s lokálnymi closures; hlási
 len to, čo je blízko známeho názvu (preklep), zvyšok ako `INFO`. Pred skenovaním
 zahadzuje reťazcové literály — inak by slovenské „Odoslané parametre (bez
 obsahu)" vypadalo ako volanie `parametre(...)`.
@@ -299,11 +299,11 @@ Pozor: `pfseed` do instancie **zapisuje**. Nepúšťaj ho na produkciu.
 ## pfapi.py — inventár extension pointov
 
 ```bash
-python3 tools/pfapi.py > reference/action-api.md
+python3 tools/pfapi.py > docs/reference/action-api.md
 python3 tools/pfapi.py --check    # neaktuálny výstup vráti 1
 ```
 
-Generuje `reference/action-api.md` z jaru enginu (`javap`) a zo zdrojáku
+Generuje `docs/reference/action-api.md` z jaru enginu (`javap`) a zo zdrojáku
 `EtaskActionDelegate`. Generované zámerne: `ActionDelegate` má 169 unikátnych
 metód v 407 pretaženiach, ručný zoznam by driftoval s verziou enginu, a nesprávny
 zoznam je horší než žiadny. `--check` je preto súčasťou `pftest.sh`.

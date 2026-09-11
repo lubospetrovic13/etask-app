@@ -20,7 +20,13 @@ Dve pasce, ktore to riesi za teba:
   2. REST nikde nevracia importId roli siete, len lokalizovany nazov. Mapovanie
      importId -> nazov sa preto cita z lokalneho XML v processes/ a nazov ->
      stringId z /api/petrinet/{id}/roles.
-  3. Zlyhany import siete role vytvori, priradi uzivatelovi a siet nechá
+  3. `role/assign` vrati 2xx aj vtedy, ked ulozene role nezodpovedaju poslanym.
+     pfseed preto po kazdom zapise CITA stav znova a porovnava. Bez toho hlasil
+     uspech na zapise, ktory sa nestal - typicky ked bezal hned po importe
+     a cerstva verzia siete jeste nebola vo vyhladavani; `assign` pritom cely
+     zoznam prepisuje, takze tej verzii role zmizli a v appke to vyzeralo, ze
+     uzivatelovi zmizla uloha, na ktoru rolu ma.
+  4. Zlyhany import siete role vytvori, priradi uzivatelovi a siet nechá
      neexistovat. Taky uzivatel sa potom **neda precitat cez REST vobec** -
      /api/user/search aj /api/user/me na nom vracia 500, lebo serializacia roli
      spadne na chybajucej sieti. Cez API sa to opravit NEDA; --repair to preto
@@ -227,11 +233,42 @@ def main(argv):
     refs = nets.get("_embedded", {}).get("petriNetReferences", [])
     scoped = [n for n in refs
               if any(fnmatch.fnmatch(n.get("identifier", ""), p) for p in scope)]
+
+    titles = local_role_titles()
+
+    # Dopytat sa NA KAZDY lokalny identifikator zvlast a doplnit, co v hromadnom
+    # zozname chybalo.
+    #
+    # Preco: `role/assign` cely zoznam roli PREPISUJE, takze verzia siete, ktoru
+    # pfseed nevidi, ostane bez roli - a nikto to nezisti, kym niekomu nezmizne
+    # uloha, na ktoru "rolu ma". A nevidiet ju sa da lahko: pfseed sa bezne
+    # spusta hned po importe (`pfsync --sync`, `up.sh`), kedy cerstva verzia
+    # v hromadnom vyhladavani este nemusi byt. Presne to sa stalo na
+    # `schvalovanie/faktury/fa_faktura` v3.0.0: import presel, pfseed hlasil
+    # zmeny, a super prisel o vsetky roly tej verzie.
+    known = {(n.get("identifier"), n.get("version")) for n in scoped}
+    for ident in sorted(titles):
+        if not any(fnmatch.fnmatch(ident, pat) for pat in scope):
+            continue
+        st, one, _ = http(f"{url}/api/petrinet/search?size=100", token, "POST",
+                          {"identifier": ident})
+        found = (one.get("_embedded", {}).get("petriNetReferences", [])
+                 if isinstance(one, dict) else [])
+        found = [n for n in found if n.get("identifier") == ident]
+        if not found:
+            print(f"  ! {ident}: v enginu NIE JE ziadna verzia - siet nie je "
+                  f"naimportovana, role sa nemaju na co pridelit")
+            continue
+        for n in found:
+            if (n.get("identifier"), n.get("version")) not in known:
+                print(f"  + {ident} v{n.get('version')}: doplnene do rozsahu "
+                      f"(v hromadnom zozname nebolo)")
+                known.add((n.get("identifier"), n.get("version")))
+                scoped.append(n)
+
     if not scoped:
         print(f"pfseed: netScope {scope} nezodpoveda ziadnej sieti", file=sys.stderr)
         return 1
-
-    titles = local_role_titles()
 
     # --- importId -> {stringId} cez vsetky verzie ------------------------
     by_import = {}
@@ -305,6 +342,30 @@ def main(argv):
                         sorted(desired))
         if st >= 400:
             print(f"  {email}: CHYBA pri pridelovani ({st})")
+            failed += 1
+            continue
+
+        # OVERIT, ze to naozaj sedi. Endpoint vrati 2xx aj vtedy, ked ulozene
+        # role nezodpovedaju tomu, co sme poslali - a bez tejto kontroly to
+        # pfseed hlasil ako uspech.
+        #
+        # Preco to nie je paranoja: pfseed sa bezne spusta HNED po importe
+        # (`pfsync --sync`, `up.sh`), kedy cerstva verzia siete jeste nemusi byt
+        # vo vyhladavani. `role/assign` cely zoznam PREPISUJE, takze verzia,
+        # ktoru pfseed nevidel, ostane bez roli - a v appke to vyzera tak, ze
+        # uzivatelovi zmizla uloha, na ktoru "rolu ma". Stalo sa to na
+        # `schvalovanie/faktury/fa_faktura`.
+        st, after, _ = http(f"{url}/api/user/search?size=20", token, "POST", {"fulltext": email})
+        again = (after.get("_embedded", {}).get("users", []) if isinstance(after, dict) else [])
+        fresh = next((u for u in again if (u.get("email") or "").lower() == email.lower()), None)
+        stored = {r["stringId"] for r in ((fresh or {}).get("processRoles") or [])}
+        missing = desired - stored
+        if missing:
+            print(f"  {email}: {delta}  {sorted(want) or '(ziadne SD role)'}"
+                  f"  ! ULOZENE NESEDI, chyba {len(missing)} rol")
+            print("      Najcastejsia pricina: siet bola naimportovana prave teraz")
+            print("      a jej verzia sa este neobjavila vo vyhladavani. Spusti")
+            print("      pfseed znova - a ak to trva, over `GET /api/petrinet/search`.")
             failed += 1
         else:
             print(f"  {email}: {delta}  {sorted(want) or '(ziadne SD role)'}")

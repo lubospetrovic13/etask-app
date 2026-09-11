@@ -37,7 +37,7 @@ KNOWN_TYPES = {
 # Poradie podelementov <data> tu ZAMERNE nekontrolujeme. Existuju tri zdroje
 # pravdy a odporuju si:
 #
-#   1. Oficialna XSD (petriflow.com, v1.1.0, priloz. reference/petriflow.schema.xsd):
+#   1. Oficialna XSD (petriflow.com, v1.1.0, priloz. docs/reference/petriflow.schema.xsd):
 #      id → title → placeholder → desc → options → valid → init → format → view
 #      → component → encryption → action|event → ...
 #   2. NAE 6.3.1 za behu: prijme aj <component> pred <init>. Vsetky siete v tomto
@@ -74,7 +74,9 @@ def line_of(raw, needle, occurrence=1):
     return raw.count("\n", 0, idx) + 1
 
 
-ACTION_API = Path(__file__).resolve().parent.parent / "reference" / "action-api.md"
+# Dokumentacia je v roote repozitara (etask-configuration je prikazovy priecinok).
+ACTION_API = (Path(__file__).resolve().parent.parent.parent
+              / "docs" / "reference" / "action-api.md")
 MANIFEST = Path(__file__).resolve().parent.parent / "processes.json"
 
 # Groovy/Java konstrukcie, ktore vyzeraju ako nahe volanie a nie su nim.
@@ -86,10 +88,10 @@ CALL_KEYWORDS = {
 
 
 def delegate_methods():
-    """Nazvy metod volatelnych z akcie, z generovaneho reference/action-api.md.
+    """Nazvy metod volatelnych z akcie, z generovaneho docs/reference/action-api.md.
 
     Ked inventar chyba, kontrola sa preskoci - hadat by znamenalo hlasit
-    funkcny kod. Vygenerovat: python3 tools/pfapi.py > reference/action-api.md
+    funkcny kod. Vygenerovat: python3 tools/pfapi.py > docs/reference/action-api.md
     """
     if not ACTION_API.is_file():
         return None
@@ -186,6 +188,7 @@ def lint(path):
     # ---- inventar -------------------------------------------------------
     data_els = direct(root, "data")
     data_types, data_immediate = {}, {}
+    typing_saved = set()
     for d in data_els:
         fid = child_text(d, "id")
         if not fid:
@@ -197,6 +200,12 @@ def lint(path):
                                f"pole '{fid}' je deklarovane viackrat"))
         data_types[fid] = d.get("type")
         data_immediate[fid] = d.get("immediate") == "true"
+        # `saveWhileTyping` uklada pole uz pri pisani, takze race medzi blur
+        # a klikom na tlacidlo (pravidlo `button-reads-text` nizsie) tam nie je.
+        for prop in d.iter("property"):
+            if (prop.get("key") or "").strip() == "saveWhileTyping" \
+                    and (prop.text or "").strip() == "true":
+                typing_saved.add(fid)
 
     roles = {child_text(r, "id") for r in direct(root, "role")}
     transitions = {}
@@ -231,6 +240,71 @@ def lint(path):
                 out.append(Finding("error", "dataref-undeclared", rel,
                                    line_of(raw, f"<id>{fid}</id>"),
                                    f"transition '{tid}' odkazuje na pole '{fid}', ktore nie je deklarovane"))
+    # ---- 3a. dve polia na tom istom miesto v gride -----------------------
+    #
+    # Engine to prijme, `pfcheck` prejde a v appke sa uloha uz NIKDY nevykresli:
+    # Angular grid vyhodi
+    #     "Cannot place element X into the grid layout, because it's space
+    #      (x, y) is already occupied by another element (Y)"
+    # a formular zostane na nekonecnom spinneri. Chyba je len v konzole
+    # prehliadaca, takze zvonku to vyzera na zaseknuty server.
+    #
+    # Najcastejsie takto vznikne to, ze niekto zvysi `rows` jedneho pola
+    # (aby dlhy text netiekol) a nepohne tym, co je pod nim.
+    for tid, t in transitions.items():
+        for dg in findall(t, "dataGroup"):
+            gid = child_text(dg, "id") or "?"
+            cols_limit = child_text(dg, "cols")
+            occupied = {}
+            for dr in findall(dg, "dataRef"):
+                fid = child_text(dr, "id")
+                # `direct` vracia ZOZNAM - nie prvok. Bez tohto rozbalenia
+                # `child_text` hlada <x> medzi <layout> a vracia None, takze
+                # kontrola nizsie nikdy nic nenajde a tvari sa, ze je vsetko
+                # v poriadku. Presne to sa mi stalo pri pisani tohto pravidla.
+                layouts = direct(dr, "layout")
+                layout = layouts[0] if layouts else None
+                if not fid or layout is None:
+                    continue
+
+                def num(name, default=None):
+                    raw_val = child_text(layout, name)
+                    try:
+                        return int(raw_val)
+                    except (TypeError, ValueError):
+                        return default
+
+                x, y = num("x"), num("y")
+                rows, cols = num("rows", 1), num("cols", 1)
+                if x is None or y is None:
+                    continue
+                if cols_limit:
+                    try:
+                        if x + cols > int(cols_limit):
+                            out.append(Finding(
+                                "warning", "grid-overflow", rel,
+                                line_of(raw, f"<id>{fid}</id>"),
+                                f"'{fid}' v '{gid}' konci na x={x + cols}, "
+                                f"ale skupina ma cols={cols_limit}",
+                                "prebytok grid utne alebo zabali - skontroluj sirku"))
+                    except ValueError:
+                        pass
+                for yy in range(y, y + max(rows, 1)):
+                    for xx in range(x, x + max(cols, 1)):
+                        other = occupied.get((yy, xx))
+                        if other and other != fid:
+                            out.append(Finding(
+                                "error", "grid-overlap", rel,
+                                line_of(raw, f"<id>{fid}</id>"),
+                                f"'{fid}' a '{other}' sa v '{gid}' prekryvaju "
+                                f"na (x={xx}, y={yy})",
+                                "Angular grid ulohu NEVYKRESLI a zostane na spinneri - "
+                                "chyba je len v konzole prehliadaca. Posun to, co je nizsie, "
+                                "alebo zmensi `rows`"))
+                            occupied[(yy, xx)] = fid
+                            break
+                        occupied[(yy, xx)] = fid
+
     action_text = " ".join(strip_comments(a.text or "") for a in findall(root, "action"))
     for fid in data_types:
         if fid not in referenced and not re.search(r"\b" + re.escape(fid) + r"\b", action_text):
@@ -305,10 +379,32 @@ def lint(path):
             for a in findall(root, "action"):
                 body = strip_comments(a.text or "")
                 for m in re.finditer(re.escape(fn) + r"\s*\(([^)]{0,400})", body):
-                    lits = re.findall(r'"([^"\n]*)"', m.group(1))
-                    if len(lits) <= idx:
+                    # Pocitaju sa ARGUMENTY, nie literaly.
+                    #
+                    # Povodne sa bral n-ty literal, takze volanie, ktore ma id
+                    # v premennej (`createOrUpdateMenuItem(podanie, "service_desk",
+                    # "Case", ...)`) posunulo poradie a pravidlo hlasilo ako URI
+                    # retazec "Case". Ked argument na danom mieste nie je literal,
+                    # kontrola sa PRESKOCI - tvrdit nieco o hodnote, ktoru nevidime,
+                    # je horsie nez netvrdit nic.
+                    args, depth, current = [], 0, ""
+                    for ch in m.group(1):
+                        if ch in "([{":
+                            depth += 1
+                        elif ch in ")]}":
+                            depth -= 1
+                        if ch == "," and depth == 0:
+                            args.append(current.strip())
+                            current = ""
+                        else:
+                            current += ch
+                    args.append(current.strip())
+                    if len(args) <= idx:
                         continue
-                    uri = lits[idx]
+                    lit = re.fullmatch(r'"([^"\n]*)"', args[idx])
+                    if not lit:
+                        continue
+                    uri = lit.group(1)
                     if not uri or uri in nodes:
                         continue
                     out.append(Finding("warning", "menu-uri-unknown", rel,
@@ -452,7 +548,7 @@ def lint(path):
                     out.append(Finding("info", "unknown-call", rel, ln,
                                        f"volanie `{name}(...)` sa neda rozresit",
                                        "ak je to metoda delegata, aktualizuj inventar: "
-                                       "python3 tools/pfapi.py > reference/action-api.md"))
+                                       "python3 tools/pfapi.py > docs/reference/action-api.md"))
 
     # ---- 8. button cita textove pole v tej istej poziadavke (B2) --------
     for tid, t in transitions.items():
@@ -475,14 +571,16 @@ def lint(path):
                     ref = m.group(1)
                     if (data_types.get(ref) == "text"
                             and ref in editable
-                            and not data_immediate.get(ref)):
+                            and not data_immediate.get(ref)
+                            and ref not in typing_saved):
                         out.append(Finding(
                             "warning", "button-reads-text", rel,
                             line_of(raw, f"<id>{fid}</id>"),
                             f"button '{fid}' cita textove pole '{ref}' v tom istom dataGroup, "
-                            f"a '{ref}' nema immediate=\"true\" - blur a klik su jedna poziadavka, "
-                            "takze akcia precita prazdno",
-                            f"<data type=\"text\" immediate=\"true\"> na '{ref}'"))
+                            f"a '{ref}' sa uklada az na blur - blur a klik su jedna "
+                            "poziadavka, takze akcia precita hodnotu z pred pisania",
+                            f"<property key=\"saveWhileTyping\">true</property> na '{ref}' "
+                            f"- pole sa uklada pocas pisania (RUNBOOK 6)"))
                         break
     return out
 

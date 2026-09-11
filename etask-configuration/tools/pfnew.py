@@ -23,6 +23,7 @@ Co vznikne:
     processes/<app>_menu.xml       karta a dve zobrazenia so stlpcami
     processes.json                 doplneny import, bootstrapCase, uriNodes
     tools/<app>check.py            akceptacny test proti beziacemu enginu
+                                   (stavia na tools/pftestlib.py)
 
 Nic sa neprepisuje - ked subor existuje, pfnew skonci a povie to.
 
@@ -38,6 +39,7 @@ import argparse
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -64,12 +66,28 @@ NET = '''<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noN
 		  p_novy -> t___PREFIX___podanie -> p_hotovy
 
 		Stav je SAMOSTATNE POLE s `immediate="true"`, nie len poloha tokenu:
-		inak sa neda dat do stlpca zoznamu ani podla neho hladat. Nazov pripadu
-		zacina stavom, lebo stlpec Nazov sa v zozname skracuje a odpada koniec.
+		inak sa neda dat do stlpca zoznamu ani podla neho hladat.
+
+		A je to `enumeration_map`, nie `text`. KVOLI PREKLADU: `TextField` drzi
+		obycajny `String`, takze hodnotu, ktoru zapise akcia, engine prelozit
+		nevie - v anglickom portali by stav zostal slovensky ako jedina
+		slovenska vec na formulari. Moznosti maju `name`, takze ich engine
+		preklada, a akcia zapisuje KLUC. Vedlajsi zisk: dopyty v menu filtruju
+		podla kluca, takze nezavisia od jazyka ani od preformulovania popisku.
+
+		Do NAZVU PRIPADU stav nepatri z toho isteho dovodu: `Case.title` je
+		tiez `String`. Nazov nesie data (predmet, cislo, sumu), stav nesie
+		pole a stlpec - ten prelozeny je. Podrobne RUNBOOK 9.
 
 		Ked pridas dalsiu ulohu, NEVES ju na read arc z miesta, ktore nejaky
 		prechod konzumuje - odmietnute DOKONCIT ju zmaze a neobnovi
 		(PETRIFLOW_LEARNINGS B8b). Bud sink, alebo cast tej istej ulohy.
+
+		Ked ma zadavatel po podani vidiet, v akom stave jeho pripad je (typicke
+		pri schvalovani, kde ho styri oci zo schvalovatelov vylucia), pridaj
+		miesto so zetonom, ktore NIKTO nekonzumuje, a read arc z neho - pohlad
+		je potom dostupny cely zivot pripadu. Vzor: `pfdoc learnings B25`.
+		Skelet to zamerne nema: minimalna appka to nepotrebuje.
 	-->
 	<caseEvents>
 		<event type="create">
@@ -78,8 +96,9 @@ NET = '''<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noN
 				<action id="1"><![CDATA[
 __PREFIX___stav_label: f.__PREFIX___stav_label, __PREFIX___predmet: f.__PREFIX___predmet;
 
-change __PREFIX___stav_label value { "Rozpísané" }
-changeCaseProperty("title").about { nazov(__PREFIX___predmet, "Rozpísané") }
+// KLUC moznosti, nie popisok - popisok si engine prelozi sam.
+change __PREFIX___stav_label value { "rozpisane" }
+changeCaseProperty("title").about { nazov(__PREFIX___predmet) }
 changeCaseProperty("color").about { "grey" }
 				]]></action>
 			</actions>
@@ -92,11 +111,15 @@ changeCaseProperty("color").about { "grey" }
 }
 	]]></function>
 	<function scope="process" name="nazov"><![CDATA[
-{ def pole, def stav ->
-    // Stav je na ZACIATKU: stlpec Nazov sa v zozname skracuje a to, co je na
-    // konci, odpadne prve.
+{ def pole ->
+    // BEZ STAVU: `Case.title` je v engine obycajny `String`, takze sa
+    // neprekladá - slovensky stav v nazve by bol v anglickom portali jedina
+    // slovenska vec v kazdom zozname. Stav nesie pole `_stav_label` a stlpec.
+    //
+    // Kym pole nie je vyplnene, nazov nesie cislo pripadu (`visualId`) - to je
+    // lepsie nez prazdny riadok v zozname.
     def p = ((pole.value ?: "") as String).trim()
-    return (stav as String) + " · " + (p ?: "__TITLE__")
+    return p ?: ((useCase.visualId ?: "?") as String)
 }
 	]]></function>
 	<roleRef>
@@ -131,10 +154,14 @@ changeCaseProperty("color").about { "grey" }
 			<name>textarea</name>
 		</component>
 	</data>
-	<data type="text" immediate="true">
+	<data type="enumeration_map" immediate="true">
 		<id>__PREFIX___stav_label</id>
 		<title>Stav</title>
 		<desc>Samostatné pole, aby sa dalo dať do stĺpca a hľadať podľa neho.</desc>
+		<options>
+			<option key="rozpisane">Rozpísané</option>
+			<option key="podane">Podané</option>
+		</options>
 	</data>
 	<data type="text">
 		<id>__PREFIX___podal</id>
@@ -206,10 +233,10 @@ if (!((__PREFIX___predmet.value ?: "") as String).trim()) {
 __PREFIX___predmet: f.__PREFIX___predmet, __PREFIX___stav_label: f.__PREFIX___stav_label,
 __PREFIX___podal: f.__PREFIX___podal, __PREFIX___podane_o: f.__PREFIX___podane_o;
 
-change __PREFIX___stav_label value { "Podané" }
+change __PREFIX___stav_label value { "podane" }
 change __PREFIX___podal value { kto(loggedUser()) }
 change __PREFIX___podane_o value { java.time.LocalDateTime.now() }
-changeCaseProperty("title").about { nazov(__PREFIX___predmet, "Podané") }
+changeCaseProperty("title").about { nazov(__PREFIX___predmet) }
 changeCaseProperty("color").about { "green" }
 				]]></action>
 			</actions>
@@ -360,9 +387,18 @@ def views = [
         // Filtrovanie podla DATOVEHO POLA, nie podla polohy tokenu. Ide to,
         // lebo `__PREFIX___stav_label` ma `immediate="true"` a engine ho
         // indexuje pod `dataSet.__PREFIX___stav_label.textValue`.
-        [id: "__PREFIX___rozpisane", name: i18n("Rozpísané", ["en": "Draft"]),
+        // Nazov nesie DOMENU appky. Polozky menu su case-y jednej siete pre
+        // cely portal a nazov v nich unikatny nie je - dve appky s polozkou
+        // "Rozpísané" sa na dashboarde (kde nie su priecinky) nedaju odlisit
+        // a kod, ktory si polozku hlada podla nazvu, dostane tu druhu.
+        [id: "__PREFIX___rozpisane",
+         name: i18n("Rozpísané · __TITLE__", ["en": "Drafts · __TITLE__"]),
          type: "Case", icon: "edit_note",
-         query: vsetky + " AND dataSet.__PREFIX___stav_label.textValue:\\"Rozpísané\\"",
+         // Podla KLUCA moznosti, nie podla popisku: stav je `enumeration_map`,
+         // aby sa dal prelozit - a kluc je nezavisly od jazyka aj od
+         // preformulovania popisku. Kym tam bol popisok, stacilo zmenit text
+         // stavu a zobrazenie prestalo nachadzat cokolvek. Bez chyby.
+         query: vsetky + " AND dataSet.__PREFIX___stav_label.textValue:\\"rozpisane\\"",
          nets: [siet], roles: [:], headers: stlpce],
 ]
 
@@ -388,6 +424,11 @@ views.each { v ->
                     (currentName.translations ?: [:]) == (v.name.translations ?: [:])
             if (currentQuery == (v.query as String) && currentNets == wantNets && sameName) {
                 nastav_zobrazenie(existing, v.nets as List, v.headers)
+                // Uzol dorovnaj AJ pri nezmenenej polozke: URI uzly zije
+                // Elasticsearch, polozky menu Mongo. Po vymene ES indexu maju
+                // uzly nove id, polozka visi na starom a priecinok v bocnom
+                // paneli je PRAZDNY - bez chyby a bez logu (RUNBOOK 4).
+                pripoj_do_uzla(existing, "__APP__")
                 unchanged << id
                 return
             }
@@ -496,24 +537,18 @@ changeCaseProperty("title").about { summary }
 '''
 
 
-CHECK = '''#!/usr/bin/env python3
+CHECK = r'''#!/usr/bin/env python3
 """
 __APP__check - akceptacny test appky __TITLE__ proti BEZIACEMU enginu.
 
-Skelet z tools/pfnew.py. Overuje to, co sa z XML ani z importu zistit neda.
+Overuje to, co sa z XML ani z importu zistit neda: ze karta je vidno spravnym
+uctom, ze zobrazenia maju stlpce, a ze priebeh pripadu robi to, co ma.
 Domenove kontroly sa dopisuju; to, co je tu, plati pre kazdu appku.
 
-Styri veci, na ktore sa v tomto repozitari naletelo a preto su v kode napisane:
-
-  1. Telo `POST /api/task/{id}/data` je {taskId: {fieldId: {...}}}, NIE
-     {fieldId: {...}}. Ploche telo vrati HTTP 200 s hlaskou "Could not find
-     task with id [<fieldId>]" a ticho nezapise nic.
-  2. Engine odmietnutie NEHLASI HTTP kodom - `finish` vrati 200 a dovod da do
-     tela ako `error`. Test na status by taky blok prehliadol.
-  3. `GET /api/auth/login` vrati 405, ale token uz je v hlavicke - filter bezi
-     pred handlerom.
-  4. `GET /api/task/case/{id}` NEOVERUJE opravnenia. Na to, co uzivatel naozaj
-     vidi, sa musi pouzit `POST /api/task/search`.
+Klient a pomocnici su v `tools/pftestlib.py` - aj s pascami, na ktore sa v tomto
+repozitari naletelo (prihlasenie vracia 405 s tokenom v hlavicke, telo setData
+je zanorene pod id ulohy, odmietnutie prichadza ako 200 s `error` v tele,
+`/api/task/case` neoveruje opravnenia).
 
 Predpoklad: bezi stack (tools/up.sh) a role su pridelene (tools/pfseed.py).
 
@@ -523,164 +558,45 @@ Predpoklad: bezi stack (tools/up.sh) a role su pridelene (tools/pfseed.py).
 Exit 0 = vsetko preslo, 1 = nieco zlyhalo.
 """
 
-import base64
-import json
-import os
-import re
 import sys
 import time
-import urllib.error
-import urllib.request
 
-URL = os.environ.get("PF_URL", "http://127.0.0.1:8080")
-TEST_PASS = os.environ.get("ETASK_TEST_PASSWORD", "test1234")
-SUPER_PASS = os.environ.get("PF_PASS", "password")
+import pftestlib as pf
+
 NET = "__APP__/__NET__"
+MENU = "__APP__/__PREFIX___menu"
 CARD = "__APP__"
 ROLE_USER_EMAIL = "admin@test.local"       # ucet, ktory ma rolu `__ROLE__`
 OTHER_USER_EMAIL = "operator@test.local"   # ucet, ktory ju NEMA, ale karty vidi
 
-OK, FAIL = [], []
-
-
-class Client:
-    def __init__(self, email, password, allow_fail=False):
-        self.email = email
-        self.token = None
-        req = urllib.request.Request(
-            URL + "/api/auth/login", method="GET",
-            headers={"Authorization": "Basic " + base64.b64encode(
-                f"{email}:{password}".encode()).decode()})
-        try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                self.token = r.headers.get("X-Auth-Token")
-        except urllib.error.HTTPError as e:
-            self.token = e.headers.get("X-Auth-Token")
-        except urllib.error.URLError:
-            sys.exit(f"__APP__check: engine na {URL} neodpoveda")
-        if not self.token and not allow_fail:
-            sys.exit(f"__APP__check: prihlasenie {email} zlyhalo")
-
-    def call(self, method, path, body=None, timeout=120):
-        data = json.dumps(body).encode("utf-8") if body is not None else None
-        headers = {"X-Auth-Token": self.token,
-                   # Bez hal+json vracaju HATEOAS endpointy 406.
-                   "Accept": "application/hal+json, application/json;q=0.9, */*;q=0.8"}
-        if data:
-            headers["Content-Type"] = "application/json"
-        req = urllib.request.Request(URL + path, data=data, method=method, headers=headers)
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                text = r.read().decode("utf-8")
-                return r.status, (json.loads(text) if text else None)
-        except urllib.error.HTTPError as e:
-            return e.code, e.read().decode("utf-8", "replace")
-
-    def get(self, p):
-        return self.call("GET", p)
-
-    def post(self, p, body=None):
-        return self.call("POST", p, body)
-
-
-def check(label, cond, detail=""):
-    (OK if cond else FAIL).append(label)
-    print(("  [OK]   " if cond else "  [ZLE] ") + label + ((" -- " + str(detail)) if detail else ""))
-
-
-def newest_net(cl, identifier):
-    st, r = cl.post("/api/petrinet/search?size=200", {"identifier": identifier})
-    refs = [x for x in r["_embedded"]["petriNetReferences"] if x["identifier"] == identifier]
-    if not refs:
-        sys.exit(f"__APP__check: siet {identifier} nie je naimportovana")
-    refs.sort(key=lambda x: [int(n) for n in x["version"].split(".")])
-    return refs[-1]
-
-
-def new_case(cl, net_id):
-    st, r = cl.post("/api/workflow/case", {"netId": net_id, "title": None, "color": ""})
-    m = re.search(r"Case with id ([0-9a-f]{24})",
-                  r.get("success", "") if isinstance(r, dict) else "")
-    if not m:
-        sys.exit(f"__APP__check: zalozenie pripadu zlyhalo: {st} {str(r)[:300]}")
-    st, c = cl.get(f"/api/workflow/case/{m.group(1)}")
-    return m.group(1), c
-
-
-def tasks_of(cl, case_id):
-    """Ulohy, ktore uzivatel NAOZAJ vidi - `/api/task/case/{id}` opravnenia
-    neoveruje a vrati vsetko kazdemu, kto pozna id."""
-    st, r = cl.post("/api/task/search?size=100", {"case": [{"id": case_id}]})
-    tl = (r.get("_embedded") or {}).get("tasks", []) if isinstance(r, dict) else []
-    return {t["transitionId"]: t["stringId"] for t in tl}
-
-
-def field_map(cl, task_id):
-    st, d = cl.get(f"/api/task/{task_id}/data")
-    groups = (d.get("data") or d.get("outcome", {}).get("data") or []) if isinstance(d, dict) else []
-    out = {}
-    for grp in groups:
-        for _, lst in grp.get("fields", {}).get("_embedded", {}).items():
-            for f in lst:
-                out[f["stringId"]] = f
-    return out
-
-
-def values(cl, task_id):
-    return {k: v.get("value") for k, v in field_map(cl, task_id).items()}
-
-
-def set_data(cl, task_id, vals):
-    cl.get(f"/api/task/assign/{task_id}")
-    return cl.post(f"/api/task/{task_id}/data", {task_id: vals})
-
-
-def wipe(cl):
-    st, r = cl.post("/api/workflow/case/search?size=500", {"process": [{"identifier": NET}]})
-    cases = (r.get("_embedded") or {}).get("cases", [])
-    for c in cases:
-        cl.call("DELETE", f"/api/workflow/case/{c['stringId']}")
-    print(f"__APP__check: zmazanych {len(cases)} pripadov")
-
 
 def main():
-    boss = Client("super@netgrif.com", SUPER_PASS)
+    boss = pf.Client("super@netgrif.com", pf.SUPER_PASS)
     if "--wipe" in sys.argv:
-        wipe(boss)
-        return 0
+        return pf.wipe_cases(boss, NET, "__APP__check")
 
     print("=== 1. karta v bocnom menu ===")
-    user = Client(ROLE_USER_EMAIL, TEST_PASS)
-    other = Client(OTHER_USER_EMAIL, TEST_PASS)
-    for name, cl, expected in [("s rolou", user, True), ("bez roly", other, False)]:
-        st, root = cl.get("/api/v2/uri/root")
-        paths = [c["uriPath"] for c in root.get("children", [])]
-        check(f"{name} {'vidi' if expected else 'nevidi'} kartu '{CARD}'",
-              (CARD in paths) == expected, paths)
-        if not expected:
-            # Bez tejto kontroly by test presel aj vtedy, keby ucet nevidel
+    user = pf.Client(ROLE_USER_EMAIL, pf.TEST_PASS)
+    other = pf.Client(OTHER_USER_EMAIL, pf.TEST_PASS)
+    for nazov, cl, ocakavane in [("s rolou", user, True), ("bez roly", other, False)]:
+        paths = pf.uri_paths(cl)
+        pf.check(f"{nazov} {'vidi' if ocakavane else 'nevidi'} kartu '{CARD}'",
+                 (CARD in paths) == ocakavane, paths)
+        if not ocakavane:
+            # Bez tejto kontroly by test presiel aj vtedy, keby ucet nevidel
             # ziadnu kartu - a nedokazoval by nic.
-            check(f"{name} pritom ine karty vidi", len(paths) > 0, paths)
+            pf.check("bez roly pritom ine karty vidi", len(paths) > 0, paths)
 
-    print("\\n=== 2. zobrazenia a stlpce ===")
-    st, mi = boss.post("/api/workflow/case/search?size=300",
-                       {"process": [{"identifier": "preference_filter_item"}]})
-    items = {}
-    for c in mi.get("_embedded", {}).get("cases", []):
-        items.setdefault(c["title"], c["stringId"])
-
-    def view_fields(title):
-        st, tl = boss.get(f"/api/task/case/{items[title]}")
-        vt = [t for t in (tl or []) if t["transitionId"] == "view"]
-        return values(boss, vt[0]["stringId"]) if vt else {}
-
-    for want in ["__TITLE__", "Rozpísané"]:
-        check(f"zobrazenie '{want}' existuje", want in items, sorted(items))
-        if want not in items:
+    print("\n=== 2. zobrazenia a stlpce ===")
+    items = pf.menu_items(boss, prefix="__PREFIX___")
+    for want in ["__TITLE__", "Rozpísané · __TITLE__"]:
+        if not pf.check(f"zobrazenie '{want}' existuje", want in items, sorted(items)):
             continue
-        v = view_fields(want)
-        check(f"'{want}' ma predvolene stlpce", bool(v.get("default_headers")),
-              v.get("default_headers"))
+        st, tl = boss.get(f"/api/task/case/{items[want]}")
+        vt = [t for t in (tl or []) if t["transitionId"] == "view"]
+        v = pf.values(boss, vt[0]["stringId"]) if vt else {}
+        pf.check(f"'{want}' ma predvolene stlpce", bool(v.get("default_headers")),
+                 v.get("default_headers"))
         # Stlpec z datoveho pola sa vykresli LEN ak je jeho siet v allowedNets:
         # ponuku stlpcov sklada CaseHeaderService z povolenych sieti a
         # `default_headers` v nej uniqueId iba vyhlada. Co nenajde, necha
@@ -693,69 +609,64 @@ def main():
             for d in (fc.get("immediateData") or []):
                 if d.get("allowedNets"):
                     have = set(d["allowedNets"])
-        check(f"'{want}' ma v allowedNets siete svojich stlpcov", need <= have,
-              f"treba {sorted(need)}, ma {sorted(have)}")
+        pf.check(f"'{want}' ma v allowedNets siete svojich stlpcov", need <= have,
+                 f"treba {sorted(need)}, ma {sorted(have)}")
 
-    st, mc = boss.post("/api/workflow/case/search?size=20",
-                       {"process": [{"identifier": "__APP__/__PREFIX___menu"}]})
-    mt = [c["title"] for c in mc.get("_embedded", {}).get("cases", [])]
-    check("bootstrap case menu hlasi 2/2", any("2/2" in t for t in mt), mt)
+    mt = [c["title"] for c in pf.cases_of(boss, MENU, size=20)]
+    pf.check("bootstrap case menu hlasi 2/2", any("2/2" in t for t in mt), mt)
 
-    print("\\n=== 3. priebeh pripadu ===")
-    net = newest_net(user, NET)
+    print("\n=== 3. priebeh pripadu ===")
+    net = pf.newest_net(user, NET)
     print(f"  siet {net['identifier']} v{net['version']}")
-    case_id, case = new_case(user, net["stringId"])
-    check("nazov pripadu zacina stavom", case["title"].startswith("Rozpísané"), case["title"])
-    t = tasks_of(user, case_id)
-    check("na zaciatku je PRESNE jedna uloha", list(t) == ["t___PREFIX___podanie"], list(t))
+    case_id, case = pf.new_case(user, net["stringId"])
+    t = pf.tasks_of(user, case_id)
+    pf.check("na zaciatku je PRESNE jedna uloha", list(t) == ["t___PREFIX___podanie"], list(t))
     podanie = t.get("t___PREFIX___podanie")
     if not podanie:
-        print("\\n__APP__check: uloha podania sa nenasla")
-        return 1
+        return pf.report("__APP__check")
 
     # Prazdny predmet musi byt odmietnuty - a odmietnutie prichadza ako HTTP 200
-    # s `error` v tele.
-    set_data(user, podanie, {"__PREFIX___predmet": {"type": "text", "value": ""}})
-    st, r = user.get(f"/api/task/finish/{podanie}")
-    check("prazdny predmet je odmietnuty", isinstance(r, dict) and "error" in r, str(r)[:110])
+    # s `error` v tele, nie ako 4xx.
+    pf.set_data(user, podanie, {"__PREFIX___predmet": {"type": "text", "value": ""}})
+    st, r = pf.finish(user, podanie)
+    pf.check("prazdny predmet je odmietnuty", pf.err_body(r), str(r)[:110])
 
-    stamp = str(int(time.time()))
-    predmet = f"Test {stamp}"
-    set_data(user, podanie, {
+    predmet = f"Test {int(time.time())}"
+    pf.set_data(user, podanie, {
         "__PREFIX___predmet": {"type": "text", "value": predmet},
         "__PREFIX___popis": {"type": "text", "value": "Popis z testu."}})
-    st, r = user.get(f"/api/task/finish/{podanie}")
-    check("DOKONCIT presiel", isinstance(r, dict) and "success" in r, str(r)[:110])
+    st, r = pf.finish(user, podanie)
+    pf.check("DOKONCIT presiel", pf.ok_body(r), str(r)[:110])
 
-    t2 = tasks_of(user, case_id)
-    check("po podani je PRESNE jedna uloha (prehlad)",
-          list(t2) == ["t___PREFIX___prehlad"], list(t2))
+    t2 = pf.tasks_of(user, case_id)
+    pf.check("po podani je PRESNE jedna uloha (prehlad)",
+             list(t2) == ["t___PREFIX___prehlad"], list(t2))
     if t2.get("t___PREFIX___prehlad"):
-        v = values(user, t2["t___PREFIX___prehlad"])
-        check("stav je 'Podané'", v.get("__PREFIX___stav_label") == "Podané",
-              v.get("__PREFIX___stav_label"))
-        check("je zapisane, kto podal", bool(v.get("__PREFIX___podal")),
-              v.get("__PREFIX___podal"))
+        v = pf.values(user, t2["t___PREFIX___prehlad"])
+        # KLUC moznosti, nie popisok: stav je `enumeration_map`, aby sa dal
+        # prelozit, a akcia zapisuje kluc.
+        pf.check("stav je 'podane'", v.get("__PREFIX___stav_label") == "podane",
+                 v.get("__PREFIX___stav_label"))
+        pf.check("je zapisane, kto podal", bool(v.get("__PREFIX___podal")),
+                 v.get("__PREFIX___podal"))
     st, c = user.get(f"/api/workflow/case/{case_id}")
-    check("nazov pripadu zacina 'Podané'", c["title"].startswith("Podané"), c["title"])
-    check("farba pripadu je zelena", c.get("color") == "green", c.get("color"))
+    pf.check("nazov pripadu nesie predmet, nie stav", predmet in (c["title"] or ""), c["title"])
+    pf.check("farba pripadu je zelena", c.get("color") == "green", c.get("color"))
 
-    print("\\n=== 4. zobrazenie 'Rozpísané' filtruje podla datoveho pola ===")
-    q = f'processIdentifier:"{NET}" AND dataSet.__PREFIX___stav_label.textValue:"Rozpísané"'
+    print("\n=== 4. zobrazenie 'Rozpísané' filtruje podla datoveho pola ===")
+    # Podla KLUCA moznosti - popisok sa prekladom meni, kluc nie.
+    q = f'processIdentifier:"{NET}" AND dataSet.__PREFIX___stav_label.textValue:"rozpisane"'
     st, r = user.post("/api/workflow/case/search?size=100", {"query": q})
-    ids = [x["stringId"] for x in (r.get("_embedded") or {}).get("cases", [])] \\
+    ids = [x["stringId"] for x in (r.get("_embedded") or {}).get("cases", [])] \
         if isinstance(r, dict) else []
-    check("podany pripad v 'Rozpísané' nie je", case_id not in ids, f"{len(ids)} pripadov")
-    c2, _ = new_case(user, net["stringId"])
+    pf.check("podany pripad v 'Rozpísané' nie je", case_id not in ids, f"{len(ids)} pripadov")
+    c2, _ = pf.new_case(user, net["stringId"])
     st, r = user.post("/api/workflow/case/search?size=100", {"query": q})
-    ids = [x["stringId"] for x in (r.get("_embedded") or {}).get("cases", [])] \\
+    ids = [x["stringId"] for x in (r.get("_embedded") or {}).get("cases", [])] \
         if isinstance(r, dict) else []
-    check("novy rozpisany pripad v 'Rozpísané' je", c2 in ids, f"{len(ids)} pripadov")
+    pf.check("novy rozpisany pripad v 'Rozpísané' je", c2 in ids, f"{len(ids)} pripadov")
 
-    print(f"\\n__APP__check: {len(OK)} preslo, {len(FAIL)} zlyhalo")
-    for f in FAIL:
-        print("  ZLYHALO:", f)
-    return 1 if FAIL else 0
+    return pf.report("__APP__check")
 
 
 if __name__ == "__main__":
@@ -929,8 +840,17 @@ def main(argv=None):
     if not re.fullmatch(r"[a-z][a-z0-9_]*", prefix):
         raise SystemExit("pfnew: prefix musi byt male litery, cislice a podtrznik")
 
+    # Diakritiku treba ZHODIT: iniciály z názvu "Skúšobná žiadosť" dávajú
+    # `SŽX`, čo neprejde vlastnou kontrolou o dva riadky nižšie - takže
+    # generátor odmietol každý slovenský názov a človek musel `--initials`
+    # dopisovať ručne bez toho, aby vedel prečo.
+    def bez_diakritiky(text):
+        rozlozene = unicodedata.normalize("NFKD", text)
+        return "".join(ch for ch in rozlozene if not unicodedata.combining(ch))
+
     initials = (args.initials or "".join(
-        w[0] for w in re.findall(r"\w+", args.title))[:3] or prefix).upper()
+        w[0] for w in re.findall(r"\w+", bez_diakritiky(args.title)))[:3]
+        or prefix).upper()
     initials = (initials + "XXX")[:3]
     if not re.fullmatch(r"[A-Z]{3}", initials):
         raise SystemExit(f"pfnew: <initials> musia byt presne 3 velke litery, mam '{initials}'")

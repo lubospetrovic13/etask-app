@@ -1,0 +1,54 @@
+# Offline kontroly sietí a nástrojov.
+#
+# Prečo samostatný workflow a nie krok v deploy.yml: `deploy.yml` sa spúšťa
+# RUČNE a stavia obrazy (minúty). Toto beží pri každom push a trvá sekundy —
+# a chytá presne tú vrstvu chýb, ktoré sa inak neprejavia ako chyba:
+# preklep vo volaní delegáta, chýbajúci preklad, komponent, ktorý frontend
+# nevykreslí, alebo prekrytie v gride.
+#
+# Čo tu NIE JE a byť nemôže: `pfcheck` a `pfsync` — tie potrebujú bežiaci
+# engine, teda Mongo, Elastic a Redis. Ground truth zostáva lokálny beh
+# (`tools/up.sh`) a akceptačné sady (`<app>check.py`).
+
+name: kvalita
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  siete-a-nastroje:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: pflint (štruktúra, tiché pasce, grid)
+        working-directory: etask-configuration
+        run: python3 tools/pflint.py processes/
+
+      - name: pfgroovy (syntax akcií)
+        working-directory: etask-configuration
+        run: python3 tools/pfgroovy.py processes/
+
+      - name: pfi18n (každý viditeľný text má preklad)
+        working-directory: etask-configuration
+        # `single_settings.xml` je systémová sieť enginu (vendorovaná na
+        # classpath) - jej preklady nevieme opraviť, a červené CI, ktoré sa
+        # nedá opraviť, sa naučia ignorovať aj so skutočnými nálezmi.
+        run: python3 tools/pfi18n.py processes/ --ignore single_settings.xml
+
+      - name: pfapi (inventár primitív je aktuálny)
+        working-directory: etask-configuration
+        run: python3 tools/pfapi.py --check
+
+      - name: pftest (testy samotných nástrojov)
+        working-directory: etask-configuration
+        # `pfview` sa vnútri preskočí, keď chýba node_modules — inventár
+        # komponentov sa číta z nainštalovanej knižnice, nie zo zoznamu v kóde.
+        run: bash tools/pftest.sh

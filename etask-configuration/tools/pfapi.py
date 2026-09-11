@@ -12,7 +12,7 @@ a napisal si vlastny helper na idempotenciu - pricom v tomto repozitari uz tri
 roky existoval `createOrUpdateMenuItem()` so spravnym poradim aj funkcnou
 update cestou. Nemal som ako vediet, ze existuje. Tento subor je fix toho.
 
-    python3 tools/pfapi.py > reference/action-api.md
+    python3 tools/pfapi.py > docs/reference/action-api.md
     python3 tools/pfapi.py --check      # neaktualny vystup vrati 1 (pre CI)
 
 Zdroje: jar enginu z ~/.m2 (cez javap) + zdrojak EtaskActionDelegate.
@@ -27,7 +27,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent.parent
 DELEGATE_FQN = "com.netgrif.application.engine.petrinet.domain.dataset.logic.action.ActionDelegate"
 PROJECT_DELEGATE = REPO / "etask-backend-starter/src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy"
-OUTPUT = REPO / "etask-configuration/reference/action-api.md"
+OUTPUT = REPO / "docs/reference/action-api.md"
 
 # Groovy/Spring vnutornosti a gettery autowirovanych servisov. Su volatelne, ale
 # nie su to extension pointy - patria do implementacie, nie do akcie.
@@ -193,7 +193,7 @@ def render():
     o = []
     o.append("# Extension pointy volateľné z Petriflow akcie")
     o.append("")
-    o.append("> **Generované — needituj ručne.** `python3 tools/pfapi.py > reference/action-api.md`")
+    o.append("> **Generované — needituj ručne.** `python3 tools/pfapi.py > docs/reference/action-api.md`")
     o.append(f"> Zdroj: `application-engine-{version}.jar` + `EtaskActionDelegate.groovy`.")
     o.append("")
     o.append("Všetko nižšie sa dá zavolať priamo z `<action>` alebo `<function>` menom,")
@@ -266,10 +266,10 @@ def main(argv):
     if "--check" in argv:
         current = OUTPUT.read_text(encoding="utf-8") if OUTPUT.is_file() else ""
         if current.strip() != text.strip():
-            print("pfapi: reference/action-api.md je neaktualny. Spusti:", file=sys.stderr)
-            print("       python3 tools/pfapi.py > reference/action-api.md", file=sys.stderr)
+            print("pfapi: docs/reference/action-api.md je neaktualny. Spusti:", file=sys.stderr)
+            print("       python3 tools/pfapi.py > docs/reference/action-api.md", file=sys.stderr)
             return 1
-        print("pfapi: reference/action-api.md je aktualny")
+        print("pfapi: docs/reference/action-api.md je aktualny")
         return 0
     sys.stdout.write(text)
     return 0

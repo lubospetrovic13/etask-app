@@ -30,7 +30,7 @@ Styri veci, na ktore sa tu naletelo a preto su v kode napisane:
 Predpoklad: bezi stack (tools/up.sh) a role su pridelene (tools/pfseed.py).
 
     python3 tools/pucheck.py
-    python3 tools/pucheck.py --wipe    # zmaze pripady uctov
+    python3 tools/pucheck.py --wipe    # zmaze pripady uctov aj testovacie ucty
 
 Test ZAKLADA UZIVATELOV - nespustat proti produkcii.
 
@@ -187,13 +187,72 @@ def roles_of(cl, user_id):
     return sorted({r.get("importId") for r in (u.get("processRoles") or [])} - {None})
 
 
+MONGO_DELETE_TEST_USERS = """
+var re = /^(pucheck|uscheck)\\.[0-9]+@test\\.local$/;
+var victims = db.user.find({email: {$regex: re}}, {_id: 1, email: 1}).toArray();
+var ids = victims.map(function (u) { return u._id; });
+if (ids.length > 0) {
+    db.user.deleteMany({_id: {$in: ids}});
+}
+print("PURGED " + ids.length);
+"""
+
+
+def mongo_eval(script):
+    """Spusti mongosh - najprv v docker kontejneri, potom lokalne.
+
+    To iste robi `pfseed --repair` a z toho isteho dovodu: engine na zmazanie
+    uzivatela REST endpoint NEMA (`deleteUser` je len na ActionDelegate, teda
+    dosiahnutelny z akcie siete). Bez tejto cesty by po kazdom behu testu
+    v instancii zostal dalsi ucet a po tyzdni ich su desiatky.
+    """
+    import subprocess
+    db = os.environ.get("PF_DB", "etask")
+    container = os.environ.get("PF_MONGO_CONTAINER")
+    candidates = []
+    if container:
+        candidates.append(["docker", "exec", container, "mongosh", "--quiet", db,
+                           "--eval", script])
+    else:
+        try:
+            out = subprocess.run(["docker", "ps", "--format", "{{.Names}}"],
+                                 capture_output=True, text=True, timeout=20)
+            for name in out.stdout.split():
+                if "mongo" in name:
+                    candidates.append(["docker", "exec", name, "mongosh", "--quiet", db,
+                                       "--eval", script])
+                    break
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    candidates.append(["mongosh", "--quiet", db, "--eval", script])
+    for cmd in candidates:
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if res.returncode == 0:
+            return res.stdout, None
+    return None, "mongosh sa nepodarilo spustit (ani v kontejneri, ani lokalne)"
+
+
 def wipe(cl):
     cs = cases_of(cl, NET)
     for c in cs:
         cl.call("DELETE", f"/api/workflow/case/{c['stringId']}")
     print(f"pucheck: zmazanych {len(cs)} pripadov uctov")
-    print("pucheck: ucty zostavaju - mazanie uzivatela cez REST engine nema, "
-          "zmaz ich cez tools/up.sh --fresh")
+
+    # A aj samotne ucty. Kym to tento nastroj nerobil, kazdy beh nechal
+    # v instancii dalsi `pucheck.<timestamp>@test.local` - po niekolkych dnoch
+    # ich bolo v zozname uzivatelov viac nez skutocnych ludi a v konfiguracnych
+    # obrazovkach sa vyberalo z odpadu.
+    out, err = mongo_eval(MONGO_DELETE_TEST_USERS)
+    if err:
+        print(f"pucheck: ucty sa zmazat nepodarilo - {err}")
+        print("pucheck: zmaz ich cez tools/up.sh --fresh")
+        return
+    line = [l for l in (out or "").splitlines() if l.startswith("PURGED")]
+    count = int(line[0].split()[1]) if line else 0
+    print(f"pucheck: zmazanych {count} testovacich uctov (pucheck.*, uscheck.*)")
 
 
 def main():
@@ -452,13 +511,17 @@ def main():
 
     print("\n=== 10. zosuladenie existujucich uctov ===")
     st, r = boss.post("/api/user/search?size=300", {"fulltext": ""})
-    # `zl_sync` je idempotentne - druhy beh nesmie nic pridat.
+    # `zl_sync` je idempotentne - druhy beh nesmie nic pridat. Meria sa preto
+    # DRUHY beh, nie prvy: co doplni prvy, zavisi od toho, co po sebe nechal
+    # predchadzajuci beh (alebo `--wipe`, ktory maze pripady, nie ucty). Kym
+    # test cital prvy beh, hlasil chybu podla historie prostredia, nie podla
+    # appky - a zelena znamenala len to, ze zosuladenie uz niekto spustil.
     set_data(spravca, tid2, {"zl_sync": {"type": "button", "value": 0}}, timeout=180)
-    v1 = values(spravca, tid2).get("zl_vysledok") or ""
-    check("zosuladenie nic nedoplnilo (uz je zosuladene)",
-          "nič nebolo treba doplniť" in v1, v1.replace("\n", " | ")[:140])
     pocet_pred = len(cases_of(boss, NET))
     set_data(spravca, tid2, {"zl_sync": {"type": "button", "value": 0}}, timeout=180)
+    v1 = values(spravca, tid2).get("zl_vysledok") or ""
+    check("druhe zosuladenie uz nic nedoplni",
+          "nič nebolo treba doplniť" in v1, v1.replace("\n", " | ")[:140])
     check("zosuladenie je idempotentne", len(cases_of(boss, NET)) == pocet_pred,
           f"{pocet_pred} -> {len(cases_of(boss, NET))}")
     titles = [c.get("title") or "" for c in cases_of(boss, NET)]

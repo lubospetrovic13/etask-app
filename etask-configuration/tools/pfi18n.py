@@ -390,13 +390,29 @@ def collect(args):
 
 def main(argv):
     do_init = "--init" in argv
-    args = [a for a in argv if not a.startswith("--")]
+    # `--ignore <subor>` vynecha siet z kontroly. Je to na siete, ktore nie su
+    # nase: `single_settings.xml` je systemova siet enginu, ktoru len vendorujeme
+    # na classpath. Jej preklady nemame ako opravit a bez tejto moznosti by CI
+    # svietilo na cerveno navzdy - co je horsie nez ziadne CI, lebo sa to naucia
+    # ignorovat aj so skutocnymi nalezmi.
+    ignore = set()
+    args = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--ignore" and i + 1 < len(argv):
+            ignore.add(argv[i + 1])
+            i += 2
+            continue
+        if not argv[i].startswith("--"):
+            args.append(argv[i])
+        i += 1
     if not args:
         print(__doc__.strip())
         return 2
     paths = collect(args)
     if paths is None:
         return 2
+    paths = [p for p in paths if p.name not in ignore]
 
     if do_init:
         for p in paths:

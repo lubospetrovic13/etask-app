@@ -221,10 +221,25 @@ def main():
     st, node = emp.get("/api/v2/uri/" + base64.b64encode(b"dovolenky").decode())
     check("karta ma ikonu beach_access", node.get("icon") == "beach_access", node.get("icon"))
 
+    def menu_id(c):
+        for d in (c.get("immediateData") or []):
+            if d.get("importId") == "menu_item_identifier":
+                return d.get("value") or ""
+        return ""
+
     print("\n=== 3. zobrazenia pod kartou ===")
     st, mi = boss.post("/api/workflow/case/search?size=200",
                        {"process": [{"identifier": "preference_filter_item"}]})
-    items = {c["title"]: c["stringId"] for c in mi.get("_embedded", {}).get("cases", [])}
+    # Polozky menu su case-y JEDNEJ siete `preference_filter_item` pre CELY
+    # portal, a nazov v nich unikatny NIE JE - je unikatny nanajvys v ramci
+    # priecinka. Mapa {nazov: id} cez vsetky appky teda jednu polozku ticho
+    # prepise druhou: kym faktury mali zobrazenie rovnakeho nazvu, tento test
+    # kontroloval stlpce faktury proti ocakavaniam dovolenky a zlyhal na appke,
+    # ktoru vobec nemeni. Filtruje sa preto na `menu_item_identifier`, ktory
+    # razi dv_menu a je stabilny aj cez preklady.
+    items = {c["title"]: c["stringId"]
+             for c in mi.get("_embedded", {}).get("cases", [])
+             if menu_id(c).startswith("dv_")}
     for want in ["Žiadosti o dovolenku", "Na schválenie", "Rozpísané a vrátené", "Vybavené"]:
         check(f"zobrazenie '{want}' existuje", want in items, sorted(items))
 
