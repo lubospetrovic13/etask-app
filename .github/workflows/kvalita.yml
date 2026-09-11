@@ -21,12 +21,38 @@ on:
 jobs:
   siete-a-nastroje:
     runs-on: ubuntu-latest
+
+    env:
+      # `pfgroovy` kontroluje syntax akcií tak, že ich preženie cez skutočný
+      # Groovy parser. Jar sa lokálne nájde v ~/.m2, na čistom runneri nie —
+      # a nástroj vtedy zámerne končí kódom 2: preskočená kontrola nie je
+      # "čisté". Preto sa jar sťahuje (7 MB) a cesta sa dá cez PF_GROOVY_JAR.
+      GROOVY_VERSION: "3.0.10"
+      PF_GROOVY_JAR: ${{ github.workspace }}/.ci/groovy.jar
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      # Groovy 3 na JDK 21+ padá na "Unsupported class file major version 65",
+      # a runner má v predvolenom stave novšiu Javu. Engine beží na 11, parser
+      # na 17 stačí — hlavne to nesmie byť 21+.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Groovy jar pre pfgroovy
+        run: |
+          mkdir -p .ci
+          curl -sSfL -o .ci/groovy.jar \
+            "https://repo1.maven.org/maven2/org/codehaus/groovy/groovy/${GROOVY_VERSION}/groovy-${GROOVY_VERSION}.jar"
+          # Stiahnutý súbor musí byť čitateľný zip — Maven Central vie vrátiť
+          # HTML chybovú stránku a tá by sa tvárila ako jar až do prvého volania.
+          unzip -tqq .ci/groovy.jar >/dev/null
 
       - name: pflint (štruktúra, tiché pasce, grid)
         working-directory: etask-configuration

@@ -83,6 +83,15 @@ def find_groovy_jar():
 def find_java():
     # Groovy 3 na JDK 21+ pada na "Unsupported class file major version 65",
     # takze siahame po 11/17, ak su k dispozicii.
+    #
+    # `JAVA_HOME` je prvy zamerne: na CI runneri (setup-java) ani na Windowse
+    # ziadna z tych debianovskych ciest neexistuje, a fallback na `java` z PATH
+    # je tam obvykle najnovsie JDK - teda presne to, na com Groovy 3 padne.
+    home = os.environ.get("JAVA_HOME")
+    if home:
+        for kandidat in (Path(home) / "bin" / "java", Path(home) / "bin" / "java.exe"):
+            if kandidat.is_file():
+                return str(kandidat)
     for cand in ("/usr/lib/jvm/java-11-openjdk-amd64/bin/java",
                  "/usr/lib/jvm/java-17-openjdk-amd64/bin/java"):
         if Path(cand).is_file():
