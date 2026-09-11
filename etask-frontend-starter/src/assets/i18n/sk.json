@@ -24,11 +24,21 @@
     "publicUrl": "Verejná URL",
     "goToPublicView": "Choď na verejnú obrazovku",
     "upload": "Nahrať proces",
-    "uploadHint": "Nahrať Petriflow XML a pridať aplikáciu"
+    "uploadHint": "Nahrať Petriflow XML a pridať aplikáciu",
+    "openInBuilder": "Otvoriť v builderi",
+    "search": "Hľadať proces",
+    "searchIn": "Hľadať v",
+    "searchClear": "Zrušiť hľadanie",
+    "searchField": {
+      "identifier": "Identifikátor",
+      "initials": "Skratka"
+    }
   },
   "snackbar": {
     "filterDeleteSuccess": "Filter úspešne vymazaný. Aktualizujem zobrazenie.",
-    "publicUrlCopied": "Verejná URL procesu skopírovaná"
+    "publicUrlCopied": "Verejná URL procesu skopírovaná",
+    "builderLinkFailed": "Odkaz na model sa nepodarilo vytvoriť.",
+    "builderInsecureContext": "Portál beží na HTTP, builder na HTTPS — prehliadač mu načítanie modelu môže zablokovať."
   },
   "app": {
     "theme": {

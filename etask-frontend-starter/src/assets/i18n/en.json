@@ -24,11 +24,21 @@
     "publicUrl": "Public URL",
     "goToPublicView": "Go to public view",
     "upload": "Upload process",
-    "uploadHint": "Upload Petriflow XML to add an application"
+    "uploadHint": "Upload Petriflow XML to add an application",
+    "openInBuilder": "Open in builder",
+    "search": "Search processes",
+    "searchIn": "Search in",
+    "searchClear": "Clear search",
+    "searchField": {
+      "identifier": "Identifier",
+      "initials": "Initials"
+    }
   },
   "snackbar": {
     "filterDeleteSuccess": "Filter deleted successfully. Refreshing view.",
-    "publicUrlCopied": "Public URL of process copied"
+    "publicUrlCopied": "Public URL of process copied",
+    "builderLinkFailed": "Could not create a link to the model.",
+    "builderInsecureContext": "The portal runs on HTTP and the builder on HTTPS - the browser may block the model from loading."
   },
   "app": {
     "theme": {

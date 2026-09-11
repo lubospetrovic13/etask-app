@@ -583,6 +583,50 @@ akú adresu sa engine pripája), a nemať v konfigurácii tichý fallback na
 
 ---
 
+## E21. Hľadanie procesov podľa `title` nenájde nikdy nič
+
+`POST /api/petrinet/search` vyzerá, že názov procesu hľadať vie —
+`PetriNetService.search` má práve tri kľúče, ktoré porovnáva regexom
+namiesto rovnosti, a `title` je jeden z nich:
+
+```java
+else if (key.equalsIgnoreCase("title") || key.equalsIgnoreCase("initials") || key.equalsIgnoreCase("identifier"))
+    valueCriteria = Criteria.where(key).regex((String) value, "i");
+```
+
+Lenže `PetriNet.title` **nie je reťazec**. V Mongu je to `I18nString`:
+
+```json
+{"defaultValue": "Nástup nového zamestnanca", "translations": {"en": "Employee onboarding"}}
+```
+
+Regex nad dokumentom sa nemá o čo oprieť, takže dopyt vráti prázdny zoznam —
+HTTP 200, žiadna chyba, žiadny záznam v logu. Namerané:
+
+```
+{"identifier": "onboarding"}   -> 2 siete
+{"initials": "NZM"}            -> 2 siete
+{"title": "ástup"}             -> 0    (a "Nástup nového zamestnanca" existuje)
+{"title.defaultValue": "Nástup nového zamestnanca"} -> 1
+```
+
+Posledný riadok je aj celé obídenie, aj jeho hranica: `title.defaultValue`
+nájde sieť, ale ako **presnú zhodu** — kľúč nie je v tej trojici vyššie, takže
+ide cez `Criteria.is()`. Hľadanie podreťazca v názve sa cez toto API napísať
+nedá a preklad z `translations` sa nehľadá vôbec.
+
+Oprava je jednoriadková: regexovať `title.defaultValue` (prípadne aj
+`translations.*`) namiesto `title`.
+
+Vedľajší nález z toho istého endpointu: hodnota ide do regexu **neescapovaná**,
+takže `{"title": "("}` vráti **HTTP 500** z neplatného vzoru a vzor typu
+`(a+)+` je otvorená cesta k zahlteniu. Klient si preto musí escapovať sám —
+robí to `EtaskWorkflowViewService`.
+
+**Dôsledok pre nás:** vyhľadávanie v sekcii Workflow ponúka `Identifikátor`
+a `Skratku`, nie `Názov`. Ponúknuť názov by znamenalo pole, ktoré vždy vráti
+prázdno — presne ten druh ticha, kvôli ktorému tento súbor existuje.
+
 ## Čo s tým
 
 Najviac stojí **E1** — znemožňuje celú jednu operáciu — a **E2**, ktoré robí
@@ -591,7 +635,8 @@ stiahnuté**: to sa ukázalo ako moja chyba merania, nie chyba enginu.
 
 **E18** je z tej istej rodiny ako **E11** a **E8**: engine urobí správnu vec
 a zamlčí dôvod. Opraviť sa dá jedným handlerom. **E19** je horšie: tam engine
-ohlási úspech operácie, ktorá sa nestala.
+ohlási úspech operácie, ktorá sa nestala. **E21** je tretí variant toho istého:
+endpoint ponúka parameter, ktorý nemôže fungovať, a mlčí o tom.
 
 Čo v tejto kope **nie je**: správanie, ktoré je v poriadku a treba ho len
 poznať — oprávnenia a `perform` ako skratka, `assignPolicy` a jeho dva okamihy,

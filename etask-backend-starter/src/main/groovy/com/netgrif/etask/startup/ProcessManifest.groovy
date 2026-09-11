@@ -26,6 +26,13 @@ class ProcessManifest {
 
     static final String PATH = "petriNets/processes.json"
 
+    /** Jeden case navzdy - pracujuci singleton. */
+    static final String ONCE = "once"
+    /** Jeden case na verziu siete - artefakt buildu, typicky menu appky. */
+    static final String REBUILD_ON_NEW_VERSION = "version"
+    /** Novy case, ked sa zmeni mnozina nasadenych sieti - katalogove zobrazenia. */
+    static final String REBUILD_ON_PROCESS_CHANGE = "processes"
+
     private Map parsed = null
 
     /** Subory sieti na import, v poradi, v akom sa maju importovat. */
@@ -57,14 +64,26 @@ class ProcessManifest {
      *     drzi verziu siete, takze po re-importe menu siete sa nova verzia
      *     akcie nespusti, kym nevznikne novy case - zmena zobrazeni sa v
      *     nasadenej instancii neprejavi a nikde sa to neohlasi.
+     *   * **Katalog** (`rebuildOnProcessChange`). Siet, ktorej vystup zavisi od
+     *     TOHO, KTORE SIETE su nasadene - typicky zobrazenie "vsetky pripady",
+     *     ktoreho `allowedNets` musi obsahovat kazdu appku, inak tlacidlo "+"
+     *     nema co ponuknut a vrati "Ziadne povolene siete". Verzia takej siete
+     *     sa pridanim appky nezmeni, takze `rebuildOnNewVersion` by ju nechal
+     *     zastaranu; preto sa porovnava zoznam sieti, nie verzia.
      */
-    Map<String, Boolean> bootstrapCases() {
+    Map<String, String> bootstrapCases() {
         return (manifest()["bootstrapCase"] ?: []).collectEntries { entry ->
             if (entry instanceof Map) {
-                return [(entry["net"] as String), (entry["rebuildOnNewVersion"] as boolean)]
+                if (entry["rebuildOnProcessChange"]) {
+                    return [(entry["net"] as String), REBUILD_ON_PROCESS_CHANGE]
+                }
+                if (entry["rebuildOnNewVersion"]) {
+                    return [(entry["net"] as String), REBUILD_ON_NEW_VERSION]
+                }
+                return [(entry["net"] as String), ONCE]
             }
-            return [(entry as String), false]
-        } as Map<String, Boolean>
+            return [(entry as String), ONCE]
+        } as Map<String, String>
     }
 
     /** uriPath -> {icon, requiredAuthorities, requiredProcessRoles}. */

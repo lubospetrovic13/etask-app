@@ -37,3 +37,21 @@
   width: 40px;
   height: 40px;
 }
+
+/* Prepínač poľa je úzky a pevný, text berie zvyšok - inak by sa pri užšom okne
+   zalomili oba a riadok by mal dvojnásobnú výšku. */
+.workflow-search {
+  padding: 0 16px;
+}
+
+.workflow-search-field {
+  width: 160px;
+  flex: 0 0 auto;
+}
+
+/* Material 13 dáva `outline` poliam spodný odsadzovací pruh pre chybové hlášky.
+   Tu žiadne nie sú, takže by len odtlačil zoznam procesov nadol. */
+.workflow-search .mat-form-field-wrapper {
+  padding-bottom: 0;
+  margin-bottom: -1.25em;
+}

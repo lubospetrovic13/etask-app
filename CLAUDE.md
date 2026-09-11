@@ -42,6 +42,7 @@ nezobrazí vlastné polia a build o tom mlčí.
 | priečinky v karte, názvy tlačidiel, schvaľovanie podľa strediska | 11 |
 | celý stack v Dockeri (OCR, SMTP, notifikácie) | 12 |
 | automatická oprava (`pffix`, `pfloop`) a MCP server | 13 |
+| otvorenie procesu v builderi (podpísaný odkaz na model) | 14 |
 
 ## Šablóna, nie nasadenie
 

@@ -72,6 +72,9 @@ ako „nefunguje to". Všetky sú overené na bežiacom engine.
   prípade, testuje starý model.
 - `findCases { it.dataSet... }` **nefunguje**. Filtruj v Groovy, alebo Elastic
   dopytom nad `dataSet.<pole>.textValue` (to je iná cesta, nie to isté).
+- Pri `enumeration_map` je kľúč v **`dataSet.<pole>.keyValue`**. `.textValue`
+  drží preložené popisky (všetky jazyky naraz), takže dopyt na kľúč cez
+  `.textValue` nenájde **nikdy nič** a zobrazenie je ticho prázdne.
 - `button` vedľa `text` poľa v tom istom `dataGroup`: bez `immediate="true"` na
   tom texte akcia prečíta prázdno — blur a klik sú jedna požiadavka.
 
@@ -99,6 +102,13 @@ ako „nefunguje to". Všetky sú overené na bežiacom engine.
   znova — a `deleteMenuItem` pred tým, `deleteFilter` po tom.
 - Stĺpec z dátového poľa sa vykreslí len ak je jeho sieť v **`allowedNets`**
   toho zobrazenia. Inak zostane prázdny a nič sa nezaloguje.
+- Prázdny `allowedNets` **vypne aj tlačidlo „+"** — klik vráti „Žiadne povolené
+  siete". Katalógové zobrazenia (`general`) preto stavia `configuration_tiles`
+  až z bootstrap casu (`rebuildOnProcessChange`), nie z udalosti `upload`:
+  tá beží pri importe **prvej** siete, keď ešte žiadna appka neexistuje.
+- Klientska kontrola `hasNetPermission` pozerá len na procesné roly, takže
+  admin bez nich v „+" nevidel nič, hoci engine mu zakladanie povoľuje. Rieši
+  to `EtaskPermissionService`; to isté pre karty robí `UriNodeVisibilityService`.
 - Menu pozná len typy **`Case`** a **`Task`**. „Single task" zobrazenie sa robí
   ako Task zobrazenie zúžené na `transitionId:"..."`.
 - Vyhodenie appky z manifestu **nič nezmaže**; uzol URI žije v Elasticsearchi.

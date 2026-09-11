@@ -69,6 +69,10 @@
   ],
   "bootstrapCase": [
     {
+      "net": "configuration_tiles",
+      "rebuildOnProcessChange": true
+    },
+    {
       "net": "service_desk/sd_menu",
       "rebuildOnNewVersion": true
     },
