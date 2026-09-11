@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>onboarding/on_menu</id>
+	<id>hr/onboarding/on_menu</id>
 	<version>1.0.0</version>
 	<initials>NZM</initials>
 	<title name="net_title">Menu Nástup nového zamestnanca</title>
@@ -42,14 +42,14 @@ def created = []
 def unchanged = []
 def failed = []
 
-def siet = "onboarding/on_nastup"
+def siet = "hr/onboarding/on_nastup"
 def vsetky = "processIdentifier:\"" + siet + "\""
 def stlpce = "meta-title" +
-        ",onboarding/on_nastup-on_stav_label" +
-        ",onboarding/on_nastup-on_datum_nastupu" +
-        ",onboarding/on_nastup-on_it_stav" +
-        ",onboarding/on_nastup-on_hr_stav" +
-        ",onboarding/on_nastup-on_maj_stav"
+        ",hr/onboarding/on_nastup-on_stav_label" +
+        ",hr/onboarding/on_nastup-on_datum_nastupu" +
+        ",hr/onboarding/on_nastup-on_it_stav" +
+        ",hr/onboarding/on_nastup-on_hr_stav" +
+        ",hr/onboarding/on_nastup-on_maj_stav"
 
 def views = [
         // Nazov prveho zobrazenia je TITULOK SIETE, nie kopia toho retazca.
@@ -120,7 +120,7 @@ views.each { v ->
                 // Elasticsearch, polozky menu Mongo. Po vymene ES indexu maju
                 // uzly nove id, polozka visi na starom a priecinok v bocnom
                 // paneli je PRAZDNY - bez chyby a bez logu (RUNBOOK 4).
-                pripoj_do_uzla(existing, "onboarding")
+                pripoj_do_uzla(existing, "hr/onboarding")
                 unchanged << id
                 return
             }
@@ -131,7 +131,7 @@ views.each { v ->
         }
         def item = createOrUpdateMenuItem(
                 id,                 // menu_item_identifier
-                "onboarding",          // URI cesta - musi sedet s uriNodes
+                "hr/onboarding",          // URI cesta - musi sedet s uriNodes
                 v.type as String,
                 v.query as String,
                 v.icon as String,

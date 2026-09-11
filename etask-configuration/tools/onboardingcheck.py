@@ -34,9 +34,9 @@ import time
 
 import pftestlib as pf
 
-NET = "onboarding/on_nastup"
-MENU = "onboarding/on_menu"
-CARD = "onboarding"
+NET = "hr/onboarding/on_nastup"
+MENU = "hr/onboarding/on_menu"
+CARD = "hr/onboarding"
 
 # Ucty podla rol. `admin@test.local` ma ROLE_ADMIN, ktora obchadza vsetky
 # opravnenia Petriflow - hranice sa preto overuju na uctoch BEZ nej.
@@ -75,7 +75,9 @@ def main():
     print("=== 1. karta v bocnom menu ===")
     for nazov, cl, ocakavane in [("hr", hr, True), ("it", it, True),
                                  ("majetok", maj, True), ("bez roly", nic, False)]:
-        paths = pf.uri_paths(cl)
+        # `deep=True`: appka zije v kategorii, takze `hr/onboarding` uz
+        # NIE JE dietatom korena - tam je len `hr`.
+        paths = pf.uri_paths(cl, deep=True)
         pf.check(f"{nazov} {'vidi' if ocakavane else 'nevidi'} kartu '{CARD}'",
                  (CARD in paths) == ocakavane, paths)
         if not ocakavane:

@@ -1,0 +1,550 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>admin/nastavenia/sc_nastavenia</id>
+	<version>1.0.0</version>
+	<initials>SCN</initials>
+	<title name="net_title">Konfigurácia schvaľovania</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Approval settings</i18nString>
+		<i18nString name="spravca_title">Administrator</i18nString>
+		<i18nString name="div_limity_init">Limits</i18nString>
+		<i18nString name="div_schvalovatelia_init">Cost centre approvers</i18nString>
+		<i18nString name="div_ostatne_init">Other roles</i18nString>
+		<i18nString name="div_stav_init">State</i18nString>
+		<i18nString name="sc_limit_title">Director's limit (EUR incl. VAT)</i18nString>
+		<i18nString name="sc_limit_desc">Above this amount the director approves after the cost centre. Applies to invoices and orders alike.</i18nString>
+		<i18nString name="sc_hotel_title">Hotel / reception</i18nString>
+		<i18nString name="sc_restauracia_title">Restaurant</i18nString>
+		<i18nString name="sc_wellness_title">Wellness</i18nString>
+		<i18nString name="sc_udrzba_title">Maintenance</i18nString>
+		<i18nString name="sc_marketing_title">Marketing</i18nString>
+		<i18nString name="sc_sprava_title">Administration</i18nString>
+		<i18nString name="sc_centrum_desc">Who approves invoices and orders of this cost centre.</i18nString>
+		<i18nString name="sc_zadavatelia_title">Clerks (enter invoices and request orders)</i18nString>
+		<i18nString name="sc_uctovnici_title">Accountants (post invoices)</i18nString>
+		<i18nString name="sc_riaditelia_title">Directors (approve above the limit)</i18nString>
+		<i18nString name="sc_vysledok_title">What the last save did</i18nString>
+		<i18nString name="sc_ulozil_title">Saved by</i18nString>
+		<i18nString name="sc_ulozene_o_title">Saved</i18nString>
+		<i18nString name="t_sc_nastavenia_label">Approval settings</i18nString>
+		<i18nString name="t_sc_nastavenia_finish">Save settings</i18nString>
+		<i18nString name="empty_button"></i18nString>
+	</i18n>
+	<icon>tune</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Konfiguracia appky Objednavky a faktury. Jedna obrazovka, jeden case,
+		vidi ju len spravca (karta ma v `uriNodes` ROLE_ADMIN).
+
+		DVE VECI, ktore sa tu nastavuju, a kazda inak:
+
+		  1. LIMIT RIADITELA je udaj - zije v tomto case (`sc_limit`) a siete
+		     faktur a objednavok si ho citaju cez `najnovsiCase`. Ked case nie
+		     je alebo je prazdny, plati zabudovany default; appka teda funguje
+		     aj bez konfiguracie.
+		  2. SCHVALOVATELIA nie su udaj, su to ROLY. Formular ich len ukazuje
+		     a zapisuje - zdrojom pravdy zostava pridelenie roly uzivatelovi.
+		     Preto sa hodnoty pri otvoreni NACITAJU zo stavu roli a pri ulozeni
+		     sa role priradia a odoberu (`setProcessRole`).
+
+		Preco takto a nie zoznam uzivatelov v datach: opravnenie citat a robit
+		s pripadom visi na rolach (`roleRef`, `userRef`). Keby zoznam zil len
+		tu, clovek vybraty v konfiguracii by ulohu dostal, ale case by nevidel -
+		a to je presne ten druh tichej diery, ktoru appka nema mat.
+
+		Case je `bootstrapCase` s `rebuildOnNewVersion`, takze po re-importe
+		vznikne novy a formular ma nove polia. `sc_limit` sa z predchadzajuceho
+		prenesie (`prenes_hodnoty`), inak by kazdy re-import zmazal nastavenie.
+
+		Ulozenie je `finish` na prechode, ktory visi na READ ARCU z `p_alive` -
+		token sa nepohne, takze sa uloha hned otvori znova a da sa ulozit
+		opakovane. To je ten "pracujuci singleton" z CLAUDE.md.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>sc_nastavenia_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+sc_limit: f.sc_limit;
+
+prenes_hodnoty(sc_limit)
+postav_menu()
+changeCaseProperty("title").about { "Konfigurácia schvaľovania" }
+changeCaseProperty("color").about { "blue" }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def identifier ->
+    // `findMenuItem(id)` z ActionDelegate existujucu polozku nenajde (hlada
+    // v inom rozsahu), takze by pri kazdej verzii vznikla dalsia.
+    def id = ((identifier ?: "") as String).trim()
+    if (!id) return null
+    def items = findCases { it.processIdentifier.eq("preference_filter_item") }
+    return items?.find { ((it.dataSet["menu_item_identifier"]?.value ?: "") as String) == id }
+}
+	]]></function>
+	<function scope="process" name="postav_menu"><![CDATA[
+{ ->
+    // Jedna polozka, typu TASK zuzeneho na `transitionId` - to je sposob, ako
+    // spravit "single task" zobrazenie: klik v menu otvori rovno formular
+    // a nie zoznam s jednym riadkom (cheatsheet, Menu a zobrazenia).
+    //
+    // DOPYT SA ZUZUJE LEN NA `transitionId`. Task dokument v indexe
+    // `processIdentifier` NEMA - nesie `processId`, teda stringId verzie siete,
+    // ktory sa pri kazdom re-importe meni. Dopyt s `processIdentifier` teda
+    // nenajde nikdy nic a obrazovka je prazdna, hoci case aj uloha existuju.
+    // Presne to sa tu stalo: "nastavenia nefunguju, nie je tam ziaden pripad".
+    // Id prechodu je naprieč sietami unikatne. Zuzuje sa ale este na `processId`
+    // TEJTO verzie siete: `bootstrapCase` s `rebuildOnNewVersion` zaklada jeden
+    // case NA VERZIU, takze po druhom re-importe by zobrazenie ukazalo dva
+    // riadky "Konfigurácia schvaľovania" a clovek by nevedel, ktory je ten
+    // platny. `processId` sa pri kazdom importe meni - a to je tu v poriadku,
+    // lebo polozku menu prestavia ta ista akcia, ktora nove `processId` pozna.
+    def id = "sc_nastavenia_view"
+    def siet = "admin/nastavenia/sc_nastavenia"
+    def nazov = i18n("Konfigurácia schvaľovania", ["en": "Approval settings"])
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            // Update cesta `createOrUpdateMenuItem` nefunguje, polozka sa vzdy
+            // zahodi a postavi znova. PORADIE: najprv polozka, potom filter -
+            // naopak to padne, lebo `deleteMenuItem` si filter este raz nacita.
+            def current = getFilterFromMenuItem(existing)
+            deleteMenuItem(existing)
+            if (current != null) deleteFilter(current)
+        }
+        createOrUpdateMenuItem(
+                id,
+                "admin/nastavenia",       // URI cesta - musi sedet s uriNodes
+                "Task",
+                "transitionId:\"t_sc_nastavenia\" AND processId:\"" +
+                        (useCase.petriNetId as String) + "\"",
+                "tune",
+                nazov,
+                [siet],
+                ["spravca": siet],  // v menu ju vidi len spravca
+                [:])
+    } catch (Exception e) {
+        // Menu nesmie zhodit zalozenie konfiguracneho casu - bez neho by appka
+        // prisla aj o limit, nielen o polozku v menu.
+        changeCaseProperty("color").about { "orange" }
+    }
+}
+	]]></function>
+	<function scope="process" name="kto"><![CDATA[
+{ def u ->
+    return (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+}
+	]]></function>
+	<function scope="process" name="siete"><![CDATA[
+{ ->
+    // Roly su v OBOCH sietiach appky a menia sa naraz - inak by clovek
+    // schvaloval faktury strediska, ale objednavky nie.
+    return ["financie/faktury/fa_faktura", "financie/objednavky/ob_objednavka"]
+}
+	]]></function>
+	<function scope="process" name="strediska"><![CDATA[
+{ ->
+    // Kluc pola -> importId roly. Poradie urcuje poradie na formulari.
+    return ["sc_hotel"      : "schv_hotel",
+            "sc_restauracia": "schv_restauracia",
+            "sc_wellness"   : "schv_wellness",
+            "sc_udrzba"     : "schv_udrzba",
+            "sc_marketing"  : "schv_marketing",
+            "sc_sprava"     : "schv_sprava"]
+}
+	]]></function>
+	<function scope="process" name="prenes_hodnoty"><![CDATA[
+{ def sc_limit ->
+    // Case sa pri novej verzii siete zaklada nanovo (inak by na nom chybali
+    // nove polia). Hodnoty, ktore su UDAJ a nie odraz roli, sa preto musia
+    // preniest - bez toho by kazdy re-import ticho vratil limit na default.
+    def stary = najnovsiCase("admin/nastavenia/sc_nastavenia")
+    def prev = (stary != null && stary.stringId != useCase.stringId)
+            ? stary.dataSet["sc_limit"]?.value : null
+    change sc_limit value { (prev != null ? prev : 1000.0d) as Double }
+}
+	]]></function>
+	<function scope="process" name="nacitaj_stav"><![CDATA[
+{ def polia ->
+    // Formular ukazuje SKUTOCNY stav roli, nie to, co si niekto naposledy
+    // ulozil - roly sa daju zmenit aj v appke Používatelia a obe obrazovky
+    // musia hovorit to iste.
+    def zoznam = userOptions()
+    strediska().each { pole, rola ->
+        change polia[pole] options { zoznam }
+        change polia[pole] value { usersWithRoleAll(rola, siete()[0]) }
+    }
+    ["sc_zadavatelia": "zadavatel", "sc_uctovnici": "uctovnik",
+     "sc_riaditelia" : "riaditel"].each { pole, rola ->
+        change polia[pole] options { zoznam }
+        change polia[pole] value { usersWithRoleAll(rola, siete()[0]) }
+    }
+}
+	]]></function>
+	<function scope="process" name="uloz_rolu"><![CDATA[
+{ def pole, def rola, def riadky ->
+    // Nastavenie stavu, nie pridavanie: kto v zozname nie je, rolu strati -
+    // inak by sa schvalovatel nedal nikdy odobrat.
+    def chceme = ((pole.value ?: []) as List).collect { it as String } as Set
+    def maju = [] as Set
+    siete().each { siet -> maju.addAll(usersWithRoleAll(rola as String, siet)) }
+
+    def pridane = 0, odobrane = 0
+    (chceme - maju).each { uid ->
+        siete().each { siet -> setProcessRole(uid as String, rola as String, siet, "", true) }
+        pridane++
+    }
+    (maju - chceme).each { uid ->
+        siete().each { siet -> setProcessRole(uid as String, rola as String, siet, "", false) }
+        odobrane++
+    }
+    if (pridane || odobrane) {
+        riadky << ((rola as String) + ": +" + pridane + " / -" + odobrane +
+                " (spolu " + chceme.size() + ")")
+    }
+}
+	]]></function>
+	<roleRef>
+		<id>spravca</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>spravca</id>
+		<title name="spravca_title">Správca</title>
+	</role>
+	<data type="i18n">
+		<id>div_limity</id>
+		<title/>
+		<init name="div_limity_init">Limity</init>
+	</data>
+	<data type="i18n">
+		<id>div_schvalovatelia</id>
+		<title/>
+		<init name="div_schvalovatelia_init">Schvaľovatelia stredísk</init>
+	</data>
+	<data type="i18n">
+		<id>div_ostatne</id>
+		<title/>
+		<init name="div_ostatne_init">Ostatné roly</init>
+	</data>
+	<data type="i18n">
+		<id>div_stav</id>
+		<title/>
+		<init name="div_stav_init">Stav</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sc_limit</id>
+		<title name="sc_limit_title">Limit riaditeľa (€ s DPH)</title>
+		<desc name="sc_limit_desc">Nad túto sumu schvaľuje po stredisku ešte riaditeľ. Platí rovnako pre faktúry aj objednávky.</desc>
+		<init>1000</init>
+	</data>
+	<!--
+		Zoznamy uzivatelov. `multichoice_map` s moznostami stavanymi ZA BEHU,
+		takze zamerne BEZ `immediate` - to na runtime moznostiach zhodi
+		indexaciu casu (PETRIFLOW_LEARNINGS B22).
+	-->
+	<data type="multichoice_map">
+		<id>sc_hotel</id>
+		<title name="sc_hotel_title">Hotel / recepcia</title>
+		<desc name="sc_centrum_desc">Kto schvaľuje faktúry a objednávky tohto strediska.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>sc_restauracia</id>
+		<title name="sc_restauracia_title">Reštaurácia</title>
+		<desc name="sc_centrum_desc">Kto schvaľuje faktúry a objednávky tohto strediska.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>sc_wellness</id>
+		<title name="sc_wellness_title">Wellness</title>
+		<desc name="sc_centrum_desc">Kto schvaľuje faktúry a objednávky tohto strediska.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>sc_udrzba</id>
+		<title name="sc_udrzba_title">Údržba</title>
+		<desc name="sc_centrum_desc">Kto schvaľuje faktúry a objednávky tohto strediska.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>sc_marketing</id>
+		<title name="sc_marketing_title">Marketing</title>
+		<desc name="sc_centrum_desc">Kto schvaľuje faktúry a objednávky tohto strediska.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>sc_sprava</id>
+		<title name="sc_sprava_title">Správa</title>
+		<desc name="sc_centrum_desc">Kto schvaľuje faktúry a objednávky tohto strediska.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>sc_zadavatelia</id>
+		<title name="sc_zadavatelia_title">Zadávatelia (zapisujú faktúry, žiadajú objednávky)</title>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>sc_uctovnici</id>
+		<title name="sc_uctovnici_title">Účtovníci (zaúčtujú faktúry)</title>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>sc_riaditelia</id>
+		<title name="sc_riaditelia_title">Riaditelia (schvaľujú nad limit)</title>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>sc_vysledok</id>
+		<title name="sc_vysledok_title">Čo posledné uloženie spravilo</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>sc_ulozil</id>
+		<title name="sc_ulozil_title">Uložil</title>
+	</data>
+	<data type="dateTime">
+		<id>sc_ulozene_o</id>
+		<title name="sc_ulozene_o_title">Uložené</title>
+	</data>
+	<transition>
+		<id>t_sc_nastavenia</id>
+		<x>140</x>
+		<y>80</y>
+		<label name="t_sc_nastavenia_label">Konfigurácia schvaľovania</label>
+		<icon>tune</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>spravca</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_sc_nastavenia</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_limity</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sc_limit</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_schvalovatelia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sc_hotel</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sc_restauracia</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sc_wellness</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sc_udrzba</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sc_marketing</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sc_sprava</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ostatne</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sc_zadavatelia</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sc_uctovnici</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sc_riaditelia</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_stav</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sc_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sc_ulozil</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sc_ulozene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_sc_nastavenia_assign</id>
+			<title name="empty_button"></title>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+sc_hotel: f.sc_hotel, sc_restauracia: f.sc_restauracia, sc_wellness: f.sc_wellness,
+sc_udrzba: f.sc_udrzba, sc_marketing: f.sc_marketing, sc_sprava: f.sc_sprava,
+sc_zadavatelia: f.sc_zadavatelia, sc_uctovnici: f.sc_uctovnici,
+sc_riaditelia: f.sc_riaditelia;
+
+// Pri kazdom otvoreni sa formular naplni zo SKUTOCNEHO stavu roli. Zoznam
+// uzivatelov aj hodnoty su runtime data - v `create` udalosti pripadu by sa
+// `change ... options` neuchovalo (B11).
+nacitaj_stav([sc_hotel      : sc_hotel, sc_restauracia: sc_restauracia,
+              sc_wellness   : sc_wellness, sc_udrzba: sc_udrzba,
+              sc_marketing  : sc_marketing, sc_sprava: sc_sprava,
+              sc_zadavatelia: sc_zadavatelia, sc_uctovnici: sc_uctovnici,
+              sc_riaditelia : sc_riaditelia])
+				]]></action>
+			</actions>
+		</event>
+		<event type="cancel">
+			<id>t_sc_nastavenia_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_sc_nastavenia_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_sc_nastavenia_finish</id>
+			<title name="t_sc_nastavenia_finish">Uložiť nastavenia</title>
+			<actions phase="pre">
+				<action id="3"><![CDATA[
+sc_limit: f.sc_limit;
+
+def v = sc_limit.value
+if (v == null || (v as Number).doubleValue() <= 0) {
+    throw new java.lang.IllegalStateException(
+            "Limit riaditeľa musí byť väčší ako nula. Ak nemá schvaľovať nič, " +
+                    "odoberte mu rolu; nula by znamenala, že schvaľuje všetko.")
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="4"><![CDATA[
+sc_limit: f.sc_limit, sc_hotel: f.sc_hotel, sc_restauracia: f.sc_restauracia,
+sc_wellness: f.sc_wellness, sc_udrzba: f.sc_udrzba, sc_marketing: f.sc_marketing,
+sc_sprava: f.sc_sprava, sc_zadavatelia: f.sc_zadavatelia,
+sc_uctovnici: f.sc_uctovnici, sc_riaditelia: f.sc_riaditelia,
+sc_vysledok: f.sc_vysledok, sc_ulozil: f.sc_ulozil, sc_ulozene_o: f.sc_ulozene_o;
+
+def riadky = []
+def polia = [sc_hotel      : sc_hotel, sc_restauracia: sc_restauracia,
+             sc_wellness   : sc_wellness, sc_udrzba: sc_udrzba,
+             sc_marketing  : sc_marketing, sc_sprava: sc_sprava]
+
+strediska().each { pole, rola -> uloz_rolu(polia[pole], rola, riadky) }
+uloz_rolu(sc_zadavatelia, "zadavatel", riadky)
+uloz_rolu(sc_uctovnici, "uctovnik", riadky)
+uloz_rolu(sc_riaditelia, "riaditel", riadky)
+
+riadky << ("limit riaditeľa: " +
+        String.format(java.util.Locale.US, "%.2f", (sc_limit.value as Number).doubleValue()) + " €")
+if (riadky.size() == 1) {
+    riadky << "roly sa nezmenili"
+}
+// Kto rolu prave dostal, musí sa odhlásit a prihlásit - prihlasena session
+// drzi stare stringId roli a zakladanie casu by vratilo 403.
+riadky << "komu sa rola zmenila, nech sa odhlási a prihlási"
+
+change sc_vysledok value { riadky.join("\n") }
+change sc_ulozil value { kto(loggedUser()) }
+change sc_ulozene_o value { java.time.LocalDateTime.now() }
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<!--
+		READ arc: ulozenie token nepohne, takze sa uloha hned otvori znova
+		a konfiguracia sa da menit dokola. Regularny arc by po prvom ulozeni
+		obrazovku zavrel a uz by ju nemal kto otvorit.
+	-->
+	<arc>
+		<id>a_sc_nastavenia</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_sc_nastavenia</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

@@ -1,0 +1,1158 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>hr/dovolenky/dv_ziadost</id>
+	<version>1.0.0</version>
+	<initials>DVZ</initials>
+	<title name="net_title">Žiadosť o dovolenku</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Leave request</i18nString>
+		<i18nString name="zamestnanec_title">Employee</i18nString>
+		<i18nString name="veduci_title">Department manager</i18nString>
+		<i18nString name="div_ziadost_init">Request</i18nString>
+		<i18nString name="div_rozhodnutie_init">Manager's decision</i18nString>
+		<i18nString name="div_priebeh_init">Progress</i18nString>
+		<i18nString name="dv_ziadatel_title">Requester</i18nString>
+		<i18nString name="dv_ziadatel_desc">Filled in automatically when the request is created. The right to see the request hangs on this list.</i18nString>
+		<i18nString name="dv_ziadatel_meno_title">Submitted by</i18nString>
+		<i18nString name="dv_od_title">Date from</i18nString>
+		<i18nString name="dv_od_desc">First day of leave.</i18nString>
+		<i18nString name="dv_do_title">Date to</i18nString>
+		<i18nString name="dv_do_desc">Last day of leave, inclusive.</i18nString>
+		<i18nString name="dv_dni_title">Number of days</i18nString>
+		<i18nString name="dv_dni_desc">Includes both the first and the last day. Calculated automatically.</i18nString>
+		<i18nString name="dv_dovod_title">Reason</i18nString>
+		<i18nString name="dv_kontrola_title">Review</i18nString>
+		<i18nString name="dv_stav_title">Status code</i18nString>
+		<i18nString name="dv_stav_label_title">Status</i18nString>
+		<i18nString name="dv_podane_o_title">Submitted</i18nString>
+		<i18nString name="dv_rozhodnutie_title">Decision</i18nString>
+		<i18nString name="dv_rozhodnutie_opt_schvalena">Approve</i18nString>
+		<i18nString name="dv_rozhodnutie_opt_zamietnuta">Reject</i18nString>
+		<i18nString name="dv_rozhodnutie_opt_vratena">Send back for changes</i18nString>
+		<i18nString name="dv_poznamka_title">Manager's note</i18nString>
+		<i18nString name="dv_poznamka_desc">The employee will see it on their own request.</i18nString>
+		<i18nString name="dv_rozhodol_title">Decided by</i18nString>
+		<i18nString name="dv_rozhodnute_o_title">Decided</i18nString>
+		<i18nString name="dv_to_vybavena_title">Routing: closed</i18nString>
+		<i18nString name="dv_to_vybavena_desc">Multiplicity of the variable arc. The decision action sets it; nobody edits it by hand.</i18nString>
+		<i18nString name="dv_to_koncept_title">Routing: back to the requester</i18nString>
+		<i18nString name="dv_to_koncept_desc">Multiplicity of the variable arc. The decision action sets it; nobody edits it by hand.</i18nString>
+		<i18nString name="dv_historia_title">Progress</i18nString>
+		<i18nString name="dv_historia_desc">What happened to the request. Appended automatically; it cannot be overwritten.</i18nString>
+		<i18nString name="t_dv_podanie_label">Submit the request</i18nString>
+		<i18nString name="t_dv_rozhodnutie_label">Decide on the request</i18nString>
+		<i18nString name="t_dv_vysledok_label">Result</i18nString>
+	</i18n>
+	<icon>beach_access</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Schvaľovanie dovoleniek pre jedno oddelenie.
+
+		Tri stavy, jeden prechod na podanie a jeden na rozhodnutie:
+
+		  p_koncept -> t_dv_podanie -> p_na_schvalenie -> t_dv_rozhodnutie -+-> p_vybavena
+		      ^                                                            |
+		      +....... variable arc, ked veduci vrati na prerobenie ........+
+
+		Rozhodnutie je JEDEN task s tromi moznostami - Schvalit, Zamietnut,
+		Vratit na prerobenie. Nie tri tasky: vedúci sa raz rozhoduje, len to má
+		tri vyústenia. Smerovanie tokenu robia dva variable arcy z toho istého
+		prechodu, ktorých násobnosť nastaví akcia v `phase="pre"` (`dv_to_vybavena`,
+		`dv_to_koncept`). Prvá verzia mala na vrátenie samostatný prechod, takže
+		vedúci videl v case dve úlohy a musel si vybrať, ktorú otvorí, skôr než
+		sa rozhodol.
+
+		Pri vrátení sa token vráti do p_koncept, žiadateľovi sa znova otvorí
+		"Podať žiadosť" s pôvodnými hodnotami a vedúcemu žiadosť zmizne z "Na
+		schválenie". Cyklus môže prebehnúť koľkokrát treba; to, čo sa pri
+		prepisovaní poznámky stráca, drží `dv_historia`.
+
+		Kto čo vidí, drží model, nie frontend:
+
+		  * `dv_ziadatel` je userList, do ktorého sa pri založení casu zapíše
+		    prihlásený človek. Na ňom visí `userRef` s `caseLogic/view` (žiadateľ
+		    vidí svoju žiadosť) aj `perform` na podaní a prehľade. Rola
+		    `zamestnanec` má na úrovni procesu iba `create` - takže zamestnanec
+		    vie žiadosť založiť, ale cudziu neuvidí. Bez toho userRefu by buď
+		    videl všetky žiadosti oddelenia, alebo ani vlastnú.
+		  * `veduci` má `view` na procese a `perform` na rozhodnutí. Rozhodnutie
+		    je vlastný prechod za vlastným miestom, takže sa nedá spraviť skôr,
+		    než je žiadosť podaná - a po rozhodnutí už token v p_na_schvalenie
+		    nie je, takže sa nedá prepísať druhýkrát.
+		  * Read-only pohľad je jeden a visí na read arcu z `p_vybavena`:
+		    `t_dv_vysledok`. Predtým tu bol prehľad na vlastnom mieste `p_alive`,
+		    otvorený od založenia casu - dôsledok bol, že každý mal v case
+		    o úlohu viac, než mal reálne robiť. Koľko úloh kto vidí teraz:
+
+		      rozpísaná / vrátená   žiadateľ 1 (Podať žiadosť), vedúci 0
+		      čaká na schválenie    žiadateľ 0,                 vedúci 1 (Rozhodnúť)
+		      vybavená              obaja 1 (Výsledok)
+
+		    Kým sa čaká, žiadateľ nemá čo robiť a stav si prečíta z názvu casu
+		    v zozname - preto názov vždy končí stavom.
+
+		    POZOR, tu bola medzikrokom chyba, ktorá stojí za zapamätanie:
+		    read-only pohľad `t_dv_podana` visel na read arcu z `p_na_schvalenie`,
+		    teda z miesta, ktoré `t_dv_rozhodnutie` KONZUMUJE. Keď vedúci klikol
+		    DOKONČIŤ a dokončenie bolo odmietnuté (prázdna voľba alebo výnimka
+		    z `phase="pre"`), engine tú read-only úlohu zmazal a už ju nikdy
+		    neobnovil - token sa nepohol, takže nebolo čo ju znova povoliť.
+		    Žiadateľ tým natrvalo stratil pohľad na vlastnú žiadosť a nikde sa
+		    to neohlásilo. Read arc pre pohľad patrí len na miesto, ktoré žiadny
+		    prechod nekonzumuje (v sd_ticket je to `p_alive`), alebo na koncové
+		    miesto ako `p_vybavena`. Podrobne v docs/PETRIFLOW_LEARNINGS.md.
+
+		Kontrola dátumov je dvakrát a zámerne: `set` event prepočítava počet dní
+		a píše varovanie hneď pri písaní, `phase="pre"` na dokončení podania to
+		isté vyhodí ako výnimku. Prvé je pohodlie, druhé je jediné, čo naozaj
+		zabráni podať žiadosť s dátumom do pred dátumom od - `required` overí len
+		to, že pole nie je prázdne.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>dv_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+dv_ziadatel: f.dv_ziadatel, dv_ziadatel_meno: f.dv_ziadatel_meno,
+dv_stav: f.dv_stav, dv_stav_label: f.dv_stav_label,
+dv_od: f.dv_od, dv_do: f.dv_do;
+
+def u = loggedUser()
+def meno = kto(u)
+
+change dv_ziadatel value { [u.id] }
+change dv_ziadatel_meno value { meno }
+change dv_stav value { "koncept" }
+change dv_stav_label value { "Rozpísaná" }
+changeCaseProperty("color").about { farba("koncept") }
+// Zamestnanec nazov nezadava - polozka menu ma vypnute `enable_case_title`,
+// takze "+" zaklada case rovno a nazov vznikne tu.
+changeCaseProperty("title").about { nazov(dv_od, dv_do, dv_ziadatel_meno, "Rozpísaná") }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="kto"><![CDATA[
+{ def u ->
+    // Nie `u?.fullName` - `?.` chráni pred null, nie pred chýbajúcou property,
+    // a na chýbajúcej vyhodí MissingPropertyException uprostred akcie.
+    // `loggedUser()` sa posiela ako argument: bezparametrická process funkcia
+    // nie je v tomto repozitári nikde overená.
+    return (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+}
+	]]></function>
+	<function scope="process" name="nazov"><![CDATA[
+{ def dv_od, def dv_do, def dv_ziadatel_meno, def stav ->
+    // Nazov casu sa nikde nezadava rucne - sklada sa tu, na jednom mieste,
+    // a ZACINA stavom. Predtym stav stal na konci a v zozname sa nedal precitat:
+    // stlpec Nazov sa skrati na "Dovolenka 5.10.2026 - 8.1..." a stav odpadne
+    // prvy. Vpredu prezije aj skratenie.
+    def meno = ((dv_ziadatel_meno.value ?: "") as String).trim()
+    def od = as_date(dv_od.value)
+    def po = as_date(dv_do.value)
+    // Kym termin nie je vyplneny, nema zmysel pisat "Dovolenka <nic>" - case
+    // sa v tej chvili vola podla toho, co to je, nie kedy to je.
+    def co = (od && po) ? ("Dovolenka " + obdobie(od, po)) : "Žiadosť o dovolenku"
+    return (stav as String) + " · " + co + " · " + (meno ?: "?")
+}
+	]]></function>
+	<function scope="process" name="farba"><![CDATA[
+{ def stavKod ->
+    // Farba casu je to jedine, co je v zozname vidno bez citania - ikona
+    // riadku sa ju obarvi. Paleta enginu: red|orange|yellow|green|teal|cyan|
+    // blue|indigo|purple|pink|brown|grey.
+    def m = ["koncept"      : "grey",     // nic sa este nedeje
+             "na_schvalenie": "blue",     // je to v obehu
+             "vratena"      : "orange",   // ziadatel ma nieco spravit
+             "schvalena"    : "green",
+             "zamietnuta"   : "red"]
+    return m[stavKod as String] ?: "grey"
+}
+	]]></function>
+	<function scope="process" name="dni_slovom"><![CDATA[
+{ def pocet ->
+    int n = ((pocet ?: 0) as Number).intValue()
+    return n + " " + ((n == 1) ? "deň" : ((n >= 2 && n <= 4) ? "dni" : "dní"))
+}
+	]]></function>
+	<function scope="process" name="zapis_historie"><![CDATA[
+{ def dv_historia, def text ->
+    // Bez tohto by sa pri druhom kole poznámka vedúceho prepísala a nebolo by
+    // vidieť, čo si žiadateľ a vedúci medzi sebou vlastne vymenili. Vzor je
+    // `tk_worklog` v sd_ticket.
+    def ts = java.time.LocalDateTime.now()
+            .format(java.time.format.DateTimeFormatter.ofPattern("d.M.yyyy HH:mm"))
+    def log = (dv_historia.value ?: "") as String
+    def riadok = ts + "  " + (text as String)
+    change dv_historia value { log ? log + "\n" + riadok : riadok }
+}
+	]]></function>
+	<function scope="process" name="as_date"><![CDATA[
+{ def raw ->
+    // Hodnota `date` poľa je LocalDate, ale cez REST aj z init príde reťazec.
+    // Bez tohto by porovnanie dátumov padlo na ClassCastException a akcia by
+    // sa zastavila v polovici - časť zmien zapísaná, zvyšok nie.
+    if (raw == null) return null
+    if (raw instanceof java.time.LocalDate) return raw
+    if (raw instanceof java.time.LocalDateTime) return raw.toLocalDate()
+    def s = (raw as String).trim()
+    if (!s) return null
+    try {
+        return java.time.LocalDate.parse(s.length() > 10 ? s.substring(0, 10) : s)
+    } catch (Exception e) {
+        return null
+    }
+}
+	]]></function>
+	<function scope="process" name="obdobie"><![CDATA[
+{ def od, def po ->
+    if (od == null || po == null) return "termín nevyplnený"
+    def fmt = java.time.format.DateTimeFormatter.ofPattern("d.M.yyyy")
+    return od.format(fmt) + " – " + po.format(fmt)
+}
+	]]></function>
+	<function scope="process" name="prepocet"><![CDATA[
+{ def dv_od, def dv_do, def dv_dni, def dv_kontrola ->
+    // `do` je v Groovy kľúčové slovo, preto `po`.
+    // Vracia true, ak je čo povedať - podľa toho akcia pole odkryje alebo skryje.
+    def od = as_date(dv_od.value)
+    def po = as_date(dv_do.value)
+    if (od == null || po == null) {
+        change dv_dni value { null }
+        change dv_kontrola value { "" }
+        return false
+    }
+    if (po.isBefore(od)) {
+        change dv_dni value { null }
+        change dv_kontrola value { "Dátum do je skôr ako dátum od – žiadosť sa takto podať nedá." }
+        return true
+    }
+    change dv_dni value { (java.time.temporal.ChronoUnit.DAYS.between(od, po) + 1) as Double }
+    change dv_kontrola value { "" }
+    return false
+}
+	]]></function>
+	<roleRef>
+		<id>zamestnanec</id>
+		<caseLogic>
+			<create>true</create>
+		</caseLogic>
+	</roleRef>
+	<userRef>
+		<id>dv_ziadatel</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</userRef>
+	<roleRef>
+		<id>veduci</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>zamestnanec</id>
+		<title name="zamestnanec_title">Zamestnanec</title>
+	</role>
+	<role>
+		<id>veduci</id>
+		<title name="veduci_title">Vedúci oddelenia</title>
+	</role>
+	<data type="i18n">
+		<id>div_ziadost</id>
+		<title/>
+		<init name="div_ziadost_init">Žiadosť</init>
+	</data>
+	<data type="i18n">
+		<id>div_rozhodnutie</id>
+		<title/>
+		<init name="div_rozhodnutie_init">Rozhodnutie vedúceho</init>
+	</data>
+	<data type="i18n">
+		<id>div_priebeh</id>
+		<title/>
+		<init name="div_priebeh_init">Priebeh</init>
+	</data>
+	<data type="userList">
+		<id>dv_ziadatel</id>
+		<title name="dv_ziadatel_title">Žiadateľ</title>
+		<desc name="dv_ziadatel_desc">Vyplní sa sám pri založení žiadosti. Na tomto zozname visí právo žiadosť vidieť.</desc>
+	</data>
+	<data type="text">
+		<id>dv_ziadatel_meno</id>
+		<title name="dv_ziadatel_meno_title">Podal</title>
+	</data>
+	<data type="date" immediate="true">
+		<id>dv_od</id>
+		<title name="dv_od_title">Dátum od</title>
+		<desc name="dv_od_desc">Prvý deň dovolenky.</desc>
+		<event type="set">
+			<id>dv_od_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+dv_od: f.dv_od, dv_do: f.dv_do, dv_dni: f.dv_dni, dv_kontrola: f.dv_kontrola;
+boolean varuj = prepocet(dv_od, dv_do, dv_dni, dv_kontrola)
+make dv_kontrola, visible on transitions when { varuj }
+make dv_kontrola, hidden  on transitions when { !varuj }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="date" immediate="true">
+		<id>dv_do</id>
+		<title name="dv_do_title">Dátum do</title>
+		<desc name="dv_do_desc">Posledný deň dovolenky, vrátane.</desc>
+		<event type="set">
+			<id>dv_do_set</id>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+dv_od: f.dv_od, dv_do: f.dv_do, dv_dni: f.dv_dni, dv_kontrola: f.dv_kontrola;
+boolean varuj = prepocet(dv_od, dv_do, dv_dni, dv_kontrola)
+make dv_kontrola, visible on transitions when { varuj }
+make dv_kontrola, hidden  on transitions when { !varuj }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="number">
+		<id>dv_dni</id>
+		<title name="dv_dni_title">Počet dní</title>
+		<desc name="dv_dni_desc">Vrátane prvého aj posledného dňa. Počíta sa sám.</desc>
+	</data>
+	<data type="text" immediate="true">
+		<id>dv_dovod</id>
+		<title name="dv_dovod_title">Dôvod</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>dv_kontrola</id>
+		<title name="dv_kontrola_title">Kontrola</title>
+		<!--
+			Nesie živé varovanie o obrátenom termíne a NIČ INÉ. Základné
+			nastavenie je preto `hidden` a akcia ho odkryje len vtedy, keď je
+			čo povedať - inak by na formulári trčal prázdny rámik s nadpisom
+			"Kontrola", ktorý vyzerá ako ovládací prvok a nie je ním.
+		-->
+	</data>
+	<data type="text">
+		<id>dv_stav</id>
+		<title name="dv_stav_title">Kód stavu</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>dv_stav_label</id>
+		<title name="dv_stav_label_title">Stav</title>
+		<!--
+			`immediate="true"` nie je kozmetika: len takto sa pole dostane do
+			`immediateData` casu a v zozname si ho ide pridat ako stlpec
+			(ponuka pod ikonou vpravo v hlavicke tabulky). Predvolene stlpce
+			riadi Angular provider NAE_DEFAULT_HEADERS, ktory je globalny pre
+			vsetky zobrazenia - do toho sa kvoli jednej appke nesaha.
+		-->
+	</data>
+	<data type="dateTime">
+		<id>dv_podane_o</id>
+		<title name="dv_podane_o_title">Podané</title>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>dv_rozhodnutie</id>
+		<title name="dv_rozhodnutie_title">Rozhodnutie</title>
+		<options>
+			<option key="schvalena" name="dv_rozhodnutie_opt_schvalena">Schváliť</option>
+			<option key="zamietnuta" name="dv_rozhodnutie_opt_zamietnuta">Zamietnuť</option>
+			<option key="vratena" name="dv_rozhodnutie_opt_vratena">Vrátiť na prerobenie</option>
+		</options>
+	</data>
+	<data type="text" immediate="true">
+		<id>dv_poznamka</id>
+		<title name="dv_poznamka_title">Poznámka vedúceho</title>
+		<!--
+			`desc` je na poli, nie na dataRef, takže je rovnaký na oboch
+			formulároch vedúceho. Pôvodne tu bolo "Nepovinné...", čo na vrátení
+			protirečilo hviezdičke pri povinnom poli - preto je znenie neutrálne.
+		-->
+		<desc name="dv_poznamka_desc">Zamestnanec ju uvidí vo svojej žiadosti.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>dv_rozhodol</id>
+		<title name="dv_rozhodol_title">Rozhodol</title>
+	</data>
+	<data type="dateTime">
+		<id>dv_rozhodnute_o</id>
+		<title name="dv_rozhodnute_o_title">Rozhodnuté</title>
+	</data>
+	<data type="number">
+		<id>dv_to_vybavena</id>
+		<title name="dv_to_vybavena_title">Smerovanie: vybavená</title>
+		<desc name="dv_to_vybavena_desc">Násobnosť variable arcu. Nastavuje ju akcia rozhodnutia, človek sa jej nedotýka.</desc>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>dv_to_koncept</id>
+		<title name="dv_to_koncept_title">Smerovanie: späť žiadateľovi</title>
+		<desc name="dv_to_koncept_desc">Násobnosť variable arcu. Nastavuje ju akcia rozhodnutia, človek sa jej nedotýka.</desc>
+		<init>0</init>
+	</data>
+	<data type="text">
+		<id>dv_historia</id>
+		<title name="dv_historia_title">Priebeh</title>
+		<desc name="dv_historia_desc">Čo sa so žiadosťou dialo. Dopĺňa sa samo, prepísať sa nedá.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<transition>
+		<id>t_dv_podanie</id>
+		<x>140</x>
+		<y>80</y>
+		<label name="t_dv_podanie_label">Podať žiadosť</label>
+		<icon>edit_calendar</icon>
+		<assignPolicy>auto</assignPolicy>
+		<!--
+			Iba žiadateľ. Rola `zamestnanec` tu zámerne nie je: roleRef a userRef
+			sa zjednocujú, takže by rozpísanú žiadosť mohol dokončiť ktokoľvek
+			z oddelenia.
+		-->
+		<userRef>
+			<id>dv_ziadatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_podanie</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<!--
+				Stav a poznámka vedúceho sú hore a zámerne aj pri prvom písaní,
+				keď sú prázdne. Po vrátení je práve toto to jediné, čo žiadateľ
+				potrebuje prečítať skôr, než začne opravovať - a keby sa
+				zobrazovali len niekedy, muselo by to riadiť `copyBehavior`
+				alebo akcia, teda ďalšie miesto, kde sa dá pomýliť.
+			-->
+			<dataRef>
+				<id>dv_stav_label</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_poznamka</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>0</y>
+					<rows>2</rows>
+					<cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ziadost</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>dv_od</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_do</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_dni</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>3</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_dovod</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_kontrola</id>
+				<logic>
+					<behavior>hidden</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_dv_podanie_finish</id>
+			<actions phase="pre">
+				<action id="4"><![CDATA[
+dv_od: f.dv_od, dv_do: f.dv_do;
+
+// Jediné miesto, ktoré podanie naozaj zastaví. Vyhodenie výnimky v phase="pre"
+// zruší dokončenie prechodu, takže token zostane v p_koncept a žiadosť sa
+// nedostane vedúcemu s nezmyselným termínom.
+def od = as_date(dv_od.value)
+def po = as_date(dv_do.value)
+if (od == null || po == null) {
+    throw new java.lang.IllegalStateException("Vyplňte dátum od aj dátum do.")
+}
+if (po.isBefore(od)) {
+    throw new java.lang.IllegalStateException("Dátum do nemôže byť skôr ako dátum od.")
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="5"><![CDATA[
+dv_od: f.dv_od, dv_do: f.dv_do, dv_stav: f.dv_stav, dv_stav_label: f.dv_stav_label,
+dv_podane_o: f.dv_podane_o, dv_kontrola: f.dv_kontrola, dv_ziadatel_meno: f.dv_ziadatel_meno,
+dv_dni: f.dv_dni, dv_historia: f.dv_historia;
+
+def opakovane = (((dv_stav.value ?: "") as String) == "vratena")
+
+change dv_stav value { "na_schvalenie" }
+change dv_stav_label value { "Čaká na schválenie" }
+changeCaseProperty("color").about { farba("na_schvalenie") }
+change dv_podane_o value { java.time.LocalDateTime.now() }
+change dv_kontrola value { "" }
+zapis_historie(dv_historia, (opakovane ? "podané znova: " : "podané: ") +
+        obdobie(as_date(dv_od.value), as_date(dv_do.value)) +
+        " (" + dni_slovom(dv_dni.value) + ")")
+changeCaseProperty("title").about {
+    nazov(dv_od, dv_do, dv_ziadatel_meno, "Čaká na schválenie")
+}
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_dv_rozhodnutie</id>
+		<x>332</x>
+		<y>80</y>
+		<label name="t_dv_rozhodnutie_label">Rozhodnúť o žiadosti</label>
+		<icon>how_to_reg</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>veduci</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_rozhodnutie</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_ziadost</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>dv_ziadatel_meno</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_podane_o</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_od</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_do</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_dni</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>2</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_dovod</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>3</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_priebeh</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>6</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>dv_historia</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>7</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_rozhodnutie</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>10</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>dv_rozhodnutie</id>
+				<logic>
+					<behavior>editable</behavior>
+					<behavior>required</behavior>
+				</logic>
+				<!-- Schváliť / Zamietnuť / Vrátiť na prerobenie -->
+				<layout>
+					<x>0</x>
+					<y>11</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_poznamka</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>12</y>
+					<rows>3</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_dv_rozhodnutie_finish</id>
+			<actions phase="pre">
+				<action id="6"><![CDATA[
+dv_rozhodnutie: f.dv_rozhodnutie, dv_poznamka: f.dv_poznamka,
+dv_to_vybavena: f.dv_to_vybavena, dv_to_koncept: f.dv_to_koncept;
+
+// SMEROVANIE MUSÍ BYŤ V phase="pre". Engine vyhodnotí násobnosti variable
+// arcov po `pre` a pred `post`; keby sa flagy nastavili v `post`, token by sa
+// pohyboval s pôvodnými nulami a nevystrelil by ani jeden arc - case by ostal
+// bez tokenu. (docs/petriflow_reference.md, C4)
+def volba = ((dv_rozhodnutie.value ?: "") as String).trim()
+
+if (!volba) {
+    throw new java.lang.IllegalStateException(
+            "Vyberte, či žiadosť schvaľujete, zamietate alebo vraciate na prerobenie.")
+}
+if (!(volba in ["schvalena", "zamietnuta", "vratena"])) {
+    // Bez tohto by neznáma hodnota nechala oba flagy na nule a token by sa
+    // z p_na_schvalenie stratil bez toho, aby kdekoľvek pribudol.
+    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+}
+if (volba == "vratena" && !((dv_poznamka.value ?: "") as String).trim()) {
+    // Povinné je to len pri vrátení, takže sa to nedá vyjadriť `required`
+    // na dataRefe - ten platí pre všetky tri možnosti naraz.
+    throw new java.lang.IllegalStateException("Napíšte, čo má žiadateľ doplniť.")
+}
+
+change dv_to_vybavena value { (volba == "vratena" ? 0 : 1) as Double }
+change dv_to_koncept  value { (volba == "vratena" ? 1 : 0) as Double }
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="7"><![CDATA[
+dv_rozhodnutie: f.dv_rozhodnutie, dv_stav: f.dv_stav, dv_stav_label: f.dv_stav_label,
+dv_rozhodol: f.dv_rozhodol, dv_rozhodnute_o: f.dv_rozhodnute_o, dv_poznamka: f.dv_poznamka,
+dv_historia: f.dv_historia, dv_od: f.dv_od, dv_do: f.dv_do,
+dv_ziadatel_meno: f.dv_ziadatel_meno;
+
+def volba = ((dv_rozhodnutie.value ?: "") as String).trim()
+def meno = kto(loggedUser())
+def pozn = ((dv_poznamka.value ?: "") as String).trim()
+
+def label = ["schvalena": "Schválená", "zamietnuta": "Zamietnutá",
+             "vratena"  : "Vrátená na prerobenie"][volba]
+
+change dv_stav value { volba }
+change dv_stav_label value { label }
+changeCaseProperty("color").about { farba(volba) }
+
+if (volba == "vratena") {
+    zapis_historie(dv_historia, "vrátené na prerobenie (" + meno + "): " + pozn)
+} else {
+    // Kto a kedy rozhodol sa zapisuje len pri konečnom rozhodnutí. Vrátenie
+    // rozhodnutie nie je - žiadosť sa vracia do hry.
+    change dv_rozhodol value { meno }
+    change dv_rozhodnute_o value { java.time.LocalDateTime.now() }
+    zapis_historie(dv_historia,
+            (volba == "schvalena" ? "schválené (" : "zamietnuté (") + meno + ")" +
+                    (pozn ? ": " + pozn : ""))
+}
+
+// Vynulovať výber, inak by pri ďalšom kole (po vrátení a opätovnom podaní)
+// bola v selecte predvyplnená minulá voľba a DOKONČIŤ by prešlo bez toho,
+// aby sa vedúci na čokoľvek pozrel.
+change dv_rozhodnutie value { null }
+changeCaseProperty("title").about { nazov(dv_od, dv_do, dv_ziadatel_meno, label) }
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_dv_vysledok</id>
+		<x>524</x>
+		<y>250</y>
+		<label name="t_dv_vysledok_label">Výsledok</label>
+		<icon>fact_check</icon>
+		<assignPolicy>auto</assignPolicy>
+		<!--
+			Read arc z p_vybavena - vznikne až rozhodnutím a potom zostane
+			otvorený navždy. Predtým tu bol jeden prehľad na read arcu
+			z vlastného miesta p_alive, otvorený od založenia casu; každý mal
+			potom v case o jednu úlohu viac, než mal skutočne robiť.
+		-->
+		<userRef>
+			<id>dv_ziadatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<roleRef>
+			<id>veduci</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_vysledok</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>dv_stav_label</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_ziadatel_meno</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>0</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_od</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_do</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_dni</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>4</x>
+					<y>1</y>
+					<rows>1</rows>
+					<cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_dovod</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>2</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_rozhodnutie</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>4</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>dv_poznamka</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>5</y>
+					<rows>2</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_rozhodol</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>dv_rozhodnute_o</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>3</x>
+					<y>7</y>
+					<rows>1</rows>
+					<cols>3</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>div_priebeh</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>8</y>
+					<rows>1</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+				<component>
+					<name>divider</name>
+				</component>
+			</dataRef>
+			<dataRef>
+				<id>dv_historia</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>0</x>
+					<y>9</y>
+					<rows>4</rows>
+					<cols>6</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p_koncept</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Rozpísaná</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_na_schvalenie</id>
+		<x>236</x>
+		<y>80</y>
+		<label>Čaká na schválenie</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_vybavena</id>
+		<x>428</x>
+		<y>80</y>
+		<label>Vybavená</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_podanie_in</id>
+		<type>regular</type>
+		<sourceId>p_koncept</sourceId>
+		<destinationId>t_dv_podanie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_podanie_out</id>
+		<type>regular</type>
+		<sourceId>t_dv_podanie</sourceId>
+		<destinationId>p_na_schvalenie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_rozhodnutie_in</id>
+		<type>regular</type>
+		<sourceId>p_na_schvalenie</sourceId>
+		<destinationId>t_dv_rozhodnutie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<!--
+		Dva variable arcy z toho istého prechodu. Variable arc sa nepíše ako
+		type="variable" - je to regular s multiplicity 0 a <reference> na number
+		pole, ktoré akcia v phase="pre" nastaví na 0 alebo 1. Token teda vystrelí
+		presne jeden z nich, podľa voľby vedúceho.
+
+		Preto je vrátenie tretia možnosť v jednom tasku a nie samostatný prechod:
+		rozhodnutie je jedno rozhodnutie, len má tri vyústenia.
+	-->
+	<arc>
+		<id>a_rozhodnutie_vybavit</id>
+		<type>regular</type>
+		<sourceId>t_dv_rozhodnutie</sourceId>
+		<destinationId>p_vybavena</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>dv_to_vybavena</reference>
+	</arc>
+	<arc>
+		<id>a_rozhodnutie_vratit</id>
+		<type>regular</type>
+		<sourceId>t_dv_rozhodnutie</sourceId>
+		<destinationId>p_koncept</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>dv_to_koncept</reference>
+	</arc>
+	<arc>
+		<id>a_vysledok</id>
+		<type>read</type>
+		<sourceId>p_vybavena</sourceId>
+		<destinationId>t_dv_vysledok</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

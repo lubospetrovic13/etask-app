@@ -1,0 +1,316 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>hr/dovolenky/dv_menu</id>
+	<version>1.0.0</version>
+	<initials>DVM</initials>
+	<title name="net_title">Menu Dovoleniek</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Leave menu</i18nString>
+		<i18nString name="veduci_title">Department manager</i18nString>
+		<i18nString name="t_dv_menu_label">Menu state</i18nString>
+	</i18n>
+	<icon>menu</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Karta "Dovolenky" v bočnom menu sama žiadne zobrazenia nenesie - uzol URI
+		vznikne importom siete s identifikátorom `dovolenky/...`, ale to, čo pod
+		kartou vidno, sú casy procesov `filter` a `preference_filter_item`.
+		Bez nich karta existuje a vedie do prázdna.
+
+		Túto sieť teda drží pri živote jediný bootstrap case (processes.json ->
+		bootstrapCase), z ktorého sa spustí akcia nižšie.
+
+		Používa sa `createOrUpdateMenuItem` so 7 argumentmi - tá z projektu, nie
+		tá z enginu (rozlišujú sa len aritou a engine na update ceste volá
+		neexistujúce `updateFilter`). Dôvod je siedmy argument `allowedNets`:
+		bez neho zobrazenie existuje, ale tlačidlo "+" v ňom vráti "Žiadne
+		povolené siete" a zamestnanec si žiadosť nemá ako založiť. sd_menu.xml
+		stavia zobrazenia cez `createFilterInMenu`, ktoré allowedNets nastaviť
+		nevie - preto tam ten istý problém je a Service Desk sa zakladá inak.
+
+		Idempotencia je ručne: `findMenuItem(id)` vnútri tej metódy existujúcu
+		položku nenájde (hľadá v inom rozsahu), takže pri druhom spustení by
+		vznikla druhá sada zobrazení. Rovnaké necháme byť, zmenené zahodíme
+		a postavíme znova.
+
+		Štyri zobrazenia, všetky typu Case. Filtrovať sa dá dvoma spôsobmi a oba
+		sú tu použité zámerne:
+
+		  * podľa **polohy tokenu** - `taskIds` je pole v indexe casu, ktoré drží
+		    id práve otvorených prechodov. `taskIds:"t_dv_rozhodnutie"` = "žiadosti,
+		    o ktorých sa dá rozhodnúť". Hovorí to o tom, čo sa s casom dá robiť.
+		  * podľa **dátového poľa** - polia s `immediate="true"` engine indexuje
+		    pod `dataSet.<id pola>` a v query stringu sú dostupné ako `.textValue`
+		    a `.textValue.keyword` (text), `.timestampValue` a `.dateValue`
+		    (dátum), `.booleanValue`. Zobrazenie "Vybavené" to používa a je to
+		    čitateľnejšie: hovorí o stave žiadosti, nie o tom, ktorá úloha je
+		    zhodou okolností otvorená.
+
+		POZOR na zámenu: gotcha 40 v referencii hovorí, že `dataSet` filtre
+		NEFUNGUJÚ - ale to je o `findCases { it.dataSet... }`, teda o QueryDSL nad
+		Mongom. V Elasticu fungujú. Sú to dva rôzne mechanizmy s tým istým názvom.
+
+		Prvá verzia mala tieto zobrazenia typu Task (dopyt na `transitionId`).
+		Filtrovalo sa to samo a vyzeralo to elegantnejšie, ale malo to chybu:
+		zobrazenie typu Task ukáže riadok na úlohu, nie na žiadosť, takže pri
+		viacerých úlohách v jednom stave by bola tá istá žiadosť v zozname
+		viackrát. Zobrazenie typu Case otvorí celý case a v ňom sú úlohy vedľa
+		seba.
+
+		Cena za to je, že Case zoznam sa filtruje oprávnením `view` na case, nie
+		právom prechod vykonať - žiadateľ má `view` na svoju žiadosť, takže by
+		si vlastnú videl aj v "Na schválenie". Preto má tá položka `allowed_roles`
+		nastavené na `veduci`: drawer aj počítadlá ju potom zamestnancovi vôbec
+		nezobrazia. Nie je to bezpečnostná hranica (tou je `perform` na prechode),
+		je to poriadok v menu.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>dv_menu_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+def created = []
+def unchanged = []
+def failed = []
+
+// allowedNets je to, z coho zobrazenie stavia ponuku tlacidla "+". Zaklada sa
+// len ziadost, takze tam patri jedina siet - a len pri zobrazeni typu Case,
+// task sa zalozit neda.
+def ziadost = "hr/dovolenky/dv_ziadost"
+def vsetky = "processIdentifier:\"" + ziadost + "\""
+
+// Predvolene stlpce zoznamu. Su to `HeaderColumn.uniqueId` oddelene ciarkou:
+// meta stlpec je `meta-<pole>` (title, visualId, author, creationDate),
+// datove pole je `<identifikator siete>-<id pola>` a MUSI mat immediate="true",
+// inak sa do casu ani do indexu nedostane a stlpec zostane prazdny.
+def stlpce = "meta-title" +
+        ",hr/dovolenky/dv_ziadost-dv_stav_label" +
+        ",hr/dovolenky/dv_ziadost-dv_od" +
+        ",hr/dovolenky/dv_ziadost-dv_do"
+
+// `nets` je allowedNets. Nesie DVE veci naraz, a tá druhá nie je zrejmá:
+//   1. tlačidlo "+" - bez neho vráti "Žiadne povolené siete";
+//   2. ponuku stĺpcov. `CaseHeaderService` ju skladá z povolených sietí
+//      a `default_headers` v nej `uniqueId` len VYHĽADÁ. Čo nenájde, nechá
+//      prázdne a nič nezaloguje - takže zobrazenie bez `nets` ukáže iba
+//      `meta-*` stĺpce, hoci `default_headers` má uložené správne.
+// Preto ho majú aj zobrazenia, z ktorých sa zakladať nemá. Zistené preklikaním:
+// "Na schválenie" a "Vybavené" ukazovali iba stĺpec Názov.
+def views = [
+        [id: "dv_moje", name: i18n("Žiadosti o dovolenku", ["en": "My leave requests"]), type: "Case", icon: "beach_access",
+         query: vsetky, nets: [ziadost], roles: [:], headers: stlpce],
+        [id: "dv_na_schvalenie", name: i18n("Na schválenie", ["en": "To approve"]), type: "Case", icon: "how_to_reg",
+         query: vsetky + " AND taskIds:\"t_dv_rozhodnutie\"", nets: [ziadost],
+         roles: ["veduci": ziadost], headers: stlpce],
+        [id: "dv_rozpisane", name: i18n("Rozpísané a vrátené", ["en": "Drafts and returned"]), type: "Case", icon: "edit_calendar",
+         query: vsetky + " AND taskIds:\"t_dv_podanie\"", nets: [ziadost], roles: [:],
+         headers: stlpce],
+        // Filtruje sa podla DATOVEHO POLA, nie podla polohy tokenu. Da sa to:
+        // polia s immediate="true" engine indexuje pod `dataSet.<id>` a v query
+        // stringu su dostupne ako `.textValue` / `.keyword` (text),
+        // `.timestampValue` / `.dateValue` (datum), `.booleanValue`.
+        // Je to citatelnejsie nez `taskIds:"t_dv_vysledok"` - hovori to o stave
+        // ziadosti, nie o tom, ktora uloha je zhodou okolnosti otvorena.
+        [id: "dv_vybavene", name: i18n("Vybavené", ["en": "Closed"]), type: "Case", icon: "task_alt",
+         query: vsetky + " AND dataSet.dv_stav_label.textValue:(\"Schválená\" OR \"Zamietnutá\")",
+         nets: [ziadost], roles: [:], headers: stlpce],
+]
+
+views.each { v ->
+    def id = v.id as String
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            // Porovnava sa dopyt A allowedNets. Nazov, ikonu, stlpce a vypnuty
+            // dialog vieme dorovnat na existujucej polozke; tieto dve nie -
+            // idu do konstruktora a menia sa len zmazanim a postavenim znova.
+            //
+            // `allowedNets` tu bolo doplnene az potom, co sa ukazalo, ze bez neho
+            // sa zmena ticho zahodi: pridal som siet dvom zobrazeniam, dopyt sa
+            // nezmenil, podmienka nizsie ich vyhlasila za nezmenene a stlpce sa
+            // dalej nezobrazovali. Rozdiel vidno na `filter` case, v poli
+            // `filter` -> `allowedNets`.
+            def current = getFilterFromMenuItem(existing)
+            def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
+            def currentNets = ((current?.dataSet?."filter"?.allowedNets ?: []) as List)
+                    .collect { it as String } as Set
+            def wantNets = (v.nets as List).collect { it as String } as Set
+            // A NAZOV, vratane prekladov. Bez toho by uz nasadena instancia
+            // doplneny preklad nikdy nedostala: polozka tam je s tym istym
+            // dopytom aj sietami, takze by sa vzdy vyhlasila za nezmenenu
+            // a v menu by navzdy zostal jednojazycny nazov.
+            def currentName = current?.dataSet?."i18n_filter_name"?.value
+            def sameName = currentName != null &&
+                    (currentName.defaultValue as String) == (v.name.defaultValue as String) &&
+                    (currentName.translations ?: [:]) == (v.name.translations ?: [:])
+            if (currentQuery == (v.query as String) && currentNets == wantNets && sameName) {
+                nastav_zobrazenie(existing, v.nets as List, v.headers)
+                // Uzol dorovnaj AJ pri nezmenenej polozke: URI uzly zije
+                // Elasticsearch, polozky menu Mongo. Po vymene ES indexu maju
+                // uzly nove id, polozka visi na starom a priecinok je PRAZDNY -
+                // bez chyby a bez logu. `createOrUpdateMenuItem` to riesi, ale
+                // sem sa nedostane, lebo dopyt ani nazov sa nezmenili.
+                pripoj_do_uzla(existing, "hr/dovolenky")
+                unchanged << id
+                return
+            }
+            // UPDATE CESTA enginoveho `createOrUpdateMenuItem` NEFUNGUJE:
+            // `changeFilter filter query { ... }` vola `updateFilter(Case, Map)`,
+            // ktore JE na `ActionDelegate` - ale je `private`, a uzavery ho
+            // volaju dynamicky, takze sa hlada na metaclass podtriedy, ktoru
+            // si kazda appka robi. Vysledok je MissingMethodException.
+            // (Starter, docs/ENGINE_ISSUES.md E6.)
+            //
+            // Projektova varianta `EtaskActionDelegate.createOrUpdateMenuItem`
+            // to uz obchadza - zapisuje priamo cez `setData`. Tu sa aj tak
+            // zahadzuje a stavia znova, lebo `allowedNets` a dopyt idu do
+            // konstruktora filtra a na existujucej polozke sa zmenit nedaju.
+            //
+            // Preto sa polozka ZAHODI a postavi znova - a musi sa zahodit aj jej
+            // `filter` case. `deleteMenuItem` maze len polozku a filter nechava
+            // osirely; po niekolkych behoch ich je v databaze hromada a
+            // `getFilterFromMenuItem` potom moze vratit ten nespravny, cim sa
+            // porovnanie vyssie rozsype a cely cyklus sa opakuje.
+            //
+            // PORADIE JE POVINNE: najprv polozka, potom filter. Naopak to padne
+            // na `IllegalArgumentException: Could not find Case with id [...]`,
+            // lebo `deleteMenuItem` si filter este raz nacita podla id ulozeneho
+            // na polozke. Referenciu na filter drzime v `current`, takze po
+            // zmazani polozky ho mame stale cim zmazat.
+            deleteMenuItem(existing)
+            if (current != null) {
+                deleteFilter(current)
+            }
+        }
+        // DEVAT argumentov, a to zamerne. `createOrUpdateMenuItem` existuje
+        // dvakrat: projektova (id, uri, type, query, icon, title, allowedNets,
+        // roles = [:], bannedRoles = [:]) a enginova s 11 parametrami, ktora na
+        // update ceste vola neexistujuce `updateFilter` a PADNE. Rozlisuju sa
+        // LEN aritou. Pri osmich argumentoch si Groovy vybral enginovu a padlo
+        // to na `MissingMethodException: updateFilter()` - pri deviatich sedi
+        // projektova presne, bez dopocitavania defaultov.
+        //
+        // Poradie NIE je rovnake ako pri createFilterInMenu: tu je prve id,
+        // az potom URI.
+        def item = createOrUpdateMenuItem(
+                id,                 // menu_item_identifier
+                "hr/dovolenky",        // URI cesta
+                v.type as String,   // "Case" alebo "Task"
+                v.query as String,  // dopyt
+                v.icon as String,
+                v.name,   // nazov v menu aj nazov filtra
+                v.nets as List,     // allowedNets - bez toho "+" nefunguje
+                v.roles as Map,     // allowed_roles: importId -> identifikator siete
+                [:]                 // bannedRoles - dourcuje aritu na projektovu
+        )
+        if (item) { created << id } else { failed << id }
+        nastav_zobrazenie(item, v.nets as List, v.headers)
+    } catch (Exception e) {
+        failed << (id + " (" + e.getClass().simpleName + ": " + e.message + ")")
+    }
+}
+
+// Vysledok patri do nazvu casu, nie do datoveho pola: po createFilterInMenu sa
+// zapis do vlastneho casu neuchova - engine medzitym zakladal ine casy a nas
+// outcome zahodil. changeCaseProperty prezije.
+def summary = "Menu Dovoleniek – " + (created.size() + unchanged.size()) + "/" + views.size()
+if (failed) {
+    summary = "CHYBA menu Dovoleniek – nepodarilo sa: " + failed.join(", ")
+}
+changeCaseProperty("title").about { summary }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="nastav_zobrazenie"><![CDATA[
+{ def menuItem, def nets, def headers ->
+    // Dve veci na prechode `view` položky menu, ktoré `createOrUpdateMenuItem`
+    // ako argumenty nemá, takže sa dopisujú zvlášť cez setData:
+    //
+    //   enable_case_title  - keď je true (default), vyskočí pri "+" dialóg
+    //                        "Vyplňte názov prípadu" a názov si vymýšľa človek.
+    //                        Vypnutý sa case založí rovno a názov mu dá `create`
+    //                        akcia siete. Týka sa len zobrazení s allowedNets.
+    //   default_headers    - predvolené stĺpce zoznamu, `HeaderColumn.uniqueId`
+    //                        oddelené čiarkou. Toto je JEDINÝ spôsob, ako ich
+    //                        deklarovať bez zásahu do Angularu: engine ich dá do
+    //                        dát položky menu, `GroupNavigationComponentResolver`
+    //                        ich rozdelí a vloží ako `NAE_DEFAULT_HEADERS` do
+    //                        injektora práve toho zobrazenia. Globálny token by
+    //                        vyprázdnil stĺpce všetkých ostatných zobrazení.
+    if (menuItem == null) return
+    def payload = [:]
+    if (nets) {
+        payload.put("enable_case_title", ["value": false, "type": "boolean"])
+        payload.put("case_require_title_in_creation", ["value": false, "type": "boolean"])
+    }
+    if (headers) {
+        payload.put("default_headers", ["value": headers as String, "type": "text"])
+    }
+    if (payload) {
+        setData("view", menuItem, payload)
+    }
+}
+	]]></function>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def identifier ->
+    // `findMenuItem(id)` z ActionDelegate existujucu polozku nenajde (hlada
+    // v inom rozsahu), takze by sa pri kazdom spusteni zalozila druha sada
+    // zobrazeni. Polozky su casy `preference_filter_item`, takze si ich
+    // prejdeme sami.
+    def id = ((identifier ?: "") as String).trim()
+    if (!id) return null
+    def items = findCases { it.processIdentifier.eq("preference_filter_item") }
+    return items?.find { ((it.dataSet["menu_item_identifier"]?.value ?: "") as String) == id }
+}
+	]]></function>
+	<roleRef>
+		<id>veduci</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>veduci</id>
+		<title name="veduci_title">Vedúci oddelenia</title>
+	</role>
+	<transition>
+		<id>t_dv_menu</id>
+		<x>112</x>
+		<y>80</y>
+		<label name="t_dv_menu_label">Stav menu</label>
+		<icon>menu</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>veduci</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_dv_menu</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_dv_menu</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

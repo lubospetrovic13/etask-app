@@ -1,1 +1,73 @@
-{}
+{
+  "dovolenky": {
+    "source": "C:\\Users\\petro\\IdeaProjects\\etask-app-dovolenky",
+    "title": "Dovolenky",
+    "processes": [
+      "dv_ziadost.xml",
+      "dv_menu.xml"
+    ],
+    "tools": [
+      "dvcheck.py"
+    ],
+    "docs": [],
+    "bootstrapCase": [
+      "hr/dovolenky/dv_menu"
+    ],
+    "uriNodes": [
+      "hr/dovolenky"
+    ],
+    "netScope": [
+      "hr/dovolenky/*"
+    ]
+  },
+  "majetok": {
+    "source": "C:\\Users\\petro\\IdeaProjects\\etask-app-majetok",
+    "title": "Majetok",
+    "processes": [
+      "ma_zariadenie.xml",
+      "ma_menu.xml"
+    ],
+    "tools": [
+      "majetokcheck.py"
+    ],
+    "docs": [],
+    "bootstrapCase": [
+      "it/majetok/ma_menu"
+    ],
+    "uriNodes": [
+      "it/majetok"
+    ],
+    "netScope": [
+      "it/majetok/*"
+    ]
+  },
+  "objednavky-faktury": {
+    "source": "C:\\Users\\petro\\IdeaProjects\\etask-app-objednavky-faktury",
+    "title": "Objednávky a faktúry",
+    "processes": [
+      "fa_faktura.xml",
+      "ob_objednavka.xml",
+      "sc_menu.xml",
+      "sc_nastavenia.xml"
+    ],
+    "tools": [
+      "sccheck.py"
+    ],
+    "docs": [
+      "PRIRUCKA.md"
+    ],
+    "bootstrapCase": [
+      "financie/sc_menu",
+      "admin/nastavenia/sc_nastavenia"
+    ],
+    "uriNodes": [
+      "financie/faktury",
+      "financie/objednavky",
+      "admin/nastavenia"
+    ],
+    "netScope": [
+      "financie/*",
+      "admin/nastavenia/*"
+    ]
+  }
+}

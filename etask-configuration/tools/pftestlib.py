@@ -232,10 +232,34 @@ def ok_body(r):
 
 # -------------------------------------------------------------------- menu
 
-def uri_paths(cl):
-    """Karty, ktore uzivatel vidi v bocnom menu."""
+def uri_paths(cl, deep=False):
+    """Karty, ktore uzivatel vidi v bocnom menu.
+
+    Bez `deep` su to len deti korena. Odkedy appky zijú v kategoriach
+    (`hr/dovolenky`, `financie/faktury`), je dieťaťom korena uz len kategoria -
+    takze test, ktory hlada `hr/dovolenky` medzi detmi korena, zlyha bez ohladu
+    na to, ci appka funguje. `deep=True` prejde strom do hlbky.
+
+    Kazdy uzol sa doťahuje zvlast, lebo `/api/v2/uri/{uri}` vracia len PRIAME
+    potomkov - a zaroven filtruje podla opravneni, takze vysledok je naozaj to,
+    co ten ucet vidi, nie cely strom.
+    """
     st, root = cl.get("/api/v2/uri/root")
-    return [c["uriPath"] for c in (root or {}).get("children", [])]
+    paths = [c["uriPath"] for c in (root or {}).get("children", [])]
+    if not deep:
+        return paths
+    videne, fronta = [], list(paths)
+    while fronta:
+        p = fronta.pop(0)
+        if p in videne:
+            continue
+        videne.append(p)
+        # Standardny base64 - controller pouziva `Base64.getDecoder()`. Pre
+        # nase cesty nevznika '/' ani '+', takze URL to prezije.
+        kluc = base64.b64encode(p.encode("utf-8")).decode()
+        st, node = cl.get("/api/v2/uri/" + kluc)
+        fronta.extend(c["uriPath"] for c in (node or {}).get("children", []))
+    return videne
 
 
 def menu_items(cl, prefix=None):

@@ -244,7 +244,7 @@ def main(argv):
     # uloha, na ktoru "rolu ma". A nevidiet ju sa da lahko: pfseed sa bezne
     # spusta hned po importe (`pfsync --sync`, `up.sh`), kedy cerstva verzia
     # v hromadnom vyhladavani este nemusi byt. Presne to sa stalo na
-    # `schvalovanie/faktury/fa_faktura` v3.0.0: import presel, pfseed hlasil
+    # `financie/faktury/fa_faktura` v3.0.0: import presel, pfseed hlasil
     # zmeny, a super prisel o vsetky roly tej verzie.
     known = {(n.get("identifier"), n.get("version")) for n in scoped}
     for ident in sorted(titles):
@@ -354,7 +354,7 @@ def main(argv):
         # vo vyhladavani. `role/assign` cely zoznam PREPISUJE, takze verzia,
         # ktoru pfseed nevidel, ostane bez roli - a v appke to vyzera tak, ze
         # uzivatelovi zmizla uloha, na ktoru "rolu ma". Stalo sa to na
-        # `schvalovanie/faktury/fa_faktura`.
+        # `financie/faktury/fa_faktura`.
         st, after, _ = http(f"{url}/api/user/search?size=20", token, "POST", {"fulltext": email})
         again = (after.get("_embedded", {}).get("users", []) if isinstance(after, dict) else [])
         fresh = next((u for u in again if (u.get("email") or "").lower() == email.lower()), None)

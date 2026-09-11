@@ -4,9 +4,9 @@ pucheck - akceptacny test appky Pouzivatelia proti BEZIACEMU enginu.
 
 Model: JEDEN UCET = JEDEN PRIPAD.
 
-  pouzivatelia/pu_zalozenie   jediny pripad, jedina uloha `t_pu_novy` = pult
+  admin/pouzivatelia/pu_zalozenie   jediny pripad, jedina uloha `t_pu_novy` = pult
                               na zakladanie. Po dokonceni sa SAM vyprazdni.
-  pouzivatelia/pu_pouzivatel  pripad na ucet, sluckova uloha `t_pu_uprava`.
+  admin/pouzivatelia/pu_pouzivatel  pripad na ucet, sluckova uloha `t_pu_uprava`.
 
 Preto tento test okrem funkcnosti overuje aj JEDINECNOST: ze zakladanie
 nenechava po sebe rozpisane pripady a ze na jeden ucet je presne jeden pripad.
@@ -49,9 +49,9 @@ import urllib.request
 URL = os.environ.get("PF_URL", "http://127.0.0.1:8080")
 TEST_PASS = os.environ.get("ETASK_TEST_PASSWORD", "test1234")
 SUPER_PASS = os.environ.get("PF_PASS", "password")
-NET = "pouzivatelia/pu_pouzivatel"
-NET_ZAL = "pouzivatelia/pu_zalozenie"
-CARD = "pouzivatelia"
+NET = "admin/pouzivatelia/pu_pouzivatel"
+NET_ZAL = "admin/pouzivatelia/pu_zalozenie"
+CARD = "admin/pouzivatelia"
 
 OK, FAIL = [], []
 
@@ -255,6 +255,29 @@ def wipe(cl):
     print(f"pucheck: zmazanych {count} testovacich uctov (pucheck.*, uscheck.*)")
 
 
+def uri_paths_deep(cl):
+    """Vsetky karty, ktore ucet vidi - vratane tych v kategoriach.
+
+    `/api/v2/uri/root` vracia len PRIAME deti korena, a odkedy appka zije
+    v kategorii (`admin/pouzivatelia`), je dietatom korena uz len `admin`.
+    Test, ktory by hladal kartu medzi detmi korena, by preto zlyhal bez ohladu
+    na to, ci appka funguje. Endpoint filtruje podla opravneni, takze vysledok
+    je naozaj to, co ten ucet vidi.
+    """
+    st, root = cl.get("/api/v2/uri/root")
+    fronta = [c["uriPath"] for c in (root or {}).get("children", [])]
+    videne = []
+    while fronta:
+        path = fronta.pop(0)
+        if path in videne:
+            continue
+        videne.append(path)
+        kluc = base64.b64encode(path.encode("utf-8")).decode()
+        st, node = cl.get("/api/v2/uri/" + kluc)
+        fronta.extend(c["uriPath"] for c in (node or {}).get("children", []))
+    return videne
+
+
 def main():
     boss = Client("super@netgrif.com", SUPER_PASS)
     if "--wipe" in sys.argv:
@@ -272,8 +295,7 @@ def main():
 
     print("\n=== 2. karta a zobrazenia ===")
     for name, cl, expected in [("spravca", spravca, True), ("ina rola", iny, False)]:
-        st, root = cl.get("/api/v2/uri/root")
-        paths = [c["uriPath"] for c in root.get("children", [])]
+        paths = uri_paths_deep(cl)
         check(f"{name} {'vidi' if expected else 'nevidi'} kartu '{CARD}'",
               (CARD in paths) == expected, paths)
         if not expected:
@@ -303,9 +325,9 @@ def main():
         check("zakladanie mieri na t_pu_novy",
               "t_pu_novy" in (v.get("filter") or ""), v.get("filter"))
 
-    WANT_HEADERS = ("meta-title,pouzivatelia/pu_pouzivatel-pu_stav_label"
-                    ",pouzivatelia/pu_pouzivatel-pu_email"
-                    ",pouzivatelia/pu_pouzivatel-pu_priezvisko")
+    WANT_HEADERS = ("meta-title,admin/pouzivatelia/pu_pouzivatel-pu_stav_label"
+                    ",admin/pouzivatelia/pu_pouzivatel-pu_email"
+                    ",admin/pouzivatelia/pu_pouzivatel-pu_priezvisko")
     if "Používatelia" in items:
         v = view_fields("Používatelia")
         check("zoznam ma predvolene stlpce", v.get("default_headers") == WANT_HEADERS,

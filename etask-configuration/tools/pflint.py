@@ -382,7 +382,7 @@ def lint(path):
                     # Pocitaju sa ARGUMENTY, nie literaly.
                     #
                     # Povodne sa bral n-ty literal, takze volanie, ktore ma id
-                    # v premennej (`createOrUpdateMenuItem(podanie, "service_desk",
+                    # v premennej (`createOrUpdateMenuItem(podanie, "it/service_desk",
                     # "Case", ...)`) posunulo poradie a pravidlo hlasilo ako URI
                     # retazec "Case". Ked argument na danom mieste nie je literal,
                     # kontrola sa PRESKOCI - tvrdit nieco o hodnote, ktoru nevidime,

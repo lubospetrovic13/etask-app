@@ -47,11 +47,18 @@
     }
   },
   "uriNode": {
+    "admin": "Správa",
+    "dovolenky": "Dovolenky",
     "faktury": "Faktúry",
+    "financie": "Financie",
     "general": "Všeobecné",
+    "hr": "Ľudské zdroje",
+    "it": "IT",
+    "majetok": "Majetok",
+    "nastavenia": "Nastavenia",
     "objednavky": "Objednávky",
-    "onboarding": "Nástup nového zamestnanca",
-    "schvalovanie": "Objednávky a faktúry",
+    "onboarding": "Nástup zamestnanca",
+    "pouzivatelia": "Používatelia",
     "service_desk": "Service Desk"
   }
 }

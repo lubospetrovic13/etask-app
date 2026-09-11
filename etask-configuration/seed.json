@@ -9,9 +9,13 @@
     "ho prepíš (napr. [\"mojaapp/*\"]) alebo pridaj ďalší vzor."
   ],
   "netScope": [
-    "service_desk/*",
-    "pouzivatelia/*",
-    "onboarding/*"
+    "it/service_desk/*",
+    "admin/pouzivatelia/*",
+    "hr/onboarding/*",
+    "hr/dovolenky/*",
+    "it/majetok/*",
+    "financie/*",
+    "admin/nastavenia/*"
   ],
   "users": [
     {

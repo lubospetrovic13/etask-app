@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>pouzivatelia/pu_zalozenie</id>
+	<id>admin/pouzivatelia/pu_zalozenie</id>
 	<version>1.0.0</version>
 	<initials>PUN</initials>
 	<title name="net_title">Nový používateľ</title>
@@ -62,7 +62,7 @@
 		verziu), takže dopyt musí ísť na `transitionId` — a preto je ten
 		identifikátor zámerne jedinečný.
 
-		Účet samotný je entita a má vlastný prípad v `pouzivatelia/pu_pouzivatel`.
+		Účet samotný je entita a má vlastný prípad v `admin/pouzivatelia/pu_pouzivatel`.
 		Ten sa zakladá tu, hneď po vytvorení účtu, a naplní sa cez `setData` —
 		názov prípadu si dopočíta jeho vlastná dátová udalosť na `pu_email`.
 
@@ -138,7 +138,7 @@ changeCaseProperty("color").about { "blue" }
     // jeden úplný prechod prípadmi na účet. Spolu s vtedy kvadratickým
     // `userSnapshot` na tom zosúladenie vytimeoutovalo.
     def out = [] as Set
-    findCases({ it.processIdentifier.eq("pouzivatelia/pu_pouzivatel") }).each {
+    findCases({ it.processIdentifier.eq("admin/pouzivatelia/pu_pouzivatel") }).each {
         def v = ((it.getFieldValue("pu_userid") ?: "") as String).trim()
         if (v) out << v
     }
@@ -150,7 +150,7 @@ changeCaseProperty("color").about { "blue" }
     // Prípad účtu.
     // Stačí zviazať. Meno, e-mail, oprávnenia aj role si prípad dotiahne z účtu
     // sám - má na to dátovú udalosť na `pu_userid`. Účet je zdroj pravdy.
-    def c = createCase("pouzivatelia/pu_pouzivatel")
+    def c = createCase("admin/pouzivatelia/pu_pouzivatel")
     setData("t_pu_uprava", c, ["pu_userid": ["value": id as String, "type": "text"]])
     return c
 }

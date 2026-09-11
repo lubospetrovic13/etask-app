@@ -581,7 +581,7 @@ def main():
     user = pf.Client(ROLE_USER_EMAIL, pf.TEST_PASS)
     other = pf.Client(OTHER_USER_EMAIL, pf.TEST_PASS)
     for nazov, cl, ocakavane in [("s rolou", user, True), ("bez roly", other, False)]:
-        paths = pf.uri_paths(cl)
+        paths = pf.uri_paths(cl, deep=True)
         pf.check(f"{nazov} {'vidi' if ocakavane else 'nevidi'} kartu '{CARD}'",
                  (CARD in paths) == ocakavane, paths)
         if not ocakavane:

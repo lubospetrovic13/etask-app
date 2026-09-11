@@ -26,11 +26,11 @@ V korenov repa appky `app.json`:
     {
       "name": "dovolenky",
       "import": ["dv_ziadost.xml", "dv_menu.xml"],
-      "bootstrapCase": [{"net": "dovolenky/dv_menu", "rebuildOnNewVersion": true}],
+      "bootstrapCase": [{"net": "hr/dovolenky/dv_menu", "rebuildOnNewVersion": true}],
       "uriNodes": {"dovolenky": {"icon": "beach_access",
                                  "requiredAuthorities": [],
                                  "requiredProcessRoles": ["zamestnanec"]}},
-      "netScope": ["dovolenky/*"],
+      "netScope": ["hr/dovolenky/*"],
       "tools": ["dvcheck.py"]
     }
 
@@ -64,9 +64,9 @@ POUZITIE
         --title "Objednávky a faktúry" \
         --nets fa_faktura.xml ob_objednavka.xml sc_menu.xml sc_nastavenia.xml \
         --tools sccheck.py --docs PRIRUCKA.md \
-        --boot schvalovanie/sc_menu:rebuild nastavenia/sc_nastavenia:rebuild \
+        --boot financie/sc_menu:rebuild admin/nastavenia/sc_nastavenia:rebuild \
         --nodes schvalovanie schvalovanie/faktury \
-        --scope "schvalovanie/*"
+        --scope "financie/*"
     python3 tools/pfapp.py remove dovolenky
 
 Exit 0 = hotovo (pri `status` aj "vsetko sedi"), 1 = chyba alebo rozdiel,

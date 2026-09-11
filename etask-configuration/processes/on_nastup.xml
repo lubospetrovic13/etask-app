@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>onboarding/on_nastup</id>
+	<id>hr/onboarding/on_nastup</id>
 	<version>1.0.0</version>
 	<initials>NZM</initials>
 	<title name="net_title">Nástup nového zamestnanca</title>

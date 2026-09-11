@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>service_desk/sd_menu</id>
+	<id>it/service_desk/sd_menu</id>
 	<version>1.0.0</version>
 	<initials>SDM</initials>
 	<title name="net_title">Menu Service Desku</title>
@@ -59,9 +59,9 @@ def failed = []
 def views = [
         [id: "sd_tickets", name: i18n("Tikety", ["en": "Tickets"]),
          type: "Case", icon: "confirmation_number",
-         query: "processIdentifier:\"service_desk/sd_ticket\"",
-         nets: ["service_desk/sd_ticket"],
-         roles: ["agent": "service_desk/sd_ticket"]],
+         query: "processIdentifier:\"it/service_desk/sd_ticket\"",
+         nets: ["it/service_desk/sd_ticket"],
+         roles: ["agent": "it/service_desk/sd_ticket"]],
         // Zamerne `t_wi_work`, nie `t_work`: task dokument v indexe nesie
         // processId (stringId siete, meni sa pri kazdom re-importe), nie
         // processIdentifier - takze filter sa da spolahlivo zuzit len na
@@ -69,18 +69,18 @@ def views = [
         [id: "sd_my_work", name: i18n("Moje úlohy", ["en": "My work"]),
          type: "Task", icon: "build",
          query: "transitionId:\"t_wi_work\"",
-         nets: ["service_desk/sd_work_item"],
-         roles: ["agent": "service_desk/sd_ticket"]],
+         nets: ["it/service_desk/sd_work_item"],
+         roles: ["agent": "it/service_desk/sd_ticket"]],
         [id: "sd_customers", name: i18n("Zákazníci", ["en": "Customers"]),
          type: "Case", icon: "domain",
-         query: "processIdentifier:\"service_desk/sd_customer\"",
-         nets: ["service_desk/sd_customer"],
-         roles: ["agent": "service_desk/sd_ticket"]],
+         query: "processIdentifier:\"it/service_desk/sd_customer\"",
+         nets: ["it/service_desk/sd_customer"],
+         roles: ["agent": "it/service_desk/sd_ticket"]],
         [id: "sd_submissions", name: i18n("Podania z formulára", ["en": "Form submissions"]),
          type: "Case", icon: "inbox",
-         query: "processIdentifier:\"service_desk/sd_intake\"",
-         nets: ["service_desk/sd_intake"],
-         roles: ["agent": "service_desk/sd_ticket"]],
+         query: "processIdentifier:\"it/service_desk/sd_intake\"",
+         nets: ["it/service_desk/sd_intake"],
+         roles: ["agent": "it/service_desk/sd_ticket"]],
 ]
 
 // Podanie poziadavky pre PRIHLASENEHO cloveka. Stavia sa zvlast, lebo
@@ -89,7 +89,7 @@ def views = [
 // nastavit nevie, projektovy `createOrUpdateMenuItem` ano (to je cely dovod,
 // preco existuje).
 try {
-    def intake = "service_desk/sd_intake"
+    def intake = "it/service_desk/sd_intake"
     def podanie = "sd_new_request"
     def existing = menu_item(podanie)
     if (existing != null) {
@@ -99,7 +99,7 @@ try {
     }
     def item = createOrUpdateMenuItem(
             podanie,
-            "service_desk",
+            "it/service_desk",
             "Case",
             "processIdentifier:\"" + intake + "\"",
             "add_comment",
@@ -161,7 +161,7 @@ views.each { v ->
                 // uzly nove id, polozka visi na starom a priecinok je PRAZDNY -
                 // bez chyby a bez logu. `createOrUpdateMenuItem` to riesi, ale
                 // sem sa nedostane, lebo dopyt ani nazov sa nezmenili.
-                pripoj_do_uzla(existing, "service_desk")
+                pripoj_do_uzla(existing, "it/service_desk")
                 unchanged << id
                 return
             }
@@ -180,7 +180,7 @@ views.each { v ->
         // roly nastavi a zaroven vie `allowedNets`, takze zoznamy maju stlpce.
         def item = createOrUpdateMenuItem(
                 id,                     // menu_item_identifier
-                "service_desk",         // URI cesta
+                "it/service_desk",         // URI cesta
                 v.type as String,       // "Case" alebo "Task"
                 v.query as String,
                 v.icon as String,

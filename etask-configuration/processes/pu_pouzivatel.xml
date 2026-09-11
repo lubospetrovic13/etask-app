@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>pouzivatelia/pu_pouzivatel</id>
+	<id>admin/pouzivatelia/pu_pouzivatel</id>
 	<version>1.0.0</version>
 	<initials>PUZ</initials>
 	<title name="net_title">Používateľ</title>
@@ -58,7 +58,7 @@
 		nebol ten pravý. Účet je entita, nie úkon - preto je prípad na účet
 		a úprava je slučka, ktorá sa dá spustiť opakovane.
 
-		Prípady zakladá `pouzivatelia/pu_zalozenie` (zobrazenie „Nový
+		Prípady zakladá `admin/pouzivatelia/pu_zalozenie` (zobrazenie „Nový
 		používateľ") a jeho tlačidlo na zosúladenie doplní prípad aj účtom,
 		ktoré vznikli inak - z `application.properties` alebo pred touto appkou.
 

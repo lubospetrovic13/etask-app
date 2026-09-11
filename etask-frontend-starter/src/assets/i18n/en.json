@@ -47,11 +47,18 @@
     }
   },
   "uriNode": {
+    "admin": "Administration",
+    "dovolenky": "Time off",
     "faktury": "Invoices",
+    "financie": "Finance",
     "general": "General",
+    "hr": "Human resources",
+    "it": "IT",
+    "majetok": "Assets",
+    "nastavenia": "Settings",
     "objednavky": "Orders",
     "onboarding": "Employee onboarding",
-    "schvalovanie": "Orders and invoices",
+    "pouzivatelia": "Users",
     "service_desk": "Service Desk"
   }
 }

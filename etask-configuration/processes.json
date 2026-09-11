@@ -22,6 +22,22 @@
     "              Prečo to menu vôbec potrebuje: uzol URI sám žiadne zobrazenia",
     "              nenesie a menu API enginu je na action delegate, teda",
     "              dosiahnuteľné len z akcie - a akcia chce case.",
+    "KATEGÓRIE. Aplikácie sú zoskupené do štyroch kariet podľa toho, koho sa",
+    "týkajú: hr, financie, it, admin. Priečinok v bočnom menu NIE JE konfigurácia -",
+    "je to cesta v identifikátore siete (`hr/dovolenky/dv_ziadost`), takže",
+    "preskupenie appky znamená premenovanie jej sietí. A premenovanie identifikátora",
+    "je NOVÁ SIEŤ: staré prípady zostanú pod starým identifikátorom a do nových",
+    "zobrazení nespadnú, lebo dopyty filtrujú `processIdentifier`. Na čistej",
+    "inštancii je to bez následkov, na bežiacej treba staré prípady zmazať",
+    "(`<app>check.py --wipe` to robí, a mažú aj predchádzajúce identifikátory).",
+    "",
+    "Kategórie (hr, financie, it, admin) deklaruje TENTO manifest, nie app.json",
+    "aplikácií - inak by tú istú kategóriu deklarovali dve aplikácie a `pfapp",
+    "install` tú druhú odmietne. Aplikácia deklaruje len svoje vlastné priečinky",
+    "(`hr/dovolenky`, `financie/faktury`). Uzol bez záznamu je viditeľný pre",
+    "každého, takže kategória musí mať záznam - inak prázdnu kartu uvidí aj ten,",
+    "kto pod ňou nemá jediné zobrazenie.",
+    "",
     "uriNodes      ikona a viditeľnosť karty v bočnom menu. requiredProcessRoles",
     "              sú importId rolí (z <role><id> v sieti), nie stringId -",
     "              stringId sa razí per verziu siete a re-import by zoznam vyprázdnil.",
@@ -67,7 +83,15 @@
     "pu_zalozenie.xml",
     "pu_menu.xml",
     "on_nastup.xml",
-    "on_menu.xml"
+    "on_menu.xml",
+    "dv_ziadost.xml",
+    "dv_menu.xml",
+    "ma_zariadenie.xml",
+    "ma_menu.xml",
+    "fa_faktura.xml",
+    "ob_objednavka.xml",
+    "sc_menu.xml",
+    "sc_nastavenia.xml"
   ],
   "bootstrapCase": [
     {
@@ -75,16 +99,32 @@
       "rebuildOnProcessChange": true
     },
     {
-      "net": "service_desk/sd_menu",
+      "net": "it/service_desk/sd_menu",
       "rebuildOnNewVersion": true
     },
-    "pouzivatelia/pu_zalozenie",
+    "admin/pouzivatelia/pu_zalozenie",
     {
-      "net": "pouzivatelia/pu_menu",
+      "net": "admin/pouzivatelia/pu_menu",
       "rebuildOnNewVersion": true
     },
     {
-      "net": "onboarding/on_menu",
+      "net": "hr/onboarding/on_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "hr/dovolenky/dv_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "it/majetok/ma_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "financie/sc_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "admin/nastavenia/sc_nastavenia",
       "rebuildOnNewVersion": true
     }
   ],
@@ -96,19 +136,43 @@
       ],
       "requiredProcessRoles": []
     },
-    "service_desk": {
+    "it": {
+      "icon": "dns",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": []
+    },
+    "it/service_desk": {
       "icon": "support_agent",
       "requiredAuthorities": [],
       "requiredProcessRoles": []
     },
-    "pouzivatelia": {
+    "admin": {
+      "icon": "admin_panel_settings",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "spravca"
+      ]
+    },
+    "admin/pouzivatelia": {
       "icon": "manage_accounts",
       "requiredAuthorities": [],
       "requiredProcessRoles": [
         "spravca"
       ]
     },
-    "onboarding": {
+    "hr": {
+      "icon": "groups",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "hr",
+        "it",
+        "majetok",
+        "nadriadeny",
+        "zamestnanec",
+        "veduci"
+      ]
+    },
+    "hr/onboarding": {
       "icon": "badge",
       "requiredAuthorities": [],
       "requiredProcessRoles": [
@@ -117,6 +181,76 @@
         "majetok",
         "nadriadeny"
       ]
+    },
+    "financie": {
+      "icon": "account_balance",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "hr/dovolenky": {
+      "icon": "beach_access",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zamestnanec",
+        "veduci"
+      ]
+    },
+    "it/majetok": {
+      "icon": "assignment",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "spravca_majetku"
+      ]
+    },
+    "financie/faktury": {
+      "icon": "receipt_long",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "financie/objednavky": {
+      "icon": "shopping_cart",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "admin/nastavenia": {
+      "icon": "tune",
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
     }
   }
 }
