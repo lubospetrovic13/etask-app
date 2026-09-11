@@ -44,7 +44,17 @@
     "Pozor: uzol URI riadi len VIDITEĽNOSŤ KARTY. Zobrazenia pod ňou stavia",
     "sd_menu s visibility \"public\", takže kto pozná URL, otvorí ich aj tak;",
     "čo v nich uvidí, riadia oprávnenia v sietiach. Skrytie karty nie je",
-    "prístupové opatrenie."
+    "prístupové opatrenie.",
+    "",
+    "Čo je v processes/ a NIE je v tomto zozname:",
+    "  single_settings.xml   systémová sieť enginu. Na classpath sa dostane cez",
+    "                        pom.xml (processes/*.xml) a engine si ju importuje",
+    "                        sám - v `import` teda nemá byť.",
+    "Čo je v tomto zozname a NIE je v processes/:",
+    "  configuration_tiles.xml   žije v etask-backend-starter/src/main/resources/",
+    "                        petriNets/. NetRunner číta z classpath, nie z disku.",
+    "Príkladové siete, ktoré sa neimportujú, sú v examples/ (ai_config,",
+    "sd_request) - v processes/ patrí len to, čo je nasadené."
   ],
   "import": [
     "configuration_tiles.xml",
@@ -57,7 +67,13 @@
     "pu_zalozenie.xml",
     "pu_menu.xml",
     "dv_ziadost.xml",
-    "dv_menu.xml"
+    "dv_menu.xml",
+    "fa_faktura.xml",
+    "ob_objednavka.xml",
+    "sc_menu.xml",
+    "sc_nastavenia.xml",
+    "ma_zariadenie.xml",
+    "ma_menu.xml"
   ],
   "bootstrapCase": [
     {
@@ -72,6 +88,18 @@
     {
       "net": "dovolenky/dv_menu",
       "rebuildOnNewVersion": true
+    },
+    {
+      "net": "schvalovanie/sc_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "nastavenia/sc_nastavenia",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "majetok/ma_menu",
+      "rebuildOnNewVersion": true
     }
   ],
   "uriNodes": {
@@ -84,9 +112,7 @@
     },
     "service_desk": {
       "icon": "support_agent",
-      "requiredAuthorities": [
-        "ROLE_ADMIN"
-      ],
+      "requiredAuthorities": [],
       "requiredProcessRoles": []
     },
     "pouzivatelia": {
@@ -102,6 +128,68 @@
       "requiredProcessRoles": [
         "zamestnanec",
         "veduci"
+      ]
+    },
+    "schvalovanie": {
+      "icon": "request_quote",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "schvalovanie/faktury": {
+      "icon": "receipt_long",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "schvalovanie/objednavky": {
+      "icon": "shopping_cart",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "nastavenia": {
+      "icon": "tune",
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
+    },
+    "majetok": {
+      "icon": "assignment",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "spravca_majetku"
       ]
     }
   }

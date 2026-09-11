@@ -11,30 +11,52 @@
   "netScope": [
     "service_desk/*",
     "pouzivatelia/*",
-    "dovolenky/*"
+    "dovolenky/*",
+    "schvalovanie/*",
+    "nastavenia/*",
+    "majetok/*"
   ],
   "users": [
     {
       "email": "super@netgrif.com",
       "roles": [
-        "manager",
         "agent",
+        "manager",
+        "riaditel",
+        "schv_hotel",
+        "schv_marketing",
+        "schv_restauracia",
+        "schv_sprava",
+        "schv_udrzba",
+        "schv_wellness",
+        "schvalovatel",
         "spravca",
-        "veduci"
+        "uctovnik",
+        "veduci",
+        "zadavatel"
       ]
     },
     {
       "email": "admin@test.local",
       "roles": [
         "agent",
+        "riaditel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schvalovatel",
         "spravca",
+        "uctovnik",
         "veduci"
       ]
     },
     {
       "email": "operator@test.local",
       "roles": [
+        "schv_wellness",
+        "schvalovatel",
         "specialist",
+        "uctovnik",
+        "zadavatel",
         "zamestnanec"
       ]
     },
@@ -42,7 +64,8 @@
       "email": "druhy@test.local",
       "roles": [
         "specialist",
-        "zamestnanec"
+        "zamestnanec",
+        "zadavatel"
       ]
     },
     {

@@ -18,5 +18,56 @@
     "netScope": [
       "dovolenky/*"
     ]
+  },
+  "objednavky-faktury": {
+    "source": "C:\\Users\\petro\\IdeaProjects\\etask-app-objednavky-faktury",
+    "title": "Objednávky a faktúry",
+    "processes": [
+      "fa_faktura.xml",
+      "ob_objednavka.xml",
+      "sc_menu.xml",
+      "sc_nastavenia.xml"
+    ],
+    "tools": [
+      "sccheck.py"
+    ],
+    "docs": [
+      "PRIRUCKA.md"
+    ],
+    "bootstrapCase": [
+      "schvalovanie/sc_menu",
+      "nastavenia/sc_nastavenia"
+    ],
+    "uriNodes": [
+      "schvalovanie",
+      "schvalovanie/faktury",
+      "schvalovanie/objednavky",
+      "nastavenia"
+    ],
+    "netScope": [
+      "schvalovanie/*",
+      "nastavenia/*"
+    ]
+  },
+  "majetok": {
+    "source": "C:\\Users\\petro\\IdeaProjects\\etask-app-majetok",
+    "title": "Majetok",
+    "processes": [
+      "ma_zariadenie.xml",
+      "ma_menu.xml"
+    ],
+    "tools": [
+      "majetokcheck.py"
+    ],
+    "docs": [],
+    "bootstrapCase": [
+      "majetok/ma_menu"
+    ],
+    "uriNodes": [
+      "majetok"
+    ],
+    "netScope": [
+      "majetok/*"
+    ]
   }
 }

@@ -14,6 +14,8 @@ import com.netgrif.application.engine.petrinet.domain.roles.ProcessRole
 import com.netgrif.application.engine.petrinet.domain.version.Version
 import com.netgrif.application.engine.workflow.domain.Case
 import com.netgrif.etask.ai.AiCallService
+import com.netgrif.etask.doc.InvoiceReaderService
+import com.netgrif.etask.mail.NotifyService
 import com.netgrif.etask.petrinet.domain.UriNodeData
 import com.netgrif.etask.petrinet.domain.UriNodeDataRepository
 import org.springframework.beans.factory.annotation.Autowired
@@ -32,6 +34,12 @@ class EtaskActionDelegate extends ActionDelegate {
 
     @Autowired
     private IAuthorityService authorityService
+
+    @Autowired
+    private InvoiceReaderService invoiceReaderService
+
+    @Autowired
+    private NotifyService notifyService
 
     // Id poli na `preference_filter_item` a prechod na `filter`, kde sa data
     // zapisuju. V engine su to `private static final` na `ActionDelegate`, takze
@@ -139,6 +147,60 @@ class EtaskActionDelegate extends ActionDelegate {
                 (MENU_FIELD_NEW_FILTER_ID): ["type": "text", "value": filter.stringId],
         ])
         return workflowService.findOne(menuItem.stringId)
+    }
+
+    /**
+     * Prepoji existujucu polozku menu na URI uzol danej cesty.
+     *
+     * Preco to je samostatny primitiv: **URI uzly zije Elasticsearch, polozky
+     * menu Mongo.** Kazdy uzol ma teda id z ineho ulozista, a ked sa ES index
+     * zahodi alebo vymeni (`up.sh --fresh`, prenos na iny stroj, cisty volume
+     * v Dockeri), uzly sa vytvoria ZNOVA a s NOVYMI id - kym polozky menu
+     * v Mongu drzia stare.
+     *
+     * Prejavi sa to tak, ze v bocnom paneli je priecinok, ale je PRAZDNY:
+     * frontend hlada polozky dopytom `uriNodeId: <id uzla>`
+     * (`UriService.getCasesOfNode`), a ten na stare id nesedi. Ziadna chyba,
+     * ziadny log - len appka bez zobrazeni.
+     *
+     * `createOrUpdateMenuItem` uriNodeId dorovnava, ale siete stavajuce menu ho
+     * pri NEZMENENEJ polozke vobec nezavolaju (kontroluju dopyt, allowedNets
+     * a nazov - a tie sa nezmenili). Preto to musi ist zvlast a lacno.
+     *
+     * @return true, ked sa uzol naozaj zmenil
+     */
+    boolean pripoj_do_uzla(Object item, String uri) {
+        if (item == null || !uri) {
+            return false
+        }
+        String itemId = (item instanceof Case) ? (item.stringId as String) : (item as String)
+        Case menuItem = workflowService.findOne(itemId)
+        if (menuItem == null) {
+            return false
+        }
+        UriNode node = uriService.findByUri(uri)
+        if (node == null) {
+            return false
+        }
+        String want = node.id as String
+        boolean changed = ((menuItem.uriNodeId ?: "") as String) != want
+        if (changed) {
+            menuItem.setUriNodeId(want)
+            menuItem = workflowService.save(menuItem)
+        }
+        // A to iste v datovom poli. Frontend cita `uriNodeId` z pripadu, ale
+        // `parentId` drzi to iste a rozchod dvoch zdrojov tej istej pravdy sa
+        // vzdy niekomu vrati.
+        // Zapis rovno do dataSetu a save - `setData` by potrebovalo prechod,
+        // ktory `parentId` naozaj obsahuje, a to nie je nas kontrakt (rovnaky
+        // dovod ako pri `setMenuItemRoles` nizsie).
+        def pole = menuItem.dataSet["parentId"]
+        if (pole != null && ((pole.value ?: "") as String) != want) {
+            pole.value = want
+            workflowService.save(menuItem)
+            changed = true
+        }
+        return changed
     }
 
     /** Nahrada za private `ActionDelegate.updateMenuItemRoles`. */
@@ -311,6 +373,76 @@ class EtaskActionDelegate extends ActionDelegate {
      *
      * @param netIdentifier ak nie je null, rola musi byt z tejto siete
      */
+    /**
+     * Vsetci skutocni pouzivatelia, ktori maju danu procesnu rolu.
+     *
+     * `usersWithRole` filtruje ZADANY zoznam; toto je ten druhy pripad -
+     * "kto vsetko ma rolu schvalovatela strediska Wellness". Petriflow na to
+     * primitiv nema: `roleRef` sa v prechode uvadza staticky a dynamicky sa
+     * vybrat neda, takze rola sa musi premietnut do `userList` pola, na ktorom
+     * visi `userRef`.
+     *
+     * Pouzivaju to obe siete appky schvalovania (faktury aj objednavky) -
+     * a to je aj dovod, preco to je tu a nie ako process funkcia v jednej
+     * z nich.
+     */
+    List<String> usersWithRoleAll(String roleImportId, String netIdentifier = null) {
+        if (!roleImportId) {
+            return []
+        }
+        return userService.findAll(true).findAll { IUser u ->
+            isRealUser(u) && hasProcessRole(u, roleImportId, netIdentifier)
+        }.collect { IUser u -> u.stringId as String }
+    }
+
+    /**
+     * Case danej siete, ktory plati - z NAJNOVSEJ verzie siete a z nej ten
+     * naposledy zalozeny.
+     *
+     * Na co to je: konfiguracny case (limity, parametre) sa zaklada
+     * `bootstrapCase` s `rebuildOnNewVersion`, takze po kazdom re-importe
+     * pribudne novy a stare zostanu ako stopa. Kto by cital "prvy najdeny",
+     * cital by po case ten najstarsi a nechapal by, preco sa zmena nastavenia
+     * neprejavila.
+     *
+     * Vracia null, ked siet neexistuje alebo z nej ziadny case nie je -
+     * volajuci ma vtedy pouzit svoj default, nie spadnut.
+     */
+    Case najnovsiCase(String netIdentifier) {
+        if (!netIdentifier) {
+            return null
+        }
+        List<PetriNet> nets = petriNetService.getByIdentifier(netIdentifier)
+        if (!nets) {
+            return null
+        }
+        // Najnovsiu verziu urcuje ENGINE, nie my.
+        //
+        // Prva verzia tejto metody hladala maximum sama:
+        //     nets.max { versionKey("${n.version.major}.${...}") }
+        // `versionKey` vracia `List<Integer>` a Groovy `max` porovnava
+        // navratove hodnoty cez `DefaultTypeTransformation.compareTo`, ktore
+        // dva `ArrayList`y porovnat ODMIETNE:
+        //     Cannot compare java.util.ArrayList with value '[1, 0, 0]'
+        //     and java.util.ArrayList with value '[2, 0, 0]'
+        // Kym existovala jedna verzia siete, `max` nic neporovnaval a vsetko
+        // vyzeralo v poriadku. Po druhom importe zacala akcia, ktora tuto
+        // metodu vola, padat - a kedze bola v `create` udalosti konfiguracneho
+        // casu, PRESTAL SA ZAKLADAT CELY CASE. V appke to vyzeralo tak, ze
+        // "nastavenia nefunguju, nie je tam ziaden pripad".
+        PetriNet newest = petriNetService.getNewestVersionByIdentifier(netIdentifier)
+        if (newest == null) {
+            return null
+        }
+        List<Case> cases = findCases({ it.processIdentifier.eq(netIdentifier) }) ?: []
+        List<Case> fromNewest = cases.findAll { it.petriNetObjectId == newest.objectId }
+        List<Case> pool = fromNewest ?: cases
+        if (!pool) {
+            return null
+        }
+        return pool.max { Case c -> c.creationDate }
+    }
+
     boolean hasProcessRole(IUser user, String roleImportId, String netIdentifier = null) {
         if (user == null || !roleImportId) {
             return false
@@ -589,7 +721,11 @@ class EtaskActionDelegate extends ActionDelegate {
         nets.collect { it.version?.toString() }
                 .findAll { it != null }
                 .unique()
-                .sort(false) { String v -> versionKey(v) }
+                // `versionSortKey`, nie `versionKey`: ten vracia List a Groovy
+                // dva Listy porovnat odmietne (viz `najnovsiCase`). Tu to
+                // doteraz neprasklo len preto, ze sa to volalo na sietach
+                // s jednou verziou.
+                .sort(false) { String v -> versionSortKey(v) }
                 .reverse()
                 .each { String v ->
                     out.put(v.replace(".", "_"),
@@ -848,6 +984,15 @@ class EtaskActionDelegate extends ActionDelegate {
         return new Version(parts[0] as long, parts[1] as long, parts[2] as long)
     }
 
+    /** Verzia ako jedno cislo - porovnatelne, na rozdiel od zoznamu castí. */
+    private static long versionSortKey(String v) {
+        List<Integer> parts = versionKey(v)
+        while (parts.size() < 3) {
+            parts << 0
+        }
+        return (parts[0] as long) * 1_000_000L + (parts[1] as long) * 1_000L + (parts[2] as long)
+    }
+
     private static List<Integer> versionKey(String v) {
         return (v ?: "0").split("\\.").collect {
             try { Integer.parseInt(it) } catch (NumberFormatException ignored) { 0 }
@@ -872,6 +1017,240 @@ class EtaskActionDelegate extends ActionDelegate {
      */
     String callAIToolByConfig(Map params) {
         return aiCallService.callByConfig(params)
+    }
+
+    // ==================================================================
+    // Cítanie faktúry z prílohy
+    //
+    // Volá sa z Petriflow akcie (tlačidlo "Načítať z prílohy" v fa_faktura):
+    //     def v = precitajFakturu(fa_skan, useCase.stringId)
+    //
+    // Logika je v com.netgrif.etask.doc, delegát len presmeruje a vyrieši,
+    // kde na disku príloha vlastne leží.
+    // ==================================================================
+
+    /**
+     * Precita fakturu z prilohy a vrati polia, ktore sa z nej dali vytiahnut.
+     *
+     * XML e-fakturu (UBL 2.1 / CII podla EN 16931, alebo ISDOC) <b>cita</b>,
+     * PDF s textovou vrstvou cita cez PDFBox, sken a fotku prezenie OCR
+     * (binarka `tesseract`, ked je k dispozicii). Nikdy nic nezapisuje sama -
+     * vysledok je na predvyplnenie formulara, ktory clovek potvrdi.
+     *
+     * Kluce vysledku: `zdroj` (xml|text|ocr|nic), `dodavatel`, `cislo`, `suma`,
+     * `mena`, `splatnost`, `vystavenie`, `ico`, `dic`, `iban`, `vs`, `chyba`,
+     * `poznamka`, `nedocitane`.
+     *
+     * @param priloha pole typu `file` (alebo jeho hodnota, alebo cesta)
+     * @param caseId  stringId pripadu - `useCase.stringId`; sluzi na dopocitanie
+     *                cesty k prilohe, ked ju hodnota pola nenesie
+     */
+    Map<String, Object> precitajFakturu(Object priloha, String caseId = null) {
+        File file = resolveAttachment(priloha, caseId)
+        if (file == null) {
+            return [zdroj: "nic", nedocitane: [],
+                    chyba: "Príloha nie je nahraná - priložte XML e-faktúru, PDF alebo sken."]
+        }
+        return invoiceReaderService.read(file)
+    }
+
+    /**
+     * Je OCR na tomto stroji k dispozicii? Siet to vie povedat cloveku skor,
+     * nez zbytocne priloži fotku.
+     */
+    boolean ocrDostupne() {
+        return invoiceReaderService.ocrAvailable()
+    }
+
+    // ==================================================================
+    // Notifikacne maily
+    //
+    // Volá sa z Petriflow akcie, napríklad po podaní faktúry:
+    //     notifikuj(fa_schvalovatelia, "Faktúra na schválenie", text)
+    //
+    // Logika je v com.netgrif.etask.mail.NotifyService; delegát rieši len to,
+    // čo Petriflow nevie - dostať z userList poľa e-mailové adresy.
+    // ==================================================================
+
+    /**
+     * Da sa posielat? Siet sa to pyta, aby o tom vedela napisat do priebehu
+     * pripadu - "notifikacie su vypnute" je informacia, nie chyba.
+     */
+    boolean notifikacieZapnute() {
+        return notifyService.available()
+    }
+
+    /**
+     * Posle notifikacny mail a vrati, kolkym prijemcom sa to podarilo.
+     *
+     * Nikdy nevyhodi vynimku. Notifikacia sa posiela z udalosti `finish`, teda
+     * vnutri transakcie, ktora prepina token - keby padla, zlyhalo by
+     * schvalenie faktury na tom, ze sa nepodarilo poslat mail o schvaleni.
+     *
+     * @param prijemcovia userList pole, jeho hodnota, zoznam id, zoznam adries
+     *                    alebo jedna adresa
+     */
+    int notifikuj(Object prijemcovia, String predmet, String telo) {
+        try {
+            return notifyService.send(emailyOf(prijemcovia), predmet, telo)
+        } catch (Throwable t) {
+            return 0
+        }
+    }
+
+    /**
+     * E-mailove adresy z coho sa da: userList pole, jeho hodnota, zoznam id,
+     * zoznam adries alebo jedna adresa.
+     */
+    List<String> emailyOf(Object co) {
+        if (co instanceof String) {
+            return ((String) co).contains("@") ? [((String) co).trim()] : []
+        }
+        return usersOf(co).collect { IUser u -> (u.email ?: "") as String }
+                .findAll { it }.unique()
+    }
+
+    /**
+     * Mena uzivatelov, "Meno Priezvisko" (alebo e-mail, ked meno chyba).
+     *
+     * Preco to je primitiv a nie akcia: pole, ktore ma cloveku povedat, u koho
+     * jeho faktura lezi, je `text`, teda `String` - a ten sa neprekladá
+     * (RUNBOOK 9). Menu clovoka to netrapi, ale slovo "riaditeľ" by v anglickom
+     * portali bolo jedina slovenska vec v zozname. Preto do takeho pola patria
+     * MENA, a mena sa z roly (`usersWithRoleAll` vracia id) inak nedaju.
+     */
+    List<String> menaUzivatelov(Object co) {
+        return usersOf(co).collect { IUser u ->
+            String meno = ((u.name ?: "") as String).trim()
+            String priezvisko = ((u.surname ?: "") as String).trim()
+            String cele = (meno + " " + priezvisko).trim()
+            return cele ?: ((u.email ?: "") as String)
+        }.findAll { it }.unique()
+    }
+
+    /**
+     * Hociaky tvar "zoznam uzivatelov" na skutocne ucty.
+     *
+     * Prijme: userList pole, jeho `UserListFieldValue`, zoznam id, zoznam
+     * e-mailov, jedno id, jeden e-mail. Vsetky tieto tvary si siete medzi sebou
+     * naozaj posielaju - `schvalovatelia_strediska` vracia id, `f.fa_zadal` je
+     * pole a konfiguracia pracuje s adresami.
+     */
+    private List<IUser> usersOf(Object co) {
+        if (co == null) {
+            return []
+        }
+        List<IUser> out = []
+        Closure<Void> pridaj = { Object item ->
+            if (item == null) return
+            if (item instanceof IUser) {
+                out << (IUser) item
+                return
+            }
+            if (item instanceof Map) {
+                // UserFieldValue serializovany do mapy: uz nesie meno aj mail,
+                // ale kvoli jednotnemu tvaru sa dohleda ucet.
+                Object id = item["_id"] ?: item["id"]
+                if (id) {
+                    IUser u = userService.findById(id as String, false)
+                    if (u != null) {
+                        out << u
+                        return
+                    }
+                }
+                if (item["email"]) {
+                    IUser u = userService.findByEmail(item["email"] as String, false)
+                    if (u != null) out << u
+                }
+                return
+            }
+            String str = (item as String).trim()
+            if (!str) return
+            IUser u = str.contains("@") ? userService.findByEmail(str, false)
+                    : userService.findById(str, false)
+            if (u != null) out << u
+        }
+
+        def value = co.hasProperty("value") ? co.value : co
+        if (value == null) {
+            return []
+        }
+        if (value.hasProperty("userValues") && value.userValues) {
+            value.userValues.each { pridaj(it) }
+        } else if (value instanceof Collection) {
+            ((Collection) value).each { pridaj(it) }
+        } else {
+            pridaj(value)
+        }
+        return out.unique { IUser u -> u.stringId as String }
+    }
+
+    /**
+     * Najde prilohu na disku. Hodnota `file` pola nesie `name` a `path`, ale
+     * `path` je relativna k pracovnemu priecinku procesu a po zmene
+     * `nae.storage.path` alebo po prenose databazy medzi prostrediami uz sediet
+     * nemusí. Preto sa skusa v poradí: cesta z hodnoty, cesta dopocitana
+     * enginom (`getPath(caseId, fieldId)`) a nakoniec hladanie podla nazvu
+     * v storage - inak by akcia hlasila "priloha nie je nahrana" na prilohe,
+     * ktora tam je.
+     */
+    private File resolveAttachment(Object priloha, String caseId) {
+        if (priloha == null) {
+            return null
+        }
+        if (priloha instanceof File) {
+            return ((File) priloha).exists() ? (File) priloha : null
+        }
+        if (priloha instanceof String) {
+            File f = new File((String) priloha)
+            return f.exists() ? f : null
+        }
+
+        def value = priloha.hasProperty("value") ? priloha.value : priloha
+        if (value == null) {
+            return null
+        }
+
+        String name = value.hasProperty("name") ? (value.name as String) : null
+        String path = value.hasProperty("path") ? (value.path as String) : null
+
+        List<String> candidates = []
+        if (path) {
+            candidates << path
+        }
+        if (caseId && priloha.hasProperty("importId")) {
+            try {
+                candidates << (value.getPath(caseId, priloha.importId as String) as String)
+            } catch (Exception ignored) {
+                // Pretazenie getPath(String, String) je Groovy metoda enginu;
+                // ked sa zmeni, nesmie to zhodit celu akciu.
+            }
+        }
+        for (String c : candidates) {
+            if (!c) {
+                continue
+            }
+            File f = new File(c)
+            if (f.exists() && f.length() > 0) {
+                return f
+            }
+        }
+        return name ? findInStorage(name) : null
+    }
+
+    /** Posledna moznost: nájdi v storage subor, ktoreho nazov konci nazvom prilohy. */
+    private static File findInStorage(String name) {
+        File root = new File(System.getProperty("nae.storage.path", "storage"))
+        if (!root.isDirectory()) {
+            return null
+        }
+        File hit = null
+        root.eachFileRecurse { File f ->
+            if (hit == null && f.isFile() && f.name.endsWith(name)) {
+                hit = f
+            }
+        }
+        return hit
     }
 
 }

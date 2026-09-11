@@ -1,0 +1,1970 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>schvalovanie/objednavky/ob_objednavka</id>
+	<version>1.0.0</version>
+	<initials>OBJ</initials>
+	<title name="net_title">Objednávka</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Purchase order</i18nString>
+		<i18nString name="zadavatel_title">Requester</i18nString>
+		<i18nString name="schvalovatel_title">Cost centre approver</i18nString>
+		<i18nString name="riaditel_title">Managing director</i18nString>
+		<i18nString name="uctovnik_title">Accountant</i18nString>
+		<i18nString name="div_ob_ziadost_init">Request</i18nString>
+		<i18nString name="div_ob_rozhodnutie_init">Approval</i18nString>
+		<i18nString name="div_ob_objednanie_init">Ordering</i18nString>
+		<i18nString name="div_ob_priebeh_init">Progress</i18nString>
+		<i18nString name="ob_zadal_title">Requested by (user)</i18nString>
+		<i18nString name="ob_zadal_desc">Filled in automatically when the order is created. The right to see one's own order hangs on this list.</i18nString>
+		<i18nString name="ob_zadal_meno_title">Requested by</i18nString>
+		<i18nString name="ob_predmet_title">What is to be ordered</i18nString>
+		<i18nString name="div_ob_poziadavky_init">Requirements</i18nString>
+		<i18nString name="ob_polozky_title">Requirements</i18nString>
+		<i18nString name="ob_polozky_desc">What exactly is to be ordered. The total drives who has to approve.</i18nString>
+		<i18nString name="ob_polozky_json_title">Requirements (data)</i18nString>
+		<i18nString name="ob_polozky_json_desc">Source of truth for the list. Nobody edits it by hand.</i18nString>
+		<i18nString name="ob_p_nazov_title">Item</i18nString>
+		<i18nString name="ob_p_mnozstvo_title">Quantity</i18nString>
+		<i18nString name="ob_p_jednotka_title">Unit</i18nString>
+		<i18nString name="ob_p_cena_title">Unit price incl. VAT (EUR)</i18nString>
+		<i18nString name="btn_ob_pridat_placeholder">Add requirement</i18nString>
+		<i18nString name="btn_ob_pridat_desc">Adds the line to the list and recalculates the total.</i18nString>
+		<i18nString name="ob_polozky_vyber_title">Remove from the list</i18nString>
+		<i18nString name="ob_polozky_vyber_desc">Tick what should go; then press Remove ticked.</i18nString>
+		<i18nString name="btn_ob_odobrat_placeholder">Remove ticked</i18nString>
+		<i18nString name="btn_ob_odobrat_desc">Removes every ticked line and recalculates the total.</i18nString>
+		<i18nString name="ob_polozky_sprava_title">List status</i18nString>
+		<i18nString name="ob_dodavatel_title">Proposed supplier</i18nString>
+		<i18nString name="ob_suma_title">Estimated price incl. VAT (EUR)</i18nString>
+		<i18nString name="ob_suma_desc">Total of the requirements. Decides who has to approve: above the limit the director approves too.</i18nString>
+		<i18nString name="ob_stredisko_title">Cost centre</i18nString>
+		<i18nString name="ob_stredisko_desc">Whose budget the order is charged to.</i18nString>
+		<i18nString name="ob_stredisko_opt_hotel">Hotel / reception</i18nString>
+		<i18nString name="ob_stredisko_opt_restauracia">Restaurant</i18nString>
+		<i18nString name="ob_stredisko_opt_wellness">Wellness</i18nString>
+		<i18nString name="ob_stredisko_opt_udrzba">Maintenance</i18nString>
+		<i18nString name="ob_stredisko_opt_marketing">Marketing</i18nString>
+		<i18nString name="ob_stredisko_opt_sprava">Administration</i18nString>
+		<i18nString name="ob_zdovodnenie_title">Why it is needed</i18nString>
+		<i18nString name="ob_termin_title">Needed by</i18nString>
+		<i18nString name="ob_kontrola_title">Notice</i18nString>
+		<i18nString name="ob_stav_title">Status code</i18nString>
+		<i18nString name="ob_stav_label_title">Status</i18nString>
+		<i18nString name="ob_ceka_na_title">Waiting for</i18nString>
+		<i18nString name="ob_ceka_na_desc">Who has the order on their desk right now. Names, so it reads the same in every language.</i18nString>
+		<i18nString name="ob_stav_opt_koncept">Draft</i18nString>
+		<i18nString name="ob_stav_opt_na_schvalenie">Waiting for the cost centre</i18nString>
+		<i18nString name="ob_stav_opt_u_riaditela">Waiting for the director</i18nString>
+		<i18nString name="ob_stav_opt_na_objednanie">Approved to order</i18nString>
+		<i18nString name="ob_stav_opt_objednana">Ordered</i18nString>
+		<i18nString name="ob_stav_opt_vratena">Sent back for completion</i18nString>
+		<i18nString name="ob_stav_opt_zamietnuta">Rejected</i18nString>
+		<i18nString name="ob_ziadane_o_title">Requested</i18nString>
+		<i18nString name="ob_rozhodnutie_title">Decision</i18nString>
+		<i18nString name="ob_rozhodnutie_opt_schvalit">Approve</i18nString>
+		<i18nString name="ob_rozhodnutie_opt_vratit">Send back for completion</i18nString>
+		<i18nString name="ob_rozhodnutie_opt_zamietnut">Reject</i18nString>
+		<i18nString name="ob_poznamka_title">Note on the order</i18nString>
+		<i18nString name="ob_poznamka_desc">The requester sees it on the order. Every note is kept in Progress.</i18nString>
+		<i18nString name="ob_schvalil_stredisko_title">Approved by cost centre</i18nString>
+		<i18nString name="ob_schvalil_riaditel_title">Approved by director</i18nString>
+		<i18nString name="ob_schvalene_o_title">Approved</i18nString>
+		<i18nString name="ob_cislo_title">Order no.</i18nString>
+		<i18nString name="ob_cislo_desc">The number the supplier was given. The invoice refers to it later.</i18nString>
+		<i18nString name="ob_objednal_title">Ordered by</i18nString>
+		<i18nString name="ob_objednane_o_title">Ordered</i18nString>
+		<i18nString name="ob_historia_title">Progress</i18nString>
+		<i18nString name="ob_historia_desc">What happened to the order. Appended automatically; it cannot be overwritten.</i18nString>
+		<i18nString name="ob_to_riaditel_title">Routing: to the director</i18nString>
+		<i18nString name="ob_to_objednanie_title">Routing: to ordering</i18nString>
+		<i18nString name="ob_to_koncept_title">Routing: back to the requester</i18nString>
+		<i18nString name="ob_to_uzavreta_title">Routing: closed</i18nString>
+		<i18nString name="ob_routing_desc">Multiplicity of a variable arc. The decision action sets it; nobody edits it by hand.</i18nString>
+		<i18nString name="t_ob_ziadost_label">Request an order</i18nString>
+		<i18nString name="t_ob_schvalenie_label">Approve for the cost centre</i18nString>
+		<i18nString name="t_ob_riaditel_label">Director's approval</i18nString>
+		<i18nString name="t_ob_objednanie_label">Confirm the order</i18nString>
+		<i18nString name="t_ob_prehlad_label">Order status</i18nString>
+		<i18nString name="schv_hotel_title">Approver: Hotel / reception</i18nString>
+		<i18nString name="schv_restauracia_title">Approver: Restaurant</i18nString>
+		<i18nString name="schv_wellness_title">Approver: Wellness</i18nString>
+		<i18nString name="schv_udrzba_title">Approver: Maintenance</i18nString>
+		<i18nString name="schv_marketing_title">Approver: Marketing</i18nString>
+		<i18nString name="schv_sprava_title">Approver: Administration</i18nString>
+		<i18nString name="ob_schvalovatelia_title">Cost centre approvers</i18nString>
+		<i18nString name="ob_schvalovatelia_desc">Filled in automatically from the cost centre when the order is submitted. The right to approve hangs on this list.</i18nString>
+		<i18nString name="t_ob_ziadost_assign">Take over</i18nString>
+		<i18nString name="t_ob_ziadost_finish_t">Submit for approval</i18nString>
+		<i18nString name="t_ob_schvalenie_assign">Take for approval</i18nString>
+		<i18nString name="t_ob_schvalenie_finish_t">Record the decision</i18nString>
+		<i18nString name="t_ob_schvalenie_cancel">Release for someone else</i18nString>
+		<i18nString name="t_ob_riaditel_assign">Take for approval</i18nString>
+		<i18nString name="t_ob_riaditel_finish_t">Record the decision</i18nString>
+		<i18nString name="t_ob_riaditel_cancel">Release for someone else</i18nString>
+		<i18nString name="t_ob_objednanie_assign">Take over</i18nString>
+		<i18nString name="t_ob_objednanie_finish_t">Confirm the order</i18nString>
+		<i18nString name="empty_button"></i18nString>
+	</i18n>
+	<icon>shopping_cart</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Schvalovanie objednavok (podklad: cenova ponuka z 31. 8. 2026, Faza 2).
+
+		Ta ista schvalovacia kostra ako `fa_faktura` a ten isty limit - kto ma
+		v hoteli podpisove pravo na fakturu, ma ho aj na objednavku. Preto su
+		to DVE SIETE a nie jedna s prepinacom typu: objednavka nekonci
+		zauctovanim, ale odoslanim dodavatelovi a vlastnym cislom, a polia
+		"splatnost" a "cislo faktury" na nej nemaju co robit. Jedna siet
+		s polovicou poli skrytych by znamenala, ze polovica formulara je
+		vzdy zavadzajuca.
+
+		  p_koncept -> t_ob_ziadost -> p_na_schvalenie -> t_ob_schvalenie -+-> p_u_riaditela -> t_ob_riaditel -+
+		      ^                                                           |                                   |
+		      |                                                           +-> p_na_objednanie <...............+
+		      |                                                           |          |
+		      |                                                           |          v
+		      +...... variable arcy: vratenie na doplnenie ................+   t_ob_objednanie -> p_uzavreta
+		                                                                  |                            ^
+		                                                                  +-> p_uzavreta (zamietnuta) ..+
+
+		POZIADAVKY su zoznam riadkov (nazov, mnozstvo, jednotka, cena), ktoreho
+		zdroj pravdy je JSON v `ob_polozky_json`; `ob_polozky` je len jeho citatelne
+		vykreslenie a `ob_suma` jeho SUCET. Vzor je `ai_config` (císelník modelov):
+		JSON + `button` na pridanie + `multichoice_map` s prestavanymi moznostami na
+		odobranie. Preco takto a nie child casy ako `sd_ticket` -> `sd_work_item`:
+		poziadavka nema vlastny zivotny cyklus, nikto ju samostatne neschvaluje ani
+		nezatvara - je to specifikacia, ktoru schvalovatel cita. Child case by
+		znamenal dalsiu siet, dalsi prenos dat medzi casmi a jeho tiche pasce.
+
+		Suma sa PREPOCITAVA, netypuje: kto zada mnozstvo a cenu, nemoze sa
+		v sucte pomylit, a hranica dvoch urovni schvalenia tak stoji na tom, co je
+		v objednavke naozaj napisane. Preto je `ob_suma` na formulari len `visible`.
+
+		Spojenie s fakturou je `ob_cislo`: cislo, ktore zadavatel pri potvrdeni
+		objednavky napise, sa na fakture zapise do `fa_objednavka`. Zamerne je
+		to retazec a nie odkaz na case - parovanie objednavka/faktura je uloha
+		pre Fazu 2 a robi sa az vtedy, ked je co parovat. Odkaz na case, ktory
+		nikto nepouziva, by bol len dalsie miesto, kde sa da rozist.
+
+		Oprávnenia, `assignPolicy` a styri oci fungujú ako v `fa_faktura` -
+		vysvetlenie je v komentari tam.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>ob_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+ob_zadal: f.ob_zadal, ob_zadal_meno: f.ob_zadal_meno,
+ob_stav: f.ob_stav, ob_stav_label: f.ob_stav_label, ob_ceka_na: f.ob_ceka_na,
+ob_predmet: f.ob_predmet, ob_suma: f.ob_suma;
+
+def u = loggedUser()
+
+change ob_zadal value { [u.id] }
+change ob_zadal_meno value { kto(u) }
+change ob_stav value { "koncept" }
+change ob_stav_label value { "koncept" }
+// Rozpisana objednavka lezi u toho, kto ju zacal. Notifikacia sa neposiela -
+// nikto nema dostat mail o tom, ze si prave zalozil vlastnu ziadost.
+change ob_ceka_na value { kto(u) }
+changeCaseProperty("color").about { farba("koncept") }
+changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "koncept") }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="limit_riaditela"><![CDATA[
+{ ->
+    // Hranica dvoch urovni schvalenia, v EUR s DPH: do limitu vratane staci
+    // stredisko, nad limit schvaluje aj riaditel.
+    //
+    // Cita sa z konfiguracneho casu (`nastavenia/sc_nastavenia`), aby sa dala
+    // zmenit v appke a nie novou verziou siete. Ked konfiguracia neexistuje
+    // alebo je prazdna, plati zabudovanych 1000 - appka musi fungovat aj
+    // v instancii, kde konfiguracnu siet nikto nenaimportoval.
+    def cfg = najnovsiCase("nastavenia/sc_nastavenia")
+    def v = cfg?.dataSet?.get("sc_limit")?.value
+    if (v == null) return 1000.0d
+    double d = (v as Number).doubleValue()
+    return d > 0 ? d : 1000.0d
+}
+	]]></function>
+	<function scope="process" name="kto"><![CDATA[
+{ def u ->
+    // Nie `u?.fullName` - `?.` chrani pred null, nie pred chybajucou property,
+    // a na chybajucej vyhodi MissingPropertyException uprostred akcie.
+    return (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+}
+	]]></function>
+	<function scope="process" name="farba"><![CDATA[
+{ def kod ->
+    def m = ["koncept"      : "grey",
+             "na_schvalenie": "blue",
+             "u_riaditela"  : "indigo",
+             "na_objednanie": "teal",
+             "objednana"    : "green",
+             "vratena"      : "orange",
+             "zamietnuta"   : "red"]
+    return m[kod as String] ?: "grey"
+}
+	]]></function>
+	<function scope="process" name="suma_slovom"><![CDATA[
+{ def ob_suma ->
+    def v = ob_suma.value
+    if (v == null) return "cena nevyplnená"
+    return String.format(java.util.Locale.US, "%.2f", (v as Number).doubleValue()) + " €"
+}
+	]]></function>
+	<function scope="process" name="nazov"><![CDATA[
+{ def ob_predmet, def ob_suma, def stavKod ->
+    // BEZ STAVU - dovod je v `fa_faktura` pri tej istej funkcii: `Case.title`
+    // je `String` a prelozit sa neda, kym pole `ob_stav_label` je
+    // `enumeration_map`, teda prelozene, a je v zobrazeniach ako stlpec.
+    def p = ((ob_predmet.value ?: "") as String).trim()
+    if (p.length() > 60) p = p.substring(0, 57) + "..."
+    def co = p ?: ((useCase.visualId ?: "?") as String)
+    // Nula znamena "este nic nepridane" - `number` pole prazdne nevracia null,
+    // takze bez tejto podmienky sa kazda nova objednavka vola "... 0.00 €".
+    def suma = ob_suma.value
+    if (suma != null && (suma as Number).doubleValue() > 0) {
+        co = co + " · " + suma_slovom(ob_suma)
+    }
+    return co
+}
+	]]></function>
+	<function scope="process" name="zapis_historie"><![CDATA[
+{ def ob_historia, def text ->
+    def ts = java.time.LocalDateTime.now()
+            .format(java.time.format.DateTimeFormatter.ofPattern("d.M.yyyy HH:mm"))
+    def log = (ob_historia.value ?: "") as String
+    def riadok = ts + "  " + (text as String)
+    change ob_historia value { log ? log + "\n" + riadok : riadok }
+}
+	]]></function>
+	<function scope="process" name="nad_limit"><![CDATA[
+{ def ob_suma ->
+    def v = ob_suma.value
+    if (v == null) return false
+    return (v as Number).doubleValue() > limit_riaditela()
+}
+	]]></function>
+	<function scope="process" name="prepocet"><![CDATA[
+{ def ob_suma, def ob_kontrola ->
+    def v = ob_suma.value
+    if (v == null) {
+        change ob_kontrola value { "" }
+        return false
+    }
+    def d = (v as Number).doubleValue()
+    if (d <= 0) {
+        change ob_kontrola value { "Predpokladaná cena musí byť väčšia ako nula – takto sa objednávka podať nedá." }
+        return true
+    }
+    if (d > limit_riaditela()) {
+        change ob_kontrola value {
+            "Nad " + String.format(java.util.Locale.US, "%.0f", limit_riaditela()) +
+                    " € schvaľuje po stredisku ešte riaditeľ."
+        }
+        return true
+    }
+    change ob_kontrola value { "" }
+    return false
+}
+	]]></function>
+	<function scope="process" name="polozky_zo_json"><![CDATA[
+{ def ob_polozky_json ->
+    def raw = ((ob_polozky_json.value ?: "") as String).trim()
+    if (!raw) return []
+    try {
+        return new groovy.json.JsonSlurper().parseText(raw) as List
+    } catch (Exception e) {
+        // Rozsypany JSON nesmie zhodit celu akciu - prazdny zoznam je horsi
+        // vysledok, ale opravitelny.
+        return []
+    }
+}
+	]]></function>
+	<function scope="process" name="sucet_polozok"><![CDATA[
+{ def polozky ->
+    double sum = 0.0d
+    polozky.each { pol ->
+        double mn = ((pol.mnozstvo ?: 0) as Number).doubleValue()
+        double cn = ((pol.cena ?: 0) as Number).doubleValue()
+        sum += mn * cn
+    }
+    // Zaokruhlenie na centy: 0.1 + 0.2 v doublach nie je 0.3 a v sucte
+    // desiatok riadkov to je vidno.
+    return Math.round(sum * 100.0d) / 100.0d
+}
+	]]></function>
+	<function scope="process" name="render_polozky"><![CDATA[
+{ def ob_polozky_json, def ob_polozky, def ob_polozky_vyber, def ob_suma, def ob_kontrola ->
+    // Jedno miesto, ktore drzi vykreslenie, moznosti na odobranie a sucet
+    // v zhode s JSONom. Kazdy, kto zoznam meni, konci volanim tejto funkcie.
+    def list = polozky_zo_json(ob_polozky_json)
+    def fmt = { def n -> String.format(java.util.Locale.US, "%.2f", (n as Number).doubleValue()) }
+    def riadok = { def pol ->
+        double mn = ((pol.mnozstvo ?: 0) as Number).doubleValue()
+        double cn = ((pol.cena ?: 0) as Number).doubleValue()
+        return (pol.nazov as String) + "  ·  " + fmt(mn) + " " + ((pol.jednotka ?: "ks") as String) +
+                " × " + fmt(cn) + " € = " + fmt(mn * cn) + " €"
+    }
+    change ob_polozky value {
+        list ? list.withIndex(1).collect { pol, i -> i + ". " + riadok(pol) }.join("\n")
+             : ""
+    }
+    // Kluc moznosti nesmie obsahovat `.` ani `$` (Mongo to v nazvoch poli
+    // zakazuje), preto id typu "p3" a nie nazov polozky.
+    change ob_polozky_vyber options {
+        list.collectEntries { pol -> [((pol.id ?: "?") as String): riadok(pol)] }
+    }
+    change ob_polozky_vyber value { [] }
+    change ob_suma value { sucet_polozok(list) as Double }
+    // Upozornenie na limit sa musi prepocitat tu: `ob_suma` uz nikto netypuje,
+    // takze jeho `set` udalost sa cez formular nespusti.
+    boolean varuj = prepocet(ob_suma, ob_kontrola)
+    make ob_kontrola, visible on transitions when { varuj }
+    make ob_kontrola, hidden  on transitions when { !varuj }
+}
+	]]></function>
+	<function scope="process" name="schvalovatelia_strediska"><![CDATA[
+{ def ob_stredisko, def ob_zadal, def ob_schvalovatelia, def ob_historia ->
+    // To iste ako v `fa_faktura`: kto smie schvalit TUTO objednavku. Kaskada
+    // (stredisko -> vsetci schvalovatelia -> riaditel) je zamerna a kazdy jej
+    // stupen sa zapise do priebehu, aby objednavka v stredisku bez schvalovatela
+    // necakala navzdy a bez vysvetlenia.
+    def kod = ((ob_stredisko.value ?: "") as String).trim()
+    def zadal = (userIdsOf(ob_zadal.value) ?: []).collect { it as String }
+    def bezZadavatela = { List ids -> (ids ?: []).collect { it as String } - zadal }
+
+    def kandidati = bezZadavatela(usersWithRoleAll("schv_" + kod))
+    def preco = null
+    if (!kandidati) {
+        kandidati = bezZadavatela(usersWithRoleAll("schvalovatel"))
+        preco = "stredisko nemá vlastného schvaľovateľa, ide to všetkým schvaľovateľom"
+    }
+    if (!kandidati) {
+        kandidati = bezZadavatela(usersWithRoleAll("riaditel"))
+        preco = "nikto okrem riaditeľa nemôže túto objednávku schváliť"
+    }
+    change ob_schvalovatelia value { kandidati }
+    if (preco) {
+        zapis_historie(ob_historia, "smerovanie: " + preco)
+    }
+    return kandidati
+}
+	]]></function>
+	<function scope="process" name="cakajuci"><![CDATA[
+{ def kod, def ob_zadal, def ob_schvalovatelia ->
+    // Kto je na rade. ID, nie rola ako slovo - do `ob_ceka_na` patria mena.
+    def k = ((kod ?: "") as String)
+    if (k == "na_schvalenie") return userIdsOf(ob_schvalovatelia.value)
+    if (k == "u_riaditela") return usersWithRoleAll("riaditel")
+    // Objednat a potvrdit objednanie ma ten, kto o objednavku poziadal.
+    if (k in ["na_objednanie", "vratena", "koncept"]) return userIdsOf(ob_zadal.value)
+    return []
+}
+	]]></function>
+	<function scope="process" name="veta_o_stave"><![CDATA[
+{ def kod ->
+    def k = ((kod ?: "") as String)
+    if (k == "na_schvalenie") return "Objednávka čaká na schválenie za stredisko."
+    if (k == "u_riaditela") return "Objednávka je nad limitom a čaká na schválenie riaditeľom."
+    if (k == "na_objednanie") return "Objednávka je schválená - môže sa objednať."
+    if (k == "objednana") return "Objednávka bola objednaná u dodávateľa."
+    if (k == "vratena") return "Objednávka bola vrátená na doplnenie."
+    if (k == "zamietnuta") return "Objednávka bola zamietnutá."
+    return "Objednávka je rozpísaná."
+}
+	]]></function>
+	<function scope="process" name="po_zmene_stavu"><![CDATA[
+{ def kod, def ob_ceka_na, def ob_zadal, def ob_schvalovatelia, def ob_historia,
+  def ob_predmet, def ob_suma, def ob_stredisko ->
+    // Jedno miesto pre "u koho to lezi" a pre upozornenie toho, kto je na rade.
+    // Rovnaky vzor ako v fa_faktura - keby to bolo rozpisane po prechodoch,
+    // jeden z nich to vzdy zabudne.
+    def k = ((kod ?: "") as String)
+    def ids = cakajuci(k, ob_zadal, ob_schvalovatelia)
+    def mena = menaUzivatelov(ids)
+    change ob_ceka_na value { mena ? mena.join(", ") : "—" }
+
+    def komu = ids ?: ((k in ["objednana", "zamietnuta"]) ? userIdsOf(ob_zadal.value) : [])
+    if (!komu) return 0
+
+    def popis = (((ob_predmet.value ?: "") as String).trim() ?: "objednávka")
+    def telo = new StringBuilder()
+    telo.append(veta_o_stave(k)).append("\n\n")
+    telo.append("Objednávka: ").append(popis).append("\n")
+    telo.append("Cena:       ").append(suma_slovom(ob_suma)).append("\n")
+    telo.append("Stredisko:  ").append(((ob_stredisko.value ?: "-") as String)).append("\n")
+    telo.append("\nPortál eTask → Objednávky a faktúry → Objednávky.\n")
+
+    def poslane = notifikuj(komu, popis + " – " + veta_o_stave(k), telo.toString())
+    if (poslane > 0) {
+        zapis_historie(ob_historia, "upozornenie e-mailom: " + poslane + "×")
+    }
+    return poslane
+}
+	]]></function>
+	<function scope="process" name="nie_vlastnu"><![CDATA[
+{ def ob_zadal, def rola ->
+    // STVORI OCI. `userIdsOf` je primitiv delegata - id z userList pola sa
+    // nikdy netahaju rucne, `u?._id` zhodi celu akciu.
+    def zadal = (userIdsOf(ob_zadal.value) ?: []).collect { it as String }
+    def ja = loggedUser().id as String
+    if (zadal.contains(ja)) {
+        throw new java.lang.IllegalStateException(
+                "Objednávku, o ktorú ste požiadali, nemôžete schváliť ako " + (rola as String) +
+                        ". Nech ju schváli niekto iný.")
+    }
+}
+	]]></function>
+	<roleRef>
+		<id>zadavatel</id>
+		<caseLogic>
+			<create>true</create>
+		</caseLogic>
+	</roleRef>
+	<userRef>
+		<id>ob_zadal</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</userRef>
+	<roleRef>
+		<id>schvalovatel</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>riaditel</id>
+		<caseLogic>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>uctovnik</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<!--
+		Roly stredisk - to iste ako na fakture: vidiet vsetko, schvalit len
+		svoje stredisko. Riadi to `ob_schvalovatelia`, do ktoreho sa pri
+		podani premietnu uzivatelia s rolou daneho strediska.
+	-->
+	<roleRef>
+		<id>schv_hotel</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>schv_restauracia</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>schv_wellness</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>schv_udrzba</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>schv_marketing</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>schv_sprava</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>zadavatel</id>
+		<title name="zadavatel_title">Zadávateľ objednávok</title>
+	</role>
+	<role>
+		<id>schvalovatel</id>
+		<title name="schvalovatel_title">Schvaľovateľ strediska</title>
+	</role>
+	<role>
+		<id>riaditel</id>
+		<title name="riaditel_title">Riaditeľ hotela</title>
+	</role>
+	<role>
+		<id>uctovnik</id>
+		<title name="uctovnik_title">Účtovník</title>
+	</role>
+	<role>
+		<id>schv_hotel</id>
+		<title name="schv_hotel_title">Schvaľovateľ: Hotel / recepcia</title>
+	</role>
+	<role>
+		<id>schv_restauracia</id>
+		<title name="schv_restauracia_title">Schvaľovateľ: Reštaurácia</title>
+	</role>
+	<role>
+		<id>schv_wellness</id>
+		<title name="schv_wellness_title">Schvaľovateľ: Wellness</title>
+	</role>
+	<role>
+		<id>schv_udrzba</id>
+		<title name="schv_udrzba_title">Schvaľovateľ: Údržba</title>
+	</role>
+	<role>
+		<id>schv_marketing</id>
+		<title name="schv_marketing_title">Schvaľovateľ: Marketing</title>
+	</role>
+	<role>
+		<id>schv_sprava</id>
+		<title name="schv_sprava_title">Schvaľovateľ: Správa</title>
+	</role>
+	<data type="i18n">
+		<id>div_ob_ziadost</id>
+		<title/>
+		<init name="div_ob_ziadost_init">Žiadosť</init>
+	</data>
+	<data type="i18n">
+		<id>div_ob_rozhodnutie</id>
+		<title/>
+		<init name="div_ob_rozhodnutie_init">Schválenie</init>
+	</data>
+	<data type="i18n">
+		<id>div_ob_objednanie</id>
+		<title/>
+		<init name="div_ob_objednanie_init">Objednanie</init>
+	</data>
+	<data type="i18n">
+		<id>div_ob_priebeh</id>
+		<title/>
+		<init name="div_ob_priebeh_init">Priebeh</init>
+	</data>
+	<data type="userList">
+		<id>ob_schvalovatelia</id>
+		<title name="ob_schvalovatelia_title">Schvaľovatelia strediska</title>
+		<desc name="ob_schvalovatelia_desc">Vyplní sa sám pri podaní podľa strediska. Na tomto zozname visí právo objednávku schváliť.</desc>
+	</data>
+	<data type="userList">
+		<id>ob_zadal</id>
+		<title name="ob_zadal_title">Žiadal (užívateľ)</title>
+		<desc name="ob_zadal_desc">Vyplní sa sám pri založení objednávky. Na tomto zozname visí právo vidieť vlastnú objednávku.</desc>
+	</data>
+	<data type="text">
+		<id>ob_zadal_meno</id>
+		<title name="ob_zadal_meno_title">Žiadal</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>ob_predmet</id>
+		<title name="ob_predmet_title">Čo treba objednať</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>ob_dodavatel</id>
+		<title name="ob_dodavatel_title">Navrhovaný dodávateľ</title>
+	</data>
+	<data type="i18n">
+		<id>div_ob_poziadavky</id>
+		<title/>
+		<init name="div_ob_poziadavky_init">Požiadavky</init>
+	</data>
+	<data type="text">
+		<id>ob_polozky_json</id>
+		<title name="ob_polozky_json_title">Požiadavky (dáta)</title>
+		<desc name="ob_polozky_json_desc">Zdroj pravdy zoznamu. Ručne sa needituje.</desc>
+	</data>
+	<data type="text">
+		<id>ob_polozky</id>
+		<title name="ob_polozky_title">Požiadavky</title>
+		<desc name="ob_polozky_desc">Čo presne treba objednať. Podľa súčtu sa určuje, kto musí schvaľovať.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text" immediate="true">
+		<id>ob_p_nazov</id>
+		<title name="ob_p_nazov_title">Položka</title>
+		<!--
+			`immediate="true"` je tu POVINNE: blur textoveho pola a klik na button
+			su jedna poziadavka, takze bez neho by akcia buttonu precitala prazdno.
+		-->
+	</data>
+	<data type="number" immediate="true">
+		<id>ob_p_mnozstvo</id>
+		<title name="ob_p_mnozstvo_title">Množstvo</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>ob_p_jednotka</id>
+		<title name="ob_p_jednotka_title">Jednotka</title>
+	</data>
+	<data type="number" immediate="true">
+		<id>ob_p_cena</id>
+		<title name="ob_p_cena_title">Cena za jednotku s DPH (€)</title>
+	</data>
+	<data type="button">
+		<id>btn_ob_pridat</id>
+		<title/>
+		<desc name="btn_ob_pridat_desc">Pridá riadok do zoznamu a prepočíta súčet.</desc>
+		<placeholder name="btn_ob_pridat_placeholder">Pridať požiadavku</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_ob_pridat_set</id>
+			<actions phase="post">
+				<action id="13"><![CDATA[
+ob_p_nazov: f.ob_p_nazov, ob_p_mnozstvo: f.ob_p_mnozstvo,
+ob_p_jednotka: f.ob_p_jednotka, ob_p_cena: f.ob_p_cena,
+ob_polozky_json: f.ob_polozky_json, ob_polozky: f.ob_polozky,
+ob_polozky_vyber: f.ob_polozky_vyber, ob_polozky_sprava: f.ob_polozky_sprava,
+ob_suma: f.ob_suma, ob_kontrola: f.ob_kontrola;
+
+// Button nie je `finish`, takze vynimka by tu nemala komu nic povedat -
+// chyba ide do `ob_polozky_sprava` a formular zostane otvoreny.
+def nazov = ((ob_p_nazov.value ?: "") as String).trim()
+def mn = (ob_p_mnozstvo.value == null) ? 1.0d : (ob_p_mnozstvo.value as Number).doubleValue()
+def cn = (ob_p_cena.value == null) ? 0.0d : (ob_p_cena.value as Number).doubleValue()
+
+if (!nazov) {
+    change ob_polozky_sprava value { "Napíšte, čo sa má objednať." }
+} else if (mn <= 0) {
+    change ob_polozky_sprava value { "Množstvo musí byť väčšie ako nula." }
+} else if (cn < 0) {
+    change ob_polozky_sprava value { "Cena nemôže byť negatívna." }
+} else {
+    def list = polozky_zo_json(ob_polozky_json)
+    // Id je pocitadlo, nie index: po odobrani riadku by sa indexy precislovali
+    // a zaskrtnutie v `ob_polozky_vyber` by ukazovalo na inu polozku.
+    int next = 1
+    list.each { pol ->
+        // Zamerne bez regexu: `pflint` v `/p(\d+)/` vidi volanie metody `p(...)`
+        // a hlasi preklep. Substring je aj tak citatelnejsi.
+        def id = ((pol.id ?: "") as String)
+        if (id.startsWith("p") && id.length() > 1 && id.substring(1).isInteger()) {
+            int n = id.substring(1) as int
+            if (n >= next) next = n + 1
+        }
+    }
+    list.add([id       : "p" + next,
+              nazov    : nazov,
+              mnozstvo : mn,
+              jednotka : (((ob_p_jednotka.value ?: "") as String).trim() ?: "ks"),
+              cena     : cn])
+    change ob_polozky_json value { groovy.json.JsonOutput.toJson(list) }
+    render_polozky(ob_polozky_json, ob_polozky, ob_polozky_vyber, ob_suma, ob_kontrola)
+    change ob_polozky_sprava value { "Pridané: " + nazov + " (" + list.size() + " v zozname)" }
+    change ob_p_nazov value { "" }
+    change ob_p_mnozstvo value { null }
+    change ob_p_jednotka value { "" }
+    change ob_p_cena value { null }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="multichoice_map">
+		<id>ob_polozky_vyber</id>
+		<title name="ob_polozky_vyber_title">Odobrať zo zoznamu</title>
+		<desc name="ob_polozky_vyber_desc">Zaškrtnite, čo má zo zoznamu zmiznúť, a stlačte Odobrať vybrané.</desc>
+		<!--
+			BEZ `immediate="true"`: moznosti sa stavaju za behu a `immediate` na
+			`multichoice_map` s runtime moznostami zhodi indexaciu casu
+			(PETRIFLOW_LEARNINGS B22, ENGINE_ISSUES E5).
+		-->
+	</data>
+	<data type="button">
+		<id>btn_ob_odobrat</id>
+		<title/>
+		<desc name="btn_ob_odobrat_desc">Odoberie všetky zaškrtnuté riadky a prepočíta súčet.</desc>
+		<placeholder name="btn_ob_odobrat_placeholder">Odobrať vybrané</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_ob_odobrat_set</id>
+			<actions phase="post">
+				<action id="14"><![CDATA[
+ob_polozky_json: f.ob_polozky_json, ob_polozky: f.ob_polozky,
+ob_polozky_vyber: f.ob_polozky_vyber, ob_polozky_sprava: f.ob_polozky_sprava,
+ob_suma: f.ob_suma, ob_kontrola: f.ob_kontrola;
+
+def vybrane = ((ob_polozky_vyber.value ?: []) as List).collect { it as String } as Set
+if (!vybrane) {
+    change ob_polozky_sprava value { "Nič nie je zaškrtnuté." }
+} else {
+    def list = polozky_zo_json(ob_polozky_json)
+    def zostava = list.findAll { pol -> !(((pol.id ?: "") as String) in vybrane) }
+    change ob_polozky_json value { groovy.json.JsonOutput.toJson(zostava) }
+    render_polozky(ob_polozky_json, ob_polozky, ob_polozky_vyber, ob_suma, ob_kontrola)
+    change ob_polozky_sprava value { "Odobraté: " + (list.size() - zostava.size()) }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>ob_polozky_sprava</id>
+		<title name="ob_polozky_sprava_title">Stav zoznamu</title>
+	</data>
+	<data type="number" immediate="true">
+		<id>ob_suma</id>
+		<title name="ob_suma_title">Predpokladaná cena s DPH (€)</title>
+		<desc name="ob_suma_desc">Súčet požiadaviek. Rozhoduje o tom, kto musí schvaľovať: nad limit schvaľuje aj riaditeľ.</desc>
+		<!--
+			Bez komponentu `currency` - dovod je v `fa_faktura` pri `fa_suma`:
+			frontend nikde nevola `registerLocaleData`, takze CurrencyPipe by
+			na `sk-SK` padla na chybajuce data locale.
+		-->
+		<event type="set">
+			<id>ob_suma_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+ob_suma: f.ob_suma, ob_kontrola: f.ob_kontrola;
+boolean varuj = prepocet(ob_suma, ob_kontrola)
+make ob_kontrola, visible on transitions when { varuj }
+make ob_kontrola, hidden  on transitions when { !varuj }
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>ob_stredisko</id>
+		<title name="ob_stredisko_title">Stredisko</title>
+		<desc name="ob_stredisko_desc">Na koho rozpočet objednávka ide.</desc>
+		<options>
+			<option key="hotel" name="ob_stredisko_opt_hotel">Hotel / recepcia</option>
+			<option key="restauracia" name="ob_stredisko_opt_restauracia">Reštaurácia</option>
+			<option key="wellness" name="ob_stredisko_opt_wellness">Wellness</option>
+			<option key="udrzba" name="ob_stredisko_opt_udrzba">Údržba</option>
+			<option key="marketing" name="ob_stredisko_opt_marketing">Marketing</option>
+			<option key="sprava" name="ob_stredisko_opt_sprava">Správa</option>
+		</options>
+	</data>
+	<data type="text">
+		<id>ob_zdovodnenie</id>
+		<title name="ob_zdovodnenie_title">Načo to je</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="date" immediate="true">
+		<id>ob_termin</id>
+		<title name="ob_termin_title">Treba dokedy</title>
+		<!--
+			`immediate="true"` kvoli stlpcu v zozname: co nie je v `immediateData`
+			casu, stlpec nenajde a nechá ho prázdny - bez akéhokoľvek hlásenia.
+		-->
+	</data>
+	<data type="text">
+		<id>ob_kontrola</id>
+		<title name="ob_kontrola_title">Upozornenie</title>
+	</data>
+	<data type="text">
+		<id>ob_stav</id>
+		<title name="ob_stav_title">Kód stavu</title>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>ob_stav_label</id>
+		<title name="ob_stav_label_title">Stav</title>
+		<!--
+			`enumeration_map`, nie `text`, a to KVOLI PREKLADU.
+			`TextField` drzi `String`, takze hodnotu, ktoru zapise akcia,
+			engine prelozit nevie - v anglickom portali by stav zostal
+			slovensky ako jediny text na formulari. Moznosti maju `name`,
+			takze ich engine prekladá, a akcia zapisuje KLUC.
+
+			Vedlajsi zisk: dopyty v menu filtruju podla kluca
+			(`dataSet.ob_stav_label.textValue:"zauctovana"`), teda nezavisia
+			od jazyka ani od preformulovania popisku.
+		-->
+		<options>
+			<option key="koncept" name="ob_stav_opt_koncept">Rozpísaná</option>
+			<option key="na_schvalenie" name="ob_stav_opt_na_schvalenie">Čaká na stredisko</option>
+			<option key="u_riaditela" name="ob_stav_opt_u_riaditela">Čaká na riaditeľa</option>
+			<option key="na_objednanie" name="ob_stav_opt_na_objednanie">Schválená na objednanie</option>
+			<option key="objednana" name="ob_stav_opt_objednana">Objednaná</option>
+			<option key="vratena" name="ob_stav_opt_vratena">Vrátená na doplnenie</option>
+			<option key="zamietnuta" name="ob_stav_opt_zamietnuta">Zamietnutá</option>
+		</options>
+	</data>
+	<data type="dateTime">
+		<id>ob_ziadane_o</id>
+		<title name="ob_ziadane_o_title">Požiadané</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>ob_ceka_na</id>
+		<title name="ob_ceka_na_title">U koho leží</title>
+		<desc name="ob_ceka_na_desc">Kto má objednávku práve na stole. Sú to mená, aby to bolo rovnaké v každom jazyku.</desc>
+		<!--
+			MENA, nie roly - pole je `text`, teda `String`, a ten sa nepreklada
+			(RUNBOOK 9). To iste rieši `fa_ceka_na` na fakturach.
+			`immediate` kvoli stlpcu v zozname.
+		-->
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>ob_rozhodnutie</id>
+		<title name="ob_rozhodnutie_title">Rozhodnutie</title>
+		<options>
+			<option key="schvalit" name="ob_rozhodnutie_opt_schvalit">Schváliť</option>
+			<option key="vratit" name="ob_rozhodnutie_opt_vratit">Vrátiť na doplnenie</option>
+			<option key="zamietnut" name="ob_rozhodnutie_opt_zamietnut">Zamietnuť</option>
+		</options>
+	</data>
+	<data type="text" immediate="true">
+		<id>ob_poznamka</id>
+		<title name="ob_poznamka_title">Poznámka k objednávke</title>
+		<desc name="ob_poznamka_desc">Zadávateľ ju uvidí na objednávke. Každá poznámka zostáva v Priebehu.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>ob_schvalil_stredisko</id>
+		<title name="ob_schvalil_stredisko_title">Schválilo stredisko</title>
+	</data>
+	<data type="text">
+		<id>ob_schvalil_riaditel</id>
+		<title name="ob_schvalil_riaditel_title">Schválil riaditeľ</title>
+	</data>
+	<data type="dateTime">
+		<id>ob_schvalene_o</id>
+		<title name="ob_schvalene_o_title">Schválená</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>ob_cislo</id>
+		<title name="ob_cislo_title">Číslo objednávky</title>
+		<desc name="ob_cislo_desc">Číslo, ktoré dostal dodávateľ. Faktúra sa naň potom odvoláva.</desc>
+	</data>
+	<data type="text">
+		<id>ob_objednal</id>
+		<title name="ob_objednal_title">Objednal</title>
+	</data>
+	<data type="dateTime">
+		<id>ob_objednane_o</id>
+		<title name="ob_objednane_o_title">Objednané</title>
+	</data>
+	<data type="text">
+		<id>ob_historia</id>
+		<title name="ob_historia_title">Priebeh</title>
+		<desc name="ob_historia_desc">Čo sa s objednávkou dialo. Dopĺňa sa samo, prepísať sa nedá.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="number">
+		<id>ob_to_riaditel</id>
+		<title name="ob_to_riaditel_title">Smerovanie: k riaditeľovi</title>
+		<desc name="ob_routing_desc">Násobnosť variable arcu. Nastavuje ju akcia rozhodnutia, človek sa jej nedotýka.</desc>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>ob_to_objednanie</id>
+		<title name="ob_to_objednanie_title">Smerovanie: na objednanie</title>
+		<desc name="ob_routing_desc">Násobnosť variable arcu. Nastavuje ju akcia rozhodnutia, človek sa jej nedotýka.</desc>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>ob_to_koncept</id>
+		<title name="ob_to_koncept_title">Smerovanie: späť zadávateľovi</title>
+		<desc name="ob_routing_desc">Násobnosť variable arcu. Nastavuje ju akcia rozhodnutia, človek sa jej nedotýka.</desc>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>ob_to_uzavreta</id>
+		<title name="ob_to_uzavreta_title">Smerovanie: uzavretá</title>
+		<desc name="ob_routing_desc">Násobnosť variable arcu. Nastavuje ju akcia rozhodnutia, človek sa jej nedotýka.</desc>
+		<init>0</init>
+	</data>
+	<transition>
+		<id>t_ob_ziadost</id>
+		<x>140</x>
+		<y>80</y>
+		<label name="t_ob_ziadost_label">Požiadať o objednávku</label>
+		<icon>add_shopping_cart</icon>
+		<assignPolicy>auto</assignPolicy>
+		<userRef>
+			<id>ob_zadal</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_ob_ziadost</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>ob_stav_label</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_poznamka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>2</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_ziadost</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_predmet</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_stredisko</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_dodavatel</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_termin</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_zdovodnenie</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_poziadavky</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_p_nazov</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_p_mnozstvo</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_p_jednotka</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_p_cena</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_ob_pridat</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>5</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_polozky_sprava</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_polozky</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_polozky_vyber</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>2</rows><cols>5</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_ob_odobrat</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>5</x><y>15</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_suma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>17</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_kontrola</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>2</x><y>17</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_polozky_json</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>18</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_ob_ziadost_finish</id>
+			<title name="t_ob_ziadost_finish_t">Podať na schválenie</title>
+			<actions phase="pre">
+				<action id="3"><![CDATA[
+ob_suma: f.ob_suma, ob_polozky_json: f.ob_polozky_json,
+ob_polozky: f.ob_polozky, ob_polozky_vyber: f.ob_polozky_vyber,
+ob_kontrola: f.ob_kontrola;
+
+// Jedine miesto, ktore podanie naozaj zastavi. `required` overi len to, ze pole
+// nie je prazdne, a poziadavky ziadne `required` nepokryje - su to riadky
+// v JSONe, nie pole na formulari. Odmietnutie vracia HTTP 200 a dovod v tele
+// ako `error`.
+def polozky = polozky_zo_json(ob_polozky_json)
+if (!polozky) {
+    throw new java.lang.IllegalStateException(
+            "Pridajte aspoň jednu požiadavku - bez nej nie je čo objednať.")
+}
+
+// Sucet sa prepocita TU a nie len v buttone: kto posle data cez API, formular
+// (a s nim aj button) obchadza, a suma by zostala z predoslej verzie zoznamu.
+// Nad limit ide objednavka riaditelovi, takze na tomto cisle zavisi smerovanie.
+render_polozky(ob_polozky_json, ob_polozky, ob_polozky_vyber, ob_suma, ob_kontrola)
+
+def v = ob_suma.value
+if (v == null || (v as Number).doubleValue() <= 0) {
+    throw new java.lang.IllegalStateException(
+            "Ceny požiadaviek sú nulové. Limit schvaľovania stojí na peniazoch, " +
+                    "takže aj odhad je lepší než nič.")
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="4"><![CDATA[
+ob_stav: f.ob_stav, ob_stav_label: f.ob_stav_label, ob_ziadane_o: f.ob_ziadane_o,
+ob_kontrola: f.ob_kontrola, ob_historia: f.ob_historia,
+ob_predmet: f.ob_predmet, ob_suma: f.ob_suma, ob_polozky_json: f.ob_polozky_json,
+ob_stredisko: f.ob_stredisko, ob_zadal: f.ob_zadal, ob_ceka_na: f.ob_ceka_na,
+ob_schvalovatelia: f.ob_schvalovatelia;
+
+def opakovane = (((ob_stav.value ?: "") as String) == "vratena")
+int pocet = polozky_zo_json(ob_polozky_json).size()
+
+// Kto smie tuto objednavku schvalit. Prepocitava sa pri KAZDOM podani -
+// po vrateni sa stredisko moze zmenit a s nim aj schvalovatel.
+schvalovatelia_strediska(ob_stredisko, ob_zadal, ob_schvalovatelia, ob_historia)
+
+change ob_stav value { "na_schvalenie" }
+change ob_stav_label value { "na_schvalenie" }
+changeCaseProperty("color").about { farba("na_schvalenie") }
+change ob_ziadane_o value { java.time.LocalDateTime.now() }
+change ob_kontrola value { "" }
+zapis_historie(ob_historia, (opakovane ? "doplnené a podané znova: " : "požiadané: ") +
+        pocet + (pocet == 1 ? " požiadavka" : (pocet < 5 ? " požiadavky" : " požiadaviek")) +
+        " za " + suma_slovom(ob_suma) +
+        (nad_limit(ob_suma) ? " (nad limit, pôjde aj riaditeľovi)" : ""))
+changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "na_schvalenie") }
+po_zmene_stavu("na_schvalenie", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia,
+        ob_predmet, ob_suma, ob_stredisko)
+				]]></action>
+			</actions>
+		</event>
+		<event type="assign">
+			<id>t_ob_ziadost_assign</id>
+			<title name="t_ob_ziadost_assign">Prevziať</title>
+		</event>
+		<event type="cancel">
+			<id>t_ob_ziadost_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_ob_ziadost_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+	</transition>
+	<transition>
+		<id>t_ob_schvalenie</id>
+		<x>332</x>
+		<y>80</y>
+		<label name="t_ob_schvalenie_label">Schváliť za stredisko</label>
+		<icon>how_to_reg</icon>
+		<assignPolicy>manual</assignPolicy>
+		<!--
+			Schvaluje ten, kto je v `ob_schvalovatelia` - uzivatelia s rolou TOHO
+			strediska, bez zadavatela. Rola `schvalovatel` tu zamerne nie je:
+			`roleRef` a `userRef` sa zjednocuju, takze by smerovanie podla
+			stredisk nebolo k nicomu. Zostava ako zaloha v tom zozname.
+		-->
+		<userRef>
+			<id>ob_schvalovatelia</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_ob_schvalenie</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_ob_ziadost</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_suma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_termin</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_zadal_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_zdovodnenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_polozky</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_priebeh</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_historia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_rozhodnutie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_rozhodnutie</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_poznamka</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>16</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_ob_schvalenie_finish</id>
+			<title name="t_ob_schvalenie_finish_t">Zaznamenať rozhodnutie</title>
+			<actions phase="pre">
+				<action id="6"><![CDATA[
+ob_rozhodnutie: f.ob_rozhodnutie, ob_poznamka: f.ob_poznamka, ob_suma: f.ob_suma,
+ob_zadal: f.ob_zadal,
+ob_to_riaditel: f.ob_to_riaditel, ob_to_objednanie: f.ob_to_objednanie,
+ob_to_koncept: f.ob_to_koncept, ob_to_uzavreta: f.ob_to_uzavreta;
+
+// STVORI OCI. Je to tu a nie v udalosti `assign`, hoci tam by to zabralo
+// skor: vynimka z akcie v `assign` vracia HOLE HTTP 500 bez spravy, kym tu
+// vrati engine HTTP 200 a vetu v tele ako `error` (ENGINE_ISSUES E18).
+nie_vlastnu(ob_zadal, "schvaľovateľ strediska")
+
+// SMEROVANIE MUSI BYT V phase="pre" (C4) - v `post` by sa token pohol
+// s povodnymi nulami a case by ostal bez tokenu.
+def volba = ((ob_rozhodnutie.value ?: "") as String).trim()
+
+if (!volba) {
+    throw new java.lang.IllegalStateException(
+            "Vyberte, či objednávku schvaľujete, vraciate na doplnenie alebo zamietate.")
+}
+if (!(volba in ["schvalit", "vratit", "zamietnut"])) {
+    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+}
+if (volba != "schvalit" && !((ob_poznamka.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException(
+            "Napíšte dôvod - zadávateľ inak nevie, čo s objednávkou robiť.")
+}
+
+boolean naRiaditela = (volba == "schvalit" && nad_limit(ob_suma))
+
+change ob_to_riaditel   value { (naRiaditela ? 1 : 0) as Double }
+change ob_to_objednanie value { ((volba == "schvalit" && !naRiaditela) ? 1 : 0) as Double }
+change ob_to_koncept    value { (volba == "vratit" ? 1 : 0) as Double }
+change ob_to_uzavreta   value { (volba == "zamietnut" ? 1 : 0) as Double }
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="7"><![CDATA[
+ob_rozhodnutie: f.ob_rozhodnutie, ob_stav: f.ob_stav, ob_stav_label: f.ob_stav_label,
+ob_poznamka: f.ob_poznamka, ob_historia: f.ob_historia, ob_suma: f.ob_suma,
+ob_predmet: f.ob_predmet,
+ob_ceka_na: f.ob_ceka_na, ob_zadal: f.ob_zadal,
+ob_schvalovatelia: f.ob_schvalovatelia, ob_stredisko: f.ob_stredisko,
+ob_schvalil_stredisko: f.ob_schvalil_stredisko, ob_schvalene_o: f.ob_schvalene_o;
+
+def volba = ((ob_rozhodnutie.value ?: "") as String).trim()
+def meno = kto(loggedUser())
+def pozn = ((ob_poznamka.value ?: "") as String).trim()
+
+def kod
+if (volba == "vratit") {
+    kod = "vratena"
+    zapis_historie(ob_historia, "vrátené na doplnenie (" + meno + "): " + pozn)
+} else if (volba == "zamietnut") {
+    kod = "zamietnuta"
+    zapis_historie(ob_historia, "zamietnuté strediskom (" + meno + "): " + pozn)
+} else {
+    change ob_schvalil_stredisko value { meno }
+    if (nad_limit(ob_suma)) {
+        kod = "u_riaditela"
+        zapis_historie(ob_historia, "schválené strediskom (" + meno + "), cena " +
+                suma_slovom(ob_suma) + " je nad limit – ide riaditeľovi" +
+                (pozn ? ": " + pozn : ""))
+    } else {
+        kod = "na_objednanie"
+        change ob_schvalene_o value { java.time.LocalDateTime.now() }
+        zapis_historie(ob_historia, "schválené strediskom (" + meno + ")" +
+                (pozn ? ": " + pozn : ""))
+    }
+}
+
+change ob_stav value { kod }
+change ob_stav_label value { kod }
+changeCaseProperty("color").about { farba(kod) }
+// Vynulovat vyber, inak by pri dalsom kole bola v selecte predvyplnena minula
+// volba a DOKONCIT by preslo bez toho, aby sa schvalovatel na cokolvek pozrel.
+change ob_rozhodnutie value { null }
+changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, kod) }
+po_zmene_stavu(kod, ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia,
+        ob_predmet, ob_suma, ob_stredisko)
+				]]></action>
+			</actions>
+		</event>
+		<event type="assign">
+			<id>t_ob_schvalenie_assign</id>
+			<title name="t_ob_schvalenie_assign">Prevziať na schválenie</title>
+		</event>
+		<event type="cancel">
+			<id>t_ob_schvalenie_cancel</id>
+			<title name="t_ob_schvalenie_cancel">Uvoľniť pre iného</title>
+		</event>
+		<event type="delegate">
+			<id>t_ob_schvalenie_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+	</transition>
+	<transition>
+		<id>t_ob_riaditel</id>
+		<x>524</x>
+		<y>80</y>
+		<label name="t_ob_riaditel_label">Schválenie riaditeľom</label>
+		<icon>gavel</icon>
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>riaditel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_ob_riaditel</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_ob_ziadost</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_suma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_schvalil_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_zadal_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_zdovodnenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_polozky</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_priebeh</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_historia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_rozhodnutie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_rozhodnutie</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_poznamka</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>16</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_ob_riaditel_finish</id>
+			<title name="t_ob_riaditel_finish_t">Zaznamenať rozhodnutie</title>
+			<actions phase="pre">
+				<action id="9"><![CDATA[
+ob_rozhodnutie: f.ob_rozhodnutie, ob_poznamka: f.ob_poznamka, ob_zadal: f.ob_zadal,
+ob_to_riaditel: f.ob_to_riaditel, ob_to_objednanie: f.ob_to_objednanie,
+ob_to_koncept: f.ob_to_koncept, ob_to_uzavreta: f.ob_to_uzavreta;
+
+nie_vlastnu(ob_zadal, "riaditeľ")
+
+def volba = ((ob_rozhodnutie.value ?: "") as String).trim()
+if (!volba) {
+    throw new java.lang.IllegalStateException(
+            "Vyberte, či objednávku schvaľujete, vraciate na doplnenie alebo zamietate.")
+}
+if (!(volba in ["schvalit", "vratit", "zamietnut"])) {
+    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+}
+if (volba != "schvalit" && !((ob_poznamka.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException(
+            "Napíšte dôvod - zadávateľ inak nevie, čo s objednávkou robiť.")
+}
+
+// Vsetky styri flagy sa nastavuju vzdy: zdielaju ich arcy z troch prechodov
+// a hodnota, ktoru tu niekto nechal, by smerovala aj to dalsie.
+change ob_to_riaditel   value { 0 as Double }
+change ob_to_objednanie value { (volba == "schvalit" ? 1 : 0) as Double }
+change ob_to_koncept    value { (volba == "vratit" ? 1 : 0) as Double }
+change ob_to_uzavreta   value { (volba == "zamietnut" ? 1 : 0) as Double }
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="10"><![CDATA[
+ob_rozhodnutie: f.ob_rozhodnutie, ob_stav: f.ob_stav, ob_stav_label: f.ob_stav_label,
+ob_poznamka: f.ob_poznamka, ob_historia: f.ob_historia, ob_suma: f.ob_suma,
+ob_predmet: f.ob_predmet,
+ob_ceka_na: f.ob_ceka_na, ob_zadal: f.ob_zadal,
+ob_schvalovatelia: f.ob_schvalovatelia, ob_stredisko: f.ob_stredisko,
+ob_schvalil_riaditel: f.ob_schvalil_riaditel, ob_schvalene_o: f.ob_schvalene_o;
+
+def volba = ((ob_rozhodnutie.value ?: "") as String).trim()
+def meno = kto(loggedUser())
+def pozn = ((ob_poznamka.value ?: "") as String).trim()
+
+def kod
+if (volba == "vratit") {
+    kod = "vratena"
+    zapis_historie(ob_historia, "riaditeľ vrátil na doplnenie (" + meno + "): " + pozn)
+} else if (volba == "zamietnut") {
+    kod = "zamietnuta"
+    zapis_historie(ob_historia, "zamietnuté riaditeľom (" + meno + "): " + pozn)
+} else {
+    kod = "na_objednanie"
+    change ob_schvalil_riaditel value { meno }
+    change ob_schvalene_o value { java.time.LocalDateTime.now() }
+    zapis_historie(ob_historia, "schválené riaditeľom (" + meno + ")" +
+            (pozn ? ": " + pozn : ""))
+}
+
+change ob_stav value { kod }
+change ob_stav_label value { kod }
+changeCaseProperty("color").about { farba(kod) }
+change ob_rozhodnutie value { null }
+changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, kod) }
+po_zmene_stavu(kod, ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia,
+        ob_predmet, ob_suma, ob_stredisko)
+				]]></action>
+			</actions>
+		</event>
+		<event type="assign">
+			<id>t_ob_riaditel_assign</id>
+			<title name="t_ob_riaditel_assign">Prevziať na schválenie</title>
+		</event>
+		<event type="cancel">
+			<id>t_ob_riaditel_cancel</id>
+			<title name="t_ob_riaditel_cancel">Uvoľniť pre iného</title>
+		</event>
+		<event type="delegate">
+			<id>t_ob_riaditel_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+	</transition>
+	<transition>
+		<id>t_ob_objednanie</id>
+		<x>716</x>
+		<y>80</y>
+		<label name="t_ob_objednanie_label">Potvrdiť objednanie</label>
+		<icon>local_shipping</icon>
+		<!--
+			OSOBNA uloha zadavatela - objednava ten, kto o to poziadal. Poslednym
+			akterom pred nou bol schvalovatel alebo riaditel, ktori ju vykonat
+			nesmu (nie su v `ob_zadal`), takze `auto` na nich neuvazne (B21) a uloha
+			pocka nepriradena, kym si ju zadavatel neotvori.
+		-->
+		<assignPolicy>auto</assignPolicy>
+		<userRef>
+			<id>ob_zadal</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_ob_objednanie</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>ob_stav_label</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_schvalene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_ziadost</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_polozky</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_suma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_termin</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_objednanie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_dodavatel</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_cislo</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>9</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_poznamka</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_priebeh</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_historia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_ob_objednanie_finish</id>
+			<title name="t_ob_objednanie_finish_t">Potvrdiť objednanie</title>
+			<actions phase="pre">
+				<action id="11"><![CDATA[
+ob_cislo: f.ob_cislo, ob_dodavatel: f.ob_dodavatel,
+ob_to_riaditel: f.ob_to_riaditel, ob_to_objednanie: f.ob_to_objednanie,
+ob_to_koncept: f.ob_to_koncept, ob_to_uzavreta: f.ob_to_uzavreta;
+
+// Cislo objednavky je jedina stopa, po ktorej sa k nej da priradit faktura
+// (`fa_objednavka`). Bez neho je objednavka uzavreta a nespojitelna.
+if (!((ob_cislo.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException(
+            "Vyplňte číslo objednávky, ktoré dostal dodávateľ.")
+}
+if (!((ob_dodavatel.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException("Vyplňte, u koho ste objednali.")
+}
+
+change ob_to_riaditel   value { 0 as Double }
+change ob_to_objednanie value { 0 as Double }
+change ob_to_koncept    value { 0 as Double }
+change ob_to_uzavreta   value { 1 as Double }
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="12"><![CDATA[
+ob_stav: f.ob_stav, ob_stav_label: f.ob_stav_label, ob_historia: f.ob_historia,
+ob_cislo: f.ob_cislo, ob_dodavatel: f.ob_dodavatel,
+ob_objednal: f.ob_objednal, ob_objednane_o: f.ob_objednane_o,
+ob_ceka_na: f.ob_ceka_na, ob_zadal: f.ob_zadal,
+ob_schvalovatelia: f.ob_schvalovatelia, ob_stredisko: f.ob_stredisko,
+ob_predmet: f.ob_predmet, ob_suma: f.ob_suma;
+
+def meno = kto(loggedUser())
+
+change ob_stav value { "objednana" }
+change ob_stav_label value { "objednana" }
+changeCaseProperty("color").about { farba("objednana") }
+change ob_objednal value { meno }
+change ob_objednane_o value { java.time.LocalDateTime.now() }
+zapis_historie(ob_historia, "objednané (" + meno + ") u " +
+        ((ob_dodavatel.value ?: "") as String).trim() + ", objednávka č. " +
+        ((ob_cislo.value ?: "") as String).trim())
+changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "objednana") }
+po_zmene_stavu("objednana", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia,
+        ob_predmet, ob_suma, ob_stredisko)
+				]]></action>
+			</actions>
+		</event>
+		<event type="assign">
+			<id>t_ob_objednanie_assign</id>
+			<title name="t_ob_objednanie_assign">Prevziať</title>
+		</event>
+		<event type="cancel">
+			<id>t_ob_objednanie_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_ob_objednanie_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+	</transition>
+	<transition>
+		<id>t_ob_prehlad</id>
+		<x>908</x>
+		<y>250</y>
+		<label name="t_ob_prehlad_label">Stav objednávky</label>
+		<icon>fact_check</icon>
+		<!--
+			Read-only pohlad dostupny CELY zivot objednavky - read arc z
+			`p_info`, ktore ma zeton od zalozenia pripadu a ktore nikto
+			nekonzumuje.
+
+			Preco: zadavatel po podani nema ziadnu ulohu (styri oci ho vylucia
+			zo schvalovatelov), takze bez tohto pohladu nemal kde zistit, v akom
+			stave objednavka je a u koho lezi. Read arc z miesta, ktore nejaky
+			prechod konzumuje, by tu ulohu po odmietnutom DOKONCIT zmazal
+			a uz ju neobnovil (B8b) - preto miesto navyse.
+		-->
+		<assignPolicy>auto</assignPolicy>
+		<userRef>
+			<id>ob_zadal</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<roleRef>
+			<id>schvalovatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>riaditel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>uctovnik</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_ob_prehlad</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>ob_stav_label</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_ceka_na</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_zadal_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_ziadost</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_suma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_termin</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_zdovodnenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_polozky</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_rozhodnutie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<!--
+				Pri zamietnuti je poznamka jedine miesto, kde zadavatel precita
+				DOVOD bez lustrovania Priebehu. Chybala a odhalil to az akceptacny
+				test (tools/sccheck.py).
+			-->
+			<dataRef>
+				<id>ob_poznamka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_schvalil_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_schvalil_riaditel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_schvalene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_objednanie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_cislo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>15</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_objednal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>15</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>ob_objednane_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>16</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ob_priebeh</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>17</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>ob_historia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>18</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_ob_prehlad_assign</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_ob_prehlad_finish</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="cancel">
+			<id>t_ob_prehlad_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_ob_prehlad_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+	</transition>
+	<place>
+		<id>p_koncept</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Rozpísaná</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_na_schvalenie</id>
+		<x>236</x>
+		<y>80</y>
+		<label>Čaká na stredisko</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_u_riaditela</id>
+		<x>428</x>
+		<y>80</y>
+		<label>Čaká na riaditeľa</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_na_objednanie</id>
+		<x>620</x>
+		<y>80</y>
+		<label>Na objednanie</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_info</id>
+		<x>908</x>
+		<y>380</y>
+		<label>Objednávka existuje</label>
+		<tokens>1</tokens>
+		<static>false</static>
+		<!--
+			Zeton od zalozenia pripadu a NIKTO ho nekonzumuje - jediny vstup do
+			`t_ob_prehlad` je read arc. Preto je stavovy pohlad k dispozicii
+			cely zivot objednavky a odmietnute DOKONCIT na inom prechode ho
+			nezmaze (B8b).
+		-->
+	</place>
+	<place>
+		<id>p_uzavreta</id>
+		<x>812</x>
+		<y>80</y>
+		<label>Uzavretá</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_ob_ziadost_in</id>
+		<type>regular</type>
+		<sourceId>p_koncept</sourceId>
+		<destinationId>t_ob_ziadost</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_ob_ziadost_out</id>
+		<type>regular</type>
+		<sourceId>t_ob_ziadost</sourceId>
+		<destinationId>p_na_schvalenie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_ob_schvalenie_in</id>
+		<type>regular</type>
+		<sourceId>p_na_schvalenie</sourceId>
+		<destinationId>t_ob_schvalenie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<!--
+		Variable arc sa nepise ako type="variable" - je to regular
+		s multiplicity 0 a <reference> na number pole, ktore akcia v phase="pre"
+		nastavi na 0 alebo 1. Token vystreli presne jednym z nich.
+	-->
+	<arc>
+		<id>a_ob_schvalenie_riaditel</id>
+		<type>regular</type>
+		<sourceId>t_ob_schvalenie</sourceId>
+		<destinationId>p_u_riaditela</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>ob_to_riaditel</reference>
+	</arc>
+	<arc>
+		<id>a_ob_schvalenie_objednanie</id>
+		<type>regular</type>
+		<sourceId>t_ob_schvalenie</sourceId>
+		<destinationId>p_na_objednanie</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>ob_to_objednanie</reference>
+	</arc>
+	<arc>
+		<id>a_ob_schvalenie_koncept</id>
+		<type>regular</type>
+		<sourceId>t_ob_schvalenie</sourceId>
+		<destinationId>p_koncept</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>ob_to_koncept</reference>
+	</arc>
+	<arc>
+		<id>a_ob_schvalenie_uzavriet</id>
+		<type>regular</type>
+		<sourceId>t_ob_schvalenie</sourceId>
+		<destinationId>p_uzavreta</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>ob_to_uzavreta</reference>
+	</arc>
+	<arc>
+		<id>a_ob_riaditel_in</id>
+		<type>regular</type>
+		<sourceId>p_u_riaditela</sourceId>
+		<destinationId>t_ob_riaditel</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_ob_riaditel_objednanie</id>
+		<type>regular</type>
+		<sourceId>t_ob_riaditel</sourceId>
+		<destinationId>p_na_objednanie</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>ob_to_objednanie</reference>
+	</arc>
+	<arc>
+		<id>a_ob_riaditel_koncept</id>
+		<type>regular</type>
+		<sourceId>t_ob_riaditel</sourceId>
+		<destinationId>p_koncept</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>ob_to_koncept</reference>
+	</arc>
+	<arc>
+		<id>a_ob_riaditel_uzavriet</id>
+		<type>regular</type>
+		<sourceId>t_ob_riaditel</sourceId>
+		<destinationId>p_uzavreta</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>ob_to_uzavreta</reference>
+	</arc>
+	<arc>
+		<id>a_ob_objednanie_in</id>
+		<type>regular</type>
+		<sourceId>p_na_objednanie</sourceId>
+		<destinationId>t_ob_objednanie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_ob_objednanie_uzavriet</id>
+		<type>regular</type>
+		<sourceId>t_ob_objednanie</sourceId>
+		<destinationId>p_uzavreta</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>ob_to_uzavreta</reference>
+	</arc>
+	<arc>
+		<id>a_ob_prehlad</id>
+		<type>read</type>
+		<sourceId>p_info</sourceId>
+		<destinationId>t_ob_prehlad</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

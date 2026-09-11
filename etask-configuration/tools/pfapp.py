@@ -58,6 +58,15 @@ POUZITIE
     python3 tools/pfapp.py install /cesta/k/etask-app-dovolenky
     python3 tools/pfapp.py status
     python3 tools/pfapp.py list
+
+    # appku, ktora zatial zije v starteri, vytiahni do vlastneho repa:
+    python3 tools/pfapp.py extract objednavky-faktury ../etask-app-objednavky-faktury \
+        --title "Objednávky a faktúry" \
+        --nets fa_faktura.xml ob_objednavka.xml sc_menu.xml sc_nastavenia.xml \
+        --tools sccheck.py --docs PRIRUCKA.md \
+        --boot schvalovanie/sc_menu:rebuild nastavenia/sc_nastavenia:rebuild \
+        --nodes schvalovanie schvalovanie/faktury \
+        --scope "schvalovanie/*"
     python3 tools/pfapp.py remove dovolenky
 
 Exit 0 = hotovo (pri `status` aj "vsetko sedi"), 1 = chyba alebo rozdiel,
@@ -75,6 +84,8 @@ MANIFEST = ROOT / "processes.json"
 SEED = ROOT / "seed.json"
 PROCESSES = ROOT / "processes"
 TOOLS = ROOT / "tools"
+# Prirucka appky patri k dokumentacii v roote, nie do prikazoveho priecinka.
+DOCS = ROOT.parent / "docs"
 
 # Zoznam nainstalovanych appiek. Drzi sa oddelene od `processes.json` preto, ze
 # ten je vstup pre runtime - a odinstalovanie potrebuje vediet, CO presne appka
@@ -121,6 +132,12 @@ def install(src_arg, dry):
 
     nets = app.get("import") or []
     tools = app.get("tools") or []
+    # Dokumentacia appky (prirucka pre toho, kto appku preberá) patri k appke,
+    # nie k starteru - a musi sa nainstalovat spolu s nou. Kym to `install`
+    # nevedel, `extract` ju do `app.json` zapisal a `install` ju ticho
+    # ignoroval: v nasadeni bola appka bez prirucky a odkazy na nu viedli
+    # do prazdna.
+    docs = app.get("docs") or []
 
     # --- najprv skontroluj vsetko, potom zapisuj -----------------------
     #
@@ -130,11 +147,13 @@ def install(src_arg, dry):
     # instalacie.
     missing = [f for f in nets if not (src / "processes" / f).is_file()]
     missing += [f for f in tools if not (src / "tools" / f).is_file()]
+    missing += [f for f in docs if not (src / "docs" / f).is_file()]
     if missing:
         sys.exit("pfapp: v repe appky chybaju subory:\n  " + "\n  ".join(missing))
 
     clashes = [f for f in nets if (PROCESSES / f).exists()]
     clashes += [f for f in tools if (TOOLS / f).exists()]
+    clashes += [f for f in docs if (DOCS / f).exists()]
     if clashes:
         sys.exit("pfapp: v starteri uz existuju (nic neprepisujem):\n  "
                  + "\n  ".join(clashes))
@@ -156,7 +175,8 @@ def install(src_arg, dry):
     added_scope = [p for p in (app.get("netScope") or [])
                    if p not in (seed.get("netScope") or [])]
 
-    plan = [f"processes/{f}" for f in nets] + [f"tools/{f}" for f in tools]
+    plan = ([f"processes/{f}" for f in nets] + [f"tools/{f}" for f in tools]
+            + [f"docs/{f}" for f in docs])
     print(f"pfapp: install `{name}` z {src}")
     for line in plan:
         print(f"  + {line}")
@@ -172,6 +192,10 @@ def install(src_arg, dry):
         shutil.copy2(src / "processes" / f, PROCESSES / f)
     for f in tools:
         shutil.copy2(src / "tools" / f, TOOLS / f)
+    if docs:
+        DOCS.mkdir(exist_ok=True)
+    for f in docs:
+        shutil.copy2(src / "docs" / f, DOCS / f)
 
     manifest.setdefault("import", []).extend(added_imports)
     manifest.setdefault("bootstrapCase", []).extend(added_boot)
@@ -187,6 +211,7 @@ def install(src_arg, dry):
         "title": app.get("title") or name,
         "processes": nets,
         "tools": tools,
+        "docs": docs,
         "bootstrapCase": [bootstrap_net(e) for e in added_boot],
         "uriNodes": list(added_nodes),
         "netScope": added_scope,
@@ -223,6 +248,8 @@ def remove(name, dry):
         print(f"  - processes/{f}")
     for f in rec["tools"]:
         print(f"  - tools/{f}")
+    for f in rec.get("docs") or []:
+        print(f"  - docs/{f}")
     print(f"  - processes.json: import, bootstrapCase {rec['bootstrapCase']}, "
           f"uriNodes {rec['uriNodes']}")
     print(f"  - seed.json: netScope {rec['netScope']}")
@@ -241,6 +268,8 @@ def remove(name, dry):
         (PROCESSES / f).unlink(missing_ok=True)
     for f in rec["tools"]:
         (TOOLS / f).unlink(missing_ok=True)
+    for f in rec.get("docs") or []:
+        (DOCS / f).unlink(missing_ok=True)
 
     manifest["import"] = [f for f in (manifest.get("import") or [])
                           if f not in rec["processes"]]
@@ -258,6 +287,142 @@ def remove(name, dry):
     installed.pop(name)
     save(INSTALLED, installed)
     print(f"\npfapp: `{name}` odinstalovana. Prestav jar: tools/up.sh")
+    return 0
+
+
+def extract(name, dest_arg, title, nets, tools, docs, boot, nodes, scope, dry):
+    """Vytiahne appku zo starteru do vlastneho repa.
+
+    Starter ma byt sablona: framework, infrastruktura, sprava pouzivatelov
+    a jedna prikladova appka (Service Desk). Klientska appka je len
+    `processes/*.xml` plus riadky v manifeste, takze patri do vlastneho repa
+    a do konkretneho nasadenia sa dostane `install`om.
+
+    Preco na to nastroj: rozdelenie je presne ta operacia, kde sa da stratit
+    jedna zo styroch sekcii manifestu tak, ze to NIC NEPOVIE - appka zostane
+    v `import`, ale bez `uriNodes`, alebo naopak. `extract` teda spravi obe
+    strany naraz: napise repo appky a odoberie ju zo starteru rovnakou cestou,
+    akou by ju odobral `remove`.
+    """
+    dest = Path(dest_arg).resolve()
+
+    chybaju = [f for f in nets if not (PROCESSES / f).is_file()]
+    chybaju += [f for f in tools if not (TOOLS / f).is_file()]
+    chybaju += [f for f in docs if not (ROOT / "docs" / f).is_file()]
+    if chybaju:
+        sys.exit("pfapp: v starteri tieto subory nie su:\n  " + "\n  ".join(chybaju))
+
+    manifest = load(MANIFEST, {})
+    seed = load(SEED, {})
+    have_nodes = manifest.get("uriNodes") or {}
+    chybaju_uzly = [n for n in nodes if n not in have_nodes]
+    if chybaju_uzly:
+        sys.exit("pfapp: tieto uzly v manifeste nie su: " + ", ".join(chybaju_uzly))
+
+    boot_entries = []
+    for b in boot:
+        if b.endswith(":rebuild"):
+            boot_entries.append({"net": b[:-len(":rebuild")], "rebuildOnNewVersion": True})
+        else:
+            boot_entries.append(b)
+
+    app = {
+        "name": name,
+        "title": title or name,
+        "import": nets,
+        "bootstrapCase": boot_entries,
+        "uriNodes": {n: have_nodes[n] for n in nodes},
+        "netScope": scope,
+        "tools": tools,
+    }
+    if docs:
+        app["docs"] = docs
+
+    print(f"pfapp: extract `{name}` -> {dest}")
+    for f in nets:
+        print(f"  -> processes/{f}")
+    for f in tools:
+        print(f"  -> tools/{f}")
+    for f in docs:
+        print(f"  -> docs/{f}")
+    print(f"  -> app.json: bootstrapCase {[bootstrap_net(e) for e in boot_entries]}, "
+          f"uriNodes {nodes}, netScope {scope}")
+    print(f"  zo starteru sa odoberie to iste (manifest aj subory)")
+    if dry:
+        print("\npfapp: dry-run, nic som nezapisal")
+        return 0
+
+    # --- 1. repo appky --------------------------------------------------
+    (dest / "processes").mkdir(parents=True, exist_ok=True)
+    if tools:
+        (dest / "tools").mkdir(parents=True, exist_ok=True)
+    if docs:
+        (dest / "docs").mkdir(parents=True, exist_ok=True)
+    for f in nets:
+        shutil.copy2(PROCESSES / f, dest / "processes" / f)
+    for f in tools:
+        shutil.copy2(TOOLS / f, dest / "tools" / f)
+    for f in docs:
+        shutil.copy2(ROOT / "docs" / f, dest / "docs" / f)
+    save(dest / "app.json", app)
+
+    readme = dest / "README.md"
+    if not readme.exists():
+        readme.write_text(f"""# {app['title']}
+
+Petriflow appka pre eTask. Zije vo vlastnom repozitari; do konkretneho
+nasadenia sa dostane nastrojom starteru:
+
+```bash
+cd etask-configuration
+python3 tools/pfapp.py install {dest_arg}
+python3 tools/pfsync.py --sync        # import do bezuceho enginu + role
+```
+
+Co je tu:
+
+| subor | co to je |
+|---|---|
+{chr(10).join(f'| `processes/{f}` | siet |' for f in nets)}
+{chr(10).join(f'| `tools/{f}` | akceptacny test proti beziacemu enginu |' for f in tools)}
+{chr(10).join(f'| `docs/{f}` | dokumentacia appky |' for f in docs)}
+| `app.json` | manifest appky - `import`, `bootstrapCase`, `uriNodes`, `netScope` |
+
+**Role appka nikomu neprideluje.** Kto ktoru rolu dostane, je rozhodnutie
+nasadenia a dopisuje sa do `seed.json` starteru (`netScope` doplni `install`).
+""", encoding="utf-8")
+
+    # --- 2. odober zo starteru ------------------------------------------
+    for f in nets:
+        (PROCESSES / f).unlink(missing_ok=True)
+    for f in tools:
+        (TOOLS / f).unlink(missing_ok=True)
+    for f in docs:
+        (ROOT / "docs" / f).unlink(missing_ok=True)
+
+    manifest["import"] = [f for f in (manifest.get("import") or []) if f not in nets]
+    boot_names = {bootstrap_net(e) for e in boot_entries}
+    manifest["bootstrapCase"] = [e for e in (manifest.get("bootstrapCase") or [])
+                                 if bootstrap_net(e) not in boot_names]
+    for n in nodes:
+        (manifest.get("uriNodes") or {}).pop(n, None)
+    save(MANIFEST, manifest)
+
+    if scope:
+        seed["netScope"] = [x for x in (seed.get("netScope") or []) if x not in scope]
+        save(SEED, seed)
+
+    print(f"""
+pfapp: `{name}` je v {dest} a zo starteru odobrana.
+
+  POZOR, co sa TYM NEZMAZE: naimportovane siete v engine, ich casy, polozky
+  menu ani uzol URI (ten sa cez REST zmazat NEDA, ENGINE_ISSUES E7).
+  Bezuce nasadenie teda dalej funguje.
+
+Ked ju toto nasadenie ma mat, nainstaluj ju z noveho repa:
+
+  python3 tools/pfapp.py install {dest_arg}
+""")
     return 0
 
 
@@ -294,7 +459,7 @@ def status():
             print(f"  ! zdroj {src} nie je dostupny - porovnat sa neda")
             diffs += 1
             continue
-        for kind, folder in (("processes", PROCESSES), ("tools", TOOLS)):
+        for kind, folder in (("processes", PROCESSES), ("tools", TOOLS), ("docs", DOCS)):
             for f in rec.get(kind) or []:
                 here, there = folder / f, src / kind / f
                 if not there.is_file():
@@ -320,9 +485,19 @@ def main(argv=None):
     ap = argparse.ArgumentParser(
         prog="pfapp.py", description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("action", choices=["install", "remove", "list", "status"])
+    ap.add_argument("action", choices=["install", "remove", "extract", "list", "status"])
     ap.add_argument("target", nargs="?",
-                    help="cesta k repu appky (install) alebo jej nazov (remove)")
+                    help="cesta k repu appky (install), jej nazov (remove) "
+                         "alebo nazov novej appky (extract)")
+    ap.add_argument("dest", nargs="?", help="extract: kam repo appky napisat")
+    ap.add_argument("--title", default=None)
+    ap.add_argument("--nets", nargs="*", default=[], help="extract: siete v processes/")
+    ap.add_argument("--tools", nargs="*", default=[], help="extract: nastroje v tools/")
+    ap.add_argument("--docs", nargs="*", default=[], help="extract: dokumenty v docs/")
+    ap.add_argument("--boot", nargs="*", default=[],
+                    help="extract: bootstrapCase; `siet:rebuild` = jeden case na verziu")
+    ap.add_argument("--nodes", nargs="*", default=[], help="extract: uzly URI")
+    ap.add_argument("--scope", nargs="*", default=[], help="extract: netScope pre pfseed")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
 
@@ -334,6 +509,13 @@ def main(argv=None):
         ap.error(f"{args.action} potrebuje argument")
     if args.action == "install":
         return install(args.target, args.dry_run)
+    if args.action == "extract":
+        if not args.dest:
+            ap.error("extract potrebuje cielovu cestu: extract <nazov> <cesta>")
+        if not args.nets:
+            ap.error("extract potrebuje aspon jednu siet (--nets)")
+        return extract(args.target, args.dest, args.title, args.nets, args.tools,
+                       args.docs, args.boot, args.nodes, args.scope, args.dry_run)
     return remove(args.target, args.dry_run)
 
 

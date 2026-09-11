@@ -1,0 +1,201 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>majetok/ma_menu</id>
+	<version>1.0.0</version>
+	<initials>EZM</initials>
+	<title name="net_title">Menu Evidencia zariadení</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">TODO Menu Evidencia zariadení</i18nString>
+		<i18nString name="spravca_majetku_title">TODO Spravca_majetku</i18nString>
+		<i18nString name="t_ma_menu_label">Menu state</i18nString>
+	</i18n>
+	<icon>menu</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Skelet z tools/pfnew.py. Kazdy vzor tu je kvoli konkretnej pasci:
+
+		  * `createOrUpdateMenuItem` sa vola s DEVIATIMI argumentmi. Existuje
+		    dvakrat - projektova (7-9) a enginova (11) - a rozlisuju sa len
+		    aritou. Pri osmich si Groovy vyberie enginovu a padne to.
+		  * Jej UPDATE cesta nefunguje, takze polozka sa vzdy zahodi a postavi
+		    znova. PORADIE: najprv `deleteMenuItem`, POTOM `deleteFilter` -
+		    naopak to padne, lebo deleteMenuItem si filter jeste raz nacita.
+		  * `nets` (allowedNets) musi byt, inak sa nevykreslia stlpce
+		    z datovych poli - a to bez akehokolvek hlasenia.
+		  * URI cesta MUSI sedet s klucom v `uriNodes` v processes.json, inak
+		    polozka vznikne bez karty, na ktorej by bola vidno.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>ma_menu_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+def created = []
+def unchanged = []
+def failed = []
+
+def siet = "majetok/ma_zariadenie"
+def vsetky = "processIdentifier:\"" + siet + "\""
+def stlpce = "meta-title" +
+        ",majetok/ma_zariadenie-ma_stav_label" +
+        ",majetok/ma_zariadenie-ma_predmet"
+
+def views = [
+        // Nazov prveho zobrazenia je TITULOK SIETE, nie kopia toho retazca.
+        // Titulok siete je I18nString a ma svoj preklad v bloku `<i18n>`, takze
+        // sa preklada na jednom mieste; kopia by znamenala prelozit to dvakrat
+        // a druhy vyskyt by nikto nenasiel - nazvy zobrazeni su v Groovy akcii,
+        // kde `pfi18n` nedosiahne.
+        [id: "ma_vsetky", name: petriNetService.getNewestVersionByIdentifier(siet).title,
+         type: "Case", icon: "assignment",
+         query: vsetky, nets: [siet], roles: [:], headers: stlpce],
+        // Filtrovanie podla DATOVEHO POLA, nie podla polohy tokenu. Ide to,
+        // lebo `ma_stav_label` ma `immediate="true"` a engine ho
+        // indexuje pod `dataSet.ma_stav_label.textValue`.
+        [id: "ma_rozpisane", name: i18n("Rozpísané", ["en": "Draft"]),
+         type: "Case", icon: "edit_note",
+         query: vsetky + " AND dataSet.ma_stav_label.textValue:\"Rozpísané\"",
+         nets: [siet], roles: [:], headers: stlpce],
+]
+
+views.each { v ->
+    def id = v.id as String
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            // Porovnava sa dopyt A allowedNets - oboje ide do konstruktora
+            // a na existujucej polozke sa zmenit nedaju.
+            def current = getFilterFromMenuItem(existing)
+            def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
+            def currentNets = ((current?.dataSet?."filter"?.allowedNets ?: []) as List)
+                    .collect { it as String } as Set
+            def wantNets = (v.nets as List).collect { it as String } as Set
+            // Do porovnania patri aj NAZOV, vratane prekladov. Bez toho by uz
+            // nasadena instancia zmeneny nazov (a doplneny preklad) nikdy
+            // nedostala: polozka tam je s tym istym dopytom, takze by sa vzdy
+            // vyhodnotila ako nezmenena.
+            def currentName = current?.dataSet?."i18n_filter_name"?.value
+            def sameName = currentName != null &&
+                    (currentName.defaultValue as String) == (v.name.defaultValue as String) &&
+                    (currentName.translations ?: [:]) == (v.name.translations ?: [:])
+            if (currentQuery == (v.query as String) && currentNets == wantNets && sameName) {
+                nastav_zobrazenie(existing, v.nets as List, v.headers)
+                // Uzol dorovnaj AJ pri nezmenenej polozke: URI uzly zije
+                // Elasticsearch, polozky menu Mongo. Po vymene ES indexu maju
+                // uzly nove id, polozka visi na starom a priecinok je PRAZDNY -
+                // bez chyby a bez logu. `createOrUpdateMenuItem` to riesi, ale
+                // sem sa nedostane, lebo dopyt ani nazov sa nezmenili.
+                pripoj_do_uzla(existing, "majetok")
+                unchanged << id
+                return
+            }
+            deleteMenuItem(existing)
+            if (current != null) {
+                deleteFilter(current)
+            }
+        }
+        def item = createOrUpdateMenuItem(
+                id,                 // menu_item_identifier
+                "majetok",          // URI cesta - musi sedet s uriNodes
+                v.type as String,
+                v.query as String,
+                v.icon as String,
+                v.name,             // I18nString - polozka menu vie byt dvojjazycna
+                v.nets as List,     // allowedNets - bez toho ziadne stlpce
+                v.roles as Map,
+                [:]                 // bannedRoles - dourcuje aritu na projektovu
+        )
+        if (item) { created << id } else { failed << id }
+        nastav_zobrazenie(item, v.nets as List, v.headers)
+    } catch (Exception e) {
+        failed << (id + " (" + e.getClass().simpleName + ": " + e.message + ")")
+    }
+}
+
+def summary = "Menu Evidencia zariadení – " + (created.size() + unchanged.size()) + "/" + views.size()
+if (failed) {
+    summary = "CHYBA menu Evidencia zariadení – nepodarilo sa: " + failed.join(", ")
+}
+changeCaseProperty("title").about { summary }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="nastav_zobrazenie"><![CDATA[
+{ def menuItem, def nets, def headers ->
+    // `enable_case_title`  - vypnuty dialog "Vyplnte nazov pripadu" pri "+".
+    // `default_headers`    - predvolene stlpce zoznamu.
+    // Ani jedno nie je argument `createOrUpdateMenuItem`.
+    if (menuItem == null) return
+    def payload = [:]
+    if (nets) {
+        payload.put("enable_case_title", ["value": false, "type": "boolean"])
+        payload.put("case_require_title_in_creation", ["value": false, "type": "boolean"])
+    }
+    if (headers) {
+        payload.put("default_headers", ["value": headers as String, "type": "text"])
+    }
+    if (payload) {
+        setData("view", menuItem, payload)
+    }
+}
+	]]></function>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def identifier ->
+    // `findMenuItem(id)` z ActionDelegate existujucu polozku nenajde (hlada
+    // v inom rozsahu), takze by sa pri kazdom spusteni zalozila druha sada.
+    def id = ((identifier ?: "") as String).trim()
+    if (!id) return null
+    def items = findCases { it.processIdentifier.eq("preference_filter_item") }
+    return items?.find { ((it.dataSet["menu_item_identifier"]?.value ?: "") as String) == id }
+}
+	]]></function>
+	<roleRef>
+		<id>spravca_majetku</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>spravca_majetku</id>
+		<title name="spravca_majetku_title">Spravca_majetku</title>
+	</role>
+	<transition>
+		<id>t_ma_menu</id>
+		<x>112</x>
+		<y>80</y>
+		<label name="t_ma_menu_label">Stav menu</label>
+		<icon>menu</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>spravca_majetku</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_ma_menu</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_ma_menu</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>
