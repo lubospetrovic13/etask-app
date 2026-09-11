@@ -23,12 +23,14 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # `pfgroovy` kontroluje syntax akcií tak, že ich preženie cez skutočný
-      # Groovy parser. Jar sa lokálne nájde v ~/.m2, na čistom runneri nie —
-      # a nástroj vtedy zámerne končí kódom 2: preskočená kontrola nie je
-      # "čisté". Preto sa jar sťahuje (7 MB) a cesta sa dá cez PF_GROOVY_JAR.
+      # Dva nástroje potrebujú Maven artefakt, ktorý lokálne leží v ~/.m2
+      # a na čistom runneri nie je:
+      #   pfgroovy  skutočný Groovy parser (kontroluje syntax akcií)
+      #   pfapi     jar enginu (inventár metód sa číta cez javap)
+      # Oba vtedy zámerne končia kódom 2 — preskočená kontrola nie je "čisté",
+      # lebo tichý skip je horší než červené CI. Preto sa jary sťahujú.
       GROOVY_VERSION: "3.0.10"
-      PF_GROOVY_JAR: ${{ github.workspace }}/.ci/groovy.jar
+      PF_GROOVY_JAR: ${{ github.workspace }}/.ci/groovy-3.0.10.jar
 
     steps:
       - uses: actions/checkout@v4
@@ -45,14 +47,29 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Groovy jar pre pfgroovy
+      - name: Jary z Maven Central (pfgroovy, pfapi)
         run: |
+          set -eu
           mkdir -p .ci
-          curl -sSfL -o .ci/groovy.jar \
+          # Verzia enginu sa berie z pom.xml, nie natvrdo: inventár má
+          # zodpovedať verzii, na ktorej appka naozaj stojí. Po jej zdvihnutí
+          # sa CI posunie samo.
+          ENGINE_VERSION=$(grep -A2 '<artifactId>application-engine</artifactId>' \
+            etask-backend-starter/pom.xml | grep -m1 '<version>' \
+            | sed -E 's/.*<version>([^<]+)<.*/\1/')
+          echo "engine: $ENGINE_VERSION, groovy: $GROOVY_VERSION"
+
+          curl -sSfL -o ".ci/groovy-${GROOVY_VERSION}.jar" \
             "https://repo1.maven.org/maven2/org/codehaus/groovy/groovy/${GROOVY_VERSION}/groovy-${GROOVY_VERSION}.jar"
-          # Stiahnutý súbor musí byť čitateľný zip — Maven Central vie vrátiť
+          curl -sSfL -o ".ci/application-engine-${ENGINE_VERSION}.jar" \
+            "https://repo1.maven.org/maven2/com/netgrif/application-engine/${ENGINE_VERSION}/application-engine-${ENGINE_VERSION}.jar"
+
+          # Stiahnuté súbory musia byť čitateľné zipy — Maven Central vie vrátiť
           # HTML chybovú stránku a tá by sa tvárila ako jar až do prvého volania.
-          unzip -tqq .ci/groovy.jar >/dev/null
+          unzip -tqq ".ci/groovy-${GROOVY_VERSION}.jar" >/dev/null
+          unzip -tqq ".ci/application-engine-${ENGINE_VERSION}.jar" >/dev/null
+
+          echo "PF_ENGINE_JAR=$GITHUB_WORKSPACE/.ci/application-engine-${ENGINE_VERSION}.jar" >> "$GITHUB_ENV"
 
       - name: pflint (štruktúra, tiché pasce, grid)
         working-directory: etask-configuration
