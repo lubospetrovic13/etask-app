@@ -160,6 +160,48 @@ else
   skip "pfview: etask-frontend-starter/node_modules chyba (npm ci)"
 fi
 
+# --- pffix: oprava musi opravit a nesmie sahat na to, co je v poriadku ------
+#
+# Nastroj, ktory prepisuje siete, je nebezpecnejsi nez ten, ktory len hlasi.
+# Preto dve kontroly: ze rozbitu siet naozaj opravi, a ze cistu nechá na pokoji.
+tmp_fix=$(mktemp -d)
+cp tools/fixtures/bad-grid.xml "$tmp_fix/"
+$PY tools/pffix.py "$tmp_fix/bad-grid.xml" --write >/dev/null 2>&1
+if $PY tools/pflint.py "$tmp_fix/bad-grid.xml" >/dev/null 2>&1; then
+  ok "pffix opravil prekrytie v gride"
+else
+  bad "pffix prekrytie v gride neopravil"
+fi
+if $PY tools/pffix.py tools/fixtures/ok.xml 2>&1 | grep -q "nic na opravu"; then
+  ok "pffix sa cistej siete nedotkol"
+else
+  bad "pffix chce menit siet, ktora je v poriadku"
+fi
+rm -rf "$tmp_fix"
+
+# --- pfloop: na cistych sietach musi skoncit nulou -------------------------
+if $PY tools/pfloop.py tools/fixtures/ok.xml >/dev/null 2>&1; then
+  ok "pfloop na cistej sieti konci nulou"
+else
+  bad "pfloop hlasi nalez na sieti, ktora je v poriadku"
+fi
+
+# --- pfmcp: protokol musi odpovedat -----------------------------------------
+#
+# MCP server komunikuje po stdout, takze akykolvek vypis navyse (print, warning)
+# rozbije klientovi parsovanie a prejavi sa to ako "server nereaguje". Tato
+# kontrola je lacna a chyta presne to.
+mcp_out=$(printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+  | $PY tools/pfmcp.py 2>/dev/null)
+if printf '%s' "$mcp_out" | grep -q '"serverInfo"' \
+   && printf '%s' "$mcp_out" | grep -q '"pf_doc_search"'; then
+  ok "pfmcp odpovedá na initialize aj tools/list"
+else
+  bad "pfmcp neodpovedá podla protokolu (alebo pise na stdout nieco navyse)"
+fi
+
 # --- pfdoc: kapitola musi byt vyrazne lacnejsia nez cely subor -------------
 #
 # Cely zmysel nastroja je, ze "kapitola 4" stoji zlomok toho, co cely RUNBOOK.

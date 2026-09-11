@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "petriflow": {
+      "command": "py",
+      "args": ["-3", "etask-configuration/tools/pfmcp.py"]
+    }
+  }
+}

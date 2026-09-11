@@ -1280,3 +1280,84 @@ docker compose -f deploy/docker-compose.dev.yml restart backend
 Nemontuje zdrojáky. Zmena v Jave alebo Groovy delegáte znamená
 `--docker --build` (Maven beží v obraze, ~3 minúty). **Zmena v sieti build
 nepotrebuje** — siete sa importujú cez `pfsync` z repozitára, nie z jaru.
+
+---
+
+## 13. Automatická oprava a MCP server
+
+### `pffix` — opravy, ktoré majú jednoznačné riešenie
+
+```bash
+python3 tools/pffix.py processes/            # ukáže, čo by spravil
+python3 tools/pffix.py processes/ --write    # zapíše
+python3 tools/pflint.py processes/           # a potom skontroluj
+```
+
+Oddelené od `pflint` zámerne: kontrola, ktorá aj prepisuje, sa raz spustí omylom
+a prepis siete sa neprejaví ako chyba, ale ako iná appka.
+
+| pravidlo | oprava |
+|---|---|
+| `grid-overlap` | posunie nižšie položený prvok o výšku prekrytia — Angular pri prekrytí úlohu **nevykreslí** a zostane spinner |
+| `type-textarea` | `type="textarea"` → `type="text"` + `<component><name>textarea</name></component>` |
+| `button-reads-text` | doplní `immediate="true"` poľu, ktoré číta tlačidlo v tom istom dataGroup |
+
+Čo **neopravuje** a prečo: `unsafe-nav-property` (oprava závisí od kontextu
+akcie), `findcase-stringid` (treba istotu, že premenná je id), `option-key-mongo`
+(kľúč sa používa aj inde a v dátach), `data-unused` (nástroj nevie, či pole plní
+iná sieť). Tie ostávajú `pflint`u — a `pfloop`u.
+
+### `pfloop` — validuj, oprav, over, zvyšok priprav modelu
+
+```bash
+python3 tools/pfloop.py                 # processes/, bez enginu
+python3 tools/pfloop.py --fix           # aj aplikuje mechanické opravy
+python3 tools/pfloop.py --engine        # aj import do bežiaceho enginu
+```
+
+Spojí celý reťazec do jedného príkazu a **rozdelí nálezy na tri triedy**, lebo
+každá patrí niekomu inému:
+
+1. **mechanické** — aplikuje `pffix` a overí znova;
+2. **podľa hlásenia** — model ich vie opraviť, keď dostane chybu **aj**
+   príslušnú kapitolu; `pfloop` mu to napíše do `.run/pfloop-zadanie.md`
+   (chyba + výrez siete + kapitola, nie celá dokumentácia);
+3. **návrhové** — „stav patrí do `enumeration_map`", „pohľad má visieť na
+   mieste, ktoré nikto nekonzumuje". Tu automat nezlyhá hlučne, zlyhá tak, že
+   appka **vyzerá** hotovo. Ostáva človeku.
+
+Zadanie sa **nespúšťa** automaticky. To je zámer: patch, ktorý nikto nevidel,
+je horší než nález, ktorý zostal.
+
+### MCP server (`pfmcp`)
+
+```bash
+# rýchla skúška bez klienta
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | python3 tools/pfmcp.py
+```
+
+Registrácia je v `.mcp.json` v roote repozitára — Claude Code si ju vezme sám
+pri štarte v tomto priečinku (na Linuxe/macOS zmeň `py -3` na `python3`):
+
+```json
+{"mcpServers": {"petriflow": {"command": "py",
+  "args": ["-3", "etask-configuration/tools/pfmcp.py"]}}}
+```
+
+| nástroj | vracia |
+|---|---|
+| `pf_doc_list` | dokumenty a kapitoly s cenou v tokenoch |
+| `pf_doc` | jednu kapitolu |
+| `pf_doc_search` | v ktorých kapitolách to je (nadpisy, nie telo) |
+| `pf_lint` | nálezy ako `{subor, riadok, uroven, pravidlo, sprava, oprava}` |
+| `pf_fix` | čo by `pffix` opravil (`write=true` zapíše) |
+| `pf_api` | primitíva volateľné z akcie podľa mena |
+
+Prečo to má zmysel popri CLI: **popis nástroja je súčasťou protokolu**, takže
+sa nástroj ohlási sám — presne ten problém, kvôli ktorému vznikol
+`docs/reference/action-api.md` („nemal som ako vedieť, že to existuje"). A nález
+ako štruktúra sa dá spracovať; text sa dá len prečítať.
+
+Server **nič nemení**, kým sa nezavolá `pf_fix` s `write=true`, a nesiaha na
+engine ani na databázu — `pfsync` a akceptačné sady majú bežať vedome.

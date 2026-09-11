@@ -41,6 +41,7 @@ nezobrazí vlastné polia a build o tom mlčí.
 | čítanie faktúry z prílohy (e-faktúra, PDF, OCR) | 10 |
 | priečinky v karte, názvy tlačidiel, schvaľovanie podľa strediska | 11 |
 | celý stack v Dockeri (OCR, SMTP, notifikácie) | 12 |
+| automatická oprava (`pffix`, `pfloop`) a MCP server | 13 |
 
 ## Šablóna, nie nasadenie
 
@@ -113,6 +114,10 @@ python3 tools/pfi18n.py processes/        # každý viditeľný text má preklad
 python3 tools/pfview.py                   # frontend vykreslí, čo sieť pýta
 python3 tools/pfsync.py --sync            # import + role, len čo sa rozišlo
 ```
+
+`python3 tools/pfloop.py --fix` spustí ten istý reťazec naraz, aplikuje opravy,
+ktoré majú jednoznačné riešenie, a čo zostane, napíše ako zadanie do
+`.run/pfloop-zadanie.md` (RUNBOOK 13).
 
 **Ground truth je bežiaci engine.** Import pri chybe vracia holé
 `{"status":500}` bez dôvodu — príčina je len v logu servera. Bez importu sieť
