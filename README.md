@@ -19,10 +19,10 @@ Po zmene siete ho spusti znova: prestaví jar a backend reštartuje sám.
 
 | chcem… | kde |
 |---|---|
-| rozbehať, pridať appku, menu, používateľov, anonymný prístup, tému, komponent | **[`docs/RUNBOOK.md`](etask-configuration/docs/RUNBOOK.md)** |
+| rozbehať, pridať appku, menu, používateľov, anonymný prístup, tému, komponent | **[`docs/RUNBOOK.md`](docs/RUNBOOK.md)** |
 | písať Petriflow siete | [`.claude/skills/petriflow/SKILL.md`](.claude/skills/petriflow/SKILL.md) |
-| zoznam volateľných metód v akciách | [`reference/action-api.md`](etask-configuration/reference/action-api.md) |
-| prečo je repozitár takto postavený | [`docs/AI_STARTER_ANALYSIS.md`](etask-configuration/docs/AI_STARTER_ANALYSIS.md) |
+| zoznam volateľných metód v akciách | [`docs/reference/action-api.md`](docs/reference/action-api.md) |
+| prečo je repozitár takto postavený | [`docs/AI_STARTER_ANALYSIS.md`](docs/AI_STARTER_ANALYSIS.md) |
 | pravidlá pre AI agenta | [`CLAUDE.md`](CLAUDE.md) |
 
 ## Nová aplikácia

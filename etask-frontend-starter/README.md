@@ -24,7 +24,7 @@ build and run the application for development.
 
 | Name                              | Version  | Description                                               | Recommendation                                                  |
 |-----------------------------------|----------|-----------------------------------------------------------|-----------------------------------------------------------------|
-| [Angular CLI](https://angular.io) | 13.+     | TypeScript-based web application framework                | ```npm i -g @angular/cli@13.3.1"```                             |
+| [Angular![img.png](img.png)I](https://angular.io) | 13.+     | TypeScript-based web application framework                | ```npm i -g @angular/cli@13.3.1"```                             |
 | [NodeJs](https://nodejs.org/en/)  | 16+, 18+ | JavaScript runtime built on Chrome's V8 JavaScript engine | [NodeJs 18.19.0](https://nodejs.org/download/release/v18.19.0/) |
 | [NPM](https://www.npmjs.com)      | 9+       | Node Package Manager                                      | Compatible version comes with NodeJs                            |
 

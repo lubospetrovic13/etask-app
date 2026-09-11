@@ -257,7 +257,7 @@ kompiluje.
 > Cena za to je dynamický dispatch: preklep v názve metódy **engine nezachytí**
 > (overené — naimportuje sa a za behu vráti HTTP 200, kým akcia padne na
 > `MissingMethodException`). Preto `pflint` odvtedy kontroluje volania proti
-> `reference/action-api.md`. Rozširovanie slovníka a aktuálny inventár sú dve
+> `docs/reference/action-api.md`. Rozširovanie slovníka a aktuálny inventár sú dve
 > strany tej istej veci.
 
 Navrhujem tri vrstvy s jasným pravidlom, kedy sa smie prejsť nižšie:
@@ -285,7 +285,7 @@ Skill files nemajú byť prepis referencie. Majú obsahovať to, čo sa z kódu
 * **Rozhodovací postup** — kedy Petriflow, kedy delegate, kedy framework.
 * **Tiché pasce** — `PETRIFLOW_LEARNINGS` prerobené na pravidlá, nie príbehy.
 * **Varovanie o dialekte** — schéma z hlavičky siete nie je pravda; pravda je
-  `reference/petriflow.schema.v1.1.0.xsd` **a** runtime, a runtime vyhráva.
+  `docs/reference/petriflow.schema.v1.1.0.xsd` **a** runtime, a runtime vyhráva.
 * **Worked examples** — Service Desk ako referenčný vzor.
 
 ### 7. MCP server vs. template repository
@@ -340,11 +340,11 @@ Hotové:
 * `tools/pfgroovy.py` — syntax Groovy, 0 falošných pozitív na 90 akciách
 * `tools/pfcheck.sh` — ground truth import, root cause z logu, kontrola loginu
 * `tools/pftest.sh` + `tools/fixtures/` — regresia nástrojov, 7 testov
-* `tools/pfapi.py` + `reference/action-api.md` — generovaný inventár extension pointov
+* `tools/pfapi.py` + `docs/reference/action-api.md` — generovaný inventár extension pointov
 * `.claude/skills/petriflow/SKILL.md` + `CLAUDE.md` — instruction layer
 * `tools/pfseed.py` + `seed.json` — idempotentné prideľovanie rolí, oprava osirelých
 * `tools/README-petriflow-tools.md` — kedy ktorý a prečo tri
-* `reference/petriflow.schema.v1.1.0.xsd` — oficiálna schéma offline
+* `docs/reference/petriflow.schema.v1.1.0.xsd` — oficiálna schéma offline
 * `processes.json` + `ProcessManifest` — nová appka bez zásahu do Javy
 * Service Desk odpojený od frameworku — je to príkladová aplikácia, nie výbava
 * `examples/skeleton.xml` — najmenšia funkčná sieť ako východisko
@@ -353,7 +353,7 @@ Hotové:
 Ďalší krok v poradí podľa páky:
 
 1. ~~Inventár extension pointov ako skill file.~~ **Hotové** — `tools/pfapi.py`
-   generuje `reference/action-api.md` (169 metód enginu + vlastné metódy
+   generuje `docs/reference/action-api.md` (169 metód enginu + vlastné metódy
    projektu), skill file je v `.claude/skills/petriflow/SKILL.md`, boundary
    pravidlo v `CLAUDE.md`. Generované zámerne: ručný zoznam by driftoval
    s verziou enginu a nesprávny zoznam je horší než žiadny, preto je kontrola
@@ -419,3 +419,87 @@ Hotové:
    z JSON prídu zoznamy, takže porovnanie by nikdy nesedelo a runner by
    zapisoval pri každom štarte — „idempotentný" len na papieri. Preto sa obe
    strany prevádzajú na `Set<String>` pred porovnaním.
+
+---
+
+## 6. Koľko to stojí na tokenoch — a čo s tým
+
+Merané na tomto repozitári (odhad ~4 znaky na token, ide o rád veľkosti).
+
+### Kde tokeny boli
+
+| čo | ~tokenov | kedy sa to čítalo |
+|---|---|---|
+| `CLAUDE.md` | 3 014 | **vždy**, v každom sedení |
+| `docs/reference/cheatsheet.md` | 1 760 | na začiatku úlohy |
+| skill `petriflow` | 3 188 | pri sieťach a akciách |
+| `docs/RUNBOOK.md` | 14 466 | celý, aj keď išlo o jednu kapitolu |
+| `docs/petriflow_reference.md` | 27 120 | celý, alebo vôbec |
+| všetko dokopy | **86 644** | |
+
+Otázka „ako pridám kartu do bočného menu?" stála **19 240 tokenov**
+(`CLAUDE.md` + cheatsheet + celý RUNBOOK) — a druhá otázka v tom istom sedení
+zaplatila RUNBOOK znova, ak medzitým vypadol z kontextu.
+
+### Čo sa ukázalo, keď sa to zmeralo
+
+**Duplicita nie je problém.** Naprieč všetkými dokumentmi je doslovne zopakovaná
+**jedna** veta dlhšia než 90 znakov (z 1 098). Dokumentácia nie je kopírovaná,
+je paralelná — každý súbor hovorí o tom istom z inej strany a pre iný moment.
+Zlučovať ju by teda nič neušetrilo a niečo by sa stratilo.
+
+**Problém je granularita.** Čítalo sa po súboroch, lebo nástroje čítajú súbory.
+
+### Čo sa spravilo
+
+1. **`tools/pfdoc.py`** — číta kapitolu, nie súbor, a `hladaj` vypíše len
+   **nadpisy** kapitol s ich cenou (telo si vypýtaš zvlášť; inak by sa grep
+   výstupom ušetrené tokeny hneď minuli späť).
+
+   | kapitola | ~tokenov | namiesto |
+   |---|---|---|
+   | `runbook 4` (menu) | 2 760 | 14 466 |
+   | `runbook 12` (Docker) | 1 905 | 14 466 |
+   | `learnings B25` | 341 | 9 063 |
+   | `engine E20` | 430 | 5 795 |
+
+2. **`CLAUDE.md` na diéte: 3 014 → 1 790 tokenov (−41 %).** Ostali v ňom len
+   rozhodnutia, pravidlá a smerovník; vysvetlenia sa presunuli tam, kde už boli.
+   Pravidlo pre ďalšie škrtanie: **škrtá sa vysvetlenie, nikdy pravidlo**, a po
+   každom škrte musí ostať ukazovateľ, ktorý menuje presný príkaz `pfdoc`.
+
+3. **Cheatsheet smeruje príkazmi**, nie názvami súborov, a pribudla v ňom
+   tabuľka vzorov z reálnych appiek (B25–B27, schvaľovanie podľa strediska,
+   preložiteľný stav).
+
+Nová cena tej istej otázky o menu: `CLAUDE.md` (1 790) + cheatsheet (1 957) +
+`pfdoc hladaj` (~150) + `runbook 4` (2 760) = **6 657 tokenov, −65 %**. Druhá
+otázka v tom istom sedení stojí už len cenu svojej kapitoly.
+
+### Čo by som spravil ďalej (v poradí podľa pomeru úžitok/riziko)
+
+1. **Skill `petriflow` (3 188) rozdeliť** na krátky rozhodovací router (~800)
+   a sekcie na dožiadanie. Načítava sa pri každej úlohe so sieťou, takže je to
+   druhý najdrahší „vždy" po `CLAUDE.md`.
+2. **Zdieľaná knižnica akceptačných testov.** `sccheck`, `dvcheck`, `pucheck`
+   a `majetokcheck` nesú každý ~150 riadkov identického `Client`a a pomocníkov.
+   `tools/pftestlib.py` by z písania testu novej appky spravil desiatky riadkov
+   namiesto stoviek — a šablóna má práve toto robiť lacným.
+3. **Skelet nech učí viac.** `pfnew` už nesie preložiteľný stav a `pripoj_do_uzla`;
+   pridať read-only stavový pohľad (B25) by nový appke dalo správny vzor zadarmo,
+   bez jediného prečítaného riadku dokumentácie.
+4. **CI na kvalitu, nie len na build.** `deploy.yml` stavia obrazy; `pflint`,
+   `pfgroovy`, `pfi18n`, `pfview` a `pftest` v ňom nebežia. Sú to sekundy a je to
+   presne tá vrstva, ktorá chytá tiché chyby.
+5. **`pfdoc --json`** pre agentov (zoznam kapitol s cenami strojovo), aby si
+   vedeli naplánovať čítanie dopredu.
+6. **Dve siete v `processes/` nie sú v manifeste** (`ai_config.xml`,
+   `sd_request.xml`) — v engine neexistujú, ale `pflint` ich lintuje a vyzerajú
+   ako súčasť dodávky. Buď doplniť do `import`, alebo vyhodiť.
+
+### Čo sa zámerne NEškrtalo
+
+Bezpečnostné a prostredové pravidlá (Java 11, `LANG=C.UTF-8`, JWT kľúč,
+„nespúšťať `pfsync --sync` na produkciu"), pravidlo troch vrstiev a zoznam
+„čo nerobiť". To sú veci, ktorých vynechanie stojí hodiny ladenia — a ich cena
+v tokenoch je rádovo nižšia než jedno také ladenie.

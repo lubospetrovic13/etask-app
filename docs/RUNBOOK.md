@@ -123,6 +123,41 @@ python3 tools/pfsync.py            # ktoré siete sa rozišli s enginom
 python3 tools/pfsync.py --sync     # dorovnať (import + role)
 ```
 
+### Appka do vlastného repa (`extract`)
+
+Starter je šablóna: framework, infraštruktúra, správa používateľov a jedna
+príkladová appka. Keď v ňom vznikne klientska appka, patrí do vlastného repa:
+
+```bash
+cd etask-configuration
+python3 tools/pfapp.py extract objednavky-faktury ../../etask-app-objednavky-faktury \
+    --title "Objednávky a faktúry" \
+    --nets fa_faktura.xml ob_objednavka.xml sc_menu.xml sc_nastavenia.xml \
+    --tools sccheck.py --docs PRIRUCKA.md \
+    --boot schvalovanie/sc_menu:rebuild nastavenia/sc_nastavenia:rebuild \
+    --nodes schvalovanie schvalovanie/faktury schvalovanie/objednavky nastavenia \
+    --scope "schvalovanie/*" "nastavenia/*" --dry-run     # najprv nasucho
+```
+
+`extract` spraví **obe strany naraz**: napíše repo appky (`app.json`,
+`processes/`, `tools/`, `docs/`, `README.md`) a odoberie ju z manifestu starteru
+rovnakou cestou ako `remove`. To je celý dôvod, prečo je to nástroj — manifest
+má štyri sekcie v dvoch súboroch a keď jedna z nich zostane, **nič to nepovie**:
+sieť je v `import` bez `uriNodes` (karta nie je vidno) alebo naopak (karta vedie
+do prázdna).
+
+Bežiace nasadenie tým nezmizne — siete v engine, prípady, položky menu ani
+uzol URI sa nemažú. Keď má appku mať aj tento checkout, nainštaluj ju späť
+z nového repa:
+
+```bash
+python3 tools/pfapp.py install ../../etask-app-objednavky-faktury
+python3 tools/pfapp.py status     # nasadená kópia vs. zdroj
+```
+
+Inštalácia mení `processes.json` a `seed.json`. Tie zmeny sú **stav nasadenia**,
+nie šablóny — do commitu šablóny nepatria.
+
 ### Premenovanie alebo odstránenie appky
 
 Vyhodenie zo `processes.json` **nič nezmaže** — manifest hovorí, čo sa má
@@ -179,10 +214,10 @@ Potom regeneruj inventár, inak o metóde nebude vedieť ani `pflint`, ani ďal�
 agent:
 
 ```bash
-cd etask-configuration && python3 tools/pfapi.py > reference/action-api.md
+cd etask-configuration && python3 tools/pfapi.py > docs/reference/action-api.md
 ```
 
-**Najprv sa pozri do `reference/action-api.md`.** Je to generovaný zoznam 169
+**Najprv sa pozri do `docs/reference/action-api.md`.** Je to generovaný zoznam 169
 metód enginu plus vlastných metód projektu. Bez neho tu už raz vznikla horšia
 verzia extension pointu, ktorý v enginu tri roky bol — príbeh je v
 `AI_STARTER_ANALYSIS.md`, časť 0.
@@ -279,6 +314,75 @@ prvé.
 A ešte: po `createFilterInMenu` sa zápis do vlastného casu (ani `change`, ani
 `setData`) neuchová — engine medzitým zakladal iné casy a výsledok zahodí.
 `changeCaseProperty("title")` prežije.
+
+### Názov položky musí byť v celom portáli jedinečný
+
+Položky menu sú prípady **jednej** siete `preference_filter_item` pre celý
+portál. Priečinok je len `parentId`, takže dva rovnaké názvy v dvoch
+priečinkoch engine prijme bez slova — a pokazí to dve veci, ktoré obe mlčia:
+
+* **Dashboard** kreslí karty naplocho, bez priečinka. Dve karty „Rozpísané
+  a vrátené" sa nedajú odlíšiť a klik vedie raz sem, raz tam.
+* **Kód, ktorý si položku hľadá podľa názvu**, dostane tú, ktorá v odpovedi
+  prišla druhá. `dvcheck` takto kontroloval stĺpce faktúry proti očakávaniam
+  dovolenky a zlyhal na appke, ktorej sa nikto nedotkol.
+
+Preto názov nesie **domenu** („Rozpísané faktúry", nie „Rozpísané"), a kód sa
+opiera o `menu_item_identifier` — id, ktoré si razíš sám, je stabilné cez
+preklady a `menu_item(id)` ho vracia priamo. Kolíziu chytí `tools/sccheck.py`
+kontrolou „ziadne dve zobrazenia v menu sa nevolaju rovnako".
+
+### Prázdny priečinok: položky menu sú v Mongu, URI uzly v Elasticsearchi
+
+Priečinok v bočnom paneli je, dá sa na ňom kliknúť — a **nie je v ňom nič**.
+Cez API sa pritom všetky zobrazenia nájdu a každý používateľ ich vidí.
+
+Dôvod je rozdelenie úložísk:
+
+| čo | kde žije | ako sa ráta id |
+|---|---|---|
+| položka menu (`preference_filter_item`) | Mongo | ObjectId, prežije reštart aj prenos |
+| URI uzol (priečinok) | **Elasticsearch** | id indexu, vzniká pri vytvorení uzla |
+
+Frontend hľadá položky priečinka dopytom `uriNodeId: <id uzla>`
+(`UriService.getCasesOfNode`). Keď sa ES index vymení — `up.sh --fresh`,
+prenos na iný stroj, čistý volume v Dockeri — `UriNodeDataRunner` uzly vytvorí
+**znova a s novými id**, kým položky v Mongu držia staré. Dopyt potom nesedí
+a priečinok je prázdny. Nikde sa to neohlási: uzol existuje, položky existujú,
+oprávnenia sú v poriadku.
+
+Opravuje to primitív `pripoj_do_uzla(existing, uri)`, ktorý každá menu sieť volá
+**aj vo vetve „položka je nezmenená"**:
+
+```groovy
+if (currentQuery == v.query && currentNets == wantNets && sameName) {
+    nastav_zobrazenie(existing, v.nets as List, v.headers)
+    pripoj_do_uzla(existing, v.uri as String)   // <- bez tohto zostane na starom uzle
+    unchanged << id
+    return
+}
+```
+
+`createOrUpdateMenuItem` `uriNodeId` dorovnáva samo, ale do tejto vetvy sa
+nedostane — dopyt, siete ani názov sa nezmenili, takže sieť položku „nechá byť".
+
+Chytá to `tools/sccheck.py` kontrolou „priečinok faktúr má pod sebou
+zobrazenia": hľadá presne tak, ako hľadá frontend, teda podľa `uriNodeId`.
+
+### Zmena položky sa prejaví až novým prípadom menu siete
+
+Akcia staviaca menu je v udalosti `create`, teda beží **raz za prípad**.
+`pfsync --sync` naimportuje novú verziu, ale prípad pre ňu nezaloží — to robí
+`bootstrapCase` pri starte backendu. Kým prípad novej verzie nie je, v portáli
+je stará položka a vyzerá to, že re-import nefunguje. Bez restartu:
+
+```bash
+curl -s -X POST localhost:8080/api/workflow/case \
+     -H "X-Auth-Token: $TOK" -H "Content-Type: application/json" \
+     -d '{"netId":"<stringId NAJNOVSEJ verzie>","title":null,"color":""}'
+```
+
+To je presne to, čo robí `bootstrapCase`.
 
 ### Stĺpce zoznamu a vyhľadávanie podľa dátových polí
 
@@ -422,6 +526,73 @@ Konfigurácia ide cez `<component><properties>`, ktoré knižnica ignoruje, ale
     <properties><property key="variant">section</property></properties>
 </component>
 ```
+
+### Uloženie poľa bez odkliknutia (`saveWhileTyping`)
+
+Pole sa štandardne uloží, **až keď stratí fokus**. Nie je to rozhodnutie
+ukladacej vrstvy, je to jeden riadok knižnice:
+
+```
+AbstractDataFieldComponent:  new FormControl('', {updateOn: 'blur'})
+```
+
+Reťaz je `input` → (blur) → `FormControl.valueChanges` → `DataField.value` →
+`TaskDataService.updateTaskDataFields()` → `POST /api/task/{id}/data`. Medzi DOM
+a serverom teda netreba meniť nič — hodnota len do blur neopustí input. Ten
+`FormControl` vzniká v privátnom poli knižničnej triedy a **injection token na
+neho nie je**, takže `updateOn: 'change'` sa zvonku vypýtať nedá. To je tá veta,
+ktorá túto vec posúva na vrstvu 3.
+
+Pole si to vypýta zo siete:
+
+```xml
+<data type="text">
+    <id>poznamka</id>
+    <component>
+        <properties>
+            <property key="saveWhileTyping">true</property>
+        </properties>
+    </component>
+</data>
+```
+
+`<component>` **bez `<name>`** je v poriadku — engine to prijme (overené
+importom) a `pfview` meno nekontroluje, keď tam nie je. Pri poli, ktoré už
+komponent má (`textarea`), sa `<properties>` pridá doňho.
+
+Robí to `EtaskFieldComponentResolverComponent`: počúva `input` udalosť, ktorá
+bublá z knižničného `<input>`, po 600 ms bez písania zapíše hodnotu do
+`DataField.value` — a tým sa ďalej ide **knižničnou** cestou (validácia,
+changed fields, POST). Žiadna knižničná šablóna sa nekopíruje.
+
+Typ poľa sa pritom pýta cez `getElementType()`, nie cez `instanceof TextField`:
+v produkčnom builde je trieda minifikovaná (`E4e`), takže `instanceof` proti
+importovanému symbolu ticho vráti `false` a funkcia nerobí nič. `DataField` nemá
+za behu ani `type`. Podrobne FRONTEND_LEARNINGS A4.
+
+**Je to voliteľné a zámerne nie default.** Čo to stojí:
+
+| cena | prečo |
+|---|---|
+| každý commit je požiadavka, ktorá na serveri spustí `set` akcie prechodu | v tomto stacku tie akcie robia skutočnú prácu (prepočty, upozornenia, render položiek) — pole, do ktorého sa píše desať sekúnd, znamená ~15 behov namiesto jedného |
+| **odpoveď servera sa zapisuje späť do inputu** (`registerFormControl`: `_value` → `formControl.setValue`) | pri poli, ktoré akcia normalizuje (trim, formát čísla, prepočet), ten zápis príde **počas písania** a preloží kurzor alebo prepíše text. Na blur je to neviditeľné, pri písaní nie |
+| dve požiadavky môžu byť naraz vo vzduchu a `setData` nemá verziu | vyhrá pomalšia odpoveď; debounce to robí zriedkavým, nie nemožným |
+| `required` a pattern validácie začnú svietiť uprostred slova | |
+
+**Nezapínaj to na poli, ktoré nejaká akcia prepisuje.** To je celé pravidlo.
+
+Čo to kupuje: pole sa uloží, aj keď z neho človek nikdy neodíde — zavrie úlohu,
+alebo klikne na tlačidlo v tom istom formulári. To druhé je reálna pasca, na
+ktorú tento repozitár má lint (`pflint`, pravidlo `button-reads-text`): blur
+a klik sú pre prehliadač **jedna** požiadavka, takže akcia za tlačidlom prečíta
+hodnotu spred písania. Pravidlo `saveWhileTyping` uznáva ako opravu.
+
+Kde to je zapnuté a prečo:
+
+| pole | dôvod |
+|---|---|
+| `sd_intake.req_description` | verejný formulár, najdlhší text — píše sa doň minútu a dá sa odoslať bez odkliknutia |
+| `fa_faktura.fa_dodavatel`, `fa_cislo` | tlačidlo „Načítať z prílohy" v tom istom formulári tie polia číta (`dopln_ak_prazdne` sa podľa nich rozhoduje) |
 
 **Najdrahšia chyba v histórii tohto frontendu:** `nc-task-list` renderuje
 knižničný panel a teda knižničný resolver — vlastné polia sa nezobrazia
@@ -709,9 +880,11 @@ v `PETRIFLOW_LEARNINGS.md` B24; `pfseed` a `pucheck` to už robia.
 * **Názov prípadu.** `Case.title` je obyčajný `String`. `defaultCaseName` sa
   preloží raz, jazykom toho, kto prípad zakladá, a tak zamrzne — anglicky
   hovoriaci používateľ uvidí názvy, ktoré vyrobil slovenský kolega. Preto do
-  názvov prípadov nepatrí próza, ale **dáta**: číslo, dátum, meno, stav ako
-  krátky kód. Stav ako slovo („Podané") tam patrí len vtedy, keď je jednojazyčnosť
-  prijateľná.
+  názvov prípadov nepatrí próza ani stav, ale **dáta**: číslo, dátum, meno,
+  suma.
+* **Text v `text` poli.** `TextField extends Field<String>`, takže to má ten
+  istý problém ako názov prípadu — a keďže sa doň zvykne písať stav, je to
+  v praxi najčastejší zdroj jednej slovenskej veci na anglickom formulári.
 * **Názov uzla URI** (karta priečinka). Nie je `I18nString` vôbec —
   `UriService` mu nastaví názov ako `String` z cesty. Prekladá sa na frontende:
   kľúč `uriNode.<segment>` v `etask-frontend-starter/src/assets/i18n/*.json`,
@@ -720,6 +893,46 @@ v `PETRIFLOW_LEARNINGS.md` B24; `pfseed` a `pucheck` to už robia.
   reťazec a ten je jednojazyčný. Ak sa má prepínať, musí to byť pole s
   možnosťami a preložené `options`, alebo `i18n(...)`:
   `change pole options { ["a": i18n("Aktívny", ["en": "Active"])] }`.
+
+**Stav preto nie je `text`, ale `enumeration_map`.** To je jediné textové pole,
+ktoré appka prepisuje pri každom prechode, a zároveň to, čo používateľ v zozname
+číta najčastejšie. Ako `enumeration_map` má popisky možností v `<i18n>`, akcia
+zapisuje **kľúč** a engine zobrazí preklad:
+
+```xml
+<data type="enumeration_map" immediate="true">
+  <id>fa_stav_label</id>
+  <title name="fa_stav_label_title">Stav</title>
+  <options>
+    <option key="koncept" name="fa_stav_opt_koncept">Rozpísaná</option>
+    <option key="zauctovana" name="fa_stav_opt_zauctovana">Zaúčtovaná</option>
+  </options>
+</data>
+```
+
+```groovy
+change fa_stav_label value { "zauctovana" }   // kluc, nie popisok
+```
+
+Vedľajší zisk: dopyty v menu potom filtrujú podľa kľúča
+(`dataSet.fa_stav_label.textValue:"zauctovana"`), takže nezávisia od jazyka ani
+od preformulovania popisku. Kým bol stav `text`, stačilo zmeniť jeho znenie
+a zobrazenie „Uzavreté" prestalo nachádzať čokoľvek — bez chyby.
+
+A keď stav nesie pole aj stĺpec, **do názvu prípadu už nemá čo pridať** — tam
+by bol jediná neprekladaná vec v každom zozname. Názov nesie dáta: dodávateľa,
+číslo, sumu, a kým nie sú, `visualId`.
+
+Merať sa to dá jedným dopytom, hádať netreba:
+
+```bash
+curl -s "localhost:8080/api/task/<id>/data" \
+     -H "X-Auth-Token: $TOK" -H "Accept-Language: en" | grep -o '"name":"[^"]*"'
+```
+
+`tools/sccheck.py` to robí v kroku 21 pre celý formulár faktúry: v `en` nesmie
+byť **žiadny** popisok s diakritikou a stav musí mať anglické možnosti. To je
+kontrola, ktorú `pfi18n` spraviť nedokáže — vidí XML, nie odpoveď enginu.
 
 ### Názvy zobrazení v ľavom menu
 
@@ -757,3 +970,313 @@ Jazyk sa pamätá v preferenciách používateľa a v `localStorage['Language']`
 Aplikácia nastavuje default **len keď si používateľ nikdy nevybral**;
 bezpodmienečné `setLanguage(...)` pri starte prepíše obnovenú voľbu a prepínač
 prestane fungovať po reloade.
+
+---
+
+## 10. Čítanie faktúry z prílohy (e-faktúra, PDF, OCR)
+
+```groovy
+// v akcii ktorejkoľvek siete
+def r = precitajFakturu(fa_skan, useCase.stringId)
+//  r.zdroj  = xml | text | ocr | nic
+//  r.dodavatel r.cislo r.suma r.mena r.splatnost r.vystavenie
+//  r.ico r.dic r.iban r.vs r.chyba r.poznamka r.nedocitane
+```
+
+Vzor je tlačidlo **Načítať z prílohy** v `processes/fa_faktura.xml`
+(`btn_fa_nacitat`). Logika je v `com.netgrif.etask.doc`:
+`DocumentTextService` (text z dokumentu) a `InvoiceReaderService` (polia
+z textu alebo z XML). Delegát len presmeruje a vyrieši, kde príloha na disku
+leží.
+
+**Tri cesty a nie sú rovnocenné:**
+
+| príloha | ako sa čítajú polia | istota |
+|---|---|---|
+| XML e-faktúra (UBL 2.1 / CII podľa EN 16931, ISDOC) | **čítajú sa** z elementov | presné |
+| PDF s textovou vrstvou | hádajú sa podľa popiskov („Celkom k úhrade“) | dobré |
+| sken, fotka | OCR (`tesseract`), potom tie isté popisky | odhad |
+
+Poradie je zámerne také, že OCR beží **len keď textová vrstva nie je**.
+Väčšina došlých faktúr je digitálne PDF, kde OCR z presného vstupu spraví
+odhad. PDFBox je v classpath tranzitívne z `application-engine`, takže prvé dve
+cesty nepotrebujú žiadnu inštaláciu.
+
+**OCR treba doinštalovať** — inak appka vo formulári napíše, že binárka nie je
+v PATH, a beží ďalej:
+
+```bash
+apt-get install tesseract-ocr tesseract-ocr-slk     # Debian/Ubuntu
+```
+
+Na Windows build z UB-Mannheim + `slk` do PATH. Prepína sa
+`etask.ocr.binary` a `etask.ocr.languages` (bez `slk` nastav `eng`).
+
+### Čo tam hryzie
+
+* **Prečítané sa nikdy nezapisuje samo do rozhodnutia.** Akcia vyplní len
+  **prázdne** polia; keď sa hodnota líši od tej, ktorú človek napísal, ohlási
+  rozdiel a nechá jeho verziu. Inak by jedno kliknutie ticho prepísalo sumu,
+  ktorú niekto práve opravoval podľa papiera.
+* **`number` pole bez hodnoty vracia `0.0`, nie `null`.** Kto testuje „je
+  prázdne?“ na null, nedoplní nikdy nič a bude hlásiť rozdiel oproti nule.
+* **IBAN sa overuje kontrolným súčtom (mod 97), nie regexom.** Vzor na
+  „SK + 2 číslice + skupiny po štyroch“ sedí aj na IČ DPH (`SK2023445566`)
+  a po odstránení medzier aj na IBAN s nalepeným ďalším slovom. Mod 97 je
+  zároveň ochrana pred OCR: prehodená číslica kontrolu neprejde, takže sa
+  IBAN radšej nevyplní, než by sa vyplnil zle.
+* **V UBL je `cbc:CompanyID` dvakrát** — u dodávateľa aj u odberateľa, a ešte
+  raz ako IČ DPH. Kto hľadá po celom dokumente, vytiahne cudzie IČO a hodnota
+  tam **bude** — len bude nesprávna. Preto sa polia strany hľadajú len
+  v podstrome dodávateľa a prejdú sa všetci kandidáti.
+* **Nahranie prílohy cez API vyžaduje časť `data` = `{taskId: fieldId}`.**
+  S `{}` vráti engine HTTP 200 a neuloží nič (`ENGINE_ISSUES.md`, E19).
+
+Overenie: `python3 tools/sccheck.py` (kroky 14–16). Fixture e-faktúry je
+`tools/fixtures/faktura-ubl.xml`, testovacie PDF si test generuje sám.
+
+---
+
+## 11. Priečinky v karte, názvy tlačidiel, schvaľovanie podľa strediska
+
+Tri veci, ktoré sa v Petriflow dajú a nevyzerá to tak.
+
+### Karta s priečinkami
+
+Uzol URI vzniká z **cesty v identifikátore siete**, takže priečinok je vec
+pomenovania siete, nie konfigurácie:
+
+```
+schvalovanie/faktury/fa_faktura        -> karta „schvalovanie“, priečinok „faktury“
+schvalovanie/objednavky/ob_objednavka  -> ten istý rodič, druhý priečinok
+```
+
+Do `processes.json` → `uriNodes` patrí **každý** uzol zvlášť (rodič aj deti) —
+ikona a role sa dedia z ničoho. Názov, ktorý človek v menu vidí, je
+`uriNode.<segment>` v `etask-frontend-starter/src/assets/i18n/*.json`; bez
+kľúča sa zobrazí surový segment cesty. Zobrazenia sa vešajú na konkrétny uzol
+druhým argumentom `createOrUpdateMenuItem`.
+
+**Pasca:** premenovanie identifikátora je **nová sieť**. Staré prípady zostanú
+pod starým identifikátorom a do nových zobrazení nespadnú (dopyt filtruje
+`processIdentifier`), takže ich treba zmazať — `tools/sccheck.py --wipe` maže
+aj staré identifikátory práve preto.
+
+### „Single task" zobrazenie: dopyt nesmie stáť na `processIdentifier`
+
+Karta, ktorá má otvoriť rovno jeden formulár (konfigurácia, pult), sa robí ako
+zobrazenie typu **Task** zúžené na `transitionId`. Pozor na to, čo do dopytu
+patrí a čo nie:
+
+```groovy
+// ZLE - task dokument v indexe `processIdentifier` NEMÁ
+"processIdentifier:\"nastavenia/sc_nastavenia\" AND transitionId:\"t_sc_nastavenia\""
+
+// DOBRE - id prechodu je unikátne, `processId` je stringId tej verzie siete
+"transitionId:\"t_sc_nastavenia\" AND processId:\"" + (useCase.petriNetId as String) + "\""
+```
+
+Prvý dopyt nenájde **nikdy nič**: prípad aj úloha existujú, engine nič
+nenahlási a obrazovka je prázdna — vyzerá to, že sa case nezaložil. Task
+dokument nesie `processId` (stringId verzie siete), nie identifikátor.
+`processId` sa pri každom re-importe mení, čo je tu v poriadku, lebo položku
+menu prestavuje tá istá akcia, ktorá nové `processId` pozná — a zároveň to
+zúži zobrazenie na **jeden** case, keď `bootstrapCase` zakladá jeden na verziu.
+
+Druhá polovica tej istej pasce: konfiguračný case sa nezaloží vôbec, keď akcia
+v jeho `create` udalosti spadne. Overuj teda existenciu case-u **pre najnovšiu
+verziu** siete, nie „nejakého" — `sccheck` to robí v kroku 20.
+
+### Názvy tlačidiel úlohy
+
+`DOKONČIŤ` a `ZRUŠIŤ` nie sú dané: titulok udalosti sa posiela klientovi
+a **prázdny titulok tlačidlo skryje** (`PETRIFLOW_LEARNINGS.md` B23,
+`ENGINE_ISSUES.md` E3). V tejto appke má každý prechod svoje:
+
+```xml
+<event type="finish">
+    <id>t_fa_zapis_finish</id>
+    <title name="t_fa_zapis_finish_t">Podať na schválenie</title>
+    ...
+</event>
+<event type="delegate">
+    <id>t_fa_zapis_delegate</id>
+    <title name="empty_button"></title>
+</event>
+```
+
+Prázdny titulok potrebuje **prázdny preklad v každom jazyku** — inak sa
+tlačidlo v druhom jazyku vráti. Preto je v sieti jeden kľúč `empty_button`
+s prázdnou hodnotou a používajú ho všetky skryté tlačidlá.
+
+Read-only pohľad (`t_fa_prehlad`) má prázdne všetky štyri: nie je čo dokončiť
+ani rušiť, a skryť tlačidlo takto je lepšie než odoberať oprávnenie — `view`
+musí zostať.
+
+### Schvaľovanie podľa strediska
+
+`roleRef` sa v prechode uvádza staticky, takže „schváli to vedúci **toho**
+strediska“ sa deklaratívne napísať nedá. Ide to cez `userList` pole:
+
+```groovy
+// pri podaní: kto smie túto faktúru schváliť
+def kandidati = usersWithRoleAll("schv_" + stredisko) - zadávateľ
+change fa_schvalovatelia value { kandidati }
+```
+
+a na prechode visí `userRef fa_schvalovatelia` s `perform`. `usersWithRoleAll`
+je primitívum delegáta — `usersWithRole` filtruje **zadaný** zoznam, toto je ten
+druhý prípad („kto všetko má rolu X“).
+
+Tri veci, ktoré k tomu patria:
+
+* **Rola `schvalovatel` na tom prechode byť nesmie.** `roleRef` a `userRef` sa
+  zjednocujú, takže by faktúru schválil ktokoľvek s generickou rolou
+  a smerovanie podľa stredísk by nebolo k ničomu. Zostáva ako **záloha**:
+  keď stredisko vlastného schvaľovateľa nemá, dostane sa do toho zoznamu.
+* **Kaskáda musí byť viditeľná.** `stredisko → všetci schvaľovatelia →
+  riaditeľ`, a každý stupeň sa zapíše do priebehu prípadu. Bez toho by faktúra
+  v stredisku bez schvaľovateľa čakala navždy a nikto by nevedel prečo.
+* **Zadávateľ sa zo zoznamu vyhodí.** Štvoro očí tak nezačína odmietnutím, ale
+  smerovaním — kto faktúru zapísal, tú úlohu ani neuvidí. Guard vo `finish`
+  zostáva ako druhá línia, pole sa dá prepísať akciou aj cez API.
+
+**Pri testovaní pozor na `ROLE_ADMIN`:** obchádza všetky oprávnenia Petriflow,
+takže hranicu „cudzie stredisko si úlohu nepriradí“ sa na `admin@test.local`
+overiť nedá. `sccheck` na to používa `operator@test.local` (bez ROLE_ADMIN).
+
+---
+
+## 12. Celý stack v Dockeri (OCR, SMTP, notifikácie)
+
+```bash
+etask-configuration/tools/up.sh --docker            # postaví, zdvihne, naimportuje siete
+etask-configuration/tools/up.sh --docker --build    # vynúti rebuild obrazov
+etask-configuration/tools/up.sh --docker --stop     # zastaví, dáta zostanú
+etask-configuration/tools/up.sh --docker --fresh --build   # od nuly, ZMAŽE dáta
+```
+
+Compose je `deploy/docker-compose.dev.yml` (projekt `etask`), takže Docker
+Desktop ukáže jeden stack so všetkým, čo appka používa:
+
+| služba | čo to je | odkiaľ sa na to ide |
+|---|---|---|
+| `frontend` | Angular portál v nginxe, `/api` proxuje na backend | http://localhost:4200 |
+| `backend` | engine + eTask starter, **s tesseractom v obraze** | http://localhost:8080 |
+| `mongo` | dáta prípadov | `localhost:27017` (`mongosh`) |
+| `elastic` | index pre `/search` — bez neho sú zoznamy prázdne | http://localhost:9200 |
+| `redis` | session store; bez neho Spring spadne až na session | — |
+| `mailpit` | SMTP, ktorý maily **nikam neposiela** a ukáže ich | http://localhost:8025 |
+
+Prod compose (`docker-compose.prod.yml`) obrazy **ťahá** z GHCR; tento ich
+**buildí** z checkoutu. To je celý rozdiel v zámere — inak sú služby tie isté.
+
+### OCR
+
+`tesseract` je v obraze backendu vrátane `slk` a `eng` dát. Slovenské dáta sú
+povinné: bez nich tesseract na slovenskej faktúre vráti zmes znakov, ktorá
+**vyzerá** ako prečítaný text, takže sa to neprejaví ako chyba, ale ako nezmyselne
+predvyplnené polia. Overiť sa to dá priamo v obraze:
+
+```bash
+docker run --rm --entrypoint sh etask-backend:dev -c 'tesseract --list-langs'
+```
+
+### Notifikačné maily
+
+Appka posiela e-mail vždy, keď sa faktúra alebo objednávka posunie — tomu, kto
+je na rade (a pri uzavretí tomu, kto ju podal). Ide to cez
+`com.netgrif.etask.mail.NotifyService` a z Petriflow to je jeden primitív:
+
+```groovy
+notifikuj(fa_schvalovatelia, "Faktúra na schválenie", telo)   // vráti počet odoslaných
+notifikacieZapnute()                                          // je vôbec SMTP?
+```
+
+Tri veci, ktoré sú v tom zámerne:
+
+* **Notifikácia nesmie zhodiť schválenie.** Posiela sa z `finish`, teda vnútri
+  transakcie, ktorá prepína token. `JavaMailSender` pri nedostupnom SMTP hodí
+  výnimku — a schválenie faktúry by zlyhalo na tom, že sa nepodarilo poslať mail
+  o schválení. Preto sa chytá `Throwable` a appka beží ďalej.
+* **`spring.mail.host` má v `application.properties` default `''`** — dva
+  apostrofy, nie prázdny string. Spring úvodzovky neodstraňuje, takže naivná
+  kontrola „je host nastavený?" prehlási SMTP za nastavený na každom stroji bez
+  SMTP a každá notifikácia skončí výnimkou v logu. `NotifyService.smtpHost()`
+  tie apostrofy zratá.
+* **Každý príjemca dostane vlastný mail.** V jednom by každý schvaľovateľ videl
+  adresy ostatných a jedna zlá adresa by zhodila odoslanie všetkým.
+
+Vypnúť sa to dá `ETASK_NOTIFICATIONS=false` (property
+`etask.notifications.enabled`) — vypnuté notifikácie nie sú chyba, sieť si to
+vie zistiť cez `notifikacieZapnute()`.
+
+Testovať sa dá bez prehliadača, Mailpit má REST API:
+
+```bash
+curl -s localhost:8025/api/v1/messages | head -c 400
+curl -s -X DELETE localhost:8025/api/v1/messages     # vyčistí schránku
+```
+
+### Prenos dát z lokálneho behu do stacku (a prečo Elastic vyzerá prázdny)
+
+Starý `etask-backend-starter/docker-compose.yml` mal Mongo v **anonymnom**
+volume a Elastic **bez** volume. Po prechode na `etask` stack sú volumes iné,
+takže appka vyzerá prázdna. Mongo sa prenesie kópiou:
+
+```bash
+OLD=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data/db"}}{{.Name}}{{end}}{{end}}' \
+      etask-backend-starter-docker-mongo-1)
+docker volume create etask_mongo-data
+docker run --rm -v "$OLD":/from -v etask_mongo-data:/to alpine sh -c 'cp -a /from/. /to/'
+```
+
+**Pozor: v Elasticu nie sú len indexy prípadov, ale aj URI uzly** (priečinky
+bočného menu). Nový ES index teda znamená nové id uzlov a položky menu z Monga
+visia na starých — priečinok v paneli je prázdny. Prejde to reštartom backendu
+(menu siete si uzol dorovnajú, RUNBOOK 4), nie preindexovaním.
+
+Index v Elasticu sa **neprenáša** — a to je horšie, než sa zdá: prípady v Mongu
+sú, ale `/search` ich nenájde, takže zoznamy v appke sú prázdne bez jedinej
+chyby. Engine na to má cron úlohu (`spring.data.elasticsearch.reindex`), ktorá
+ale pozerá len na prípady zmenené **od štartu** — `reindex-from` má default
+null. Dev compose ju preto prepína na „každé 2 minúty, spätne 30 dní":
+
+```yaml
+SPRING_APPLICATION_JSON: >-
+  {"spring.data.elasticsearch.reindex":"0 */2 * * * *",
+   "spring.data.elasticsearch.reindex-from":"P30D"}
+```
+
+Cez `SPRING_APPLICATION_JSON`, nie cez `JAVA_OPTS`: cron výraz obsahuje medzery
+a v `${JAVA_OPTS}` by sa rozpadol na viac argumentov.
+
+### Šesť pascí, na ktorých to padlo
+
+Všetky tri vyzerali ako niečo iné, než čím boli:
+
+| hlásenie | v skutočnosti |
+|---|---|
+| `failed to resolve source metadata for docker.io/library/openjdk:11-jdk` | oficiálna rodina obrazov `openjdk` bola z Docker Hubu **stiahnutá** (aj `maven:3-jdk-11`). Nástupca: `eclipse-temurin:11-jdk`, `maven:3.9-eclipse-temurin-11` |
+| `/usr/bin/env: 'bash\r': No such file or directory` | `core.autocrlf=true` dal skriptu CRLF, shebang sa číta ako `bash\r`. Rieši `.gitattributes` (`*.sh text eol=lf`) pre budúce checkouty a `sed -i 's/\r$//'` v Dockerfile pre ten aktuálny |
+| `ZipException opening "xml-apis-ext-1.3.04.jar": zip END header not found` + `cannot access java` | JitPack ako Maven repozitár v `settings.xml` odpovedal na **cudzí** artefakt 403 s HTML telom a Maven to uložil ako `.jar`. Maven nevie repozitár obmedziť na jednu groupId, takže jediná obrana je nemať ho tam — `vendor-deps.sh` si qrgen ťahá `curl`om sám a každý stiahnutý jar overí, že je čitateľný zip |
+| `JedisConnectionException: Could not get a resource from the pool` → `Connection refused`, hoci redis kontejner je healthy | engine si Jedis factory stavia sám a číta `spring.session.redis.host` cez `@Value` (`SessionConfiguration`), čo starter plní z `${REDIS_HOST}`. `SPRING_REDIS_HOST` (štandardné Spring Boot property) sa naň **nedostane** — appka beží na `localhost`. Správne env sú `REDIS_HOST` a `REDIS_PORT`; prod compose to mal tiež zle |
+| služba je `unhealthy`, hoci z hostiteľa odpovedá 200 — a `depends_on` kvôli tomu nespustí, čo na ňu čaká | healthcheck volal `http://localhost/` **vnútri** kontejnera. Tam sa `localhost` rozloží najprv na `::1`, ale nginx počúva len na IPv4 `0.0.0.0:80` → `Connection refused`. V healthchecku patrí `127.0.0.1` |
+| v logu `NetRunner: ziadne siete na import` a `BootstrapCaseRunner finished` za 13 ms — prázdna appka bez menu | Dockerfile kopíroval `etask-configuration/processes`, ale **nie** `processes.json`. Maven chýbajúci resource mlčky preskočí, takže jar mal siete a nemal manifest — a manifest je to, čo NetRunner aj BootstrapCaseRunner čítajú. Build to teraz kontroluje (`test -f target/classes/petriNets/processes.json`) |
+
+### Po `pfsync --sync` v Dockeri: menu a konfigurácia potrebujú nový prípad
+
+`pfsync --sync` naimportuje novú verziu siete, ale `bootstrapCase` prípady
+zakladá **runner pri štarte**. Po importe teda platí to isté ako pri lokálnom
+behu (RUNBOOK 4): menu aj konfigurácia ostanú na starej verzii, kým nevznikne
+nový prípad. V Dockeri je to jeden príkaz:
+
+```bash
+docker compose -f deploy/docker-compose.dev.yml restart backend
+```
+
+### Čo `--docker` nerobí
+
+Nemontuje zdrojáky. Zmena v Jave alebo Groovy delegáte znamená
+`--docker --build` (Maven beží v obraze, ~3 minúty). **Zmena v sieti build
+nepotrebuje** — siete sa importujú cez `pfsync` z repozitára, nie z jaru.

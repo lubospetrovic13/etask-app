@@ -436,7 +436,7 @@ nie je nič. Rovnaká trieda tichosti ako B11 a B12.
 
 Jediná statická obrana je kontrola proti inventáru metód —
 `tools/pflint.py` (pravidlo `unknown-call-typo`) porovnáva nahé volania
-s `reference/action-api.md`. Od enginu sa to čakať nedá.
+s `docs/reference/action-api.md`. Od enginu sa to čakať nedá.
 
 Dôsledok pre rozširovanie delegáta: každá nová metóda zväčšuje plochu, kde
 preklep spadne až za behu. To nie je argument proti rozširovaniu — je to
@@ -642,6 +642,95 @@ appky bola vidno, len zoznam úloh bol prázdny. Zachytil to `pucheck.py`.
 Platí to aj naopak: appka, ktorá vyzerá anglicky bez toho, aby si to niekto
 zapol, nie je pokazená — len klient neposiela hlavičku. V portáli ju posiela
 `TranslateInterceptor` knižnice.
+
+### B25. Read-only pohľad na celý život prípadu: miesto, ktoré nikto nekonzumuje
+
+B8b hovorí, kam read arc **nevešať**. Toto je, kam ho vešať.
+
+Zadávateľ po podaní typicky nemá čo robiť — pri štvorech očiach ho appka
+zo schvaľovateľov priamo vylučuje. Nemá teda **žiadnu** úlohu, a tým ani kde
+prečítať, v akom stave jeho prípad je. Vyzerá to, že sa podanie nepodarilo.
+
+Riešenie je jedno miesto navyše:
+
+```xml
+<place>
+    <id>p_info</id>
+    <tokens>1</tokens>          <!-- žetón od založenia prípadu -->
+</place>
+<arc>
+    <type>read</type>           <!-- číta, nekonzumuje -->
+    <sourceId>p_info</sourceId>
+    <destinationId>t_stav</destinationId>
+</arc>
+```
+
+`p_info` **nie je vstupom žiadneho prechodu**, takže:
+
+* úloha `t_stav` je povolená od založenia po uzavretie prípadu,
+* odmietnuté `finish` na inom prechode ju nezmaže (to je celé B8b),
+* `assignPolicy=auto` + prázdne titulky udalostí z nej spravia obrazovku bez
+  tlačidiel — číta sa, neklikáte.
+
+Do formulára patrí stav (`enumeration_map`, teda preložiteľný), priebeh
+(história) a pole „u koho to leží". To posledné nesie **mená ľudí**, nie rolu:
+`text` pole je `String`, ktorý sa neprekladá, takže „riaditeľ" by v anglickom
+portáli bolo jediné slovenské slovo v zozname. Mená sú jazykovo neutrálne
+a použiteľnejšie — dá sa zavolať.
+
+Overené na schvaľovaní faktúr; `sccheck` to drží krokom 16b.
+
+
+### B26. Opakované položky (riadky objednávky): JSON je zdroj pravdy
+
+Petriflow nemá opakovanú skupinu polí. „Tri položky objednávky" sa teda
+nemodelujú ako tri polia, ale takto:
+
+| pole | typ | úloha |
+|---|---|---|
+| `_polozky_json` | `text` (skryté) | **zdroj pravdy** — serializovaný zoznam |
+| `_polozky` | `text`, `textarea` | vyrenderovaný, čitateľný výpis |
+| `_polozky_vyber` | `multichoice_map` | výber na odobranie, možnosti sa stavajú za behu |
+| `btn_pridat` / `btn_odobrat` | `button` | akcie nad JSON-om |
+
+Prečo nie iba renderovaný text: parsovať späť to, čo ste práve naformátovali pre
+človeka, je zdroj tichých chýb (čiarka v názve položky). Prečo nie iba JSON: ten
+zas človek v zozname neprečíta. Obe polia sú lacné, rozchodiť sa nemôžu, lebo
+render beží vždy po zmene JSON-u.
+
+Dve veci, ktoré sa inak vymyslia zle:
+
+* **Id položky** je počítadlo (`p1`, `p2`, …) uložené v JSON-e, nie index v poli.
+  Po odobraní prostrednej položky by sa indexy posunuli a `multichoice` by
+  odobral inú položku, než človek vybral.
+* **Súčet** sa prepočítava aj v `finish` (phase `pre`), nielen pri pridaní.
+  Inak stačí, aby posledná zmena prišla bez re-renderu, a suma prípadu je iná
+  než súčet položiek — bez chyby.
+
+Kľúče `multichoice_map` nesmú obsahovať `.` ani `$` (Mongo, C17).
+
+
+### B27. Konfiguračná appka: `bootstrapCase` na verziu + jednoúlohové zobrazenie
+
+Limity, schvaľovatelia stredísk a podobné veci nepatria do XML natvrdo — mení
+ich zákazník, nie nasadenie. Vzor, ktorý funguje:
+
+1. Sieť `nastavenia/xx_nastavenia` s **jedným** prechodom, ktorý má `read` arc
+   z miesta so žetónom (B8) — trvale otvorený „pult".
+2. `{"net": "...", "rebuildOnNewVersion": true}` v manifeste: jeden prípad na
+   verziu siete, takže nová verzia konfigurácie sa naozaj prejaví.
+3. Hodnoty číta ktorákoľvek iná sieť cez `najnovsiCase("nastavenia/xx_nastavenia")`
+   a `?.dataSet?.get("...")?.value`, s rozumným defaultom keď konfigurácia
+   ešte neexistuje.
+4. Karta v menu je zobrazenie typu **Task**, nie Case — otvorí rovno formulár.
+   Jeho dopyt **nesmie** stáť na `processIdentifier` (task dokument ho nemá):
+   `transitionId:"t_xx" AND processId:"<stringId tej verzie>"`.
+
+Prečo `najnovsiCase` a nie `findCase`: verziu siete určuje engine
+(`getNewestVersionByIdentifier`). Vlastné porovnávanie verzií padlo na tom, že
+`versionKey` vracia `List` a Groovy dva `ArrayList`y porovnať odmietne — akcia
+spadla a konfiguračný prípad sa prestal zakladať. Chyba bola vidno až tak, že
+obrazovka nastavení bola prázdna.
 
 ## C. Mimo Petriflow, ale stálo to čas
 

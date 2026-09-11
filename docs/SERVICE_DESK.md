@@ -78,6 +78,20 @@ printf 'sd_request' | base64      →  c2RfcmVxdWVzdA==
 https://<host>/process/c2RfcmVxdWVzdA==
 ```
 
+**Ktorý formulár je nasadený.** Manifest (`processes.json`) importuje
+`sd_intake`, nie `sd_request` — `sd_request.xml` v `processes/` zostal ako
+staršia jednostránková verzia a v engine **nie je** (`pfsync` ho ani
+nespomenie, lebo nie je v `import`). Živý odkaz je preto:
+
+```
+printf 'service_desk/sd_intake' | base64   →  c2VydmljZV9kZXNrL3NkX2ludGFrZQ==
+http://localhost:4200/process/c2VydmljZV9kZXNrL3NkX2ludGFrZQ==
+```
+
+Pozor na rozdiel: `sd_request` má identifikátor bez prefixu (`<id>sd_request</id>`),
+`sd_intake` s ním (`service_desk/sd_intake`) - base64 sa robí z toho, čo je
+v `<id>`.
+
 Keď tam dáš stringId siete alebo holý identifikátor, formulár skončí na
 `TypeError: You provided 'undefined' where a stream was expected` — knižnica
 sieť nenájde, vetva vráti `undefined` a `mergeMap` na tom padne.

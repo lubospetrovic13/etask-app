@@ -1,6 +1,6 @@
 # Extension pointy volateľné z Petriflow akcie
 
-> **Generované — needituj ručne.** `python3 tools/pfapi.py > reference/action-api.md`
+> **Generované — needituj ručne.** `python3 tools/pfapi.py > docs/reference/action-api.md`
 > Zdroj: `application-engine-6.3.1.jar` + `EtaskActionDelegate.groovy`.
 
 Všetko nižšie sa dá zavolať priamo z `<action>` alebo `<function>` menom,
@@ -25,6 +25,9 @@ Zaloz alebo uprav polozku menu.
 ### `createOrUpdateMenuItem(String id, String uri, String type, String query, String icon, I18nString title, List<String> allowedNets, Map<String, String> roles = [:], Map<String, String> bannedRoles = [:])`
 To iste s dvojjazycnym nazvom polozky menu.
 
+### `pripoj_do_uzla(Object item, String uri)`
+Prepoji existujucu polozku menu na URI uzol danej cesty.
+
 ### `updateMenuItemSection(String id, String section = "settings")`
 Nahrada za private `ActionDelegate.updateMenuItemRoles`. */
 
@@ -41,8 +44,13 @@ Ikona, sekcia a viditelnost karty uzla URI.
 ### `userIdsOf(Object value)`
 Vytiahne id uzivatelov z hodnoty userList pola.
 
-### `hasProcessRole(IUser user, String roleImportId, String netIdentifier = null)`
+### `usersWithRoleAll(String roleImportId, String netIdentifier = null)`
 Ci uzivatel drzi procesnu rolu s danym importId.
+
+### `najnovsiCase(String netIdentifier)`
+Case danej siete, ktory plati - z NAJNOVSEJ verzie siete a z nej ten
+
+### `hasProcessRole(IUser user, String roleImportId, String netIdentifier = null)`
 
 ### `usersWithRole(Object source, String roleImportId, String netIdentifier = null)`
 Prienik: z uzivatelov v `source` vrati tych, ktori drzia rolu `roleImportId`.
@@ -96,6 +104,24 @@ Nastavi systemove authorities uctu na presne tento zoznam.
 
 ### `callAIToolByConfig(Map params)`
 `stringId` roly -> identifikator siete, pre vsetky aplikacne siete
+
+### `precitajFakturu(Object priloha, String caseId = null)`
+Precita fakturu z prilohy a vrati polia, ktore sa z nej dali vytiahnut.
+
+### `ocrDostupne()`
+Je OCR na tomto stroji k dispozicii? Siet to vie povedat cloveku skor,
+
+### `notifikacieZapnute()`
+Da sa posielat? Siet sa to pyta, aby o tom vedela napisat do priebehu
+
+### `notifikuj(Object prijemcovia, String predmet, String telo)`
+Posle notifikacny mail a vrati, kolkym prijemcom sa to podarilo.
+
+### `emailyOf(Object co)`
+E-mailove adresy z coho sa da: userList pole, jeho hodnota, zoznam id,
+
+### `menaUzivatelov(Object co)`
+Mena uzivatelov, "Meno Priezvisko" (alebo e-mail, ked meno chyba).
 
 > **Pozor na `createOrUpdateMenuItem`.** Existuje dvakrát: tu (7–9 argumentov,
 > funkčná update cesta cez `changeFilter`/`changeMenuItem`) a v enginu

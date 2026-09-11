@@ -1,3 +1,10 @@
+> **Archív.** Návrh POC pre AI konfiguráciu čítania faktúr. Časti o faktúrach
+> sú prekonané: schvaľovanie faktúr je dnes vlastná appka
+> (`../etask-app-objednavky-faktury`) a prílohy číta `com.netgrif.etask.doc`
+> (RUNBOOK 10) — e-faktúra, textová vrstva PDF a OCR, nie LLM. Aktuálne
+> recepty sú v `RUNBOOK.md`; toto sa drží kvôli rozhodnutiam, ktoré
+> vysvetľujú, prečo sieť `ai_config` vyzerá, ako vyzerá.
+
 # POC — AI konfigurácia pre digitalizáciu došlých faktúr
 
 Plán implementácie **2 Petriflow procesov**. Reálne volanie LLM rieši Java na backende

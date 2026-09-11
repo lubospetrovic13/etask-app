@@ -4,7 +4,7 @@ Toto je **prvá z dvoch kôp**. Sú tu veci, ktoré nie sú „takto to funguje,
 to vedieť", ale **defekty**: engine alebo `@netgrif/components` sa správa inak,
 než sľubuje vlastný model, a skoro vždy o tom mlčí. Druhá kopa — správanie,
 ktoré je v poriadku a treba ho len poznať — je v `PETRIFLOW_LEARNINGS.md`,
-`RUNBOOK.md` a `reference/cheatsheet.md`.
+`RUNBOOK.md` a `docs/reference/cheatsheet.md`.
 
 Rozdelenie má praktický dôvod. Znalosť z druhej kopy je trvalá a patrí do
 dokumentácie. Znalosť z tejto kopy je **odpisujúce sa aktívum**: každý riadok
@@ -474,15 +474,128 @@ musí robiť každý komponent, ktorý drží preložený reťazec.
 
 ---
 
+## E18. Výnimka z akcie v udalosti `assign` vráti holé HTTP 500 bez dôvodu
+
+**Príznak.** Akcia v `<event type="assign"><actions phase="pre">` odmietne
+priradenie úlohy vyhodením výnimky — správne — ale klient dostane
+
+```json
+{"timestamp":1788969468781,"status":500,"error":"Internal Server Error",
+ "path":"/api/task/assign/6aa181fc9a68db34ef289fd4"}
+```
+
+Text výnimky sa v odpovedi **neobjaví nikde**. Používateľ vidí „Internal Server
+Error" namiesto vety, ktorá mu povie, prečo si tú úlohu prevziať nemôže.
+
+**Príčina.** `finish` má pre odmietnutie z akcie vlastnú cestu — vráti HTTP 200
+a dôvod v tele ako `error`. `assign` takú cestu nemá, takže výnimka prepadne
+až na default error handler Springu, ktorý telo výnimky nezverejňuje.
+
+**Dôkaz.** Zmerané na `schvalovanie/fa_faktura` v1.0.0, kontrola štyroch očí
+(`nie_vlastnu`): tá istá výnimka z tej istej process funkcie vrátila z `assign`
+holé 500 (vyššie) a z `finish`
+
+```json
+{"error":"Faktúru, ktorú ste zapísali, nemôžete schváliť ako schvaľovateľ
+ strediska. Nech ju schváli niekto iný."}
+```
+
+Token sa v oboch prípadoch nepohol a úloha zostala, takže **ochrana funguje** —
+nefunguje len jej vysvetlenie.
+
+**Obídenie.** Kontrolu dať do `finish`, nie do `assign` (tak to robí
+`fa_faktura` aj `ob_objednavka`). Cena za to je, že úlohu si zablokovaný
+používateľ **prevzať vie** a kým ju drží, nemá ju kto vykonať; pustí ju
+`cancel` — ktorý sa preto nesmie zakazovať — alebo `ROLE_ADMIN`.
+
+**Návrh opravy.** Spracovať výnimku z akcie v `assign` rovnako ako vo `finish`:
+HTTP 200 a `error` s textom výnimky.
+
+---
+
+## E19. Nahranie súboru s neúplným telom vráti HTTP 200 a nenahrá nič
+
+**Príznak.** `POST /api/task/{id}/file/{fieldId}` s multipart telom, v ktorom
+časť `data` nie je mapa `{taskId: fieldId}` (napríklad prázdny objekt `{}`),
+vráti **HTTP 200 s telom `{}`**. Súbor sa neuloží, hodnota poľa zostane prázdna
+a klient nemá z čoho zistiť, že sa nič nestalo.
+
+**Príčina.** V logu servera je `NullPointerException` v
+`TaskService.getMainOutcome` (volané z `AbstractTaskController.saveFile`) —
+výnimka sa zaloguje ako ERROR, ale odpoveď sa zloží z prázdneho outcome
+a odošle sa ako úspech.
+
+**Dôkaz.** Namerané pri písaní `tools/sccheck.py` proti 6.3.1: s `data` = `{}`
+odpoveď `HTTP 200 {}` a v logu NPE; s `data` = `{"<taskId>": "<fieldId>"}`
+odpoveď `HTTP 200 {"success": "Data field values have been successfully set"}`
+a súbor v storage. Test najprv „prešiel“ a až čítanie prílohy odhalilo,
+že príloha tam nie je.
+
+**Obídenie.** Posielať `data` tak, ako to robí knižnica
+(`{taskId: fieldId}`), a po nahraní si hodnotu poľa prečítať.
+
+**Návrh opravy.** Pri chýbajúcom outcome vrátiť 400 s dôvodom; NPE nikdy
+neposielať ako 200.
+
+---
+
+## E20. Redis sa nedá nastaviť štandardným `spring.redis.*`
+
+**Príznak.** Kontejner s `SPRING_REDIS_HOST=redis` (štandardné Spring Boot
+property pre Redis) spadne pri štarte:
+
+```
+BeanCreationException: Error creating bean with name
+  'enableRedisKeyspaceNotificationsInitializer'
+Caused by: JedisConnectionException: Could not get a resource from the pool
+Caused by: java.net.ConnectException: Connection refused
+```
+
+Redis pritom beží a je zdravý — appka sa pripája na `localhost`.
+
+**Príčina.** Engine si `JedisConnectionFactory` stavia sám
+(`configuration/SessionConfiguration`) a adresu čita cez
+
+```java
+@Value("${spring.session.redis.host}")
+@Value("${spring.session.redis.port}")
+```
+
+`spring.session.redis.host` **nie je** Spring Boot property (Spring Session má
+pod tým prefixom `namespace` a `flush-mode`, nie host), takže autokonfigurácia
+ani relaxed binding zo `SPRING_REDIS_HOST` sa naň nedostane. Hodnotu musí
+dodať `application.properties` — v tomto startere z `${REDIS_HOST:localhost}`.
+Fallback `hostName == null ? "localhost"` v tej metóde navyše zaručí, že
+nesprávna konfigurácia sa neprejaví ako chyba konfigurácie, ale ako odmietnuté
+spojenie na localhost.
+
+**Dôkaz.** Namerané pri prevode stacku do Dockera (6.3.1): s
+`SPRING_REDIS_HOST=redis` padá vyššie uvedenou výnimkou, s `REDIS_HOST=redis`
+nabehne. Ten istý omyl bol v `deploy/docker-compose.prod.yml`, takže čerstvé
+produkčné nasadenie by nenabehlo vôbec.
+
+**Obídenie.** Používať `REDIS_HOST` a `REDIS_PORT` (tak, ako ich čaká
+`application.properties`), nie `SPRING_REDIS_*`.
+
+**Návrh opravy.** Čítať štandardné `spring.redis.*` (alebo aspoň logovať, na
+akú adresu sa engine pripája), a nemať v konfigurácii tichý fallback na
+`localhost`.
+
+---
+
 ## Čo s tým
 
 Najviac stojí **E1** — znemožňuje celú jednu operáciu — a **E2**, ktoré robí
 z Task zobrazení druhotriedne. Ostatné sú jednotlivé ladenia. **E3 je
 stiahnuté**: to sa ukázalo ako moja chyba merania, nie chyba enginu.
 
+**E18** je z tej istej rodiny ako **E11** a **E8**: engine urobí správnu vec
+a zamlčí dôvod. Opraviť sa dá jedným handlerom. **E19** je horšie: tam engine
+ohlási úspech operácie, ktorá sa nestala.
+
 Čo v tejto kope **nie je**: správanie, ktoré je v poriadku a treba ho len
 poznať — oprávnenia a `perform` ako skratka, `assignPolicy` a jeho dva okamihy,
 prípad si drží verziu siete, `stringId` roly per verziu, `default_headers`
 a `allowedNets`, znaky v kľúčoch možností, `_map` typy, `setData` telo,
 odmietnutie ako HTTP 200. To je druhá kopa a je v `PETRIFLOW_LEARNINGS.md`,
-`RUNBOOK.md` a `reference/cheatsheet.md`.
+`RUNBOOK.md` a `docs/reference/cheatsheet.md`.

@@ -52,6 +52,46 @@ a `snack-bar.theme.scss` sa neincludujú vôbec — dialógy a snackbary majú l
 
 ---
 
+### A3. Dátové pole sa ukladá na blur kvôli jednému riadku
+
+`AbstractDataFieldComponent` vytvára `new FormControl('', {updateOn: 'blur'})`.
+Celá ukladacia reťaz pod tým je na zmenu pripravená — `field.valueChanges()` →
+`updateTaskDataFields()` → `POST /task/{id}/data` beží okamžite. Hodnota len do
+blur neopustí input.
+
+Prakticky to znamená dve veci:
+
+* **Nedá sa to prepnúť konfiguráciou.** `_formControl` je privátne pole
+  knižničnej triedy, injection token (na rozdiel od
+  `NAE_INFORM_ABOUT_INVALID_DATA`) preň neexistuje.
+* **Dá sa to obísť bez kopírovania šablón**: `input` udalosť z knižničného
+  `<input>` bubbluje, takže náš resolver ju odchytí a hodnotu zapíše do
+  `DataField.value` sám. Zvyšok cesty zostáva knižničný.
+
+Prečo to knižnica robí na blur, je vidieť v `registerFormControl`: odpoveď
+servera sa cez `_value` → `formControl.setValue()` zapisuje **späť do inputu**.
+Pri ukladaní počas písania to pri poli, ktoré akcia normalizuje, preloží kurzor.
+Recept aj zoznam kompromisov je v RUNBOOK 6.
+
+### A4. `instanceof` proti knižničnej triede v produkčnom builde neplatí
+
+Kontrola typu poľa cez `field instanceof TextField` sa skompiluje, prejde revíziou
+a v produkčnom builde **ticho odpovie `false`** — funkcia potom nerobí nič a nikde
+nie je chyba. Namerané v prehliadači na bežiacej appke:
+
+```js
+field.constructor.name     // "E4e"   - minifikované
+'type' in field            // false   - DataField `type` za behu nemá
+```
+
+Zdroj pravdy o type poľa je **`getElementType()`** na resolveri — to isté, na čom
+stojí `ngSwitch` v jeho šablóne. Preto `TYPABLE.includes(this.getElementType())`
+a nie `instanceof`.
+
+Stálo to jeden cyklus rebuildu obrazu: kód sa skompiloval, nasadil, a pole
+s `saveWhileTyping` sa jednoducho neukladalo. Odhalila to až kontrola hodnoty
+v Mongu (`req_description = undefined`) po písaní bez odkliknutia.
+
 ## B. Kaskádové pasti — najdrahšia časť
 
 ### B1. Dark scope re-emituje knižničné pravidlá s vyššou špecificitou

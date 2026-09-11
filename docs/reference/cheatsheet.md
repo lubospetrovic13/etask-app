@@ -1,11 +1,17 @@
 # Cheatsheet: appka v Petriflow za jedno čítanie
 
-Dokumentácia tohto repozitára má 3 700 riadkov. Načítať ju celú pred prvým
+Dokumentácia tohto repozitára má ~86 000 tokenov. Načítať ju celú pred prvým
 riadkom kódu je najväčšia jednotlivá položka nákladu na jednu appku — a väčšina
 z nej je odpoveď na otázku, ktorú v danej úlohe nikto nepoloží.
 
-**Toto je to, čo treba vedieť vopred.** Zvyšok je referencia na dožiadanie
-a v pravom stĺpci je napísané, kde presne.
+**Toto je to, čo treba vedieť vopred** (~1 700 tokenov). Zvyšok je referencia na
+dožiadanie — a berie sa **po kapitolách**, nie po súboroch:
+
+```bash
+python3 tools/pfdoc.py                  # čo kde je, s cenou v tokenoch
+python3 tools/pfdoc.py hladaj "menu"    # v ktorej kapitole to je
+python3 tools/pfdoc.py runbook 4        # len tá kapitola (~2 700 namiesto ~14 500)
+```
 
 Keď niečo nesedí s tým, čo robí engine, **pravdu má engine** — a potom je chyba
 v tomto súbore alebo v nástroji, nie v sieti.
@@ -27,7 +33,7 @@ python3 tools/pfsync.py --sync            #        import do enginu + role
 Do Javy ani do `pom.xml` sa nesiaha. Pri zmene **manifestu** treba prestaviť jar
 (pakuje sa doň); pri zmene len XML stačí `pfsync --sync`.
 
-Pred písaním vlastnej metódy otvor `reference/action-api.md` — 200+ metód,
+Pred písaním vlastnej metódy otvor `docs/reference/action-api.md` — 200+ metód,
 ktoré sa dajú volať z akcie menom. Delegát je dynamický, takže preklep spadne
 až za behu; ten zoznam je jediná obrana a `pflint` proti nemu kontroluje.
 
@@ -123,19 +129,29 @@ vyššej vrstve chýba**. Ak sa tá veta nedá napísať, problém patrí vyšš
 Vrstva 2 nie je záchranná brzda — je to miesto, kde rastie jazyk. Metóda
 v delegáte je nové Petriflow primitívum, volateľné menom z každej siete. Keď ten
 istý Groovy píšeš v druhej sieti, presuň ho tam a regeneruj inventár
-(`tools/pfapi.py > reference/action-api.md`).
+(`tools/pfapi.py > docs/reference/action-api.md`).
 
 ---
 
 ## Kde je zvyšok
 
-| chcem | súbor |
+| chcem | kapitola |
 |---|---|
-| recept na bežnú úlohu (appka, menu, používatelia, vizuál, verejný prístup, dvojjazyčnosť) | `docs/RUNBOOK.md` |
-| Petriflow ako jazyk, vzory, gotchas C1–C18 | `docs/petriflow_reference.md` |
-| čo príručka tvrdí zle alebo nepokrýva (A, B, C) | `docs/PETRIFLOW_LEARNINGS.md` |
-| chyby enginu a knižnice — čo nahlásiť upstream (E1–E17) | `docs/ENGINE_ISSUES.md` |
-| metódy volateľné z akcie | `reference/action-api.md` |
+| recept na bežnú úlohu (appka, menu, používatelia, vizuál, verejný prístup, dvojjazyčnosť, Docker) | `pfdoc runbook N` |
+| Petriflow ako jazyk, vzory, gotchas C1–C18 | `pfdoc hladaj …` v `petriflow` — **nikdy celé** |
+| čo príručka tvrdí zle alebo nepokrýva (A, B, C) | `pfdoc learnings B8b` |
+| chyby enginu a knižnice — čo nahlásiť upstream (E1–E20) | `pfdoc engine E20` |
+| metódy volateľné z akcie | `docs/reference/action-api.md` |
 | rozhodovací postup pre agenta | `.claude/skills/petriflow/SKILL.md` |
-| worked example (eForm, SLA, oprávnenia per organizácia) | `docs/SERVICE_DESK.md` |
-| prečo je repozitár takto postavený | `docs/AI_STARTER_ANALYSIS.md` |
+| worked example (eForm, SLA, oprávnenia per organizácia) | `pfdoc sd` |
+| prečo je repozitár takto postavený | `pfdoc analyza` |
+
+Vzory, ktoré vyšli z reálnych appiek a inak sa vymyslia zle:
+
+| vzor | kde |
+|---|---|
+| read-only pohľad na celý život prípadu (miesto, ktoré nikto nekonzumuje) | `pfdoc learnings B25` |
+| opakované položky (riadky objednávky) — JSON ako zdroj pravdy | `pfdoc learnings B26` |
+| konfiguračná appka (limity, schvaľovatelia) — jeden prípad na verziu | `pfdoc learnings B27` |
+| schvaľovanie podľa strediska: rola → `userList` → `userRef` | `pfdoc runbook 11` |
+| stav, ktorý sa dá preložiť, a názov prípadu bez stavu | `pfdoc runbook 9` |
