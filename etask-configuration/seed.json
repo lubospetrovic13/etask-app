@@ -36,6 +36,7 @@
         "schv_wellness",
         "schvalovatel",
         "spravca",
+        "spravca_majetku",
         "uctovnik",
         "veduci",
         "zadavatel"
@@ -51,6 +52,7 @@
         "schv_wellness",
         "schvalovatel",
         "spravca",
+        "spravca_majetku",
         "uctovnik",
         "veduci"
       ]

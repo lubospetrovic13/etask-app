@@ -32,7 +32,9 @@
 		prazdny. Presne preto sa tu roky odovzdavalo `allowedNets = []`
 		a tlacidlo "+" v "Vsetky pripady" vracalo "Ziadne povolene siete".
 		Udalost `create` bezi z bootstrap casu, teda az po NetRunneri, ked su
-		vsetky siete naimportovane.
+		vsetky siete naimportovane. Preto je tu aj konfiguracia uzla `general`:
+		v udalosti `upload` by na cistej databaze bezala skor, nez ten uzol
+		vobec existuje, a zhodila by start backendu.
 
 		A preco `rebuildOnProcessChange` a nie `rebuildOnNewVersion`: pridanim
 		appky sa VERZIA TEJTO SIETE nezmeni, takze by sa jej akcia uz nikdy
@@ -40,19 +42,6 @@
 		preto porovnava zoznam sieti so `tiles_applied_processes` nizsie -
 		to pole je jediny dovod, preco tu vobec je.
 	-->
-    <processEvents>
-        <event type="upload">
-            <id>menu_import</id>
-
-            <actions phase="pre">
-                <action>
-                    setUriNodeData("general", "General", null, "folder")
-                    setUriNodeDataFilters("general", ["general"])
-                </action>
-            </actions>
-        </event>
-    </processEvents>
-
     <caseEvents>
         <event type="create">
             <id>tiles_create</id>
@@ -112,6 +101,15 @@ views.each { v ->
         postavene << (v.id as String)
     }
 }
+
+// Uzol sa da konfigurovat AZ TERAZ. Na cistej databaze v tejto chvili este
+// neexistoval - vyrobil ho `createOrUpdateMenuItem` vyssie (vola `createUri`).
+// Kym to stalo v udalosti `upload`, backend na cistej databaze NENASTARTOVAL:
+// `setUriNodeData` spadol na NullPointerException z vnutra Groovy a NetRunner
+// zhodil cely kontext. Na uz beziacej instancii to bolo neviditelne, lebo uzol
+// tam z minula bol.
+setUriNodeData("general", "General", null, "folder")
+setUriNodeDataFilters("general", ["general"])
 
 // AZ NAKONIEC. Runner berie toto pole ako "katalog uz je postaveny pre tieto
 // siete" - keby sa zapisalo skor a stavanie polozky spadlo, dalsi start by

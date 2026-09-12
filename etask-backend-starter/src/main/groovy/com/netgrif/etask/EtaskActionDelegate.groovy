@@ -291,6 +291,23 @@ class EtaskActionDelegate extends ActionDelegate {
      */
     void setUriNodeData(String uri, String title, String section, String icon, boolean isSvgIcon = false, boolean isHidden = false) {
         UriNode uriNode = getUri(uri) as UriNode
+        if (uriNode == null) {
+            // Bez tejto kontroly to je `NullPointerException: Cannot invoke
+            // method setName() on null object` z vnutra Groovy - sprava, ktora
+            // NEPOVIE, o ktory uzol islo, a ked to bezi z NetRunnera, zhodi
+            // cely start backendu.
+            //
+            // Uzol vznikne az tym, ze ho niekto vyrobi: bud import siete, ktorej
+            // identifikator tu cestu nesie, alebo `createOrUpdateMenuItem`
+            // (ten vola `createUri`). Na CISTEJ databaze teda plati poradie -
+            // konfigurovat uzol sa da az po tom, co existuje. Tvorit ho tu
+            // potichu by znamenalo, ze preklep v ceste vyrobi druhu, prazdnu
+            // kartu namiesto chyby.
+            throw new IllegalStateException(
+                    "Uzol URI '${uri}' neexistuje, nie je co konfigurovat. " +
+                    "Vyrob ho najprv importom siete s tymto prefixom alebo " +
+                    "volanim createOrUpdateMenuItem(..., '${uri}', ...).")
+        }
         uriNode.setName(title)
         uriService.save(uriNode)
         uriNodeDataRepository.findByUriNodeId(uriNode.getId()).ifPresentOrElse(data -> {

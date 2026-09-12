@@ -482,13 +482,16 @@ def main():
         check(f"{name} {'vidi' if expected else 'nevidi'} kartu 'financie'",
               ("financie" in paths) == expected, paths)
     st, node = zad.get("/api/v2/uri/" + base64.b64encode(b"financie").decode())
-    check("karta ma ikonu request_quote", node.get("icon") == "request_quote", node.get("icon"))
-    # Pod kartou su DVA priecinky. Uzol vznika importom siete, ktorej
+    # Ikonu kategorie `financie` uz NEKONTROLUJEME: kategoriu deklaruje manifest
+    # starteru, nie `app.json` tejto appky, takze jej ikona je rozhodnutie
+    # nasadenia. Appka vlastni len svoje dva priecinky - a tie sa overuju nizsie.
+    #
+    # Pod kategoriou su DVA priecinky. Uzol vznika importom siete, ktorej
     # identifikator tu cestu nesie - `financie/faktury/fa_faktura`.
     deti = {c["uriPath"]: c for c in (node.get("children") or [])}
     check("priecinok 'financie/faktury' existuje", "financie/faktury" in deti,
           sorted(deti))
-    check("priecinok 'schvalovanie/objednavky' existuje",
+    check("priecinok 'financie/objednavky' existuje",
           "financie/objednavky" in deti, sorted(deti))
     check("priecinok faktur ma vlastnu ikonu",
           (deti.get("financie/faktury") or {}).get("icon") == "receipt_long",

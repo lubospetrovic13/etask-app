@@ -33,12 +33,23 @@ class EtaskRunnerController extends RunnerController {
             // ADDITIONAL CUSTOM RUNNERS
             EtaskRunner,
             EtaskUserCreator,
-            // Must run after NetRunner: uri nodes only exist once the processes
-            // whose identifiers carry their path have been imported.
-            UriNodeDataRunner,
-            // Must run after NetRunner too: it creates one case per process
-            // listed in `bootstrapCase`, and those processes build the menu views.
+            // Must run after NetRunner: it creates one case per process listed
+            // in `bootstrapCase`, and those processes build the menu views.
             BootstrapCaseRunner,
+            // Must run after BOTH of those. After NetRunner, because most uri
+            // nodes only exist once the process whose identifier carries their
+            // path is imported. And after BootstrapCaseRunner, because a node
+            // that NO identifier carries - `general`, the admin catalogue - is
+            // created by a menu-building action, and those run from bootstrap
+            // cases.
+            //
+            // When this ran before BootstrapCaseRunner, `general` did not exist
+            // yet, so this runner skipped it ("does not exist yet") and the node
+            // ended up with no UriNodeData at all. A node without data is
+            // visible to EVERYONE (fail-open, by design), so on a fresh database
+            // the admin-only catalogue was visible to every logged-in user -
+            // silently, and only on a fresh database.
+            UriNodeDataRunner,
             // END OF ADDITIONAL CUSTOM RUNNERS
             FinisherRunnerSuperCreator,
             FinisherRunner,
