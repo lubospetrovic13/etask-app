@@ -219,11 +219,29 @@
         <span>{{ view.navigation.title }}</span>
         <span class="menu-item-focus-overlay"></span>
       </div>
-      <div *ngIf='isRoot()' class="tree-node-lang-select mat-typography" fxLayoutAlign="start center">
+    </div>
+
+    <!--
+      Jazyk a téma sú predvoľby POUŽÍVATEĽA, nie položky sekcie Nastavenia -
+      preto stoja mimo nej.
+
+      Kým boli vnútri, boli nedosiahnuteľné: sekcia štartuje zbalená
+      (`isSectionOpen.settings = false`) a jediné, čím sa dá rozbaliť, je jej
+      hlavička - tá sa však vykresľuje len `*ngIf='!isSettingsEmpty()'`. Na
+      nasadení, kde žiadny uzol URI nemá `section` a žiadne zobrazenie nemá
+      `navigation.section` (teda na tomto), bola sekcia prázdna, hlavička sa
+      nevykreslila, nemal kto sekciu otvoriť - a prepínač témy aj výber jazyka
+      boli v DOM, ale navždy zbalené. Bez chybovej hlášky, len "nie je to tam".
+    -->
+    <div *ngIf='isRoot()' class="box-container">
+      <div *ngIf="!isSettingsEmpty() || !isRightNodesEmpty()" class="line">
+        <mat-divider></mat-divider>
+      </div>
+      <div class="tree-node-lang-select mat-typography" fxLayoutAlign="start center">
         <app-etask-language-selector fxLayout="row" [language]="getLang()"></app-etask-language-selector>
         <span class="lang-select-text">{{ 'dataField.i18n.languageSelect' | translate }}</span>
       </div>
-      <div *ngIf='isRoot()' class="tree-node mat-typography" fxLayoutAlign="start center"
+      <div class="tree-node mat-typography" fxLayoutAlign="start center"
            (click)="themeService.toggle()">
         <mat-icon class="tree-node-icon">{{ themeService.isDark() ? 'brightness_7' : 'brightness_4' }}</mat-icon>
         <span fxFlex>{{ (themeService.isDark() ? 'app.theme.toLight' : 'app.theme.toDark') | translate }}</span>
