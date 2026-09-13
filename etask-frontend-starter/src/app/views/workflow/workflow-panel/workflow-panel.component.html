@@ -59,6 +59,9 @@
         <!--                <a mat-stroked-button color="primary"-->
         <!--                   href='{{publicUrlTextField.value}}'-->
         <!--                   target="_blank">{{ 'workflow.goToPublicView' | translate | uppercase }}</a>-->
+        <button *ngIf="builderUrl" mat-raised-button color="primary"
+                (click)="openInBuilder()">{{ 'workflow.openInBuilder' | translate | uppercase }}
+        </button>
         <button mat-raised-button color="primary"
                 (click)="downloadNetFile()">{{ 'workflow.download' | translate | uppercase }}
         </button>

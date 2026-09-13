@@ -3,7 +3,7 @@
     "Jediný zoznam toho, čo runtime robí so sieťami. Číta ho ProcessManifest.",
     "",
     "Pridanie novej aplikácie: hoď XML do processes/ a dopíš sem riadok do",
-    "\"import\". Pridanie appky zásah do Javy nevyžaduje - to by protirečilo tomu,", 
+    "\"import\". Pridanie appky zásah do Javy nevyžaduje - to by protirečilo tomu,",
     "že aplikačná logika patrí do Petriflow.",
     "",
     "import        súbory sietí, v poradí importu. Poradie záleží: uzol URI",
@@ -65,17 +65,13 @@
     "sd_menu.xml",
     "pu_pouzivatel.xml",
     "pu_zalozenie.xml",
-    "pu_menu.xml",
-    "dv_ziadost.xml",
-    "dv_menu.xml",
-    "fa_faktura.xml",
-    "ob_objednavka.xml",
-    "sc_menu.xml",
-    "sc_nastavenia.xml",
-    "ma_zariadenie.xml",
-    "ma_menu.xml"
+    "pu_menu.xml"
   ],
   "bootstrapCase": [
+    {
+      "net": "configuration_tiles",
+      "rebuildOnProcessChange": true
+    },
     {
       "net": "service_desk/sd_menu",
       "rebuildOnNewVersion": true
@@ -83,22 +79,6 @@
     "pouzivatelia/pu_zalozenie",
     {
       "net": "pouzivatelia/pu_menu",
-      "rebuildOnNewVersion": true
-    },
-    {
-      "net": "dovolenky/dv_menu",
-      "rebuildOnNewVersion": true
-    },
-    {
-      "net": "schvalovanie/sc_menu",
-      "rebuildOnNewVersion": true
-    },
-    {
-      "net": "nastavenia/sc_nastavenia",
-      "rebuildOnNewVersion": true
-    },
-    {
-      "net": "majetok/ma_menu",
       "rebuildOnNewVersion": true
     }
   ],
@@ -120,76 +100,6 @@
       "requiredAuthorities": [],
       "requiredProcessRoles": [
         "spravca"
-      ]
-    },
-    "dovolenky": {
-      "icon": "beach_access",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "zamestnanec",
-        "veduci"
-      ]
-    },
-    "schvalovanie": {
-      "icon": "request_quote",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "zadavatel",
-        "schvalovatel",
-        "riaditel",
-        "uctovnik",
-        "schv_hotel",
-        "schv_restauracia",
-        "schv_wellness",
-        "schv_udrzba",
-        "schv_marketing",
-        "schv_sprava"
-      ]
-    },
-    "schvalovanie/faktury": {
-      "icon": "receipt_long",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "zadavatel",
-        "schvalovatel",
-        "riaditel",
-        "uctovnik",
-        "schv_hotel",
-        "schv_restauracia",
-        "schv_wellness",
-        "schv_udrzba",
-        "schv_marketing",
-        "schv_sprava"
-      ]
-    },
-    "schvalovanie/objednavky": {
-      "icon": "shopping_cart",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "zadavatel",
-        "schvalovatel",
-        "riaditel",
-        "uctovnik",
-        "schv_hotel",
-        "schv_restauracia",
-        "schv_wellness",
-        "schv_udrzba",
-        "schv_marketing",
-        "schv_sprava"
-      ]
-    },
-    "nastavenia": {
-      "icon": "tune",
-      "requiredAuthorities": [
-        "ROLE_ADMIN"
-      ],
-      "requiredProcessRoles": []
-    },
-    "majetok": {
-      "icon": "assignment",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "spravca_majetku"
       ]
     }
   }

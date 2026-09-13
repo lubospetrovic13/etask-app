@@ -12,35 +12,162 @@
 	-->
 	<i18n locale="en">
 		<i18nString name="net_title">Configuration tiles</i18nString>
+		<i18nString name="tiles_applied_processes_title">Processes in the catalogue</i18nString>
 	</i18n>
     <defaultRole>false</defaultRole>
     <anonymousRole>false</anonymousRole>
     <transitionRole>false</transitionRole>
 
-    <processEvents>
-        <event type="upload">
-            <id>menu_import</id>
+	<!--
+		Stavia dve katalogove zobrazenia karty `general`: "Vsetky pripady"
+		a "Vsetky systemove pripady". Kartu vidi len ROLE_ADMIN (uriNodes
+		v processes.json), takze to, ze tu `allowedNets` obsahuje uplne vsetko,
+		nie je dierou v opravneniach - a engine zakladanie pripadu adminovi
+		aj tak povoluje bez ohladu na procesne roly (overene: admin bez roly
+		`manager` zalozil `sd_customer`, bezny pouzivatel dostal 403).
 
-            <actions phase="pre">
-                <action>
-                    createOrUpdateMenuItem("general", "general", "Case",
-                            "NOT (processIdentifier:\"filter\" OR processIdentifier:\"import_filters\" OR " +
-                            "processIdentifier:\"export_filters\" OR processIdentifier:\"org_group\" OR " +
-                            "processIdentifier:\"impersonation_config\" OR " +
-                            "processIdentifier:\"impersonation_users_select\" OR " +
-                            "processIdentifier:\"preference_filter_item\")",
-                            "folder",
-                            i18n("Všetky prípady", ["en": "All cases"]), [])
+		PRECO TO JE V UDALOSTI `create` A NIE V `upload`, kde to bolo predtym:
+		`upload` sa spusti pri IMPORTE TEJTO SIETE, a tato siet sa importuje ako
+		PRVA - v tej chvili ziadna appka este neexistuje, takze zoznam sieti bol
+		prazdny. Presne preto sa tu roky odovzdavalo `allowedNets = []`
+		a tlacidlo "+" v "Vsetky pripady" vracalo "Ziadne povolene siete".
+		Udalost `create` bezi z bootstrap casu, teda az po NetRunneri, ked su
+		vsetky siete naimportovane. Preto je tu aj konfiguracia uzla `general`:
+		v udalosti `upload` by na cistej databaze bezala skor, nez ten uzol
+		vobec existuje, a zhodila by start backendu.
 
-                    createOrUpdateMenuItem("general_system", "general", "Case",
-                            "_exists_:processIdentifier",
-                            "settings",
-                            i18n("Všetky systémové prípady", ["en": "All system cases"]), [])
+		A preco `rebuildOnProcessChange` a nie `rebuildOnNewVersion`: pridanim
+		appky sa VERZIA TEJTO SIETE nezmeni, takze by sa jej akcia uz nikdy
+		nespustila a katalog by ostal taky, aky bol pri prvom starte. Runner
+		preto porovnava zoznam sieti so `tiles_applied_processes` nizsie -
+		to pole je jediny dovod, preco tu vobec je.
+	-->
+    <caseEvents>
+        <event type="create">
+            <id>tiles_create</id>
+            <actions phase="post">
+                <action id="1"><![CDATA[
+tiles_applied_processes: f.tiles_applied_processes;
 
-                    setUriNodeData("general", "General", null, "folder")
-                    setUriNodeDataFilters("general", ["general"])
-                </action>
+// Siete, ktorych pripady su INFRASTRUKTURA enginu, nie praca pouzivatela.
+// Zoznam je ten isty ako vo vylucovacom dopyte zobrazenia "Vsetky pripady" -
+// keby sa rozisli, "+" by ponukal siet, ktoru ten zoznam ani nezobrazuje.
+def systemove = [
+        "filter", "import_filters", "export_filters", "org_group",
+        "impersonation_config", "impersonation_users_select",
+        "preference_filter_item",
+]
+
+// Vsetky nasadene siete, kazda raz. `getAll()` vracia aj stare verzie, preto
+// `unique()`; `allowedNets` je zoznam IDENTIFIKATOROV, nie stringId, takze
+// verzia v nom nehra rolu.
+def vsetkySiete = petriNetService.getAll()
+        .collect { it.identifier as String }
+        .unique()
+        .sort()
+def pouzivatelske = vsetkySiete.findAll { !(it in systemove) }
+
+def vylucenie = systemove.collect { "processIdentifier:\"" + it + "\"" }.join(" OR ")
+
+def views = [
+        [id   : "general", icon: "folder",
+         name : i18n("Všetky prípady", ["en": "All cases"]),
+         query: "NOT (" + vylucenie + ")",
+         nets : pouzivatelske],
+        [id   : "general_system", icon: "settings",
+         name : i18n("Všetky systémové prípady", ["en": "All system cases"]),
+         query: "_exists_:processIdentifier",
+         nets : vsetkySiete],
+]
+
+def postavene = []
+views.each { v ->
+    // `createOrUpdateMenuItem` z EtaskActionDelegate: 9 argumentov je PROJEKTOVA
+    // varianta s funkcnou update cestou. Pri osmich si Groovy vyberie enginovu
+    // (11 argumentov) a tá na update vola neexistujuce `updateFilter()`.
+    def item = createOrUpdateMenuItem(
+            v.id as String,
+            "general",
+            "Case",
+            v.query as String,
+            v.icon as String,
+            v.name,
+            v.nets as List,
+            [:],
+            [:]
+    )
+    if (item) {
+        pripoj_do_uzla(item, "general")
+        postavene << (v.id as String)
+    }
+}
+
+// Uzol sa da konfigurovat AZ TERAZ. Na cistej databaze v tejto chvili este
+// neexistoval - vyrobil ho `createOrUpdateMenuItem` vyssie (vola `createUri`).
+// Kym to stalo v udalosti `upload`, backend na cistej databaze NENASTARTOVAL:
+// `setUriNodeData` spadol na NullPointerException z vnutra Groovy a NetRunner
+// zhodil cely kontext. Na uz beziacej instancii to bolo neviditelne, lebo uzol
+// tam z minula bol.
+setUriNodeData("general", "General", null, "folder")
+setUriNodeDataFilters("general", ["general"])
+
+// AZ NAKONIEC. Runner berie toto pole ako "katalog uz je postaveny pre tieto
+// siete" - keby sa zapisalo skor a stavanie polozky spadlo, dalsi start by
+// katalog povazoval za hotovy a uz by ho neopravil.
+change tiles_applied_processes value { vsetkySiete.join(",") }
+changeCaseProperty("title").about {
+    "Katalóg – " + postavene.size() + "/" + views.size() +
+            ", " + pouzivatelske.size() + " procesov"
+}
+                ]]></action>
             </actions>
         </event>
-    </processEvents>
+    </caseEvents>
+
+	<!--
+		Pole existuje kvoli BootstrapCaseRunner-u: ten podla neho pozna, s akou
+		mnozinou sieti bol katalog naposledy postaveny. Id musi sedet s
+		`APPLIED_PROCESSES_FIELD` v tom runneri.
+
+		Je v dataGroup zamerne - pole mimo kazdej dataGroup nevrati
+		`GET /api/task/{id}/data`, takze by sa nedalo overit testom.
+	-->
+    <data type="text" immediate="true">
+        <id>tiles_applied_processes</id>
+        <title name="tiles_applied_processes_title">Procesy v katalógu</title>
+    </data>
+
+    <transition>
+        <id>t_tiles</id>
+        <x>140</x>
+        <y>80</y>
+        <label name="net_title">Configuration tiles</label>
+        <icon>folder</icon>
+        <assignPolicy>auto</assignPolicy>
+        <dataGroup>
+            <id>g_tiles</id>
+            <cols>4</cols>
+            <layout>grid</layout>
+            <dataRef>
+                <id>tiles_applied_processes</id>
+                <logic><behavior>visible</behavior></logic>
+                <layout><x>0</x><y>0</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+            </dataRef>
+        </dataGroup>
+    </transition>
+    <place>
+        <id>p_alive</id>
+        <x>40</x>
+        <y>80</y>
+        <label>Živé</label>
+        <tokens>1</tokens>
+        <static>false</static>
+    </place>
+    <arc>
+        <id>a_tiles</id>
+        <type>read</type>
+        <sourceId>p_alive</sourceId>
+        <destinationId>t_tiles</destinationId>
+        <multiplicity>1</multiplicity>
+    </arc>
 </document>

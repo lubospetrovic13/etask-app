@@ -17,6 +17,36 @@
       <span class="upload-petri-net-label">{{ 'workflow.upload' | translate }}</span>
     </button>
   </div>
+  <!--
+    Hľadanie v zozname procesov. Prepínač poľa tu nie je z rozmaru: engine
+    spája kritériá cez AND a regex robí len nad `title`, `identifier`
+    a `initials`, takže "v názve ALEBO v identifikátore" sa cez to API napísať
+    nedá - dve kritériá naraz by zoznam vyprázdnili. Podrobne v
+    `EtaskWorkflowViewService`.
+  -->
+  <div fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="8px" class="workflow-search">
+    <mat-form-field appearance="outline" class="workflow-search-field">
+      <mat-label>{{ 'workflow.searchIn' | translate }}</mat-label>
+      <mat-select [(value)]="searchField" (selectionChange)="onSearchFieldChange()">
+        <mat-option *ngFor="let field of searchFields" [value]="field">
+          {{ 'workflow.searchField.' + field | translate }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" fxFlex class="workflow-search-term">
+      <mat-label>{{ 'workflow.search' | translate }}</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [(ngModel)]="searchTerm" (ngModelChange)="onSearchInput()"
+             [attr.aria-label]="'workflow.search' | translate">
+      <button *ngIf="searchTerm" mat-icon-button matSuffix (click)="clearSearch()"
+              [attr.aria-label]="'workflow.searchClear' | translate"
+              [matTooltip]="'workflow.searchClear' | translate">
+        <mat-icon>close</mat-icon>
+      </button>
+    </mat-form-field>
+  </div>
+
   <div fxLayout="row" fxLayoutAlign="center" class="workflow-header">
     <nc-header #header fxFlex="100" [type]="headerType"></nc-header>
   </div>

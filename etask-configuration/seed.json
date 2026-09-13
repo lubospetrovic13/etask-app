@@ -10,11 +10,7 @@
   ],
   "netScope": [
     "service_desk/*",
-    "pouzivatelia/*",
-    "dovolenky/*",
-    "schvalovanie/*",
-    "nastavenia/*",
-    "majetok/*"
+    "pouzivatelia/*"
   ],
   "users": [
     {

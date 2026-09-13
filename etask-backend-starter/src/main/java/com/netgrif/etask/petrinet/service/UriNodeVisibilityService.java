@@ -29,10 +29,21 @@ import java.util.stream.Collectors;
 public class UriNodeVisibilityService implements IUriNodeVisibilityService {
 
     /**
-     * A system admin always sees the whole tree. Without this, mis-configuring
-     * a node could hide the only route to the screen that fixes it.
+     * Admins always see the whole tree.
+     *
+     * ROLE_SYSTEMADMIN is here because mis-configuring a node could otherwise
+     * hide the only route to the screen that fixes it.
+     *
+     * ROLE_ADMIN is here because the engine already lets it create a case of
+     * ANY net - verified against a running engine: an admin without the
+     * `manager` process role created a `service_desk/sd_customer` case (200)
+     * while a plain user got 403. Hiding the card was therefore never a
+     * restriction, only a way to make a permission the admin already has
+     * unreachable from the UI: no card means no view, and no view means no
+     * "+" button. Filtering the menu below what the API allows is a lie, not
+     * a control.
      */
-    private static final String SYSTEM_ADMIN = "ROLE_SYSTEMADMIN";
+    private static final Set<String> ADMIN_AUTHORITIES = Set.of("ROLE_SYSTEMADMIN", "ROLE_ADMIN");
 
     @Override
     public boolean isVisible(UriNodeData data, IUser user) {
@@ -46,7 +57,7 @@ public class UriNodeVisibilityService implements IUriNodeVisibilityService {
         }
 
         Set<String> authorities = authorityNames(user);
-        if (authorities.contains(SYSTEM_ADMIN)) {
+        if (authorities.stream().anyMatch(ADMIN_AUTHORITIES::contains)) {
             return true;
         }
 

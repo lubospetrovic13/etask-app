@@ -29,6 +29,7 @@ import {
   ConfigurationService,
   GroupNavigationComponentResolverService,
   MaterialModule,
+  PermissionService,
   TaskResourceService,
   TranslateLibModule,
   UriResourceService,
@@ -40,6 +41,7 @@ import {ResizableModule} from 'angular-resizable-element';
 import {AppRoutingModule} from './app-routing.module';
 import {AppComponent} from './app.component';
 import {EtaskFrontendConfigurationService} from './etask-frontend-configuration.service';
+import {EtaskPermissionService} from './etask-permission.service';
 import {EtaskFrontendViewService} from './etask-frontend-view.service';
 import {DashboardComponent} from './views/dashboard/dashboard/dashboard.component';
 import {EtaskUriResourceService} from './views/dashboard/service/etask-uri-resource.service';
@@ -157,6 +159,10 @@ import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-vie
     // `EtaskUriService` a chyba by zostala, len by sa presunula.
     {provide: UriService, useExisting: EtaskUriService},
     {provide: GroupNavigationComponentResolverService, useClass: EtaskGroupNavigationComponentResolverService},
+    // Klientska kontrola opravneni musi vediet o ROLE_ADMIN, inak zakazuje
+    // to, co server povoluje - podrobne v EtaskPermissionService.
+    // `useExisting`: sluzba je `providedIn: 'root'`, `useClass` by vyrobil druhu instanciu.
+    {provide: PermissionService, useExisting: EtaskPermissionService},
   ],
 })
 export class AppModule {

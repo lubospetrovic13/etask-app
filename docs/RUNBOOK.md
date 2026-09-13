@@ -451,13 +451,25 @@ s podpoľami podľa typu:
 dataSet.<id>.textValue          .textValue.keyword   .fulltextValue
 dataSet.<id>.numberValue        .dateValue           .timestampValue
 dataSet.<id>.booleanValue
+dataSet.<id>.keyValue           <- enumeration_map / multichoice_map
+```
+
+**`enumeration_map` je výnimka a je to tichá pasca.** Kľúč možnosti je
+v `.keyValue`; `.textValue` drží **preložené popisky, všetky jazyky naraz**
+(`["Nastúpil", "Onboarded"]`). Dopyt na kľúč cez `.textValue` preto nenájde
+**nikdy nič** — engine vráti 200 a prázdny zoznam, zobrazenie je prázdne
+a nikde sa nič nezaloguje. Overené za behu (NAE 6.3.1):
+
+```
+dataSet.stav_label.keyValue:"nastupil"    -> 2 prípady
+dataSet.stav_label.textValue:"nastupil"   -> 0 prípadov
 ```
 
 Takže priečinok „Vybavené" je obyčajný dopyt nad dátovým poľom, nie nová sieť:
 
 ```groovy
 def query = "processIdentifier:\"mojaapp/mojaapp_ziadost\"" +
-            " AND dataSet.stav_label.textValue:(\"Schválená\" OR \"Zamietnutá\")"
+            " AND dataSet.stav_label.keyValue:(\"schvalena\" OR \"zamietnuta\")"
 ```
 
 Pozor, `immediate` polia majú `initial=false`, takže sa **samy od seba stĺpcom
@@ -915,7 +927,8 @@ change fa_stav_label value { "zauctovana" }   // kluc, nie popisok
 ```
 
 Vedľajší zisk: dopyty v menu potom filtrujú podľa kľúča
-(`dataSet.fa_stav_label.textValue:"zauctovana"`), takže nezávisia od jazyka ani
+(`dataSet.fa_stav_label.keyValue:"zauctovana"` — **`keyValue`**, nie
+`textValue`; to drží preložené popisky), takže nezávisia od jazyka ani
 od preformulovania popisku. Kým bol stav `text`, stačilo zmeniť jeho znenie
 a zobrazenie „Uzavreté" prestalo nachádzať čokoľvek — bez chyby.
 
@@ -1361,3 +1374,74 @@ ako štruktúra sa dá spracovať; text sa dá len prečítať.
 
 Server **nič nemení**, kým sa nezavolá `pf_fix` s `write=true`, a nesiaha na
 engine ani na databázu — `pfsync` a akceptačné sady majú bežať vedome.
+
+
+---
+
+## 14. „Otvoriť v builderi" — model do modelára bez sťahovania
+
+V sekcii **Workflow** (karta pre `ROLE_ADMIN`) je pri každom procese tlačidlo
+**Otvoriť v builderi**, ktoré otvorí model v
+`https://builder.netgrif.cloud/modeler?modelUrl=…`. Vyzerá to ako odkaz na dva
+riadky. Nie je, a dôvod je jediný: **builder si XML stiahne sám.**
+
+Zmerané na bežiacom engine a na samotnom builderi:
+
+| pokus | výsledok |
+|---|---|
+| `?modelUrl=<náš /api/petrinet/{id}/file>` | **401** — builder nepošle žiadnu našu hlavičku |
+| token v query stringu (`?auth=`, `?token=`, `?access_token=`, `?jwt=`, `?X-Auth-Token=`) | **401** vo všetkých variantoch, engine ho berie len ako hlavičku |
+| anonymná session enginu | **401**, XML nečíta ani ona |
+| `/api/public/petrinet/{id}/file` | **200**, ale je to HAL index, nie XML |
+| `?modelUrl=data:application/xml;base64,…` | XHR `data:` URL prečíta, ale nginx buildera vráti **414 Request-URI Too Large** už pri 21 kB (bežná sieť má 10–50 kB) |
+| HTTPS builder → `http://127.0.0.1:8080` | vo vstavanej prehliadačke **zablokované** (`ERR_BLOCKED_BY_CLIENT`, `status: 0`) — v bežnom Chrome NEOVERENÉ, viď nižšie |
+
+Builder číta parameter takto (z jeho vlastného bundlu):
+
+```js
+this.route.queryParams.subscribe(p => { p.modelUrl && http.get(p.modelUrl, {responseType: "text"}) ... })
+```
+
+Obyčajný `HttpClient.get` bez `withCredentials` a bez hlavičiek. Iný vstup
+**nemá** — žiadny `postMessage`, žiadny druhý parameter.
+
+Z toho plynie jediné riešenie: model musí byť chvíľu čitateľný **bez
+prihlásenia**. Robí to `ModelLinkController`:
+
+```
+GET /api/v2/model-link/{netId}        → { path, expiresAt, validForSeconds }   vyžaduje ROLE_ADMIN
+GET /api/public/model/{netId}?exp=&sig=  → XML                                  bez autentifikácie
+```
+
+Podpis je HMAC-SHA256 nad `netId|expiry` kľúčom, ktorý sa generuje **pri štarte
+a nikde sa neukladá**. Odkaz platí 5 minút a reštart ho zneplatní — čo je
+zámer: kľúč, ktorý nie je zapísaný, nevytečie z properties, z vrstvy obrazu ani
+z histórie gitu. **Ak to raz pobeží vo viac replikách, tento kľúč musí byť
+zdieľaný** — inak odkaz vydaný jednou inštanciou druhá neoverí.
+
+Tri veci, ktoré k tomu patria a inak sa spravia zle:
+
+* **Endpoint vracia cestu, nie absolútnu URL.** Za reverse proxy ju backend
+  zložiť nevie — `deploy/nginx.conf` posiela `proxy_set_header Host $host`,
+  čo zahadzuje port, takže portál na `:4200` by dostal odkaz na `:80`. Origin
+  pozná prehliadač; prefix dopĺňa frontend.
+* **Okno sa otvára v obsluhe kliknutia, nie v callbacku.** `window.open`
+  zavolané až po návrate HTTP odpovede je asynchrónny popup a prehliadače ho
+  blokujú. Tab sa otvorí prázdny hneď a presmeruje sa, keď príde odkaz.
+* **Posledný skok je jediný neoverený.** Že builder náš odkaz naozaj stiahnuť
+  skúsi, overené je — v jeho konzole je chyba jeho vlastného `HttpClient`
+  s našou URL. Či ho prehliadač k `http://localhost` pustí, overené **nie je**:
+  vo vstavanej prehliadačke to padlo na `ERR_BLOCKED_BY_CLIENT` bez hlásenia
+  o mixed contente, čo môže byť aj sandbox toho panelu. Chrome pritom
+  `http://localhost` a `http://127.0.0.1` považuje za dôveryhodný pôvod, takže
+  pravidlo o mixed contente sa na ne bežne **nevzťahuje** — reálne to môže ísť.
+  Ak nie, prejaví sa to tým, že **builder ukáže prázdne plátno a nikde nie je
+  chyba**; frontend preto pri HTTP portáli a HTTPS builderi upozorní snackbarom.
+  Vtedy sú tri cesty: povoliť „Insecure content" pre `builder.netgrif.cloud`
+  v nastaveniach stránky, pustiť portál po HTTPS, alebo si builder hostovať
+  vedľa portálu — adresa je konfigurácia (`services.builder.modelerUrl`
+  v `nae.json`, prepísateľná cez `services-builder-modelerUrl` v `env.js`).
+  Na nasadenej HTTPS inštancii tento problém nevzniká.
+
+Adresa buildera je konfigurácia, nie konštanta v kóde — appka bez nej tlačidlo
+vôbec nevykreslí (`*ngIf="builderUrl"`).

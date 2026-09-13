@@ -386,7 +386,9 @@ def views = [
          query: vsetky, nets: [siet], roles: [:], headers: stlpce],
         // Filtrovanie podla DATOVEHO POLA, nie podla polohy tokenu. Ide to,
         // lebo `__PREFIX___stav_label` ma `immediate="true"` a engine ho
-        // indexuje pod `dataSet.__PREFIX___stav_label.textValue`.
+        // indexuje pod `dataSet.__PREFIX___stav_label`. KLUC je v `.keyValue`
+        // - `.textValue` drzi PRELOZENE POPISKY (vsetky jazyky naraz), takze
+        // dopyt na kluc cez `.textValue` nenajde NIKDY NIC a nic to nepovie.
         // Nazov nesie DOMENU appky. Polozky menu su case-y jednej siete pre
         // cely portal a nazov v nich unikatny nie je - dve appky s polozkou
         // "Rozpísané" sa na dashboarde (kde nie su priecinky) nedaju odlisit
@@ -398,7 +400,7 @@ def views = [
          // aby sa dal prelozit - a kluc je nezavisly od jazyka aj od
          // preformulovania popisku. Kym tam bol popisok, stacilo zmenit text
          // stavu a zobrazenie prestalo nachadzat cokolvek. Bez chyby.
-         query: vsetky + " AND dataSet.__PREFIX___stav_label.textValue:\\"rozpisane\\"",
+         query: vsetky + " AND dataSet.__PREFIX___stav_label.keyValue:\\"rozpisane\\"",
          nets: [siet], roles: [:], headers: stlpce],
 ]
 
@@ -655,7 +657,7 @@ def main():
 
     print("\n=== 4. zobrazenie 'Rozpísané' filtruje podla datoveho pola ===")
     # Podla KLUCA moznosti - popisok sa prekladom meni, kluc nie.
-    q = f'processIdentifier:"{NET}" AND dataSet.__PREFIX___stav_label.textValue:"rozpisane"'
+    q = f'processIdentifier:"{NET}" AND dataSet.__PREFIX___stav_label.keyValue:"rozpisane"'
     st, r = user.post("/api/workflow/case/search?size=100", {"query": q})
     ids = [x["stringId"] for x in (r.get("_embedded") or {}).get("cases", [])] \
         if isinstance(r, dict) else []
