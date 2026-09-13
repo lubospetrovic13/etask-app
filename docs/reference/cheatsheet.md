@@ -28,7 +28,15 @@ python3 tools/pflint.py processes/        # 0,3 s  štruktúra a tiché pasce
 python3 tools/pfgroovy.py processes/      # 3 s    syntax Groovy
 python3 tools/pfview.py                   # 2 s    vykreslí to frontend?
 python3 tools/pfsync.py --sync            #        import do enginu + role
+tools/up.sh --docker --fresh --build      # ~10 min  ZMAZE data, len pri zmene
+                                          #          poradia startu / uzlov /
+                                          #          manifestu / runnerov
 ```
+
+Posledný krok nie je luxus. **Bežiaca inštancia nesie stav z minulých behov**,
+takže chyby poradia (uzol, ktorý prvý beh nevyrobí; runner, ktorý beží priskoro)
+sa na nej neprejavia vôbec. Dvakrát to prežilo celý zelený reťazec vyššie —
+podrobne `pfdoc analyza 7`.
 
 Pridanie appky Javu nevyžaduje (rozšírenie platformy o schopnosť, ktorú engine
 nemá, je iná vec a je v poriadku — vtedy pribudne primitívum v delegáte,

@@ -503,3 +503,173 @@ Bezpečnostné a prostredové pravidlá (Java 11, `LANG=C.UTF-8`, JWT kľúč,
 „nespúšťať `pfsync --sync` na produkciu"), pravidlo troch vrstiev a zoznam
 „čo nerobiť". To sú veci, ktorých vynechanie stojí hodiny ladenia — a ich cena
 v tokenoch je rádovo nižšia než jedno také ladenie.
+
+---
+
+## 7. Čo ukázalo postavenie jednej appky a preskupenie celého portálu
+
+Druhý priebeh tým istým harnessom, s odstupom. Vzniklo pri ňom: aplikácia
+**Onboarding** (paralelné vetvy, AND-join, smerovanie na konkrétneho
+nadriadeného), štyri rozšírenia platformy (podpísaný odkaz na model pre builder,
+`ROLE_ADMIN` v UI, katalógové zobrazenia, hľadanie v zozname procesov)
+a preskupenie **19 sietí** do kategórií `hr / financie / it / admin` naprieč
+štyrmi repozitármi. Na konci **449 kontrol v piatich akceptačných sadách**.
+
+Zaujímavé na tom nie sú tie funkcie. Zaujímavé je, čo ten priebeh ukázal o tom,
+ako sa Petriflow appky s AI stavajú — a kde to aj s celým týmto harnessom stále
+padá.
+
+### 7.1 Statická kontrola prešla, a backend nenaštartoval
+
+Toto je hlavné zistenie tohto kola. Pred nasadením preskupených sietí hlásili
+všetky offline nástroje čisto:
+
+```
+pflint:   19 sieti, 0 chyb, 0 upozorneni
+pfgroovy: 19 sieti, 216 akcii, 0 syntaktickych chyb
+pfview:   0 chyb, 0 upozorneni
+pfsync:   vsetky siete sedia s tym, co drzi engine
+```
+
+Na čistej databáze backend **nenaštartoval**. A keď po oprave naštartoval,
+admin-only katalóg „Všetky prípady" videl **každý prihlásený používateľ**.
+
+Obe chyby boli v poradí operácií pri štarte:
+
+| chyba | prečo ju nič nechytilo |
+|---|---|
+| `setUriNodeData("general", …)` bežalo v udalosti `upload`, teda pri importe prvej siete — uzol vtedy ešte neexistuje | `NullPointerException` z vnútra Groovy, `NetRunner` zhodil kontext. Na **existujúcej** inštancii uzol z minulého behu bol, takže sa to nikdy neprejavilo |
+| `UriNodeDataRunner` bežal pred `BootstrapCaseRunner`om, takže uzol `general` v čase konfigurácie neexistoval a runner ho preskočil | Uzol bez `UriNodeData` je **zámerne** viditeľný pre všetkých (fail-open). Žiadna chyba, žiadny log — len karta, ktorá tam nemá čo robiť |
+
+Obe som **zaviedol ja**, v predchádzajúcom kroku toho istého vlákna, keď som
+stavanie katalógových položiek presunul z `upload` do `create`. Overil som to
+vtedy proti bežiacej inštancii, bolo to zelené, a nešlo o nedbalosť: na bežiacej
+inštancii tá chyba **neexistuje**.
+
+Z toho plynie oprava pravidla, ktoré tento repozitár opakuje od začiatku.
+„Ground truth je bežiaci engine" je pravda, ale nestačí — **bežiaca inštancia
+nesie stav z predchádzajúcich behov a presne ten maskuje chyby poradia.**
+
+| úroveň | chytí | nechytí | cena |
+|---|---|---|---|
+| `pflint`, `pfgroovy`, `pfi18n`, `pfview` | štruktúra, syntax, preklady, render | čokoľvek, čo závisí od stavu enginu | sekundy |
+| import do **bežiaceho** enginu (`pfsync --sync`, `pfcheck`) | sieť sa naimportuje, akcie bežia | poradie pri štarte, prvý beh runnerov, prázdne indexy | desiatky sekúnd |
+| **čistá databáza** (`up.sh --docker --fresh --build`) | poradie runnerov, prvý import, fail-open uzly, chýbajúce seedy | výkon, migrácie existujúcich dát | ~10 minút |
+| akceptačné sady | čo appka naozaj robí a kto čo vidí | čo nikto nenapísal ako kontrolu | minúty |
+
+**Čistá databáza je samostatná úroveň overenia, nie luxus.** Patrí pred každé
+odovzdanie, ktoré sa dotklo poradia štartu, uzlov URI, manifestu alebo runnerov.
+Doplnené do `cheatsheet.md` aj do reťazca v `CLAUDE.md`.
+
+### 7.2 Drahé chyby neboli v písaní kódu, ale v uverení dokumentu
+
+Tri prípady z tohto vlákna, kde bol zdrojom pravdy **vlastný repozitár** a mýlil sa:
+
+* **`dataSet.<pole>.textValue` pri `enumeration_map`.** Takto to stálo v RUNBOOKu,
+  v cheatsheete aj v generátore `pfnew` — teda každá takto vygenerovaná appka
+  dostala zobrazenie, ktoré nenájde nikdy nič. Kľúč je v `.keyValue`;
+  `.textValue` drží preložené popisky (všetky jazyky naraz). Jedno meranie:
+  `keyValue:"nastupil"` → 2 prípady, `textValue:"nastupil"` → 0.
+* **Hľadanie procesov podľa názvu.** Engine má `title` explicitne v tej istej
+  vetve, ktorá robí regex — ale `PetriNet.title` je v Mongu `I18nString`, takže
+  regex nad dokumentom nemá o čo oprieť. Nenájde **nikdy nič** (`ENGINE_ISSUES`
+  E21). Vedľajší nález z toho istého merania: hodnota ide do regexu
+  neescapovaná, takže `{"title": "("}` vráti **HTTP 500**.
+* **Ako odovzdať model builderu.** Štyri hypotézy, tri vyvrátené meraním za pár
+  minút: token v query stringu (401 vo všetkých variantoch), anonymná session
+  (401), `data:` URL s modelom (nginx buildera vráti **414** už pri 21 kB, bežná
+  sieť má 10–50 kB). Zostala jedna a tá funguje.
+
+Spoločné je, že **každú z nich vyriešilo jedno meranie proti bežiacemu enginu**,
+a každá by inak prešla do dodávky ako „funguje to, len to nič nenájde".
+
+Pre agenta z toho plynie konkrétne pravidlo: keď je tvrdenie lacné odmerať
+(jeden `curl`, jeden dopyt), **odmeraj ho, aj keď je napísané v tomto repozitári**
+— najmä ak z neho generuješ kód pre ďalšie aplikácie.
+
+### 7.3 Tiché zlyhanie je stále dominantný režim
+
+Nové položky do katalógu, všetky z tohto vlákna a všetky overené za behu:
+
+| tiché zlyhanie | ako sa prejaví |
+|---|---|
+| dopyt na `enumeration_map` cez `.textValue` | zobrazenie je prázdne, HTTP 200 |
+| hľadanie procesu podľa `title` | prázdny výsledok, HTTP 200 |
+| `allowedNets: []` na zobrazení | tlačidlo „+" vráti „Žiadne povolené siete" |
+| uzol URI bez `UriNodeData` | karta viditeľná pre všetkých |
+| `required` na `boolean` | prejde aj s hodnotou `false` |
+| `roleRef` + `userRef` na prechode | zjednotia sa, nie prienik — smerovanie prestane platiť |
+| predvoľba vnorená v prázdnej zbaliteľnej sekcii | je v DOM a nedá sa k nej dostať |
+| `NetRunner` importuje len chýbajúce siete | zmena XML frameworkovej siete sa na existujúcej inštancii nikdy neprejaví |
+| premenovanie identifikátora siete | je to nová sieť; staré prípady zostanú mimo nových zobrazení |
+
+Posledné dve stoja za zvláštnu pozornosť, lebo sa týkajú **údržby**, nie vývoja:
+appka postavená správne prestane fungovať tým, že sa okolo nej niečo premenuje.
+
+### 7.4 Čo z refaktoru spravili akceptačné sady
+
+Preskupenie 19 sietí do kategórií je mechanická zmena, ktorú offline nástroje
+odobrili bez výhrady. Sady našli dve veci, ktoré by inak odišli do dodávky:
+
+1. **Karty sa prestali dať nájsť.** `/api/v2/uri/root` vracia len **priame deti
+   koreňa** — a tým je odteraz kategória, nie appka. Každý test, ktorý hľadal
+   kartu medzi deťmi koreňa, by zlyhal bez ohľadu na to, či appka funguje.
+   Riešené `pftestlib.uri_paths(deep=True)`.
+2. **Rola `spravca_majetku` nebola pridelená nikomu** — ani na `main`, teda
+   dávno pred týmto vláknom. Prípady Majetku preto cez vyhľadávanie nevidel ani
+   `super`, účet, cez ktorý čítajú všetky sady.
+
+Z bodu 6.2 („zdieľaná knižnica akceptačných testov") sa medzitým stalo
+`tools/pftestlib.py` a **toto bola prvá situácia, kde sa to vrátilo**: oprava
+hĺbkového čítania kariet bola jedna funkcia v knižnici plus tri kópie
+v samostatných sadách, ktoré si vlastného klienta ponechávajú zámerne.
+
+### 7.5 Kde harness pomohol a kde nie
+
+**Pomohol**, merateľne:
+
+* `pfnew` vygeneroval Onboarding appku so správnymi vzormi (preložiteľný stav,
+  názov prípadu bez stavu, `allowedNets`, `pripoj_do_uzla`) — dopisovala sa
+  doménová logika, nie appka.
+* `pfdoc` udržal čítanie po kapitolách; celý RUNBOOK sa ani raz nenačítal.
+* `action-api.md` zabránil písaniu metód, ktoré už existujú (`usersWithRole`,
+  `userIdsOf`, `menaUzivatelov`).
+* Akceptačné sady prežili štrukturálny refaktor a chytili obe regresie.
+
+**Nepomohol**, a to je zoznam na ďalšiu prácu:
+
+1. **Chýbal krok „čistá databáza".** Reťazec overovania končil pri `pfsync --sync`.
+   Doplnené do `cheatsheet.md` a `CLAUDE.md`; stálo to dva startup-breaking bugy.
+2. **`pfnew` skelet stále nenesie read-only stavový pohľad (B25).** V Onboardingu
+   som ho písal ručne, hoci je to vzor, ktorý potrebuje takmer každá appka so
+   schvaľovaním. Bod 6.3 je teda stále otvorený a toto vlákno ho potvrdilo.
+3. **CI nespúšťa kvalitatívny reťazec** (bod 6.4). `pflint`, `pfgroovy`,
+   `pfi18n`, `pfview` sú sekundy a chytajú presne tú vrstvu, ktorá mlčí.
+4. **Frameworkové siete sa na existujúcej inštancii neaktualizujú.**
+   `configuration_tiles.xml` žije v `backend-starter/resources` a `pfsync` ho
+   nepokrýva, takže zmenu bolo treba naimportovať ručne cez API. Nástroj na to
+   neexistuje.
+5. **`up.sh` spúšťa `pfsync` skôr, než dobehnú štartovacie runnery.** Healthcheck
+   zozelenie pred nimi, takže na čistej databáze zakaždým vypíše
+   `prihlasenie super@netgrif.com zlyhalo`. Nie je to chyba nasadenia, ale je to
+   presne ten druh šumu, ktorý učí ignorovať výpisy.
+
+### 7.6 Čo z toho platí všeobecne pre tvorbu appiek s AI
+
+Zovšeobecnenie, ktoré si trúfam spraviť z dvoch priebehov:
+
+* **Hodnota harnessu nie je v tom, že agent píše kód rýchlejšie.** Kód je lacný.
+  Hodnota je v tom, že agent **nemusí uhádnuť** to, čo sa nedá odvodiť — aritu
+  `createOrUpdateMenuItem`, poradie mazania filtra, `keyValue` vs `textValue`.
+  Každá takáto vec, ktorá nie je zapísaná, stojí hodiny a zopakuje sa pri každej
+  ďalšej appke.
+* **Overovanie musí mať úrovne a agent musí vedieť, ktorá chytá čo.** Zelená
+  statická kontrola je dôkaz o štruktúre, nie o tom, že to beží. Bez tabuľky
+  v 7.1 si agent (aj človek) vyberie najlacnejšiu úroveň a skončí pri nej.
+* **Dokumentácia projektu je vstup, nie autorita.** Tri z najdrahších chýb tohto
+  vlákna boli veci, ktoré repozitár tvrdil a neboli pravda. Pravidlo „keď si
+  nástroj a engine odporujú, chyba je v nástroji" treba rozšíriť: *keď si
+  dokument a engine odporujú, chyba je v dokumente — a treba ho opraviť.*
+* **Za každú opravu patrí záznam tam, kde ju niekto nabudúce hľadá.** Toto vlákno
+  pridalo `ENGINE_ISSUES` E21, `RUNBOOK` 14, položky do cheatsheetu a opravu
+  generátora. Bez toho by sa tá istá práca spravila znova.

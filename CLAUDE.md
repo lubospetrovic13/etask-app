@@ -130,6 +130,19 @@ python3 tools/pfsync.py --sync            # import + role, len čo sa rozišlo
 ktoré majú jednoznačné riešenie, a čo zostane, napíše ako zadanie do
 `.run/pfloop-zadanie.md` (RUNBOOK 13).
 
+**Keď si siahol na poradie štartu, uzly URI, manifest alebo runnery, pridaj
+ešte jeden krok — čistú databázu:**
+
+```bash
+tools/up.sh --docker --fresh --build     # ZMAZE data, pýtaj sa pred tým
+```
+
+**Bežiaca inštancia nesie stav z minulých behov a presne ten maskuje chyby
+poradia.** Uzly a prípady, ktoré tam už sú, prekryjú to, že ich prvý beh vôbec
+nevyrobí. Takto vznikli dve chyby, ktoré prežili zelený `pflint`, `pfgroovy`,
+`pfview` aj `pfsync`: backend na čistej databáze nenaštartoval, a admin-only
+katalóg videl každý prihlásený. Rozbor je v `pfdoc analyza 7`.
+
 **Ground truth je bežiaci engine.** Import pri chybe vracia holé
 `{"status":500}` bez dôvodu — príčina je len v logu servera. Bez importu sieť
 nie je overená.
