@@ -51,6 +51,7 @@ DOKUMENTY = {
     "sd": DOCS / "SERVICE_DESK.md",
     "prirucka": DOCS / "PRIRUCKA.md",
     "analyza": DOCS / "AI_STARTER_ANALYSIS.md",
+    "tabulky": DOCS / "ANALYZA_TABULKY.md",
     "petriflow": DOCS / "petriflow_reference.md",
     "cheatsheet": DOCS / "reference" / "cheatsheet.md",
     "api": DOCS / "reference" / "action-api.md",
