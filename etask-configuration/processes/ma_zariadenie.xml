@@ -11,8 +11,8 @@
 		a nikdy sa nepouzije (ENGINE_ISSUES E15).
 	-->
 	<i18n locale="en">
-		<i18nString name="net_title">TODO Evidencia zariadení</i18nString>
-		<i18nString name="spravca_majetku_title">TODO Spravca_majetku</i18nString>
+		<i18nString name="net_title">Equipment register</i18nString>
+		<i18nString name="spravca_majetku_title">Asset manager</i18nString>
 		<i18nString name="div_ma_zadanie_init">Brief</i18nString>
 		<i18nString name="div_ma_vysledok_init">Result</i18nString>
 		<i18nString name="ma_predmet_title">Subject</i18nString>
@@ -79,7 +79,7 @@ changeCaseProperty("color").about { "grey" }
 	</roleRef>
 	<role>
 		<id>spravca_majetku</id>
-		<title name="spravca_majetku_title">Spravca_majetku</title>
+		<title name="spravca_majetku_title">Správca majetku</title>
 	</role>
 	<data type="i18n">
 		<id>div_ma_zadanie</id>

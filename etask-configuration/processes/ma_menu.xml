@@ -11,8 +11,8 @@
 		a nikdy sa nepouzije (ENGINE_ISSUES E15).
 	-->
 	<i18n locale="en">
-		<i18nString name="net_title">TODO Menu Evidencia zariadení</i18nString>
-		<i18nString name="spravca_majetku_title">TODO Spravca_majetku</i18nString>
+		<i18nString name="net_title">Equipment register menu</i18nString>
+		<i18nString name="spravca_majetku_title">Asset manager</i18nString>
 		<i18nString name="t_ma_menu_label">Menu state</i18nString>
 	</i18n>
 	<icon>menu</icon>
@@ -167,7 +167,7 @@ changeCaseProperty("title").about { summary }
 	</roleRef>
 	<role>
 		<id>spravca_majetku</id>
-		<title name="spravca_majetku_title">Spravca_majetku</title>
+		<title name="spravca_majetku_title">Správca majetku</title>
 	</role>
 	<transition>
 		<id>t_ma_menu</id>
