@@ -746,7 +746,11 @@ def payload = [
     "tk_type"         : ["value": req_type.value, "type": "enumeration_map"]
 ]
 if (req_started.value != null) {
-    payload["src_started"] = ["value": req_started.value, "type": "dateTime"]
+    // `setData` posiela payload cez Jackson bez JSR310 modulu - surovy
+    // `LocalDateTime` v mape spadne na "not supported by default". Retazec
+    // v ISO tvare (co `toString()` na LocalDateTime vracia) sa da
+    // serializovat aj bez modulu a engine si ho pri zapise pola parsuje sam.
+    payload["src_started"] = ["value": (req_started.value as java.time.LocalDateTime).toString(), "type": "dateTime"]
 }
 
 // Zalozenie ticketu sa moze nepodarit - napriklad na pravach. Zakaznikovi
