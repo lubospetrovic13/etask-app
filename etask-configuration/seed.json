@@ -15,7 +15,8 @@
     "hr/dovolenky/*",
     "it/majetok/*",
     "financie/*",
-    "admin/nastavenia/*"
+    "admin/nastavenia/*",
+    "uver/*"
   ],
   "users": [
     {
@@ -27,6 +28,7 @@
         "majetok",
         "manager",
         "nadriadeny",
+        "referent",
         "riaditel",
         "schv_hotel",
         "schv_marketing",
@@ -47,6 +49,7 @@
       "roles": [
         "agent",
         "hr",
+        "referent",
         "riaditel",
         "schv_restauracia",
         "schv_wellness",
@@ -62,6 +65,7 @@
       "roles": [
         "it",
         "nadriadeny",
+        "referent",
         "schv_wellness",
         "schvalovatel",
         "specialist",

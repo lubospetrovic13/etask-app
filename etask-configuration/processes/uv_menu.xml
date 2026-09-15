@@ -1,0 +1,225 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>uver/uv_menu</id>
+	<version>1.0.0</version>
+	<initials>UVM</initials>
+	<title name="net_title">Menu žiadosť o úver</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Loan application menu</i18nString>
+		<i18nString name="referent_title">Loan officer</i18nString>
+		<i18nString name="t_uv_menu_label">Menu state</i18nString>
+	</i18n>
+	<icon>menu</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Skelet z tools/pfnew.py. Kazdy vzor tu je kvoli konkretnej pasci:
+
+		  * `createOrUpdateMenuItem` sa vola s DEVIATIMI argumentmi. Existuje
+		    dvakrat - projektova (7-9) a enginova (11) - a rozlisuju sa len
+		    aritou. Pri osmich si Groovy vyberie enginovu a padne to.
+		  * Jej UPDATE cesta nefunguje, takze polozka sa vzdy zahodi a postavi
+		    znova. PORADIE: najprv `deleteMenuItem`, POTOM `deleteFilter` -
+		    naopak to padne, lebo deleteMenuItem si filter jeste raz nacita.
+		  * `nets` (allowedNets) musi byt, inak sa nevykreslia stlpce
+		    z datovych poli - a to bez akehokolvek hlasenia.
+		  * URI cesta MUSI sedet s klucom v `uriNodes` v processes.json, inak
+		    polozka vznikne bez karty, na ktorej by bola vidno.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>uv_menu_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+def created = []
+def unchanged = []
+def failed = []
+
+def siet = "uver/uv_ziadost"
+def vsetky = "processIdentifier:\"" + siet + "\""
+def stlpce = "meta-title" +
+        ",uver/uv_ziadost-stav_label" +
+        ",uver/uv_ziadost-cislo_ziadosti" +
+        ",uver/uv_ziadost-meno_ziadatela" +
+        ",uver/uv_ziadost-suma_uveru" +
+        ",uver/uv_ziadost-skore" +
+        ",uver/uv_ziadost-podane_o"
+
+def views = [
+        // Nazov prveho zobrazenia je TITULOK SIETE, nie kopia toho retazca.
+        // Titulok siete je I18nString a ma svoj preklad v bloku `<i18n>`, takze
+        // sa preklada na jednom mieste; kopia by znamenala prelozit to dvakrat
+        // a druhy vyskyt by nikto nenasiel - nazvy zobrazeni su v Groovy akcii,
+        // kde `pfi18n` nedosiahne.
+        [id: "uv_vsetky", name: petriNetService.getNewestVersionByIdentifier(siet).title,
+         type: "Case", icon: "account_balance",
+         query: vsetky, nets: [siet], roles: [:], headers: stlpce],
+        // Filtrovanie podla DATOVEHO POLA, nie podla polohy tokenu. Ide to,
+        // lebo `stav_label` ma `immediate="true"` a engine ho
+        // indexuje pod `dataSet.stav_label`. KLUC je v `.keyValue`
+        // - `.textValue` drzi PRELOZENE POPISKY (vsetky jazyky naraz), takze
+        // dopyt na kluc cez `.textValue` nenajde NIKDY NIC a nic to nepovie.
+        // Nazov nesie DOMENU appky. Polozky menu su case-y jednej siete pre
+        // cely portal a nazov v nich unikatny nie je - dve appky s polozkou
+        // rovnakeho nazvu sa na dashboarde (kde nie su priecinky) nedaju
+        // odlisit a kod, ktory si polozku hlada podla nazvu, dostane tu druhu.
+        [id: "uv_na_preskumani",
+         name: i18n("Na manuálne posúdenie · Žiadosť o úver", ["en": "Awaiting manual review · Loan application"]),
+         type: "Case", icon: "fact_check",
+         // Podla KLUCA moznosti, nie podla popisku: stav je `enumeration_map`,
+         // aby sa dal prelozit - a kluc je nezavisly od jazyka aj od
+         // preformulovania popisku. Kym tam bol popisok, stacilo zmenit text
+         // stavu a zobrazenie prestalo nachadzat cokolvek. Bez chyby.
+         query: vsetky + " AND dataSet.stav_label.keyValue:\"na_preskumani\"",
+         nets: [siet], roles: [:], headers: stlpce],
+        [id: "uv_schvalene",
+         name: i18n("Schválené · Žiadosť o úver", ["en": "Approved · Loan application"]),
+         type: "Case", icon: "check_circle",
+         query: vsetky + " AND dataSet.stav_label.keyValue:\"schvalena\"",
+         nets: [siet], roles: [:], headers: stlpce],
+        [id: "uv_zamietnute",
+         name: i18n("Zamietnuté · Žiadosť o úver", ["en": "Rejected · Loan application"]),
+         type: "Case", icon: "cancel",
+         query: vsetky + " AND dataSet.stav_label.keyValue:\"zamietnuta\"",
+         nets: [siet], roles: [:], headers: stlpce],
+]
+
+views.each { v ->
+    def id = v.id as String
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            // Porovnava sa dopyt A allowedNets - oboje ide do konstruktora
+            // a na existujucej polozke sa zmenit nedaju.
+            def current = getFilterFromMenuItem(existing)
+            def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
+            def currentNets = ((current?.dataSet?."filter"?.allowedNets ?: []) as List)
+                    .collect { it as String } as Set
+            def wantNets = (v.nets as List).collect { it as String } as Set
+            // Do porovnania patri aj NAZOV, vratane prekladov. Bez toho by uz
+            // nasadena instancia zmeneny nazov (a doplneny preklad) nikdy
+            // nedostala: polozka tam je s tym istym dopytom, takze by sa vzdy
+            // vyhodnotila ako nezmenena.
+            def currentName = current?.dataSet?."i18n_filter_name"?.value
+            def sameName = currentName != null &&
+                    (currentName.defaultValue as String) == (v.name.defaultValue as String) &&
+                    (currentName.translations ?: [:]) == (v.name.translations ?: [:])
+            if (currentQuery == (v.query as String) && currentNets == wantNets && sameName) {
+                nastav_zobrazenie(existing, v.nets as List, v.headers)
+                // Uzol dorovnaj AJ pri nezmenenej polozke: URI uzly zije
+                // Elasticsearch, polozky menu Mongo. Po vymene ES indexu maju
+                // uzly nove id, polozka visi na starom a priecinok v bocnom
+                // paneli je PRAZDNY - bez chyby a bez logu (RUNBOOK 4).
+                pripoj_do_uzla(existing, "uver")
+                unchanged << id
+                return
+            }
+            deleteMenuItem(existing)
+            if (current != null) {
+                deleteFilter(current)
+            }
+        }
+        def item = createOrUpdateMenuItem(
+                id,                 // menu_item_identifier
+                "uver",          // URI cesta - musi sedet s uriNodes
+                v.type as String,
+                v.query as String,
+                v.icon as String,
+                v.name,             // I18nString - polozka menu vie byt dvojjazycna
+                v.nets as List,     // allowedNets - bez toho ziadne stlpce
+                v.roles as Map,
+                [:]                 // bannedRoles - dourcuje aritu na projektovu
+        )
+        if (item) { created << id } else { failed << id }
+        nastav_zobrazenie(item, v.nets as List, v.headers)
+    } catch (Exception e) {
+        failed << (id + " (" + e.getClass().simpleName + ": " + e.message + ")")
+    }
+}
+
+def summary = "Menu Ziadost o uver – " + (created.size() + unchanged.size()) + "/" + views.size()
+if (failed) {
+    summary = "CHYBA menu Ziadost o uver – nepodarilo sa: " + failed.join(", ")
+}
+changeCaseProperty("title").about { summary }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="nastav_zobrazenie"><![CDATA[
+{ def menuItem, def nets, def headers ->
+    // `enable_case_title`  - vypnuty dialog "Vyplnte nazov pripadu" pri "+".
+    // `default_headers`    - predvolene stlpce zoznamu.
+    // Ani jedno nie je argument `createOrUpdateMenuItem`.
+    if (menuItem == null) return
+    def payload = [:]
+    if (nets) {
+        payload.put("enable_case_title", ["value": false, "type": "boolean"])
+        payload.put("case_require_title_in_creation", ["value": false, "type": "boolean"])
+    }
+    if (headers) {
+        payload.put("default_headers", ["value": headers as String, "type": "text"])
+    }
+    if (payload) {
+        setData("view", menuItem, payload)
+    }
+}
+	]]></function>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def identifier ->
+    // `findMenuItem(id)` z ActionDelegate existujucu polozku nenajde (hlada
+    // v inom rozsahu), takze by sa pri kazdom spusteni zalozila druha sada.
+    def id = ((identifier ?: "") as String).trim()
+    if (!id) return null
+    def items = findCases { it.processIdentifier.eq("preference_filter_item") }
+    return items?.find { ((it.dataSet["menu_item_identifier"]?.value ?: "") as String) == id }
+}
+	]]></function>
+	<roleRef>
+		<id>referent</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>referent</id>
+		<title name="referent_title">Úverový referent</title>
+	</role>
+	<transition>
+		<id>t_uv_menu</id>
+		<x>112</x>
+		<y>80</y>
+		<label name="t_uv_menu_label">Stav menu</label>
+		<icon>menu</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>referent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_uv_menu</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_uv_menu</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

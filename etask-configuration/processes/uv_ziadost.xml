@@ -1,0 +1,749 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>uver/uv_ziadost</id>
+	<version>1.0.0</version>
+	<initials>UVR</initials>
+	<title name="net_title">Žiadosť o úver</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Loan application</i18nString>
+		<i18nString name="referent_title">Loan officer</i18nString>
+		<i18nString name="system_title">System</i18nString>
+		<i18nString name="div_zadanie_init">Application details</i18nString>
+		<i18nString name="div_manualne_init">Manual review</i18nString>
+		<i18nString name="meno_ziadatela_title">Applicant name</i18nString>
+		<i18nString name="suma_uveru_title">Loan amount (EUR)</i18nString>
+		<i18nString name="prijem_title">Monthly income (EUR)</i18nString>
+		<i18nString name="skore_title">Credit score (300-900)</i18nString>
+		<i18nString name="skore_desc">A whole number from 300 to 900.</i18nString>
+		<i18nString name="cislo_ziadosti_title">Application number</i18nString>
+		<i18nString name="ziadatel_title">Applicant</i18nString>
+		<i18nString name="podal_title">Submitted by</i18nString>
+		<i18nString name="podane_o_title">Submitted at</i18nString>
+		<i18nString name="stav_label_title">Application status</i18nString>
+		<i18nString name="stav_label_desc">A field of its own, so it can be a column and be searched on.</i18nString>
+		<i18nString name="stav_label_opt_rozpisane">Draft</i18nString>
+		<i18nString name="stav_label_opt_vyhodnocovanie">Being evaluated</i18nString>
+		<i18nString name="stav_label_opt_na_preskumani">In manual review</i18nString>
+		<i18nString name="stav_label_opt_schvalena">Approved</i18nString>
+		<i18nString name="stav_label_opt_zamietnuta">Rejected</i18nString>
+		<i18nString name="rozhodnutie_title">Automated decision</i18nString>
+		<i18nString name="rozhodnutie_desc">Set by the credit-scoring rule. Not editable by hand.</i18nString>
+		<i18nString name="rozhodnutie_opt_schvalit">Approve</i18nString>
+		<i18nString name="rozhodnutie_opt_preskumat">Send to manual review</i18nString>
+		<i18nString name="rozhodnutie_opt_zamietnut">Reject</i18nString>
+		<i18nString name="komentar_referenta_title">Reviewer comment</i18nString>
+		<i18nString name="rozhodnutie_referenta_title">Reviewer decision</i18nString>
+		<i18nString name="rozhodnutie_referenta_opt_schvalit">Approve</i18nString>
+		<i18nString name="rozhodnutie_referenta_opt_zamietnut">Reject</i18nString>
+		<i18nString name="vybavil_title">Reviewed by</i18nString>
+		<i18nString name="vybavene_o_title">Reviewed at</i18nString>
+		<i18nString name="t_podat_label">Submit application</i18nString>
+		<i18nString name="t_rozhodnutie_label">Evaluation</i18nString>
+		<i18nString name="t_manualne_preskumanie_label">Manual review</i18nString>
+		<i18nString name="t_prehlad_label">Application overview</i18nString>
+	</i18n>
+	<icon>account_balance</icon>
+	<defaultRole>true</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Žiadosť o úver: entita (RUNBOOK 7), nie úkon - jeden case = jedna
+		žiadosť po celý jej život (podanie -> automatické rozhodnutie ->
+		prípadné manuálne posúdenie -> schválená/zamietnutá).
+
+		Tri vrstvy rozhodovania podľa BPMN/DMN predlohy (Camunda) prevedené
+		do Petriflow bez DMN enginu - "DMN tabuľka" je tu čistý Groovy vo
+		`finish pre` systémového prechodu `t_rozhodnutie`, ktorý podľa skóre
+		a pomeru suma/príjem nastaví trojicu routovacích čísel a token ide
+		presne jednou z troch vetiev (Pattern 2 z petriflow_reference.md,
+		rozšírený na tri vetvy).
+
+		`t_prehlad` visí na read arc zo SINKU `p_detail`, ktorý nikto
+		nekonzumuje (B8b) - žiadateľ tak vidí stav žiadosti po celý jej
+		život, aj keď hlavný tok je už dávno v `p_schvalena`/`p_zamietnuta`.
+		Viditeľnosť je zúžená na referentov (rola) a samotného žiadateľa
+		(`userRef` na `ziadatel` - Pattern 20), nie na celú rolu `default`,
+		inak by každý prihlásený videl cudzie žiadosti.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>uv_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+stav_label: f.stav_label, ziadatel: f.ziadatel;
+
+change stav_label value { "rozpisane" }
+change ziadatel value { [loggedUser().id] }
+changeCaseProperty("title").about { "Nová žiadosť o úver" }
+changeCaseProperty("color").about { "grey" }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="kto"><![CDATA[
+{ def u ->
+    // `?.` chráni pred null, nie pred chýbajúcou property.
+    return (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+}
+	]]></function>
+	<function scope="process" name="nazov"><![CDATA[
+{ def pole ->
+    // BEZ STAVU: `Case.title` je v engine obycajny `String`, takze sa
+    // neprekladá. Stav nesie pole `stav_label` a stĺpec, nie názov prípadu.
+    def p = ((pole.value ?: "") as String).trim()
+    return p ?: ((useCase.visualId ?: "?") as String)
+}
+	]]></function>
+	<roleRef>
+		<id>default</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>referent</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>system</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<userRef>
+		<id>ziadatel</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</userRef>
+	<role>
+		<id>referent</id>
+		<title name="referent_title">Úverový referent</title>
+	</role>
+	<role>
+		<id>system</id>
+		<title name="system_title">Systém</title>
+	</role>
+
+	<data type="i18n">
+		<id>div_zadanie</id>
+		<title/>
+		<init name="div_zadanie_init">Údaje o žiadosti</init>
+	</data>
+	<data type="i18n">
+		<id>div_manualne</id>
+		<title/>
+		<init name="div_manualne_init">Manuálne posúdenie</init>
+	</data>
+
+	<data type="text" immediate="true">
+		<id>meno_ziadatela</id>
+		<title name="meno_ziadatela_title">Meno žiadateľa</title>
+	</data>
+	<data type="number">
+		<id>suma_uveru</id>
+		<title name="suma_uveru_title">Suma úveru (EUR)</title>
+		<component>
+			<name>currency</name>
+		</component>
+	</data>
+	<data type="number">
+		<id>prijem</id>
+		<title name="prijem_title">Mesačný príjem (EUR)</title>
+		<component>
+			<name>currency</name>
+		</component>
+	</data>
+	<data type="number">
+		<id>skore</id>
+		<title name="skore_title">Kreditné skóre (300-900)</title>
+		<desc name="skore_desc">Celé číslo od 300 do 900.</desc>
+	</data>
+	<data type="text">
+		<id>cislo_ziadosti</id>
+		<title name="cislo_ziadosti_title">Číslo žiadosti</title>
+	</data>
+	<data type="userList">
+		<id>ziadatel</id>
+		<title name="ziadatel_title">Žiadateľ</title>
+	</data>
+	<data type="text">
+		<id>podal</id>
+		<title name="podal_title">Podal</title>
+	</data>
+	<data type="dateTime">
+		<id>podane_o</id>
+		<title name="podane_o_title">Podané</title>
+	</data>
+
+	<data type="enumeration_map" immediate="true">
+		<id>stav_label</id>
+		<title name="stav_label_title">Stav žiadosti</title>
+		<desc name="stav_label_desc">Samostatné pole, aby sa dalo dať do stĺpca a hľadať podľa neho.</desc>
+		<options>
+			<option key="rozpisane" name="stav_label_opt_rozpisane">Rozpísaná</option>
+			<option key="vyhodnocovanie" name="stav_label_opt_vyhodnocovanie">Vyhodnocuje sa</option>
+			<option key="na_preskumani" name="stav_label_opt_na_preskumani">Na manuálnom posúdení</option>
+			<option key="schvalena" name="stav_label_opt_schvalena">Schválená</option>
+			<option key="zamietnuta" name="stav_label_opt_zamietnuta">Zamietnutá</option>
+		</options>
+	</data>
+	<data type="enumeration_map">
+		<id>rozhodnutie</id>
+		<title name="rozhodnutie_title">Automatické rozhodnutie</title>
+		<desc name="rozhodnutie_desc">Nastavuje ho pravidlo bodovania. Ručne sa neupravuje.</desc>
+		<options>
+			<option key="schvalit" name="rozhodnutie_opt_schvalit">Schváliť</option>
+			<option key="preskumat" name="rozhodnutie_opt_preskumat">Poslať na manuálne posúdenie</option>
+			<option key="zamietnut" name="rozhodnutie_opt_zamietnut">Zamietnuť</option>
+		</options>
+	</data>
+	<data type="number">
+		<id>go_schvalit</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>go_preskumat</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>go_zamietnut</id>
+		<title/>
+		<init>0</init>
+	</data>
+
+	<data type="text">
+		<id>komentar_referenta</id>
+		<title name="komentar_referenta_title">Komentár referenta</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>rozhodnutie_referenta</id>
+		<title name="rozhodnutie_referenta_title">Rozhodnutie referenta</title>
+		<options>
+			<option key="schvalit" name="rozhodnutie_referenta_opt_schvalit">Schváliť</option>
+			<option key="zamietnut" name="rozhodnutie_referenta_opt_zamietnut">Zamietnuť</option>
+		</options>
+	</data>
+	<data type="number">
+		<id>go_r_schvalit</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>go_r_zamietnut</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="text">
+		<id>vybavil</id>
+		<title name="vybavil_title">Vybavil</title>
+	</data>
+	<data type="dateTime">
+		<id>vybavene_o</id>
+		<title name="vybavene_o_title">Vybavené</title>
+	</data>
+
+	<transition>
+		<id>t_podat</id>
+		<x>304</x>
+		<y>208</y>
+		<label name="t_podat_label">Podať žiadosť</label>
+		<icon>send</icon>
+		<!-- Osobná úloha na čerstvom case-e - `auto` je v poriadku (B12/B21). -->
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>default</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_zadanie</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_zadanie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>meno_ziadatela</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>suma_uveru</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>prijem</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>skore</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_podat_finish</id>
+			<actions phase="pre">
+				<action id="2"><![CDATA[
+meno_ziadatela: f.meno_ziadatela, suma_uveru: f.suma_uveru, prijem: f.prijem, skore: f.skore;
+
+// Validacie, ktore `required` neoveri. Odmietnutie vrati HTTP 200 a dovod
+// v tele ako `error` - test na stavovy kod ho prehliadne.
+if (!((meno_ziadatela.value ?: "") as String).trim()) {
+    throw new IllegalStateException("Meno žiadateľa musí byť vyplnené.")
+}
+if (((suma_uveru.value ?: 0) as Double) <= 0) {
+    throw new IllegalStateException("Suma úveru musí byť kladné číslo.")
+}
+if (((prijem.value ?: 0) as Double) <= 0) {
+    throw new IllegalStateException("Mesačný príjem musí byť kladné číslo.")
+}
+def sk = (skore.value ?: 0) as Integer
+if (sk < 300 || sk > 900) {
+    throw new IllegalStateException("Kreditné skóre musí byť medzi 300 a 900.")
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+meno_ziadatela: f.meno_ziadatela, cislo_ziadosti: f.cislo_ziadosti,
+podal: f.podal, podane_o: f.podane_o, stav_label: f.stav_label;
+
+change cislo_ziadosti value { (useCase.visualId ?: useCase.stringId) as String }
+change podal value { kto(loggedUser()) }
+change podane_o value { java.time.LocalDateTime.now() }
+change stav_label value { "vyhodnocovanie" }
+changeCaseProperty("title").about { nazov(meno_ziadatela) }
+changeCaseProperty("color").about { "blue" }
+
+// Jediny system prechod v sieti sa nespusti sam (C3) - nabootuje ho tu ten,
+// kto podanie dokoncil. `finishTask` spusti jeho finish udalost, kde je
+// cela rozhodovacia logika (nahrada za DMN tabulku z Camunda predlohy).
+async.run {
+    def t = findTask { qTask -> qTask.transitionId.eq("t_rozhodnutie").and(qTask.caseId.eq(useCase.stringId)) }
+    if (t) { assignTask(t, userService.loggedOrSystem); finishTask(t, userService.loggedOrSystem) }
+}
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+
+	<transition>
+		<id>t_rozhodnutie</id>
+		<x>688</x>
+		<y>208</y>
+		<label name="t_rozhodnutie_label">Vyhodnotenie</label>
+		<icon>rule</icon>
+		<assignPolicy>auto</assignPolicy>
+		<!-- System task typu A (gotcha 44) - ziadny dataGroup, spusti ho len async.run vyssie. -->
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<event type="finish">
+			<id>t_rozhodnutie_finish</id>
+			<actions phase="pre">
+				<action id="4"><![CDATA[
+skore: f.skore, suma_uveru: f.suma_uveru, prijem: f.prijem, rozhodnutie: f.rozhodnutie,
+go_schvalit: f.go_schvalit, go_preskumat: f.go_preskumat, go_zamietnut: f.go_zamietnut;
+
+// "DMN tabulka" z predlohy - kreditne skore a pomer sumy k prijmu. Presne
+// jedna vetva sa nastavi na 1, zvysne na 0 (Pattern 2, rozsireny na tri
+// vystupy) - routovacie priznaky MUSIA byt v phase="pre" (C4).
+def sk = (skore.value ?: 0) as Integer
+def suma = (suma_uveru.value ?: 0) as Double
+def prijemVal = (prijem.value ?: 0) as Double
+
+def vysledok
+if (sk < 500) {
+    vysledok = "zamietnut"
+} else if (sk >= 700 && suma <= prijemVal * 10) {
+    vysledok = "schvalit"
+} else {
+    vysledok = "preskumat"
+}
+
+change rozhodnutie value { vysledok }
+change go_schvalit  value { vysledok == "schvalit"  ? 1 : 0 }
+change go_preskumat value { vysledok == "preskumat" ? 1 : 0 }
+change go_zamietnut value { vysledok == "zamietnut" ? 1 : 0 }
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="5"><![CDATA[
+rozhodnutie: f.rozhodnutie, stav_label: f.stav_label;
+
+def stavPodla = ["schvalit": "schvalena", "preskumat": "na_preskumani", "zamietnut": "zamietnuta"]
+change stav_label value { stavPodla[rozhodnutie.value as String] }
+def farba = ["schvalit": "green", "preskumat": "orange", "zamietnut": "red"]
+changeCaseProperty("color").about { farba[rozhodnutie.value as String] }
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+
+	<transition>
+		<id>t_manualne_preskumanie</id>
+		<x>1072</x>
+		<y>208</y>
+		<label name="t_manualne_preskumanie_label">Manuálne posúdenie</label>
+		<icon>fact_check</icon>
+		<!-- Zdielany prehlad referentov (kohokolvek), takze `manual` - `auto`
+		     by ju priradilo systemovemu uctu, ktory ju nabootoval (B12/B21). -->
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>referent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_preskumanie</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>cislo_ziadosti</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>meno_ziadatela</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>suma_uveru</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>prijem</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>skore</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>rozhodnutie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_manualne</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>komentar_referenta</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>rozhodnutie_referenta</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_manualne_preskumanie_finish</id>
+			<actions phase="pre">
+				<action id="6"><![CDATA[
+komentar_referenta: f.komentar_referenta, rozhodnutie_referenta: f.rozhodnutie_referenta,
+go_r_schvalit: f.go_r_schvalit, go_r_zamietnut: f.go_r_zamietnut;
+
+if (!((komentar_referenta.value ?: "") as String).trim()) {
+    throw new IllegalStateException("Komentár referenta musí byť vyplnený.")
+}
+if (rozhodnutie_referenta.value == "schvalit") {
+    change go_r_schvalit value { 1 }
+    change go_r_zamietnut value { 0 }
+} else {
+    change go_r_schvalit value { 0 }
+    change go_r_zamietnut value { 1 }
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="7"><![CDATA[
+rozhodnutie_referenta: f.rozhodnutie_referenta, stav_label: f.stav_label,
+vybavil: f.vybavil, vybavene_o: f.vybavene_o;
+
+change vybavil value { kto(loggedUser()) }
+change vybavene_o value { java.time.LocalDateTime.now() }
+change stav_label value { rozhodnutie_referenta.value == "schvalit" ? "schvalena" : "zamietnuta" }
+changeCaseProperty("color").about { rozhodnutie_referenta.value == "schvalit" ? "green" : "red" }
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+
+	<transition>
+		<id>t_prehlad</id>
+		<x>688</x>
+		<y>16</y>
+		<label name="t_prehlad_label">Prehľad žiadosti</label>
+		<icon>visibility</icon>
+		<assignPolicy>auto</assignPolicy>
+		<!--
+			Read arc z `p_detail`, ktore je SINK - nikto ho nekonzumuje, takze
+			tento pohlad nemoze zmiznut po odmietnutom DOKONCIT (B8b). Vidi ho
+			referent (rola, vsetky ziadosti) a zaroven ziadatel danej ziadosti
+			(userRef na `ziadatel`, len tento case - Pattern 20). Rola `default`
+			na tomto prechode zamerne NIE JE - inak by kazdy prihlaseny videl
+			cudzie ziadosti.
+		-->
+		<roleRef>
+			<id>referent</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<userRef>
+			<id>ziadatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_prehlad</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>stav_label</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>cislo_ziadosti</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_zadanie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>meno_ziadatela</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>suma_uveru</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>prijem</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>skore</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>podal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>podane_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>rozhodnutie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_manualne</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>komentar_referenta</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>rozhodnutie_referenta</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>vybavil</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>vybavene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>10</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+
+	<place>
+		<id>p_novy</id>
+		<x>112</x>
+		<y>208</y>
+		<label>Rozpísaná</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_podana</id>
+		<x>496</x>
+		<y>208</y>
+		<label>Podaná</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_detail</id>
+		<x>496</x>
+		<y>16</y>
+		<label>Detail (sink)</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_na_preskumani</id>
+		<x>880</x>
+		<y>208</y>
+		<label>Na manuálnom posúdení</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_schvalena</id>
+		<x>1264</x>
+		<y>112</y>
+		<label>Schválená</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_zamietnuta</id>
+		<x>1264</x>
+		<y>304</y>
+		<label>Zamietnutá</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+
+	<arc>
+		<id>a_start</id>
+		<type>regular</type>
+		<sourceId>p_novy</sourceId>
+		<destinationId>t_podat</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_podat_podana</id>
+		<type>regular</type>
+		<sourceId>t_podat</sourceId>
+		<destinationId>p_podana</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_podat_detail</id>
+		<type>regular</type>
+		<sourceId>t_podat</sourceId>
+		<destinationId>p_detail</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_detail_prehlad</id>
+		<type>read</type>
+		<sourceId>p_detail</sourceId>
+		<destinationId>t_prehlad</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_podana_rozhodnutie</id>
+		<type>regular</type>
+		<sourceId>p_podana</sourceId>
+		<destinationId>t_rozhodnutie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_rozhodnutie_schvalena</id>
+		<type>regular</type>
+		<sourceId>t_rozhodnutie</sourceId>
+		<destinationId>p_schvalena</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_schvalit</reference>
+	</arc>
+	<arc>
+		<id>a_rozhodnutie_preskumanie</id>
+		<type>regular</type>
+		<sourceId>t_rozhodnutie</sourceId>
+		<destinationId>p_na_preskumani</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_preskumat</reference>
+	</arc>
+	<arc>
+		<id>a_rozhodnutie_zamietnuta</id>
+		<type>regular</type>
+		<sourceId>t_rozhodnutie</sourceId>
+		<destinationId>p_zamietnuta</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_zamietnut</reference>
+	</arc>
+	<arc>
+		<id>a_preskumanie_manualne</id>
+		<type>regular</type>
+		<sourceId>p_na_preskumani</sourceId>
+		<destinationId>t_manualne_preskumanie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_manualne_schvalena</id>
+		<type>regular</type>
+		<sourceId>t_manualne_preskumanie</sourceId>
+		<destinationId>p_schvalena</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_r_schvalit</reference>
+	</arc>
+	<arc>
+		<id>a_manualne_zamietnuta</id>
+		<type>regular</type>
+		<sourceId>t_manualne_preskumanie</sourceId>
+		<destinationId>p_zamietnuta</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_r_zamietnut</reference>
+	</arc>
+</document>

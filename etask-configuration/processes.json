@@ -91,7 +91,9 @@
     "fa_faktura.xml",
     "ob_objednavka.xml",
     "sc_menu.xml",
-    "sc_nastavenia.xml"
+    "sc_nastavenia.xml",
+    "uv_ziadost.xml",
+    "uv_menu.xml"
   ],
   "bootstrapCase": [
     {
@@ -125,6 +127,10 @@
     },
     {
       "net": "admin/nastavenia/sc_nastavenia",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "uver/uv_menu",
       "rebuildOnNewVersion": true
     }
   ],
@@ -250,6 +256,11 @@
       "requiredAuthorities": [
         "ROLE_ADMIN"
       ],
+      "requiredProcessRoles": []
+    },
+    "uver": {
+      "icon": "account_balance",
+      "requiredAuthorities": [],
       "requiredProcessRoles": []
     }
   }
