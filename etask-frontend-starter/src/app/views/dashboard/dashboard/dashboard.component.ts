@@ -73,8 +73,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         this._uri.getCasesOfNode(this._uri.root, FILTER_IDENTIFIERS).pipe(
           map(cases => {
-            const filteredViews = cases
-              .content.filter(it => custom_views.includes(it.immediateData.find(f => f.stringId === 'menu_item_identifier')?.value))
+            // `cases.content` NIE JE `undefined`, ked dopyt nevrati ziadny vysledok -
+            // kniznicny `changeType()` (netgrif-components-core) vtedy vrati CELY
+            // surovy HAL response objekt (HAL odpoved bez `_embedded` je pre 0
+            // zaznamov normalna), nie `[]` ani `undefined`. `?? []` teda nechrani -
+            // `content` je definovany (truthy), len nie je pole, a `.filter` na
+            // objekte padne presne na "content.filter is not a function". Treba
+            // teda overit typ, nie len null/undefined.
+            const filteredViews = (Array.isArray(cases.content) ? cases.content : []).filter(it => custom_views.includes(it.immediateData.find(f => f.stringId === 'menu_item_identifier')?.value))
               .sort((a, b) => this.getViewOrder(a) - this.getViewOrder(b));
             return filteredViews.map(it => this.resolveFilterCaseToViewNavigationItem(it)).filter(it => !!it);
           }),
@@ -143,7 +149,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     Observable<{ node: ETaskUriNodeResource, path: string } | undefined> {
     return this._uri.getCasesOfNode(node, FILTER_IDENTIFIERS).pipe(
       switchMap(page => {
-        const path = this.firstViewPath(page?.content ?? []);
+        // Rovnaka pasca ako v ngOnInit vyssie: na 0 vysledkoch je `page.content`
+        // surovy HAL objekt, nie `[]`/`undefined` - `?? []` ho nechyti. Presne
+        // preto tento fallback nikdy nenasiel view ani na priecinku, ktory ho
+        // ma (napr. "Financie"): sam osebe ziadny nema, ale tato vynimka zhodila
+        // cely `entryFor` skor, nez sa stihol pozriet na jeho deti.
+        const path = this.firstViewPath(Array.isArray(page?.content) ? page.content : []);
         if (path !== 'portal') {
           return of({node, path});
         }
