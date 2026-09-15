@@ -2,7 +2,53 @@
 	<id>single_settings</id>
 	<version>1.0.0</version>
 	<initials>SST</initials>
-	<title>Single settings</title>
+	<title name="net_title">Single settings</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Single settings</i18nString>
+		<i18nString name="t_settings_label">Single settings</i18nString>
+		<i18nString name="admin_title">Administrator</i18nString>
+		<i18nString name="system_title">System</i18nString>
+		<i18nString name="div_identity_init">Identification</i18nString>
+		<i18nString name="div_model_init">Model and limits</i18nString>
+		<i18nString name="div_prompts_init">Prompts</i18nString>
+		<i18nString name="show_audit_title">Diagnostics</i18nString>
+		<i18nString name="show_audit_desc">Collapses or expands derived and audit data.</i18nString>
+		<i18nString name="settings_name_title">Configuration name</i18nString>
+		<i18nString name="settings_name_desc">This is the name the configuration appears under in the AI configuration list.</i18nString>
+		<i18nString name="settings_name_placeholder">e.g. Client communication categorization</i18nString>
+		<i18nString name="origin_title">Origin</i18nString>
+		<i18nString name="origin_desc">Filters the model list: running locally for you, or external via API.</i18nString>
+		<i18nString name="origin_opt_local">Local</i18nString>
+		<i18nString name="origin_opt_external">External</i18nString>
+		<i18nString name="model_title">Model</i18nString>
+		<i18nString name="model_desc">The list is populated from the catalogue in the AI configuration, filtered by Origin.</i18nString>
+		<i18nString name="model_label_title">Model name</i18nString>
+		<i18nString name="model_key_title">Model key for API</i18nString>
+		<i18nString name="model_provider_title">Provider</i18nString>
+		<i18nString name="model_provider_desc">Calling protocol, taken from the catalogue.</i18nString>
+		<i18nString name="models_status_title">Catalogue source</i18nString>
+		<i18nString name="models_status_desc">Diagnostics: where the list was loaded from and how many models it contains.</i18nString>
+		<i18nString name="refresh_placeholder">refresh</i18nString>
+		<i18nString name="refresh_desc">Reloads the model list from the catalogue. Click if you added a new model in the meantime.</i18nString>
+		<i18nString name="temperature_title">Temperature</i18nString>
+		<i18nString name="temperature_desc">Degree of randomness. 0 = most stable answers. Anthropic models do not accept this parameter.</i18nString>
+		<i18nString name="max_tokens_title">Max tokens</i18nString>
+		<i18nString name="max_tokens_desc">Caps the length of the answer, not the input. The whole JSON must fit within it.</i18nString>
+		<i18nString name="system_prompt_title">System prompt</i18nString>
+		<i18nString name="system_prompt_desc">Standing instructions for the model. This is where the category list and response format belong.</i18nString>
+		<i18nString name="system_prompt_placeholder">Markdown text - sent to the model unmodified</i18nString>
+		<i18nString name="user_prompt_title">User prompt</i18nString>
+		<i18nString name="user_prompt_desc">The concrete task. Mark the spot where the communication content is inserted with {{message}}.</i18nString>
+		<i18nString name="user_prompt_placeholder">Markdown text, placeholder for the communication content: {{message}}</i18nString>
+		<i18nString name="updated_at_title">Updated</i18nString>
+		<i18nString name="updated_at_desc">When the model or prompt was last changed.</i18nString>
+		<i18nString name="updated_by_title">Updated by</i18nString>
+	</i18n>
 	<icon>settings_applications</icon>
 	<defaultRole>true</defaultRole>
 	<anonymousRole>false</anonymousRole>
@@ -83,17 +129,17 @@
 	]]></function>
 	<role>
 		<id>admin</id>
-		<title>Administrátor</title>
+		<title name="admin_title">Administrátor</title>
 	</role>
 	<role>
 		<id>system</id>
-		<title>Systém</title>
+		<title name="system_title">Systém</title>
 	</role>
 
 	<data type="i18n">
 		<id>div_identity</id>
 		<title/>
-		<init>Identifikácia</init>
+		<init name="div_identity_init">Identifikácia</init>
 		<component>
 			<name>divider</name>
 			<properties>
@@ -104,7 +150,7 @@
 	<data type="i18n">
 		<id>div_model</id>
 		<title/>
-		<init>Model a limity</init>
+		<init name="div_model_init">Model a limity</init>
 		<component>
 			<name>divider</name>
 			<properties>
@@ -115,7 +161,7 @@
 	<data type="i18n">
 		<id>div_prompts</id>
 		<title/>
-		<init>Prompty</init>
+		<init name="div_prompts_init">Prompty</init>
 		<component>
 			<name>divider</name>
 			<properties>
@@ -125,8 +171,8 @@
 	</data>
 	<data type="boolean" immediate="true">
 		<id>show_audit</id>
-		<title>Diagnostika</title>
-		<desc>Zbalí alebo rozbalí odvodené a auditné údaje.</desc>
+		<title name="show_audit_title">Diagnostika</title>
+		<desc name="show_audit_desc">Zbalí alebo rozbalí odvodené a auditné údaje.</desc>
 		<component>
 			<name>toggle</name>
 			<properties>
@@ -159,9 +205,9 @@ make model_key, hidden on transitions when { !showIt }
 	</data>
 	<data type="text">
 		<id>settings_name</id>
-		<title>Názov konfigurácie</title>
-		<desc>Pod týmto názvom sa konfigurácia zobrazí v AI konfigurácii.</desc>
-		<placeholder>napr. Kategorizácia klientskej komunikácie</placeholder>
+		<title name="settings_name_title">Názov konfigurácie</title>
+		<desc name="settings_name_desc">Pod týmto názvom sa konfigurácia zobrazí v AI konfigurácii.</desc>
+		<placeholder name="settings_name_placeholder">napr. Kategorizácia klientskej komunikácie</placeholder>
 		<init>Kategorizácia a vyťaženie komunikácie</init>
 		<event type="set">
 			<id>settings_name_set</id>
@@ -175,12 +221,12 @@ changeCaseProperty("title").about { settings_name.value ?: "Nastavenie" }
 	</data>
 	<data type="enumeration_map" immediate="true">
 		<id>origin</id>
-		<title>Pôvod</title>
-		<desc>Filtruje ponuku modelov: lokálne bežiace u vás, alebo externé cez API.</desc>
+		<title name="origin_title">Pôvod</title>
+		<desc name="origin_desc">Filtruje ponuku modelov: lokálne bežiace u vás, alebo externé cez API.</desc>
 		<init>external</init>
 		<options>
-			<option key="local">Lokálny</option>
-			<option key="external">Externý</option>
+			<option key="local" name="origin_opt_local">Lokálny</option>
+			<option key="external" name="origin_opt_external">Externý</option>
 		</options>
 		<event type="set">
 			<id>origin_set</id>
@@ -195,8 +241,8 @@ load_models(origin, model, model_label, model_key, model_provider, models_status
 	</data>
 	<data type="enumeration_map" immediate="true">
 		<id>model</id>
-		<title>Model</title>
-		<desc>Ponuka sa plní z číselníka v AI konfigurácii, filtrovaná podľa Pôvodu.</desc>
+		<title name="model_title">Model</title>
+		<desc name="model_desc">Ponuka sa plní z číselníka v AI konfigurácii, filtrovaná podľa Pôvodu.</desc>
 		<event type="set">
 			<id>model_set</id>
 			<actions phase="post">
@@ -217,27 +263,27 @@ if (model.value) {
 	</data>
 	<data type="text">
 		<id>model_label</id>
-		<title>Názov modelu</title>
+		<title name="model_label_title">Názov modelu</title>
 	</data>
 	<data type="text">
 		<id>model_key</id>
-		<title>Kľúč modelu pre API</title>
+		<title name="model_key_title">Kľúč modelu pre API</title>
 	</data>
 	<data type="text">
 		<id>model_provider</id>
-		<title>Provider</title>
-		<desc>Protokol volania, prevzatý z číselníka.</desc>
+		<title name="model_provider_title">Provider</title>
+		<desc name="model_provider_desc">Protokol volania, prevzatý z číselníka.</desc>
 	</data>
 	<data type="text">
 		<id>models_status</id>
-		<title>Zdroj číselníka</title>
-		<desc>Diagnostika: odkiaľ sa ponuka načítala a koľko modelov obsahuje.</desc>
+		<title name="models_status_title">Zdroj číselníka</title>
+		<desc name="models_status_desc">Diagnostika: odkiaľ sa ponuka načítala a koľko modelov obsahuje.</desc>
 	</data>
 	<data type="button">
 		<id>refresh</id>
 		<title/>
-		<desc>Znovu načíta ponuku modelov z číselníka. Klikni, ak si medzitým pridal nový model.</desc>
-		<placeholder>refresh</placeholder>
+		<desc name="refresh_desc">Znovu načíta ponuku modelov z číselníka. Klikni, ak si medzitým pridal nový model.</desc>
+		<placeholder name="refresh_placeholder">refresh</placeholder>
 		<init>1</init>
 		<event type="set">
 			<id>refresh_set</id>
@@ -252,21 +298,21 @@ load_models(origin, model, model_label, model_key, model_provider, models_status
 	</data>
 	<data type="number">
 		<id>temperature</id>
-		<title>Temperature</title>
-		<desc>Miera náhodnosti. 0 = najstabilnejšie odpovede. Anthropic modely ju neprijímajú.</desc>
+		<title name="temperature_title">Temperature</title>
+		<desc name="temperature_desc">Miera náhodnosti. 0 = najstabilnejšie odpovede. Anthropic modely ju neprijímajú.</desc>
 		<init>0</init>
 	</data>
 	<data type="number">
 		<id>max_tokens</id>
-		<title>Max tokens</title>
-		<desc>Strop dĺžky odpovede, nie vstupu. Musí sa doň zmestiť celý JSON.</desc>
+		<title name="max_tokens_title">Max tokens</title>
+		<desc name="max_tokens_desc">Strop dĺžky odpovede, nie vstupu. Musí sa doň zmestiť celý JSON.</desc>
 		<init>4096</init>
 	</data>
 	<data type="text">
 		<id>system_prompt</id>
-		<title>System prompt</title>
-		<desc>Trvalé inštrukcie pre model. Sem patrí zoznam kategórií a formát odpovede.</desc>
-		<placeholder>Markdown text - posiela sa do modelu bez úprav</placeholder>
+		<title name="system_prompt_title">System prompt</title>
+		<desc name="system_prompt_desc">Trvalé inštrukcie pre model. Sem patrí zoznam kategórií a formát odpovede.</desc>
+		<placeholder name="system_prompt_placeholder">Markdown text - posiela sa do modelu bez úprav</placeholder>
 		<component>
 			<name>textarea</name>
 		</component>
@@ -302,9 +348,9 @@ mark_updated(updated_at, updated_by)
 	</data>
 	<data type="text">
 		<id>user_prompt</id>
-		<title>User prompt</title>
-		<desc>Konkrétna úloha. Miesto, kam sa vloží obsah komunikácie, označ {{message}}.</desc>
-		<placeholder>Markdown text, zástupný text pre obsah komunikácie: {{message}}</placeholder>
+		<title name="user_prompt_title">User prompt</title>
+		<desc name="user_prompt_desc">Konkrétna úloha. Miesto, kam sa vloží obsah komunikácie, označ {{message}}.</desc>
+		<placeholder name="user_prompt_placeholder">Markdown text, zástupný text pre obsah komunikácie: {{message}}</placeholder>
 		<component>
 			<name>textarea</name>
 		</component>
@@ -353,19 +399,19 @@ mark_updated(updated_at, updated_by)
 	</data>
 	<data type="dateTime">
 		<id>updated_at</id>
-		<title>Upravené</title>
-		<desc>Kedy sa naposledy zmenil model alebo prompt.</desc>
+		<title name="updated_at_title">Upravené</title>
+		<desc name="updated_at_desc">Kedy sa naposledy zmenil model alebo prompt.</desc>
 	</data>
 	<data type="text">
 		<id>updated_by</id>
-		<title>Upravil</title>
+		<title name="updated_by_title">Upravil</title>
 	</data>
 
 	<transition>
 		<id>t_settings</id>
 		<x>304</x>
 		<y>208</y>
-		<label>Single settings</label>
+		<label name="t_settings_label">Single settings</label>
 		<icon>settings_applications</icon>
 		<roleRef>
 			<id>admin</id>
