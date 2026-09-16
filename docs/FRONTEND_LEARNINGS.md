@@ -145,6 +145,40 @@ selektor komponentu má rovnakú špecificitu a vkladá sa neskôr.
 
 *Zo zdrojov — grep `ViewEncapsulation` v `esm2020/lib`.*
 
+### B5. V `fxLayout="column"` nestačí `height: 100%`, treba `fxFlex`
+
+Zabalenie `nc-header` + `nc-case-list` do wrappera (kvôli vodorovnému posunu
+v tabuľkovom režime — E23) skončilo **prázdnym zoznamom**: hlavička sa vykreslila,
+dáta z API prišli, riadkov nula. `cdk-virtual-scroll-viewport` mal nameranú
+**výšku 0**.
+
+Wrapper bol skopírovaný z knižničnej šablóny, teda s `class="full-height"`
+(`height: 100%`). Lenže vo flex **stĺpci** je výška hlavná os: dieťa dostane
+zvyšok priestoru iba cez `flex-grow`, nie cez percentuálnu výšku, a
+`fxLayoutAlign="start stretch"` na rodičovi natiahne **šírku**, nie výšku. Wrapper
+sa preto zmrštil na výšku svojho obsahu (61,6 px = hlavička) a `fxFlex` na
+`nc-case-list` už nemal do čoho rásť.
+
+```html
+<!-- zle: vo flex stĺpci sa zmrští na obsah -->
+<div class="full-height transform-div" fxLayout="column" fxLayoutAlign="start stretch">
+
+<!-- dobre -->
+<div class="transform-div" fxFlex fxLayout="column" fxLayoutAlign="start stretch">
+```
+
+**Prečo to v knižnici funguje a u nás nie:** jej `nc-filter-field-tabbed-case-view`
+má na kontajneri `min-height-custom` s **natvrdo 400 px**, takže percentá majú
+sa o čo oprieť. Náš kontajner výšku dedí cez flex reťaz — a v tom momente je
+`height: 100%` bez `fxFlex` ticho neúčinné. Kopírovanie knižničnej šablóny bez
+jej štýlov je teda samo osebe pasca.
+
+Diagnostika, ktorá to ukázala za pár sekúnd — nie hádanie v DevTools, ale zmeranie:
+
+```js
+document.querySelector('cdk-virtual-scroll-viewport').getBoundingClientRect().height  // 0
+```
+
 ---
 
 ## C. Material 13 je pre-MDC
