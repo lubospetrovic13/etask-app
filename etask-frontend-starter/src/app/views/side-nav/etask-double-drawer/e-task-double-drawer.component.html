@@ -187,8 +187,14 @@
       </div>
     </div>
     <div [@sectionExpansion]="isSectionOpen.views ? 'expanded' : 'collapsed'" class="box-container">
+      <!--
+          `onViewClick` je knižničný hook, ktorý zapíše otvorený uzol do
+          `UriService.activeNode` - táto kópia šablóny ho mala vynechaný, takže klik na
+          zobrazenie síce naroutoval, ale strom aj breadcrumbs ostali na predošlom uzle.
+      -->
       <div *ngFor='let view of views; trackBy: viewsTrackBy' class="tree-node mat-typography"
-           fxLayoutAlign="start center" [routerLink]='view.routing.path' routerLinkActive="active-tree-node">
+           fxLayoutAlign="start center" (click)="onViewClick(view)" [routerLink]='view.routing.path'
+           routerLinkActive="active-tree-node">
         <mat-icon class="tree-node-icon">{{ view.navigation.icon }}</mat-icon>
         <span>{{ view.navigation.title }}</span>
         <span class="menu-item-focus-overlay"></span>
@@ -215,7 +221,8 @@
         <span class="menu-item-focus-overlay"></span>
       </div>
       <div *ngFor='let view of settingsViews; trackBy: viewsTrackBy' class="tree-node mat-typography"
-           fxLayoutAlign="start center" [routerLink]='view.routing.path' routerLinkActive="active-tree-node">
+           fxLayoutAlign="start center" (click)="onViewClick(view)" [routerLink]='view.routing.path'
+           routerLinkActive="active-tree-node">
         <mat-icon class="tree-node-icon">{{ view.navigation.icon }}</mat-icon>
         <span>{{ view.navigation.title }}</span>
         <span class="menu-item-focus-overlay"></span>

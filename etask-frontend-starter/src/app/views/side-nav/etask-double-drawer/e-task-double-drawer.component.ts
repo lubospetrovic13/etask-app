@@ -256,6 +256,36 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
   }
 
   /**
+   * Klik v strome musí hýbať aj `UriService.activeNode`, nielen `currentNode`.
+   *
+   * Knižničné `onNodeClick`/`onHomeClick`/`onBackClick` prepisujú iba lokálne
+   * `currentNode` drawera; do `UriService` zapisuje jedine `onViewClick`. Strom sa
+   * teda prekreslí, ale nikto iný sa to nedozvie - a breadcrumbs, ktoré čítajú
+   * `activeNode$`, zostanú stáť na uzle, z ktorého človek odišiel. Rovnako by o tom
+   * nevedel ktokoľvek ďalší, kto sa na `activeNode` napojí.
+   *
+   * Poradie je zámerné: `super` spraví svoju prácu (načítanie ľavej a pravej strany),
+   * až potom sa uzol publikuje. Odberateľ `activeNode$` v knižnici potom nastaví
+   * `currentNode` ešte raz, ale jeho setter má na začiatku `if (node === this._currentNode) return`,
+   * takže sa nič nenačítava druhýkrát.
+   */
+  public onNodeClick(node: UriNodeResource): void {
+    super.onNodeClick(node);
+    this._uriService.activeNode = node;
+  }
+
+  public onHomeClick(): void {
+    super.onHomeClick();
+    this._uriService.activeNode = this._uriService.root;
+  }
+
+  public onBackClick(): void {
+    super.onBackClick();
+    // `currentNode` je po `super` už rodič - ten treba publikovať, nie pôvodný uzol.
+    this._uriService.activeNode = this.currentNode;
+  }
+
+  /**
    * Same as the library's, except the view name follows the portal's language.
    *
    * The library takes `entry_name.value.defaultValue` and therefore always shows the
