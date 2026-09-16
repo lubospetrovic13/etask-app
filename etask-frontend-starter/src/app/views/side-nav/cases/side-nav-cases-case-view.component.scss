@@ -30,3 +30,34 @@
 .content-margin {
   margin: 0 20px;
 }
+
+// "Table mode" (`OverflowService.overflowMode`, toggled from the header's edit mode):
+// widens the header/case-list to `columnCount * columnWidth` and lets them scroll
+// horizontally, same as the library's own `nc-filter-field-tabbed-case-view`.
+//
+// `.overflow-div{overflow-x:scroll}` alone puts the scrollbar under the rows, at the
+// bottom of a tall list - usually off-screen. Flipping the scrolling element with
+// `rotateX(180deg)` moves the (now-upside-down) scrollbar to its top edge, and a second
+// `rotateX(180deg)` on the child undoes the flip for the actual content.
+.overflow-div {
+  overflow-x: scroll;
+}
+
+.transform-div {
+  transform: rotateX(180deg);
+  -ms-transform: rotateX(180deg);
+  -webkit-transform: rotateX(180deg);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+// Without this, the widened header/case-list can force the whole case view a few
+// pixels wider than its container, adding a second, page-level horizontal scrollbar
+// alongside the one the transform trick above already provides.
+.max-width-fix {
+  max-width: calc(100% - 8px) !important;
+}

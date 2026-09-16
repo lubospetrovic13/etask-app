@@ -10,9 +10,14 @@
       </div>
     </mat-card>
 
-    <nc-header #header [type]="headerType" class="case-header-padding"></nc-header>
+    <div class="transform-div custom-scrollbar" [ngClass]="{'overflow-div': getOverflowStatus()}"
+         fxFlex fxLayout="column" fxLayoutAlign="start stretch">
+      <div class="transform-div max-width-fix" fxFlex fxLayout="column" fxLayoutAlign="start stretch">
+        <nc-header #header [type]="headerType" class="case-header-padding" [ngStyle]="{'width': getWidth()}"></nc-header>
 
-    <nc-case-list (caseClick)="handleCaseClick($event)"
-                  [selectedHeaders$]="selectedHeaders$" fxFlex></nc-case-list>
+        <nc-case-list (caseClick)="handleCaseClick($event)"
+                      [selectedHeaders$]="selectedHeaders$" [width]="getWidth()" fxFlex></nc-case-list>
+      </div>
+    </div>
   </div>
 </div>

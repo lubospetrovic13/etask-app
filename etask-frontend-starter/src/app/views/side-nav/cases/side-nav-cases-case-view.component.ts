@@ -11,6 +11,7 @@ import {
   NAE_BASE_FILTER,
   NAE_SEARCH_CATEGORIES,
   NAE_VIEW_ID_SEGMENT,
+  OverflowService,
   SearchService,
   SimpleFilter,
   ViewIdService,
@@ -34,6 +35,11 @@ const baseFilterFactory = () => {
     CategoryFactory,
     CaseViewService,
     SearchService,
+    // Not `providedIn: 'root'` in the library - `AbstractCaseViewComponent` only turns
+    // on "table mode" (`getOverflowStatus`/`getWidth`) when an instance exists, so it has
+    // to be provided here the same way the library's own `nc-filter-field-tabbed-case-view`
+    // provides it for itself.
+    OverflowService,
     {
       provide: NAE_BASE_FILTER,
       useFactory: baseFilterFactory,
@@ -55,14 +61,8 @@ export class SideNavCasesCaseViewComponent extends AbstractCaseViewComponent imp
 
   @ViewChild('header') public caseHeaderComponent: HeaderComponent;
 
-  constructor(caseViewService: CaseViewService) {
-    super(caseViewService, undefined, undefined,
-      //  ,
-      // {
-      // enableCaseTitle: ,
-      // isCaseTitleRequired:
-      // }
-    );
+  constructor(caseViewService: CaseViewService, overflowService: OverflowService) {
+    super(caseViewService, overflowService);
   }
 
   ngAfterViewInit(): void {

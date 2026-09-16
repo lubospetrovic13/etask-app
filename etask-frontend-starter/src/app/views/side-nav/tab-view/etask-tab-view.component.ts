@@ -1,6 +1,5 @@
 import {Component, Inject} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import {DefaultTabbedCaseViewComponent} from '@netgrif/components';
 import {
   DataGroup,
   extractIconAndTitle,
@@ -11,6 +10,7 @@ import {
   TabContent,
   ViewIdService,
 } from '@netgrif/components-core';
+import {EtaskTabbedCaseViewComponent} from '../cases/etask-tabbed-case-view.component';
 import {EtaskTabbedTaskViewComponent} from '../../task-view/etask-tabbed-task-view.component';
 
 
@@ -56,7 +56,11 @@ export class EtaskTabViewComponent {
       {
         label: {text: labelData.name, icon: labelData.icon},
         canBeClosed: false,
-        tabContentComponent: DefaultTabbedCaseViewComponent,
+        // `EtaskTabbedCaseViewComponent`, not the library's own `DefaultTabbedCaseViewComponent` -
+        // see its own doc comment for why: the library's version hardcodes `_overflowService` to
+        // `undefined` in its constructor, which silently breaks "table mode" for every case list
+        // reached from the drawer.
+        tabContentComponent: EtaskTabbedCaseViewComponent,
         injectedObject: {
           tabViewComponent: EtaskTabbedTaskViewComponent,
           tabViewOrder: 0,
