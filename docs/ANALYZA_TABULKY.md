@@ -36,6 +36,30 @@ v `allowedNets` toho zobrazenia — to je známa tichá pasca (cheatsheet).
 istými `selectedHeaders$` a `FeaturedValue`. Virtuálny scroll a stránkovanie už
 v `CaseViewService` sú.
 
+### Doplnené neskôr: „Table mode" v knižnici už JE — len je odpojený
+
+Táto analýza pôvodne tvrdila, že vykreslenie treba napísať celé. **To nie je
+presné** a zistilo sa to až na cudzej inštancii (`etask.netgrif.cloud`), kde ten
+režim beží — v tej istej verzii knižnice, akú máme my.
+
+V hlavičke je v editačnom móde prepínač **Table mode** (interne
+`OverflowService.overflowMode`) plus **šírka stĺpca** a **počet stĺpcov**. Po
+zapnutí sa hlavička aj zoznam rozšíria na `počet × šírka` a idú do vodorovného
+posunu, takže naraz je vidno podstatne viac stĺpcov, než sa zmestí na obrazovku.
+Vykreslenie ostáva akordeónové — **nie je to `mat-table`** — ale väčšinu z toho,
+kvôli čomu sa tabuľka pýta (veľa stĺpcov vedľa seba, riadok ako riadok), to
+pokrýva bez jediného nového komponentu.
+
+Prečo to nikto nevidel: komponent je odpojený hneď dvakrát (`ENGINE_ISSUES.md`,
+**E23**) — `OverflowService` nie je `providedIn: 'root'` a knižničné case view
+komponenty si ho navyše v konštruktore prepíšu na `undefined`. V tomto repe je to
+zapojené cez `EtaskTabbedCaseViewComponent`.
+
+**Dôsledok pre plán nižšie:** krok „postaviť tabuľkové vykreslenie" prestáva byť
+prvý a stáva sa nepovinný. Otázka už nie je „ako spraviť tabuľku", ale „stačí
+nám široký akordeón, alebo naozaj chceme `mat-table` s bunkami?" — a na to sa dá
+odpovedať až po tom, čo si Table mode niekto vyskúša na reálnych dátach.
+
 ### Hromadné akcie v Petriflow — hotové, len sa o tom nevie
 
 Toto je najdôležitejší nález celej analýzy. `EtaskActionDelegate` (resp. engine

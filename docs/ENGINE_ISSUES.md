@@ -627,6 +627,106 @@ robí to `EtaskWorkflowViewService`.
 a `Skratku`, nie `Názov`. Ponúknuť názov by znamenalo pole, ktoré vždy vráti
 prázdno — presne ten druh ticha, kvôli ktorému tento súbor existuje.
 
+## E22. `changeType()` vráti pri nula výsledkoch surovú odpoveď namiesto poľa
+
+**Príznak.** Zobrazenie, ktoré nenájde ani jeden prípad, **zhodí komponent**:
+
+```
+TypeError: e.content.filter is not a function
+```
+
+Nie prázdny zoznam, nie hláška — biela plocha. A čo je horšie, prejaví sa to až
+u toho, kto má prázdny filter: na stroji, kde dáta sú, je všetko v poriadku.
+
+**Príčina.** `getResourcePage()` mapuje odpoveď cez `changeType()`
+(`netgrif-components-core`, ~r. 2762–2793). Tá sa rozhoduje podľa toho, či
+odpoveď má `_embedded`:
+
+```js
+if (!r.hasOwnProperty('_embedded')) { return r; }   // <- celý surový objekt
+```
+
+Lenže **HAL odpoveď bez `_embedded` je pre nula záznamov úplne normálna**. Volajúci
+teda dostane namiesto `Array<Case>` celý wrapper (`{page: {...}, _links: {...}}`),
+`page.content` je objekt a ktorékoľvek `.filter`/`.map` nad ním padne.
+
+**Obídenie.** Typ sa musí overiť, nie iba null:
+
+```ts
+const cases = Array.isArray(page?.content) ? page.content : [];
+```
+
+`?? []` **nechráni** — hodnota je definovaná a truthy, len to nie je pole. Presne
+preto to prežilo review: vyzerá to ako ošetrený prípad. V tomto repe to stálo
+navigáciu na dashboarde (klik na kategóriu skončil na roote) a je to ošetrené
+v `dashboard.component.ts`.
+
+**Oprava.** Vrátiť `[]`, keď `_embedded` chýba.
+
+## E23. „Table mode" existuje, ale knižničné case view komponenty si ho vypnú
+
+**Príznak.** V hlavičke zoznamu je v editačnom móde prepínač **Table mode**
+(`headers.overflowMode`) so šírkou stĺpca a počtom stĺpcov. V našom portáli sa
+buď nezobrazil vôbec, alebo — po pridaní providera — sa zobrazil, dal sa zapnúť,
+ale **zoznam sa nerozšíril**. Žiadna chyba, žiadny log.
+
+**Príčina je dvojitá** a to je na tom to zákerné:
+
+1. `OverflowService` **nie je** `providedIn: 'root'` a všetci jeho konzumenti ho
+   injectujú `@Optional()`. Bez explicitného providera je teda `null`,
+   `AbstractHeaderComponent` nastaví `canOverflow = false` a prepínač sa
+   nevykreslí (`*ngIf="canOverflow"`).
+2. Aj **s** providerom to nestačí. `DefaultTabbedCaseViewComponent`
+   (~r. 2967) aj `FilterFieldTabbedCaseViewComponent` (~r. 5148) volajú:
+
+   ```js
+   super(caseViewService, loggerService, injectedTabData, undefined, ...)
+   ```
+
+   Štvrtý argument je `_overflowService` a je **natvrdo `undefined`** — hoci
+   `AbstractTabbedCaseViewComponent` (r. 27483) ho do `AbstractCaseViewComponent`
+   forwarduje správne. Výsledok: `nc-header` inštanciu má (má vlastnú DI cestu,
+   takže prepínač funguje a stav si aj zapamätá), ale `getWidth()`
+   a `getOverflowStatus()` na case view čítajú `undefined` a vracajú `'100%'`
+   a `false`. Prepínač teda prepína niečo, na čo sa nikto nepozerá.
+
+**Obídenie.** Vlastná komponenta nad `AbstractTabbedCaseViewComponent`, ktorá si
+`OverflowService` injectne a **prepustí ho do `super()`** — v tomto repe
+`EtaskTabbedCaseViewComponent` (a `SideNavCasesCaseViewComponent` pre netabovú
+cestu). Providery treba opísať z originálu celé, nielen `OverflowService`:
+bez `CaseViewService`, `SearchService`, `ViewIdService`, `CategoryFactory`
+a tovární `filterCaseTabbedData*` z `@netgrif/components` komponenta spadne na
+`NullInjectorError` a tab ostane prázdny.
+
+**Oprava.** Prepustiť injectnutú inštanciu do `super()`; ideálne k tomu
+`providedIn: 'root'`, nech to nie je opt-in, o ktorom sa nikde nepíše.
+
+## E24. `setData` s poľom `dateTime` padne na chýbajúcom JSR310 module
+
+**Príznak.** Akcia zapíše do payloadu `setData` hodnotu typu `LocalDateTime`
+a engine vráti:
+
+```
+Java 8 date/time type `java.time.LocalDateTime` not supported by default:
+add Module "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
+```
+
+Používateľ pritom videl len „Požiadavku sa nepodarilo odoslať".
+
+**Príčina.** Serializer, cez ktorý ide telo `setData`, nemá registrovaný
+`JavaTimeModule`. Týka sa to iba tejto cesty — pole typu `dateTime` zapísané
+cez `change ... value { }` je v poriadku.
+
+**Obídenie.** Poslať ISO reťazec, ktorý `LocalDateTime.toString()` aj tak vracia;
+engine si ho pri zápise poľa parsuje sám:
+
+```groovy
+payload["src_started"] = ["value": (req_started.value as java.time.LocalDateTime).toString(),
+                          "type": "dateTime"]
+```
+
+**Oprava.** Zaregistrovať `JavaTimeModule` do toho `ObjectMapper`-a.
+
 ## Čo s tým
 
 Najviac stojí **E1** — znemožňuje celú jednu operáciu — a **E2**, ktoré robí
@@ -637,6 +737,13 @@ stiahnuté**: to sa ukázalo ako moja chyba merania, nie chyba enginu.
 a zamlčí dôvod. Opraviť sa dá jedným handlerom. **E19** je horšie: tam engine
 ohlási úspech operácie, ktorá sa nestala. **E21** je tretí variant toho istého:
 endpoint ponúka parameter, ktorý nemôže fungovať, a mlčí o tom.
+
+**E22** a **E23** sú obe z frontendovej knižnice a obe sú lacné na opravu
+(jeden `return []`, jeden prepustený argument), ale drahé na nájdenie: prvá sa
+prejaví len pri prázdnom výsledku, druhá vyzerá ako chýbajúca funkcia, hoci je
+hotová a len odpojená. **E23** stojí za zmienku aj preto, že kvôli nej sme si
+mysleli, že tabuľkový režim v tejto verzii vôbec nie je — podrobne
+v `ANALYZA_TABULKY.md`.
 
 Čo v tejto kope **nie je**: správanie, ktoré je v poriadku a treba ho len
 poznať — oprávnenia a `perform` ako skratka, `assignPolicy` a jeho dva okamihy,

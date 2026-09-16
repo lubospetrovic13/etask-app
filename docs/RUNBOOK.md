@@ -59,6 +59,28 @@ Prihlásenie: `super@netgrif.com` / `password`.
 | bez `LANG=C.UTF-8` | import siete s diakritikou v názve zhodí `InvalidPathException` |
 | stale `target/` | Maven preskočí kopírovanie zdrojov: jar bez sietí, alebo s triedou, ktorú zdroj už nemá |
 | chýbajúci Redis | Spring spadne až na session store, dlho po štarte |
+
+### Windows: python nástroje padajú na diakritike uprostred behu
+
+Nástroje v `tools/` píšu po slovensky a Windows konzola je `cp1252`, takže prvé
+`č` alebo `→` v tlačenom výstupe zhodí celý skript:
+
+```
+UnicodeEncodeError: 'charmap' codec can't encode character 'č'
+```
+
+Nebezpečné je to tým, **kedy** to padne: nie na začiatku, ale až pri tom riadku
+— takže `pfseed.py` stihne role prideliť a až potom spadne, a seedovací skript
+stihne polovicu prípadov. Vyzerá to ako chyba nástroja, je to kódovanie terminálu.
+
+```bash
+PYTHONIOENCODING=utf-8 python3 tools/pfseed.py
+```
+
+A ešte jedna vec, ktorá s tým chodí v páre: v Git Bashi na Windows je `python3`
+(aj `python`) obvykle **WindowsApps stub**, ktorý len otvorí Microsoft Store.
+`where python` ukáže ten pravý interpreter; volaj ho plnou cestou, alebo si
+nastav alias.
 | sieť zmenená, nie znovu naimportovaná | engine drží starý model, nové casy z neho vznikajú, nikde ani slovo (rieši `pfsync`) |
 
 **Na Windows (Git Bash)** má `up.sh` štyri miesta, kde sa zadrhne, a všetky
