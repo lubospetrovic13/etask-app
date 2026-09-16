@@ -1,7 +1,11 @@
+// Padding matches `.case-header-padding` (6px vertical) and the left edge lines up
+// with `.case-view-container`'s 8px margin below it - see `_overrides.scss`'s
+// "Density of list views" section, which this bar is part of even though it lives
+// in the drawer shell rather than the case view itself.
 .breadcrumbs-bar {
-  padding: 10px 16px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--app-border);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--app-fg-muted);
 }
@@ -17,16 +21,16 @@
 }
 
 .breadcrumb-home-icon {
-  font-size: 18px;
-  height: 18px;
-  width: 18px;
+  font-size: 16px;
+  height: 16px;
+  width: 16px;
   vertical-align: middle;
 }
 
 .breadcrumb-separator {
-  font-size: 16px;
-  height: 16px;
-  width: 16px;
+  font-size: 14px;
+  height: 14px;
+  width: 14px;
   margin: 0 4px;
   vertical-align: middle;
   color: var(--app-fg-muted);
