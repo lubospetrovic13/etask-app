@@ -64,6 +64,7 @@ import {PublicSingleTaskViewComponent} from './views/public/public-single-task-v
 import {PublicTaskViewComponent} from './views/public/public-task-view/public-task-view.component';
 import {PublicWorkflowViewComponent} from './views/public/public-workflow-view/public-workflow-view.component';
 import {ETaskTaskResourceService} from './views/public/service/e-task-task-resource.service';
+import {EtaskTabbedCaseViewComponent} from './views/side-nav/cases/etask-tabbed-case-view.component';
 import {SideNavCasesCaseViewComponent} from './views/side-nav/cases/side-nav-cases-case-view.component';
 import {EmptyViewComponent} from './views/side-nav/emptyView/empty-view.component';
 import {ETaskBreadcrumbsComponent} from './views/side-nav/e-task-breadcrumbs/e-task-breadcrumbs.component';
@@ -87,6 +88,7 @@ import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-vie
     LoginComponent,
     SidenavComponent,
     SideNavCasesCaseViewComponent,
+    EtaskTabbedCaseViewComponent,
     SideNavTasksTaskViewComponent,
     EmptyViewComponent,
     DashboardComponent,
