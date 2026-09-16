@@ -66,6 +66,7 @@ import {PublicWorkflowViewComponent} from './views/public/public-workflow-view/p
 import {ETaskTaskResourceService} from './views/public/service/e-task-task-resource.service';
 import {SideNavCasesCaseViewComponent} from './views/side-nav/cases/side-nav-cases-case-view.component';
 import {EmptyViewComponent} from './views/side-nav/emptyView/empty-view.component';
+import {ETaskBreadcrumbsComponent} from './views/side-nav/e-task-breadcrumbs/e-task-breadcrumbs.component';
 import {ETaskDoubleDrawerComponent} from './views/side-nav/etask-double-drawer/e-task-double-drawer.component';
 import {EtaskLanguageSelectorComponent} from './views/side-nav/etask-language-selector/etask-language-selector.component';
 import {UriNodeTitlePipe} from './views/side-nav/uri-node-title.pipe';
@@ -97,6 +98,7 @@ import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-vie
     EtaskTaskListPaginationComponent,
     PublicSingleTaskViewComponent,
     ETaskDoubleDrawerComponent,
+    ETaskBreadcrumbsComponent,
     EtaskLanguageSelectorComponent,
     UriNodeTitlePipe,
     WorkflowPanelComponent,
