@@ -111,6 +111,7 @@
       </mat-sidenav>
 
       <mat-sidenav-content class="content-color">
+        <app-e-task-breadcrumbs></app-e-task-breadcrumbs>
         <ng-content></ng-content>
       </mat-sidenav-content>
     </mat-sidenav-container>
@@ -162,7 +163,7 @@
          (click)="toggleSection('folders')"
          fxLayout="row" fxFlexAlign="start center">
       <span class="headline-text "
-            fxFlex>{{ (this.isRoot() ? 'menu.root-folders' : 'menu.folders') | translate }}</span>
+            fxFlex>{{ this.isRoot() ? ('menu.root-folders' | translate) : (currentNode.name | uriNodeTitle) }}</span>
       <mat-icon>{{ isSectionOpen.folders ? 'expand_more' : 'expand_less' }}</mat-icon>
     </div>
     <div [@sectionExpansion]="isSectionOpen.folders ? 'expanded' : 'collapsed'" class="box-container">

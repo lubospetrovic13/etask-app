@@ -1,0 +1,37 @@
+.breadcrumbs-bar {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--app-border);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-fg-muted);
+}
+
+.breadcrumb-link {
+  cursor: pointer;
+  color: var(--app-fg-muted);
+
+  &:hover {
+    color: var(--app-fg);
+    text-decoration: underline;
+  }
+}
+
+.breadcrumb-home-icon {
+  font-size: 18px;
+  height: 18px;
+  width: 18px;
+  vertical-align: middle;
+}
+
+.breadcrumb-separator {
+  font-size: 16px;
+  height: 16px;
+  width: 16px;
+  margin: 0 4px;
+  vertical-align: middle;
+  color: var(--app-fg-muted);
+}
+
+.breadcrumb-current {
+  color: var(--app-fg);
+}

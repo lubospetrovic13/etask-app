@@ -1,0 +1,10 @@
+<div class="breadcrumbs-bar" *ngIf="(crumbs$ | async)?.length" fxLayout="row" fxLayoutAlign="start center">
+  <span class="breadcrumb-link" (click)="goHome()">
+    <mat-icon class="breadcrumb-home-icon" inline="true">home</mat-icon>
+  </span>
+  <ng-container *ngFor="let crumb of (crumbs$ | async); let last = last">
+    <mat-icon class="breadcrumb-separator" inline="true">chevron_right</mat-icon>
+    <span *ngIf="!last" class="breadcrumb-link" (click)="goToNode(crumb.path)">{{ crumb.name | uriNodeTitle }}</span>
+    <span *ngIf="last" class="breadcrumb-current">{{ crumb.name | uriNodeTitle }}</span>
+  </ng-container>
+</div>
