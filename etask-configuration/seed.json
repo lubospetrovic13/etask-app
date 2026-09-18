@@ -9,8 +9,8 @@
     "ho prepíš (napr. [\"mojaapp/*\"]) alebo pridaj ďalší vzor."
   ],
   "netScope": [
-    "service_desk/*",
-    "pouzivatelia/*"
+    "it/service_desk/*",
+    "admin/pouzivatelia/*"
   ],
   "users": [
     {
@@ -29,7 +29,8 @@
         "spravca",
         "uctovnik",
         "veduci",
-        "zadavatel"
+        "zadavatel",
+        "zamestnanec"
       ]
     },
     {
@@ -42,7 +43,8 @@
         "schvalovatel",
         "spravca",
         "uctovnik",
-        "veduci"
+        "veduci",
+        "zamestnanec"
       ]
     },
     {
@@ -52,6 +54,7 @@
         "schvalovatel",
         "specialist",
         "uctovnik",
+        "veduci",
         "zadavatel",
         "zamestnanec"
       ]
@@ -60,8 +63,8 @@
       "email": "druhy@test.local",
       "roles": [
         "specialist",
-        "zamestnanec",
-        "zadavatel"
+        "zadavatel",
+        "zamestnanec"
       ]
     },
     {

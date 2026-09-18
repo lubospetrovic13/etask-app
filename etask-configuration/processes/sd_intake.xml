@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>service_desk/sd_intake</id>
+	<id>it/service_desk/sd_intake</id>
 	<version>1.0.0</version>
 	<initials>SDI</initials>
 	<title name="net_title">Podanie požiadavky</title>
@@ -11,6 +11,7 @@
 		a nikdy sa nepouzije (ENGINE_ISSUES E15).
 	-->
 	<i18n locale="en">
+		<i18nString name="empty_button"></i18nString>
 		<i18nString name="net_title">Request submission</i18nString>
 		<i18nString name="agent_title">Support operator</i18nString>
 		<i18nString name="system_title">System</i18nString>
@@ -102,7 +103,7 @@ wiz_hint: f.wiz_hint, wiz_error: f.wiz_error, inner: f.inner,
 btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit,
 req_name: f.req_name, req_email: f.req_email;
 
-changeCaseProperty("title").about { "Nová požiadavka" }
+changeCaseProperty("title").about { "New request" }
 
 // Prihlasenemu cloveku netreba pisat, kto je. `isRealUser` odlisi skutocny
 // ucet od anonyma a od systemoveho uctu - anonymna session ma tiez `loggedUser`,
@@ -170,7 +171,7 @@ make btn_submit, editable on transitions when { return 1 == 4 }
 { def step ->
     // Textovy stepper. Vyplneny kruzok = hotovy krok, polovicny = aktualny.
     int s = (step as Number).intValue()
-    def names = ["Kategória", "Popis", "Kontakt", "Súhrn"]
+    def names = ["Category", "Popis", "Kontakt", "Summary"]
     def parts = []
     for (int i = 1; i <= 4; i++) {
         def mark = (i < s) ? "●" : (i == s ? "◉" : "○")
@@ -181,37 +182,37 @@ make btn_submit, editable on transitions when { return 1 == 4 }
 	]]></function>
 	<function scope="process" name="step_heading"><![CDATA[
 { def step ->
-    def m = [1: "S čím vám môžeme pomôcť?",
-             2: "Povedzte nám, čo sa deje",
-             3: "Kam sa vám máme ozvať",
-             4: "Skontrolujte a odošlite",
-             5: "Požiadavka je podaná"]
+    def m = [1: "What can we help you with?",
+             2: "Tell us what is going on",
+             3: "Where should we get back to you",
+             4: "Check and submit",
+             5: "The request is submitted"]
     return m[(step as Number).intValue()] ?: ""
 }
 	]]></function>
 	<function scope="process" name="step_hint"><![CDATA[
 { def step ->
-    def m = [1: "Vyberte jednu z možností. Podľa nej sa požiadavka dostane k správnemu tímu.",
-             2: "Čím konkrétnejšie to opíšete, tým rýchlejšie vieme pomôcť.",
-             3: "Na e-mail vám pošleme číslo požiadavky a všetky ďalšie správy.",
-             4: "Ak treba niečo upraviť, vráťte sa tlačidlom Späť. Nič sa nestratí.",
-             5: "Číslo požiadavky si odložte."]
+    def m = [1: "Pick one of the options. It decides which team the request reaches.",
+             2: "The more specific you are, the faster we can help.",
+             3: "We will send the request number and all further messages to your e-mail.",
+             4: "If something needs changing, use the Back button. Nothing gets lost.",
+             5: "Keep the request number."]
     return m[(step as Number).intValue()] ?: ""
 }
 	]]></function>
 	<function scope="process" name="type_label"><![CDATA[
 { def code ->
-    def m = ["incident": "Nahlásiť poruchu", "service": "Servisný zásah",
-             "change": "Žiadosť o zmenu", "access": "Prístup do systému",
-             "question": "Otázka"]
+    def m = ["incident": "Report a fault", "service": "Service call",
+             "change": "Change request", "access": "System access",
+             "question": "Question"]
     return m[code as String] ?: ""
 }
 	]]></function>
 	<function scope="process" name="service_label"><![CDATA[
 { def code ->
-    def m = ["portal": "Zákaznícky portál", "core": "Hlavná aplikácia",
-             "integration": "Integrácia s iným systémom", "reports": "Reporty a exporty",
-             "account": "Účet a prihlásenie", "unknown": "Neviem určiť"]
+    def m = ["portal": "Customer portal", "core": "Main application",
+             "integration": "Integration with another system", "reports": "Reporty a exporty",
+             "account": "Account and sign-in", "unknown": "Not sure"]
     return m[code as String] ?: ""
 }
 	]]></function>
@@ -363,24 +364,24 @@ int s = ((wiz_step.value ?: 1) as Number).intValue()
 def problem = null
 if (s == 1) {
     if (!((req_type.value ?: "") as String).trim()) {
-        problem = "Vyberte prosím jednu z možností."
+        problem = "Please pick one of the options."
     }
 } else if (s == 2) {
     if (!((req_title.value ?: "") as String).trim()) {
-        problem = "Doplňte krátky názov."
+        problem = "Add a short title."
     } else if (((req_description.value ?: "") as String).trim().length() < 15) {
-        problem = "Popíšte prosím situáciu aspoň jednou vetou."
+        problem = "Please describe the situation in at least one sentence."
     }
 } else if (s == 3) {
     def mail = ((req_email.value ?: "") as String).trim()
     if (!((req_name.value ?: "") as String).trim()) {
-        problem = "Doplňte meno."
+        problem = "Add your name."
     } else if (!mail.contains("@") || !mail.contains(".")) {
-        problem = "Skontrolujte e-mail, na tento vám nedokážeme odpovedať."
+        problem = "Check the e-mail, we cannot reply to this one."
     } else if (!((req_org.value ?: "") as String).trim()) {
-        problem = "Doplňte organizáciu."
+        problem = "Add your organisation."
     } else if (req_consent.value != true) {
-        problem = "Bez súhlasu so spracovaním údajov požiadavku spracovať nemôžeme."
+        problem = "Without consent to data processing we cannot handle the request."
     }
 }
 
@@ -408,10 +409,10 @@ make btn_submit, hidden on transitions when { return target != 4 }
 make btn_submit, editable on transitions when { return target == 4 }
         if (target == 4) {
             change sum_text value {
-                "TYP POŽIADAVKY\n" + type_label(req_type.value) +
-                "\n\nSLUŽBA\n" + service_label(req_service.value) +
-                "\n\nNÁZOV\n" + ((req_title.value ?: "") as String) +
-                "\n\nSÚRNOSŤ\n" + severity_label(req_severity.value) +
+                "REQUEST TYPE\n" + type_label(req_type.value) +
+                "\n\nSERVICE\n" + service_label(req_service.value) +
+                "\n\nTITLE\n" + ((req_title.value ?: "") as String) +
+                "\n\nURGENCY\n" + severity_label(req_severity.value) +
                 "\n\nPOPIS\n" + ((req_description.value ?: "") as String) +
                 "\n\nKONTAKT\n" + ((req_name.value ?: "") as String) +
                 "  ·  " + ((req_email.value ?: "") as String) +
@@ -483,9 +484,9 @@ if (s == 4) {
         change ticket_number value { ticket.visualId ?: ticket.stringId }
         change submitted_ok value { true }
         change receipt_note value {
-            "Požiadavku sme prijali. Potvrdenie posielame na " +
+            "We have received your request. A confirmation is on its way to " +
             ((req_email.value ?: "") as String) +
-            ". Operátor podpory ju prevezme a ozve sa vám."
+            ". A support operator will pick it up and get back to you."
         }
         // Synchronne a v tom istom try: `async.run` vynimku spolkne, takze
         // zle prenesene pole by sa prejavilo ako prazdny tiket bez akejkolvek
@@ -498,11 +499,11 @@ if (s == 4) {
             change inner value { [t.stringId] }
         }
         change wiz_step value { 5 }
-        change wiz_stepper value { "● 1. Kategória      →      ● 2. Popis      →      ● 3. Kontakt      →      ● 4. Súhrn" }
+        change wiz_stepper value { "1. Category  ->  2. Description  ->  3. Contact  ->  4. Summary" }
         change wiz_heading value { step_heading(5) }
         change wiz_hint value { step_hint(5) }
         change wiz_error value { "" }
-        changeCaseProperty("title").about { "Podané: " + ((req_title.value ?: "") as String) }
+        changeCaseProperty("title").about { "Submitted: " + ((req_title.value ?: "") as String) }
 
         make btn_back, hidden on transitions when { true }
         make btn_next, hidden on transitions when { true }
@@ -510,7 +511,7 @@ if (s == 4) {
     } catch (Exception e) {
         change submitted_ok value { false }
         change wiz_error value {
-            "Požiadavku sa nepodarilo odoslať. Skúste to prosím znova, alebo nám zavolajte a uveďte kód " +
+            "The request could not be sent. Please try again, or call us and quote the code " +
             useCase.stringId + " (detail: " + e.message + ")"
         }
     }
@@ -555,7 +556,7 @@ wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
 wiz_hint: f.wiz_hint, inner: f.inner,
 btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
 change req_type value { "incident" }
-change card_chosen value { "Nahlásiť poruchu" }
+change card_chosen value { "Report a fault" }
 
 // Vyber kategorie je sam rozhodnutim - netreba za nim klikat Pokracovat.
 def sub = sub_task_of(2, useCase)
@@ -597,7 +598,7 @@ wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
 wiz_hint: f.wiz_hint, inner: f.inner,
 btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
 change req_type value { "service" }
-change card_chosen value { "Servisný zásah" }
+change card_chosen value { "Service call" }
 
 // Vyber kategorie je sam rozhodnutim - netreba za nim klikat Pokracovat.
 def sub = sub_task_of(2, useCase)
@@ -639,7 +640,7 @@ wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
 wiz_hint: f.wiz_hint, inner: f.inner,
 btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
 change req_type value { "change" }
-change card_chosen value { "Žiadosť o zmenu" }
+change card_chosen value { "Change request" }
 
 // Vyber kategorie je sam rozhodnutim - netreba za nim klikat Pokracovat.
 def sub = sub_task_of(2, useCase)
@@ -681,7 +682,7 @@ wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
 wiz_hint: f.wiz_hint, inner: f.inner,
 btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
 change req_type value { "access" }
-change card_chosen value { "Prístup do systému" }
+change card_chosen value { "System access" }
 
 // Vyber kategorie je sam rozhodnutim - netreba za nim klikat Pokracovat.
 def sub = sub_task_of(2, useCase)
@@ -723,7 +724,7 @@ wiz_step: f.wiz_step, wiz_stepper: f.wiz_stepper, wiz_heading: f.wiz_heading,
 wiz_hint: f.wiz_hint, inner: f.inner,
 btn_back: f.btn_back, btn_next: f.btn_next, btn_submit: f.btn_submit;
 change req_type value { "question" }
-change card_chosen value { "Otázka" }
+change card_chosen value { "Question" }
 
 // Vyber kategorie je sam rozhodnutim - netreba za nim klikat Pokracovat.
 def sub = sub_task_of(2, useCase)
@@ -1071,6 +1072,31 @@ make req_workaround, hidden on transitions when { return !showIt }
 				</layout>
 			</dataRef>
 		</dataGroup>
+		<!--
+			Panel Netgrifu kresli ZRUSIT a DOKONCIT z titulkov udalosti. Na tomto
+			tasku nedavaju zmysel: formular ma vlastne tlacidla (Spat / Pokracovat
+			/ Odoslat) ako datove polia a `t_form` visi na read arcu, takze
+			DOKONCIT token nekonzumuje - task sa hned znovu otvori a vyzera to,
+			ze sa nestalo nic.
+			Prazdny titulok tlacidlo skryje (RUNBOOK 11, ENGINE_ISSUES E3) a musi
+			mat prazdny preklad v kazdom jazyku, inak sa v druhom jazyku vrati.
+		-->
+		<event type="assign">
+			<id>t_form_assign</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="cancel">
+			<id>t_form_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_form_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_form_finish</id>
+			<title name="empty_button"></title>
+		</event>
 	</transition>
 	<transition>
 		<id>t_s_category</id>

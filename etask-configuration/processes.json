@@ -33,7 +33,7 @@
     "",
     "Service Desk (sd_*) je príkladová aplikácia, nie časť frameworku.",
     "Odstránenie: zmaž processes/sd_*.xml, ich riadky v \"import\", položku",
-    "\"service_desk\" nižšie a netScope v seed.json.",
+    "\"it/service_desk\" nižšie a netScope v seed.json.",
     "",
     "Jeho kartu vidí LEN admin (requiredAuthorities ROLE_ADMIN). Je to príklad,",
     "nie appka, ktorú niekto v tejto instancii používa - a karta príkladu v menu",
@@ -73,12 +73,12 @@
       "rebuildOnProcessChange": true
     },
     {
-      "net": "service_desk/sd_menu",
+      "net": "it/service_desk/sd_menu",
       "rebuildOnNewVersion": true
     },
-    "pouzivatelia/pu_zalozenie",
+    "admin/pouzivatelia/pu_zalozenie",
     {
-      "net": "pouzivatelia/pu_menu",
+      "net": "admin/pouzivatelia/pu_menu",
       "rebuildOnNewVersion": true
     }
   ],
@@ -90,12 +90,24 @@
       ],
       "requiredProcessRoles": []
     },
-    "service_desk": {
+    "it": {
+      "icon": "dns",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": []
+    },
+    "it/service_desk": {
       "icon": "support_agent",
       "requiredAuthorities": [],
       "requiredProcessRoles": []
     },
-    "pouzivatelia": {
+    "admin": {
+      "icon": "shield",
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
+    },
+    "admin/pouzivatelia": {
       "icon": "manage_accounts",
       "requiredAuthorities": [],
       "requiredProcessRoles": [

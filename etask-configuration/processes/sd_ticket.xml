@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>service_desk/sd_ticket</id>
+	<id>it/service_desk/sd_ticket</id>
 	<version>1.0.0</version>
 	<initials>SDT</initials>
 	<title name="net_title">Požiadavka podpory</title>
@@ -139,8 +139,8 @@ sla_ok: f.sla_ok;
 change tk_state value { "new" }
 change sla_created_at value { java.time.LocalDateTime.now() }
 change sla_ok value { true }
-change sla_note value { "Čaká na prevzatie. Lehota sa doplní po triáži." }
-changeCaseProperty("title").about { "Nová požiadavka" }
+change sla_note value { "Awaiting pick-up. The deadline is set after triage." }
+changeCaseProperty("title").about { "New request" }
 				]]></action>
 			</actions>
 		</event>
@@ -192,11 +192,11 @@ changeCaseProperty("title").about { "Nová požiadavka" }
         change tk_customer_id value { "" }
         change tk_org_name value { org }
         change tk_org_match value {
-            org ? ("Organizácia \"" + org + "\" nie je v registri zákazníkov – tiket vidí iba vedúci.")
-                : "Organizácia nie je vyplnená – tiket vidí iba vedúci."
+            org ? ("The organisation \"" + org + "\" is not in the customer register - only the manager sees the ticket.")
+                : "The organisation is not filled in - only the manager sees the ticket."
         }
         def log0 = (tk_worklog.value ?: "") as String
-        def e0 = java.time.LocalDateTime.now().toString() + "  bez priradenia: " + (org ?: "prázdna organizácia")
+        def e0 = java.time.LocalDateTime.now().toString() + "  bez priradenia: " + (org ?: "empty organisation")
         change tk_worklog value { log0 ? log0 + "\n" + e0 : e0 }
         return false
     }
@@ -215,11 +215,11 @@ changeCaseProperty("title").about { "Nová požiadavka" }
     change tk_org_name value { name }
     change tk_org_match value {
         (agents || specialists)
-                ? (name + " – " + (agents.size() + specialists.size()) + " ľudí")
-                : (name + " – v registri nemá pridelených ľudí, tiket vidí iba vedúci.")
+                ? (name + " – " + (agents.size() + specialists.size()) + " people")
+                : (name + " - has nobody assigned in the register, only the manager sees the ticket.")
     }
     def log = (tk_worklog.value ?: "") as String
-    def e = java.time.LocalDateTime.now().toString() + "  priradené zákazníkovi: " + name
+    def e = java.time.LocalDateTime.now().toString() + "  assigned to the customer: " + name
     change tk_worklog value { log ? log + "\n" + e : e }
     return true
 }
@@ -285,16 +285,16 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 	]]></function>
 	<function scope="process" name="type_label"><![CDATA[
 { def code ->
-    def m = ["incident": "Porucha", "service": "Servisný zásah",
-             "change": "Žiadosť o zmenu", "access": "Prístup", "question": "Otázka"]
-    return m[code as String] ?: "Požiadavka"
+    def m = ["incident": "Porucha", "service": "Service call",
+             "change": "Change request", "access": "Access", "question": "Question"]
+    return m[code as String] ?: "Request"
 }
 	]]></function>
 	<function scope="process" name="wi_type_label"><![CDATA[
 { def code ->
-    def m = ["analysis": "Analýza", "fix": "Oprava", "test": "Test",
-             "deploy": "Nasadenie", "other": "Iné"]
-    return m[code as String] ?: "Práca"
+    def m = ["analysis": "Analysis", "fix": "Oprava", "test": "Test",
+             "deploy": "Nasadenie", "other": "Other"]
+    return m[code as String] ?: "Work"
 }
 	]]></function>
 	<roleRef>
@@ -428,7 +428,7 @@ changeCaseProperty("title").about { "Nová požiadavka" }
 				<action id="42"><![CDATA[
 src_title: f.src_title;
 
-// Bez tohto sa kazdy tiket v zoznamoch vola "Nová požiadavka" az do triaze.
+// Bez tohto sa kazdy tiket v zoznamoch vola "New request" az do triaze.
 def t = ((src_title.value ?: "") as String).trim()
 if (t) {
     changeCaseProperty("title").about { t }
@@ -827,9 +827,9 @@ if (raw != null) {
 }
 
 if (!title) {
-    change wi_message value { "Napíšte, čo treba urobiť." }
+    change wi_message value { "Write what needs to be done." }
 } else if (!assigneeIds) {
-    change wi_message value { "Vyberte, komu úlohu zadávate." }
+    change wi_message value { "Pick who the work item is assigned to." }
 } else {
     def child = createCase(net_prefix(useCase) + "sd_work_item")
     def childTask = findTask { it.transitionId.eq("t_define").and(it.caseId.eq(child.stringId)) }
@@ -863,12 +863,12 @@ if (!title) {
     change wi_list value { list ? list + "\n" + line : line }
 
     def log = (tk_worklog.value ?: "") as String
-    def entry = java.time.LocalDateTime.now().toString() + "  zadaná úloha: " + title
+    def entry = java.time.LocalDateTime.now().toString() + "  work item created: " + title
     change tk_worklog value { log ? log + "\n" + entry : entry }
 
     change new_wi_title value { "" }
     change new_wi_estimate value { null }
-    change wi_message value { "Úloha zadaná: " + title }
+    change wi_message value { "Work item created: " + title }
 }
 				]]></action>
 			</actions>
@@ -1543,19 +1543,19 @@ change tk_state value { "accepted" }
 boolean inTime = due == null || !now.isAfter(due)
 change sla_ok value { inTime }
 change sla_note value {
-    inTime ? "Prevzaté v lehote odozvy." : "Lehota odozvy bola prekročená pri prevzatí."
+    inTime ? "Picked up within the response deadline." : "The response deadline was missed at pick-up."
 }
 
 changeCaseProperty("title").about {
-    type_label(tk_type.value) + " — " + ((src_title.value ?: "bez názvu") as String)
+    type_label(tk_type.value) + " — " + ((src_title.value ?: "untitled") as String)
 }
 changeCaseProperty("color").about { priority_color(tk_priority.value) }
 
 def log = (tk_worklog.value ?: "") as String
-def entry = now.toString() + "  triáž: zaradené ako " + type_label(tk_type.value) +
+def entry = now.toString() + "  triage: classified as " + type_label(tk_type.value) +
             ", priorita " + (tk_priority.value as String)
 if (tk_priority_changed.value == true) {
-    entry = entry + " (zmenená, dôvod: " + ((tk_priority_reason.value ?: "") as String) + ")"
+    entry = entry + " (changed, reason: " + ((tk_priority_reason.value ?: "") as String) + ")"
 }
 change tk_worklog value { log ? log + "\n" + entry : entry }
 
@@ -1564,21 +1564,21 @@ change tk_worklog value { log ? log + "\n" + entry : entry }
 def mail = ((src_email.value ?: "") as String).trim()
 if (mail) {
     try {
-        def body = "Dobrý deň,\n\nvašu požiadavku sme prevzali.\n" +
+        def body = "Hello,\n\nwe have picked up your request.\n" +
                    "Zaradenie: " + type_label(tk_type.value) + "\n" +
                    "Priorita: " + (tk_priority.value as String) + "\n"
         if (tk_priority_changed.value == true) {
-            body = body + "Prioritu sme upravili. Dôvod: " +
+            body = body + "We adjusted the priority. Reason: " +
                    ((tk_priority_reason.value ?: "") as String) + "\n"
         }
-        body = body + "\nOzveme sa vám s ďalším postupom."
-        sendEmail([mail], "Požiadavka prevzatá", body)
+        body = body + "\nWe will get back to you with the next steps."
+        sendEmail([mail], "Request picked up", body)
     } catch (Exception e) {
         // Log v akcii nie je zarucene dostupny, takze zlyhanie zapiseme tam,
         // kde ho operator uvidi.
         change tk_worklog value {
             ((tk_worklog.value ?: "") as String) +
-            "\nPOZOR: notifikáciu o prevzatí sa nepodarilo poslať (" + e.message + ")"
+            "\nCAREFUL: the pick-up notification could not be sent (" + e.message + ")"
         }
     }
 }
@@ -1773,23 +1773,23 @@ def now = java.time.LocalDateTime.now()
 
 change tk_state value { "pending" }
 change sla_pause_from value { now }
-change sla_note value { "Čaká sa na doplnenie od zákazníka. Lehoty sa nepočítajú." }
+change sla_note value { "Waiting for the customer to add information. Deadlines are paused." }
 
 def log = (tk_worklog.value ?: "") as String
-def entry = now.toString() + "  čaká na zákazníka: " + ((tk_pending_reason.value ?: "") as String)
+def entry = now.toString() + "  waiting for the customer: " + ((tk_pending_reason.value ?: "") as String)
 change tk_worklog value { log ? log + "\n" + entry : entry }
 
 def mail = ((src_email.value ?: "") as String).trim()
 if (mail) {
     try {
-        sendEmail([mail], "Potrebujeme od vás doplnenie",
-            "Dobrý deň,\n\nk vašej požiadavke potrebujeme doplniť:\n\n" +
+        sendEmail([mail], "We need more information from you",
+            "Hello,\n\nfor your request we need the following:\n\n" +
             ((tk_pending_reason.value ?: "") as String) +
-            "\n\nKým nám odpoviete, riešenie je pozastavené.")
+            "\n\nUntil you reply, work on the request is paused.")
     } catch (Exception e) {
         change tk_worklog value {
             ((tk_worklog.value ?: "") as String) +
-            "\nPOZOR: výzvu na doplnenie sa nepodarilo poslať (" + e.message + ")"
+            "\nCAREFUL: the request for information could not be sent (" + e.message + ")"
         }
     }
 }
@@ -1884,16 +1884,16 @@ def now = java.time.LocalDateTime.now()
 // finish sa odtialto nezastavi - ale nech to nezostane neviditelne.
 int stillOpen = ((wi_open.value ?: 0) as Number).intValue()
 if (stillOpen > 0) {
-    def warn = now.toString() + "  POZOR: vyriešené, hoci " + stillOpen + " úloh je otvorených."
+    def warn = now.toString() + "  CAREFUL: resolved although " + stillOpen + " work items are still open."
     def wlog = (tk_worklog.value ?: "") as String
     change tk_worklog value { wlog ? wlog + "\n" + warn : warn }
 }
 
 change tk_state value { "resolved" }
-change sla_note value { "Vyriešené " + now.toString() + "." }
+change sla_note value { "Resolved " + now.toString() + "." }
 
 def log = (tk_worklog.value ?: "") as String
-def entry = now.toString() + "  vyriešené: " + ((tk_resolution.value ?: "") as String)
+def entry = now.toString() + "  resolved: " + ((tk_resolution.value ?: "") as String)
 change tk_worklog value { log ? log + "\n" + entry : entry }
 
 changeCaseProperty("color").about { "green" }
@@ -1901,14 +1901,14 @@ changeCaseProperty("color").about { "green" }
 def mail = ((src_email.value ?: "") as String).trim()
 if (mail) {
     try {
-        sendEmail([mail], "Požiadavka vyriešená: " + ((src_title.value ?: "") as String),
-            "Dobrý deň,\n\nvašu požiadavku sme vyriešili.\n\n" +
+        sendEmail([mail], "Request resolved: " + ((src_title.value ?: "") as String),
+            "Hello,\n\nwe have resolved your request.\n\n" +
             ((tk_resolution.value ?: "") as String) +
-            "\n\nAk problém pretrváva, odpovedzte na tento e-mail.")
+            "\n\nIf the problem persists, reply to this e-mail.")
     } catch (Exception e) {
         change tk_worklog value {
             ((tk_worklog.value ?: "") as String) +
-            "\nPOZOR: notifikáciu o vyriešení sa nepodarilo poslať (" + e.message + ")"
+            "\nCAREFUL: the resolution notification could not be sent (" + e.message + ")"
         }
     }
 }

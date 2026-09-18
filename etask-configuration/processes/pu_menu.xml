@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>pouzivatelia/pu_menu</id>
+	<id>admin/pouzivatelia/pu_menu</id>
 	<version>1.0.0</version>
 	<initials>PUM</initials>
 	<title name="net_title">Menu Používateľov</title>
@@ -45,12 +45,12 @@ def created = []
 def unchanged = []
 def failed = []
 
-def siet = "pouzivatelia/pu_pouzivatel"
+def siet = "admin/pouzivatelia/pu_pouzivatel"
 def vsetky = "processIdentifier:\"" + siet + "\""
 def stlpce = "meta-title" +
-        ",pouzivatelia/pu_pouzivatel-pu_stav_label" +
-        ",pouzivatelia/pu_pouzivatel-pu_email" +
-        ",pouzivatelia/pu_pouzivatel-pu_priezvisko"
+        ",admin/pouzivatelia/pu_pouzivatel-pu_stav_label" +
+        ",admin/pouzivatelia/pu_pouzivatel-pu_email" +
+        ",admin/pouzivatelia/pu_pouzivatel-pu_priezvisko"
 
 def views = [
         // 1. ZAKLADANIE - typ Task, zuzeny na jednu ulohu. Menu pozna len typy
@@ -62,6 +62,15 @@ def views = [
         [id: "pu_novy", name: i18n("Nový používateľ", ["en": "New user"]),
          type: "Task", icon: "person_add",
          query: "transitionId:\"t_pu_novy\"", nets: [], roles: [:], headers: ""],
+        // 1b. POZVANIE - druhy pult tej istej siete. Vlastna uloha, vlastne
+        //    miesto, takze vlastne zobrazenie; dopyt ide na `transitionId`
+        //    z toho isteho dovodu ako vyssie.
+        //    Toto je v tejto instancii PREDVOLENA cesta, ako ucet vznika
+        //    (`nae.server.auth.open-registration=false`) - zakladanie s heslom
+        //    zostava pre pripad, ze SMTP nie je k dispozicii.
+        [id: "pu_pozvanka", name: i18n("Pozvať používateľa", ["en": "Invite a user"]),
+         type: "Task", icon: "mail",
+         query: "transitionId:\"t_pu_pozvi\"", nets: [], roles: [:], headers: ""],
         // 2. ZOZNAM UCTOV - jeden pripad = jeden ucet.
         //    `nets` tu MUSI byt, inak sa nevykreslia stlpce z datovych poli
         //    (RUNBOOK 4). Vedlajsim ucinkom je tlacidlo "+", ktore vyrobi pripad
@@ -100,7 +109,7 @@ views.each { v ->
                 // uzly nove id, polozka visi na starom a priecinok je PRAZDNY -
                 // bez chyby a bez logu. `createOrUpdateMenuItem` to riesi, ale
                 // sem sa nedostane, lebo dopyt ani nazov sa nezmenili.
-                pripoj_do_uzla(existing, "pouzivatelia")
+                pripoj_do_uzla(existing, "admin/pouzivatelia")
                 unchanged << id
                 return
             }
@@ -114,7 +123,7 @@ views.each { v ->
         }
         def item = createOrUpdateMenuItem(
                 id,                 // menu_item_identifier
-                "pouzivatelia",     // URI cesta - MUSI sedet s uriNodes v processes.json
+                "admin/pouzivatelia",     // URI cesta - MUSI sedet s uriNodes v processes.json
                 v.type as String,
                 v.query as String,
                 v.icon as String,
@@ -130,9 +139,9 @@ views.each { v ->
     }
 }
 
-def summary = "Menu Používateľov – " + (created.size() + unchanged.size()) + "/" + views.size()
+def summary = "Users menu - " + (created.size() + unchanged.size()) + "/" + views.size()
 if (failed) {
-    summary = "CHYBA menu Používateľov – nepodarilo sa: " + failed.join(", ")
+    summary = "ERROR in Users menu - failed: " + failed.join(", ")
 }
 changeCaseProperty("title").about { summary }
 				]]></action>
