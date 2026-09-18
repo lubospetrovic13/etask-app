@@ -1,0 +1,280 @@
+// GENEROVANY SUBOR - needituj rucne.
+//
+// Prepis Netgrif Design System z Figmy (`Netgrif — Design System`).
+// Prepisuje sa nastrojom, nie rukou:
+//
+//   cd etask-configuration
+//   python3 tools/figmatokens.py .run/figma-tokens.json \
+//       -o ../etask-frontend-starter/src/styles/_n-tokens.scss
+//
+// Je to ZDROJOVA vrstva dizajnu, nie appkova. Nic tu nesmie zavisiet
+// od eTasku - vdaka tomu sa tento subor da presunut do
+// `@netgrif/components` bez zmeny. Appkove tokeny (`--app-*`) sa
+// na tieto len mapuju, v `_tokens.scss`.
+
+:root {
+  // --- Pismo -------------------------------------------------------
+  // Rodiny pisma
+  --n-font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --n-font-family-mono: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+
+  // Velkosti pisma (1000 v DS hodnotu nema)
+  --n-font-size-900: 64px;
+  --n-font-size-800: 56px;
+  --n-font-size-750: 48px;
+  --n-font-size-600: 40px;
+  --n-font-size-550: 32px;
+  --n-font-size-500: 28px;
+  --n-font-size-450: 24px;
+  --n-font-size-400: 20px;
+  --n-font-size-350: 18px;
+  --n-font-size-325: 16px;
+  --n-font-size-300: 14px;
+  --n-font-size-275: 12px;
+
+  // Vysky riadku
+  --n-font-line-height-300: 12;
+  --n-font-line-height-400: 16;
+  --n-font-line-height-500: 20;
+  --n-font-line-height-600: 24;
+  --n-font-line-height-700: 28;
+  --n-font-line-height-800: 32;
+  --n-font-line-height-1000: 40;
+  --n-font-line-height-1200: 48;
+  --n-font-line-height-1300: 56;
+  --n-font-line-height-1400: 64;
+  --n-font-line-height-1500: 72;
+  --n-font-line-height-1600: 80;
+
+  // Rezy
+  --n-font-weight-regular: 400;
+  --n-font-weight-medium: 500;
+  --n-font-weight-semibold: 600;
+  --n-font-weight-bold: 700;
+
+  // Prestrkanie
+  --n-font-letter-spacing-normal: 0px;
+  --n-font-letter-spacing-dense: -0.2;
+  --n-font-letter-spacing-denser: -0.3;
+  --n-font-letter-spacing-densest: -0.5;
+
+  // Odstupy
+  --n-space-0: 0px;
+  --n-space-2: 2px;
+  --n-space-4: 4px;
+  --n-space-6: 6px;
+  --n-space-8: 8px;
+  --n-space-10: 10px;
+  --n-space-12: 12px;
+  --n-space-16: 16px;
+  --n-space-20: 20px;
+  --n-space-24: 24px;
+  --n-space-28: 28px;
+  --n-space-32: 32px;
+  --n-space-40: 40px;
+  --n-space-48: 48px;
+  --n-space-64: 64px;
+  --n-space-80: 80px;
+  --n-space-96: 96px;
+  --n-space-128: 128px;
+
+  // Zaoblenia
+  --n-border-radius-2: 2px;
+  --n-border-radius-4: 4px;
+  --n-border-radius-6: 6px;
+  --n-border-radius-8: 8px;
+  --n-border-radius-10: 10px;
+  --n-border-radius-12: 12px;
+  --n-border-radius-16: 16px;
+  --n-border-radius-20: 20px;
+  --n-border-radius-24: 24px;
+  --n-border-radius-full: 9999px;
+
+  // --- Farebne rampy -----------------------------------------------
+  // Brand je vlastna; Neutral/Blue/Purple/Green/Orange/Red su
+  // Tailwind gray/blue/violet/emerald/orange/rose. Alpha* su
+  // prekryvove stupnice, hodnota je farba + priehladnost.
+  // Brand
+  --n-color-brand-50: #EAFDFE;
+  --n-color-brand-100: #D4FAFE;
+  --n-color-brand-200: #A3F5FE;
+  --n-color-brand-300: #62EAFC;
+  --n-color-brand-400: #32D3EE;
+  --n-color-brand-500: #00B5D4;
+  --n-color-brand-600: #0F91B2;
+  --n-color-brand-700: #18748F;
+  --n-color-brand-800: #0E5E76;
+  --n-color-brand-900: #114F65;
+  --n-color-brand-950: #0D3242;
+
+  // Neutral
+  --n-color-neutral-0: #FFFFFF;
+  --n-color-neutral-50: #F9FAFB;
+  --n-color-neutral-100: #F3F4F6;
+  --n-color-neutral-200: #E5E7EB;
+  --n-color-neutral-300: #D1D5DC;
+  --n-color-neutral-400: #99A1AF;
+  --n-color-neutral-500: #6A7282;
+  --n-color-neutral-600: #4B5666;
+  --n-color-neutral-700: #374050;
+  --n-color-neutral-800: #1F2938;
+  --n-color-neutral-900: #111826;
+  --n-color-neutral-950: #030713;
+
+  // Blue
+  --n-color-blue-50: #EFF6FF;
+  --n-color-blue-100: #DBEAFE;
+  --n-color-blue-200: #BFDBFE;
+  --n-color-blue-300: #93C5FD;
+  --n-color-blue-400: #60A5FA;
+  --n-color-blue-500: #3B82F6;
+  --n-color-blue-600: #2563EB;
+  --n-color-blue-700: #1D4ED8;
+  --n-color-blue-800: #1E40AF;
+  --n-color-blue-900: #1E3A8A;
+  --n-color-blue-950: #172554;
+
+  // Purple
+  --n-color-purple-50: #F5F3FF;
+  --n-color-purple-100: #EDE9FE;
+  --n-color-purple-200: #DDD6FE;
+  --n-color-purple-300: #C4B5FD;
+  --n-color-purple-400: #A78BFA;
+  --n-color-purple-500: #8B5CF6;
+  --n-color-purple-600: #7C3AED;
+  --n-color-purple-700: #6D28D9;
+  --n-color-purple-800: #5B21B6;
+  --n-color-purple-900: #4C1D95;
+  --n-color-purple-950: #2E1065;
+
+  // Green
+  --n-color-green-50: #ECFDF5;
+  --n-color-green-100: #D1FAE5;
+  --n-color-green-200: #A7F3D0;
+  --n-color-green-300: #6EE7B7;
+  --n-color-green-400: #34D399;
+  --n-color-green-500: #10B981;
+  --n-color-green-600: #059669;
+  --n-color-green-700: #047857;
+  --n-color-green-800: #065F46;
+  --n-color-green-900: #064E3B;
+  --n-color-green-950: #022C22;
+
+  // Orange
+  --n-color-orange-50: #FFF7ED;
+  --n-color-orange-100: #FFEDD5;
+  --n-color-orange-200: #FED7AA;
+  --n-color-orange-300: #FDBA74;
+  --n-color-orange-400: #FB923C;
+  --n-color-orange-500: #F97316;
+  --n-color-orange-600: #EA580C;
+  --n-color-orange-700: #C2410C;
+  --n-color-orange-800: #9A3412;
+  --n-color-orange-900: #7C2D12;
+  --n-color-orange-950: #431407;
+
+  // Red
+  --n-color-red-50: #FFF1F2;
+  --n-color-red-100: #FFE4E6;
+  --n-color-red-200: #FECDD3;
+  --n-color-red-300: #FDA4AF;
+  --n-color-red-400: #FB7185;
+  --n-color-red-500: #F43F5E;
+  --n-color-red-600: #E11D48;
+  --n-color-red-700: #BE123C;
+  --n-color-red-800: #9F1239;
+  --n-color-red-900: #881337;
+  --n-color-red-950: #4C0519;
+
+  // Alpha Black
+  --n-color-alpha-black-0: rgba(2, 6, 23, 0.00);
+  --n-color-alpha-black-2: rgba(2, 6, 23, 0.02);
+  --n-color-alpha-black-4: rgba(2, 6, 23, 0.04);
+  --n-color-alpha-black-6: rgba(2, 6, 23, 0.06);
+  --n-color-alpha-black-8: rgba(2, 6, 23, 0.08);
+  --n-color-alpha-black-10: rgba(2, 6, 23, 0.10);
+  --n-color-alpha-black-12: rgba(2, 6, 23, 0.12);
+  --n-color-alpha-black-16: rgba(2, 6, 23, 0.16);
+  --n-color-alpha-black-24: rgba(2, 6, 23, 0.24);
+  --n-color-alpha-black-40: rgba(2, 6, 23, 0.40);
+  --n-color-alpha-black-56: rgba(2, 6, 23, 0.56);
+  --n-color-alpha-black-64: rgba(2, 6, 23, 0.64);
+  --n-color-alpha-black-72: rgba(2, 6, 23, 0.72);
+  --n-color-alpha-black-80: rgba(2, 6, 23, 0.80);
+  --n-color-alpha-black-88: rgba(2, 6, 23, 0.88);
+
+  // Alpha White
+  --n-color-alpha-white-0: rgba(255, 255, 255, 0.00);
+  --n-color-alpha-white-2: rgba(255, 255, 255, 0.02);
+  --n-color-alpha-white-4: rgba(255, 255, 255, 0.04);
+  --n-color-alpha-white-6: rgba(255, 255, 255, 0.06);
+  --n-color-alpha-white-8: rgba(255, 255, 255, 0.08);
+  --n-color-alpha-white-10: rgba(255, 255, 255, 0.10);
+  --n-color-alpha-white-12: rgba(255, 255, 255, 0.12);
+  --n-color-alpha-white-16: rgba(255, 255, 255, 0.16);
+  --n-color-alpha-white-24: rgba(255, 255, 255, 0.24);
+  --n-color-alpha-white-40: rgba(255, 255, 255, 0.40);
+  --n-color-alpha-white-56: rgba(255, 255, 255, 0.56);
+  --n-color-alpha-white-64: rgba(255, 255, 255, 0.64);
+  --n-color-alpha-white-72: rgba(255, 255, 255, 0.72);
+  --n-color-alpha-white-80: rgba(255, 255, 255, 0.80);
+  --n-color-alpha-white-88: rgba(255, 255, 255, 0.88);
+
+  // --- Semanticka vrstva -------------------------------------------
+  // Odkazuje sa na primitiva vyssie - presne tak, ako je to
+  // napisane v DS.
+  --n-text-heading-3xl-font-family: var(--n-font-family-sans);
+  --n-text-heading-3xl-font-size: var(--n-font-size-600);
+  --n-text-heading-3xl-font-weight: var(--n-font-weight-medium);
+  --n-text-heading-3xl-font-letter-spacing: var(--n-font-letter-spacing-densest);
+  --n-text-heading-3xl-font-line-height: var(--n-font-line-height-1200);
+  --n-text-heading-2xl-font-family: var(--n-font-family-sans);
+  --n-text-heading-2xl-font-size: var(--n-font-size-550);
+  --n-text-heading-2xl-font-weight: var(--n-font-weight-medium);
+  --n-text-heading-2xl-font-letter-spacing: var(--n-font-letter-spacing-denser);
+  --n-text-heading-2xl-font-line-height: var(--n-font-line-height-1000);
+  --n-text-heading-xl-font-family: var(--n-font-family-sans);
+  --n-text-heading-xl-font-size: var(--n-font-size-450);
+  --n-text-heading-xl-font-weight: var(--n-font-weight-medium);
+  --n-text-heading-xl-font-letter-spacing: var(--n-font-letter-spacing-dense);
+  --n-text-heading-xl-font-line-height: var(--n-font-line-height-800);
+  --n-text-heading-lg-font-family: var(--n-font-family-sans);
+  --n-text-heading-lg-font-size: var(--n-font-size-400);
+  --n-text-heading-lg-font-weight: var(--n-font-weight-medium);
+  --n-text-heading-lg-font-letter-spacing: var(--n-font-letter-spacing-dense);
+  --n-text-heading-lg-font-line-height: var(--n-font-line-height-700);
+  --n-text-heading-md-font-family: var(--n-font-family-sans);
+  --n-text-heading-md-font-size: var(--n-font-size-350);
+  --n-text-heading-md-font-weight: var(--n-font-weight-medium);
+  --n-text-heading-md-font-letter-spacing: var(--n-font-letter-spacing-normal);
+  --n-text-heading-md-font-line-height: var(--n-font-line-height-600);
+  --n-text-heading-sm-font-family: var(--n-font-family-sans);
+  --n-text-heading-sm-font-size: var(--n-font-size-325);
+  --n-text-heading-sm-font-weight: var(--n-font-weight-medium);
+  --n-text-heading-sm-font-letter-spacing: var(--n-font-letter-spacing-normal);
+  --n-text-heading-sm-font-line-height: var(--n-font-line-height-500);
+  --n-text-heading-xs-font-family: var(--n-font-family-sans);
+  --n-text-heading-xs-font-size: var(--n-font-size-300);
+  --n-text-heading-xs-font-weight: var(--n-font-weight-medium);
+  --n-text-heading-xs-font-letter-spacing: var(--n-font-letter-spacing-normal);
+  --n-text-heading-xs-font-line-height: var(--n-font-line-height-500);
+  --n-text-heading-2xs-font-family: var(--n-font-family-sans);
+  --n-text-heading-2xs-font-size: var(--n-font-size-275);
+  --n-text-heading-2xs-font-weight: var(--n-font-weight-medium);
+  --n-text-heading-2xs-font-letter-spacing: var(--n-font-letter-spacing-normal);
+  --n-text-heading-2xs-font-line-height: var(--n-font-line-height-400);
+  --n-text-body-xs-font-family: var(--n-font-family-sans);
+  --n-text-body-lg-font-size: var(--n-font-size-350);
+  --n-text-body-font-weight-regular: var(--n-font-weight-regular);
+  --n-text-body-lg-font-letter-spacing: var(--n-font-letter-spacing-normal);
+  --n-text-body-lg-font-line-height: var(--n-font-line-height-600);
+  --n-text-body-md-font-size: var(--n-font-size-325);
+  --n-text-body-md-font-letter-spacing: var(--n-font-letter-spacing-normal);
+  --n-text-body-md-font-line-height: var(--n-font-line-height-500);
+  --n-text-body-sm-font-size: var(--n-font-size-300);
+  --n-text-body-sm-font-letter-spacing: var(--n-font-letter-spacing-normal);
+  --n-text-body-sm-font-line-height: var(--n-font-line-height-500);
+  --n-text-body-xs-font-size: var(--n-font-size-275);
+  --n-text-body-xs-font-letter-spacing: var(--n-font-letter-spacing-normal);
+  --n-text-body-xs-font-line-height: var(--n-font-line-height-400);
+}

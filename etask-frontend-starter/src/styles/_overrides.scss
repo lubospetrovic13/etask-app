@@ -503,3 +503,27 @@ body {
     background-color: var(--app-scrollbar-thumb);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Vyplnene primarne tlacidlo je JASNY BRAND, nie primarna farba temy.
+//
+// V navrhu je akcne tlacidlo ("+ Create", "Save") tyrkysove `brand-500`
+// (#00B5D4) s tmavym textom. Ako farba TEMY sa ten odtien pouzit nedal - na
+// bielej meria 2.18:1, takze vsade, kde Material kresli primarnu ako text
+// (odkaz, aktivny popisok, hint), by zmizla. Preto je primarna `brand-700`
+// a jasny tyrkys sa vracia sem, na jedine miesto, kde ho navrh naozaj chce:
+// na VYPLN tlacidla, kde je pod nim tmavy text (9.4:1).
+//
+// Plati v oboch rezimoch - v navrhu je to tlacidlo rovnake na svetlom aj
+// tmavom pozadi, je to znacka, nie plocha.
+.mat-flat-button.mat-primary,
+.mat-raised-button.mat-primary,
+.mat-fab.mat-primary,
+.mat-mini-fab.mat-primary {
+  background-color: var(--n-color-brand-500);
+  color: rgba(0, 0, 0, 0.87);
+
+  .mat-icon {
+    color: rgba(0, 0, 0, 0.87);
+  }
+}

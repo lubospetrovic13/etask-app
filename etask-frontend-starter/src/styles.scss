@@ -1,7 +1,9 @@
 // Global stylesheet. Import order matters:
+//   n-tokens      -> --n-* prepis Netgrif Design System (generovane z Figmy)
 //   tokens        -> --app-* custom properties for light and dark
 //   custom-themes -> mat.core(), Material + netgrif themes for both modes
 //   overrides     -> library fixes, must come last to win on source order
+@import 'styles/n-tokens';
 @import 'styles/tokens';
 @import 'styles/themes/custom-themes';
 @import 'styles/overrides';
@@ -13,7 +15,7 @@ body {
 
 body {
   margin: 0;
-  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  font-family: var(--n-font-family-sans);
   background-color: var(--app-bg);
   color: var(--app-fg);
 }
