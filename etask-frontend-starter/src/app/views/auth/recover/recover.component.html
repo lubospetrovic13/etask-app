@@ -1,0 +1,49 @@
+<nc-authentication-overlay>
+  <div class="auth-language" fxLayout="row" fxLayoutAlign="end center">
+    <app-etask-language-selector [language]="currentLanguage"></app-etask-language-selector>
+  </div>
+
+  <div class="fill-all-space" fxLayout="row" fxLayoutAlign="center center">
+    <div class="auth-card" fxLayout="column" fxLayoutAlign="start stretch" fxLayoutGap="16px">
+
+      <div class="auth-title">{{ 'auth.recover.title' | translate }}</div>
+
+      <ng-container *ngIf="tokenMissing; else hasToken">
+        <div class="auth-message">{{ 'auth.recover.noToken' | translate }}</div>
+        <button mat-raised-button color="primary" (click)="toReset()">
+          {{ 'auth.reset.title' | translate }}
+        </button>
+        <div class="auth-link">
+          <a href="javascript:void(0)" (click)="toLogin()">{{ 'auth.backToLogin' | translate }}</a>
+        </div>
+      </ng-container>
+
+      <ng-template #hasToken>
+        <!--
+            Vyprsany odkaz je tu castejsi nez pri pozvanke: clovek si o obnovu
+            pozia a mail otvori o tyzden. Preto sa z tejto hlasky da rovno
+            poziadat o novy, nie len vratit na prihlasenie.
+        -->
+        <ng-container *ngIf="tokenInvalid; else form">
+          <div class="auth-message">{{ 'auth.recover.invalidToken' | translate }}</div>
+          <button mat-raised-button color="primary" (click)="toReset()">
+            {{ 'auth.recover.askAgain' | translate }}
+          </button>
+          <div class="auth-link">
+            <a href="javascript:void(0)" (click)="toLogin()">{{ 'auth.backToLogin' | translate }}</a>
+          </div>
+        </ng-container>
+
+        <ng-template #form>
+          <div class="auth-message">{{ 'auth.recover.intro' | translate }}</div>
+          <nc-forgotten-password-form *ngIf="!done"
+                                      [token]="token"
+                                      [displayLegalNotice]="false"
+                                      (register)="onRecover($event)"
+                                      (invalidToken)="onInvalidToken()"></nc-forgotten-password-form>
+        </ng-template>
+      </ng-template>
+
+    </div>
+  </div>
+</nc-authentication-overlay>

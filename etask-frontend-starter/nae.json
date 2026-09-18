@@ -9,7 +9,10 @@
       "endpoints": {
         "login": "/auth/login",
         "logout": "/auth/logout",
-        "signup": "/auth/signup"
+        "signup": "/auth/signup",
+        "reset": "/auth/reset",
+        "recover": "/auth/recover",
+        "verify": "/auth/token/verify"
       },
       "sessionBearer": "X-Auth-Token"
     },
@@ -147,6 +150,39 @@
         "path": "login"
       }
     },
+    "reset-password": {
+      "component": {
+        "class": "ResetPasswordComponent",
+        "from": "./views/auth/reset-password/reset-password.component"
+      },
+      "access": "public",
+      "navigation": false,
+      "routing": {
+        "path": "reset"
+      }
+    },
+    "recover": {
+      "component": {
+        "class": "RecoverComponent",
+        "from": "./views/auth/recover/recover.component"
+      },
+      "access": "public",
+      "navigation": false,
+      "routing": {
+        "path": "recover"
+      }
+    },
+    "recover-token": {
+      "component": {
+        "class": "RecoverComponent",
+        "from": "./views/auth/recover/recover.component"
+      },
+      "access": "public",
+      "navigation": false,
+      "routing": {
+        "path": "recover/:token"
+      }
+    },
     "dashboard": {
       "component": {
         "class": "DashboardComponent",
@@ -177,6 +213,17 @@
         "path": "portal"
       },
       "children": {
+        "folder": {
+          "component": {
+            "class": "FolderViewComponent",
+            "from": "./views/side-nav/folder/folder-view.component"
+          },
+          "access": "private",
+          "navigation": false,
+          "routing": {
+            "path": "folder"
+          }
+        },
         "group-navigation-double-drawer-outlet": {
           "layout": {
             "name": "groupNavigation"
