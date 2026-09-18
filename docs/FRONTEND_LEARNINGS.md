@@ -271,6 +271,61 @@ Inline štýl potom nemá čo prebiť a na úzkom displeji sa karta stále zmen�
 
 *Za behu — obrazovka obnovy hesla.*
 
+### B8. `UriService` načíta koreň raz za beh a po prihlásení iného človeka ho nezmení
+
+`UriService` volá `loadRoot()` vo svojom konštruktore, teda **raz za beh
+aplikácie**, a je `providedIn: 'root'`, takže ju odhlásenie nezhodí. Po
+prihlásení iného účtu zostane v pamäti strom PREDOŠLÉHO človeka.
+
+Zasiahne to naraz dve obrazovky a ani jedna to nepovie:
+
+  * dashboard číta `_uri.root.children`,
+  * bočné menu visí na `activeNode`, ktorý ostal z minulého prihlásenia.
+
+Nevyzerá to ako zaseknutý komponent, ale ako **zle nastavené práva**. Uzly
+filtruje server podľa oprávnení, takže kto sa prihlási po niekom s menej
+právami, vidí jeho prázdnejšie menu a naopak. Nič sa neohlási, zoznam sa
+načítal úspešne, len pre iný účet. Pomôže až tvrdý refresh, ktorý zhodí
+celý stav služieb.
+
+Merateľne, ten istý prehliadač a to isté okno:
+
+```
+prihlásený viewer (bez rolí)   koreň: ['it']
+odhlásiť, prihlásiť admina     koreň: ['it']          ← strom viewera
+F5                             koreň: ['admin', 'financie', 'general',
+                                       'hr', 'it', 'onboarding']
+```
+
+Oprava patrí do `UriService`, nie do komponentov: keď sa koreň načíta
+znova, dashboard aj menu sa opravia naraz. V podtriede stačí počúvať
+`UserService.user$`. Tri veci pri tom:
+
+  * `user$` je `ReplaySubject(1)`, takže prvou hodnotou je už prihlásený
+    človek. Tú treba preskočiť, inak sa koreň načíta dvakrát hneď na
+    začiatku.
+  * `activeNode` sa prepína **až po** načítaní, a vždy na nový koreň
+    (`reset()`), nikdy na `undefined`. Zhodiť ho na `undefined` vyzerá
+    lákavo, lebo `loadRoot()` nastaví koreň ako aktívny len keď žiadny
+    nie je — ale odberatelia `activeNode$` s prázdnou hodnotou nepočítajú
+    a padne to na `Cannot read properties of undefined (reading 'parentId')`.
+    Tá výnimka zhodí celý blok, takže sa ani nenačíta koreň, a jediné, čo
+    z toho vidno, je že sa **nič nezmenilo** — teda presne ten pôvodný
+    príznak. Hľadá sa to potom druhýkrát a na nesprávnom mieste.
+  * `loadRoot()` je deklarovaný ako `private`. Je to len kontrola
+    prekladača, metóda na prototype je, takže sa volá cez pretyp na
+    `{ loadRoot(): void }` - typovaný, nie `any`.
+
+Kto číta koreň do vlastného poľa, musí ho stavať odznova (`this.nodes = []`),
+inak sa pri druhom načítaní položky zdvoja.
+
+Čo to NERIEŠI: zmenu, ktorú niekomu spraví niekto iný, kým má appku
+otvorenú. Knižnica nemá push kanál (ani WebSocket, ani SSE), takže cudzia
+session sa o novom prípade dozvie až keď si znova načíta zoznam. Pri zmene
+rolí nestačí ani refresh, tam je stará samotná session (ENGINE_ISSUES E25).
+
+*Za behu.*
+
 ---
 
 ## C. Material 13 je pre-MDC

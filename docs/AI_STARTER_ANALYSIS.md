@@ -673,3 +673,170 @@ Zovšeobecnenie, ktoré si trúfam spraviť z dvoch priebehov:
 * **Za každú opravu patrí záznam tam, kde ju niekto nabudúce hľadá.** Toto vlákno
   pridalo `ENGINE_ISSUES` E21, `RUNBOOK` 14, položky do cheatsheetu a opravu
   generátora. Bez toho by sa tá istá práca spravila znova.
+
+## 8. Tretí priebeh: čo ukázalo nasadenie na skutočných ľudí
+
+Tretie kolo tým istým harnessom. Vzniklo pri ňom: prepísaný **Onboarding**
+(z troch schvaľovacích kôl na jedno), appka **Pracovné cesty** (tri siete plus
+menu), **redesign portálu** podľa dizajn systému z Figmy, **obnova hesla**
+end-to-end, **verejný formulár** s označením procesov, ktoré ho majú, a
+**priečinkové zobrazenie**. V inštancii je 33 identifikátorov sietí, 51 verzií,
+81 účtov a 485 prípadov.
+
+Zaujímavé opäť nie sú tie funkcie. Zaujímavé je, že **každá jedna chyba tohto
+kola sa prejavila ako niečo iné, než čím bola** — a tri z nich by žiadna
+statická kontrola nenašla, lebo nešlo o kód, ale o stav.
+
+### 8.1 Findings
+
+| # | príznak, ktorý videl človek | skutočná príčina | zapísané v |
+|---|---|---|---|
+| 1 | „obnova hesla sa točí, mail nechodí" | chýbajúci endpoint v `nae.json`; knižnica vyhodí výnimku **pred** odoslaním | FRONTEND B6 |
+| 2 | „nemám task môjho vozidla" | proces žiadal doménovú rolu, ktorú nemalo 25 z 27 účtov | PETRIFLOW B28 |
+| 3 | „po prihlásení iného vidím cudzie menu" | `UriService` načíta koreň raz za beh aplikácie | FRONTEND B8 |
+| 4 | „pridelil som rolu a nefunguje to ani po refreshi" | oprávnenia sa počítajú zo session, `/user/me` už novú rolu hlási | ENGINE E25 |
+| 5 | „karta je cez celú šírku okna" | `fxLayoutGap` pridá inline `max-width` a prebije šírku zo štýlu | FRONTEND B7 |
+| 6 | nikto to nevidel | appka Pracovné cesty nebola v manifeste vôbec | 8.3 nižšie |
+
+### 8.2 Keď sa nestane nič, chyba je pred requestom
+
+Obnova hesla mala štyri príznaky naraz: v prehliadači **žiadny request**,
+v logu backendu **žiadny záznam**, v Mailpite **žiadny mail**, na obrazovke
+**večne točiaci spinner**. Tri zo štyroch ukazujú na backend a hľadal som ho
+tam: SMTP konfiguráciu, mailové šablóny, stav účtu v Mongu.
+
+Príčina bola jeden chýbajúci riadok v konfigurácii frontendu. `SignUpService`
+si adresu skladá v konštruktore a pri chýbajúcom kľúči **vyhodí výnimku
+synchrónne**, ešte pred vytvorením Observable. Komponent zapne spinner, zavolá
+metódu a vypína ho až v `subscribe`, ktoré nikdy nevznikne.
+
+Diagnostika, ktorá to rozhodne za desať sekúnd a ktorú som mal spraviť ako
+prvú:
+
+```bash
+curl -s -X POST "http://localhost:8080/api/auth/reset" -H "Content-Type: text/plain" -d 'niekto@example.com'
+```
+
+**Keď `curl` mail pošle a appka nie, problém je pred requestom, nie za ním.**
+Zovšeobecnene: prázdna množina príznakov na strane servera nie je dôkaz
+o serveri, je to dôkaz, že sa k nemu nič nedostalo.
+
+### 8.3 Manifest je jediné miesto, kde je napísané, čo je nasadené, a nič ho neoveruje
+
+Pri hľadaní chýbajúceho vozidla sa ukázalo, že appka **Pracovné cesty**, ktorú
+inštancia bežne používa (štyri siete, 13 prípadov, položky v menu), **nebola
+v `processes.json` vôbec**. Ani v `import`, ani v `bootstrapCase`, ani
+v `uriNodes`. Do enginu sa kedysi dostala ručným importom a odvtedy tam žila.
+
+Na čistej databáze by neexistovala. Nič to nehlásilo, lebo bežiaca inštancia ju
+má a všetky kontroly bežia proti nej alebo proti súborom v `processes/`.
+
+Je to ten istý tvar chyby ako v kapitole 7.1, len z opačnej strany: tam bežiaca
+inštancia **maskovala** chybu poradia, tu **maskovala** chýbajúci záznam
+o nasadení. Spoločné majú to, že stav inštancie je bohatší než to, čo je
+zapísané.
+
+Jediné upozornenie, ktoré na to ukazovalo, prišlo z `pflint`:
+
+```
+pc_menu.xml:138: WARNING [menu-uri-unknown] createOrUpdateMenuItem:
+  URI cesta 'hr/cesty' nie je medzi `uriNodes` v processes.json
+```
+
+Nedalo sa z neho prečítať, že chýba celá appka. Hovorilo o jednom uzle.
+
+**Návrh, ktorý z toho plynie:** `pfsync` porovnáva XML súbory s tým, čo drží
+engine. Nech porovnáva aj **zoznam identifikátorov v engine so zoznamom
+v manifeste** a hlási obe strany rozdielu:
+
+* v engine a nie v manifeste → na čistej databáze appka zanikne,
+* v manifeste a nie v engine → `up.sh` ju naimportuje, možno neúmyselne.
+
+Je to niekoľko riadkov v nástroji, ktorý oba zoznamy už má.
+
+### 8.4 Oprávnenia „pre všetkých" sa doménovou rolou nedajú spraviť
+
+Vyúčtovanie pracovnej cesty podáva ktokoľvek. Sieť to mala podmienené rolou
+`zamestnanec`, čo znie správne, a znamená to prideliť tú rolu **každému
+jednému účtu v inštancii**. Pri prvom kole ľudí to nikto nespraví: 25 z 27
+účtov ju nemalo.
+
+Prejav bol taký, že appka „nič nerobí". Položka menu je, obrazovka prázdna,
+tlačidlo nezaloží nič a nikde sa nepovie prečo.
+
+Na proces, ktorý je z definície pre všetkých, patrí systémová rola `default`.
+Má ju každý prihlásený, nedeklaruje sa a `pflint` ju pozná. S jednou výhradou,
+ktorá sa ľahko prehliadne: `default` dostáva **iba `create`**. Keby dostal aj
+`view`, videl by každý obsah osobných kariet všetkých kolegov. Vidieť ju má
+vlastník, a to je `userRef`, nie rola.
+
+### 8.5 Stav, ktorý prežije refresh
+
+Dve chyby tohto kola mali spoločné, že „skús to znova načítať" na ne nezaberá,
+a pritom je to prvá vec, ktorú človek spraví.
+
+`UriService` drží koreň stromu v službe, ktorá prežije odhlásenie, takže po
+prihlásení iného účtu svieti v menu strom predošlého človeka. To refresh
+vyrieši, lebo zhodí celý stav služieb, a práve preto sa to ťažko hlási:
+„mne to po refreshi funguje".
+
+Zmena rolí je horšia. Oprávnenia sa vyhodnocujú proti `stringId` rolí uloženým
+v session, kým `/user/me` číta z databázy. Stará session teda **novú rolu
+hlási a zároveň na ňu vracia 403**:
+
+```
+POST /api/user/{id}/role/assign   (rola agent)
+GET  /api/user/me        stará session -> ['agent']    nová session -> ['agent']
+POST /api/workflow/case  stará session -> 403          nová session -> 200
+```
+
+Používateľ vidí stav, ktorý pre neho neplatí, a odpoveď 403 nemá s čím spojiť.
+Refresh nepomôže, lebo stará nie je stránka, ale session.
+
+Pre appku z toho plynie prevádzkové pravidlo, nie oprava: **kto prideľuje role,
+musí človeku povedať, že sa má znova prihlásiť.** Pre platformu je to zadanie:
+po zmene rolí zneplatniť sessiony toho účtu.
+
+### 8.6 Čo zabránilo zbytočnej práci
+
+Dvakrát v tomto kole bolo najlacnejšie neurobiť nič a najprv zmerať.
+
+**Prvý raz** pri viackrokovom verejnom formulári. Návrh bol rozdeliť sieť na
+dve, lebo „vnútri formulára nenastane reload". Namiesto prepisovania siete som
+ten istý formulár otvoril na druhej route a fungoval. Chyba nebola v sieti, ale
+v tom, na akej obrazovke visela. Rozdelenie siete by bolo prepísalo model
+a chybu nechalo tam, kde bola.
+
+**Druhý raz** pri dvoch pokusoch rozbehať ten formulár na pôvodnej route. Ani
+jeden nefungoval a obidva som **vrátil**, namiesto aby som ich nechal v kóde
+ako „možno to niečomu pomôže". Kód, o ktorom sa nedá povedať, čo rieši, je
+drahší než jeho absencia: pri ďalšej chybe sa najprv podozrieva on.
+
+### 8.7 Dizajn systém nie je paleta
+
+Redesign portálu podľa Figma súboru ukázal vec, ktorú som nečakal: **dizajn
+systém si v deviatich miestach odporoval sám**. Krok 700 označený ako 600
+v piatich farebných rampách, štyri posunuté hodnoty rozostupov.
+
+Nástroj, ktorý tokeny ťahá z exportu, preto nesmie ticho vybrať jednu z dvoch
+hodnôt. `figmatokens.py --kontrola` rozpory **vypíše** a rozhodnutie nechá na
+človeka. Ticho vybrať znamená preniesť chybu dizajnu do kódu a stratiť
+informáciu, že tam bola.
+
+Druhá vec je knižnica: `navigation-theme` používa tóny **50 a 100** na ľavý
+rail, takže farebný odtieň v nich zafarbí celé menu. V dizajn systéme sú to
+„najsvetlejšie odtiene značky", v appke je to pozadie navigácie, a tieto dve
+veci sa nedajú splniť naraz.
+
+### 8.8 Zhrnutie: kde je harness silný a kde stále nie
+
+| | stav |
+|---|---|
+| písanie sietí | spoľahlivé. 26 sietí, `pflint`/`pfgroovy`/`pfi18n`/`pfview` zelené, chyby sú vzácne a rýchlo viditeľné |
+| akceptačné testy | 8 sád. Napísať test appky trvá menej než postaviť appku |
+| **súlad repozitára s nasadením** | **najslabšie miesto.** Manifest nikto neoveruje proti enginu a rozdiel sa prejaví až na čistej databáze |
+| chyby v knižnici frontendu | nájditeľné, ale draho. Minifikovaný kód, `private` v deklaráciách, stav v službách `providedIn: 'root'` |
+| chyby na hranici session a databázy | najdrahšie. Prejavia sa ako „appka klame" a statická kontrola o nich nemá ako vedieť |
+
+Z toho plynie jediná konkrétna úloha do nástrojov: **porovnávať manifest
+s enginom** (8.3). Zvyšok sú pravidlá pre prácu, nie kód.

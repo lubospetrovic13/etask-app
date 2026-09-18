@@ -727,6 +727,61 @@ payload["src_started"] = ["value": (req_started.value as java.time.LocalDateTime
 
 **Oprava.** Zaregistrovať `JavaTimeModule` do toho `ObjectMapper`-a.
 
+## E25. Po zmene rolí vracia stará session 403, hoci `/user/me` novú rolu už hlási
+
+**Príznak.** Používateľovi sa pridelí rola. On si stránku obnoví, vidí sa
+ako držiteľ tej roly, a každá akcia, ktorá ju vyžaduje, mu vráti **403**.
+Pomôže až odhlásenie a prihlásenie.
+
+**Meranie.** Rovnaký účet, dva tokeny: jeden získaný pred pridelením roly,
+druhý po ňom.
+
+```
+POST /api/user/{id}/role/assign   (rola agent)
+
+GET  /api/user/me       stará session → role: ['agent']
+GET  /api/user/me       nová session  → role: ['agent']
+
+POST /api/workflow/case stará session → 403
+POST /api/workflow/case nová session  → 200
+```
+
+**Prečo to bolí viac, než by muselo.** Keby stará session rolu nehlásila,
+bolo by z čoho pochopiť, čo sa deje. Ona ju ale hlási, lebo `/user/me` číta
+z databázy, kým oprávnenia sa vyhodnocujú proti `stringId` rolí uloženým
+v session. Používateľ teda vidí stav, ktorý pre neho neplatí, a odpoveď
+403 nemá s čím spojiť.
+
+**Dôsledok pre appky.** Obnovenie stránky nestačí a žiadne množstvo
+načítavania na frontende to nevyrieši — stará je session, nie stránka.
+Kto prideľuje role, musí človeku povedať, že sa má znova prihlásiť.
+
+**Oprava.** Po zmene rolí zneplatniť sessiony toho účtu, alebo oprávnenia
+vyhodnocovať proti aktuálnemu stavu účtu namiesto kópie v session.
+
+## E26. `role/assign` role NAHRADÍ, vrátane systémovej `default`
+
+**Príznak.** Po pridelení jednej roly cez API má účet práve tú jednu rolu.
+Systémová `default`, ktorú má mať každý prihlásený, je preč — a s ňou
+všetko, čo na nej visí.
+
+**Meranie.**
+
+```
+pred:  processRoles = [default]
+POST /api/user/{id}/role/assign  ["<stringId roly agent>"]   → 200
+po:    processRoles = [agent]
+```
+
+**Prečo to prekvapí.** Endpoint sa volá `assign` a knižnica ho popisuje ako
+„Assign role to the user", takže sa od neho čaká pridanie. Je to zápis
+celej množiny. Telo je navyše holé pole reťazcov — `{"roleIds": [...]}`
+aj `{"roles": [...]}` vrátia **400**, čo pri hľadaní správneho tvaru vyzerá
+ako chyba v dátach, nie v obale.
+
+**Obídenie.** Posielať vždy celú cieľovú množinu vrátane `default`, alebo
+role prideľovať cez `setProcessRole` v akcii, kde sa dopĺňa po jednej.
+
 ## Čo s tým
 
 Najviac stojí **E1** — znemožňuje celú jednu operáciu — a **E2**, ktoré robí
