@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>uver/uv_ziadost</id>
+	<id>financie/uver/uv_ziadost</id>
 	<version>1.0.0</version>
 	<initials>UVR</initials>
 	<title name="net_title">Žiadosť o úver</title>
@@ -13,6 +13,29 @@
 	<i18n locale="en">
 		<i18nString name="net_title">Loan application</i18nString>
 		<i18nString name="referent_title">Loan officer</i18nString>
+		<i18nString name="riaditel_title">Director</i18nString>
+		<i18nString name="div_vypocet_init">What the application works out to</i18nString>
+		<i18nString name="div_riaditel_init">Director's decision</i18nString>
+		<i18nString name="doba_splacania_title">Repayment period (months)</i18nString>
+		<i18nString name="doba_splacania_desc">From 12 to 360 months. The instalment - and with it the DTI - depends on it.</i18nString>
+		<i18nString name="urok_sadzba_title">Interest rate (% p.a.)</i18nString>
+		<i18nString name="urok_sadzba_desc">Derived from the credit score. Not editable by hand.</i18nString>
+		<i18nString name="splatka_title">Monthly instalment (EUR)</i18nString>
+		<i18nString name="dti_title">DTI - instalment to income (%)</i18nString>
+		<i18nString name="dti_desc">How much of the monthly income the instalment takes. This is what the decision is made on.</i18nString>
+		<i18nString name="dti_pasmo_title">DTI band</i18nString>
+		<i18nString name="dti_pasmo_opt_ok">Up to 30 % - fine</i18nString>
+		<i18nString name="dti_pasmo_opt_hranicne">30-45 % - needs review</i18nString>
+		<i18nString name="dti_pasmo_opt_vysoke">Over 45 % - unaffordable</i18nString>
+		<i18nString name="vypocet_title">How it was worked out</i18nString>
+		<i18nString name="stav_label_opt_u_riaditela">With the director</i18nString>
+		<i18nString name="rozhodnutie_opt_riaditel">Approve, but the director signs off</i18nString>
+		<i18nString name="rozhodnutie_referenta_opt_riaditel">Approve and send to the director</i18nString>
+		<i18nString name="komentar_riaditela_title">Director's comment</i18nString>
+		<i18nString name="rozhodnutie_riaditela_title">Director's decision</i18nString>
+		<i18nString name="rozhodnutie_riaditela_opt_schvalit">Approve</i18nString>
+		<i18nString name="rozhodnutie_riaditela_opt_zamietnut">Reject</i18nString>
+		<i18nString name="t_riaditel_label">Director approval</i18nString>
 		<i18nString name="system_title">System</i18nString>
 		<i18nString name="div_zadanie_init">Application details</i18nString>
 		<i18nString name="div_manualne_init">Manual review</i18nString>
@@ -50,7 +73,18 @@
 	</i18n>
 	<icon>account_balance</icon>
 	<defaultRole>true</defaultRole>
-	<anonymousRole>false</anonymousRole>
+	<!--
+		ZIADOST SA PODAVA VEREJNE. Bez prihlasenia, z formulara, ktory vidi
+		ktokolvek s adresou - preto `anonymousRole` a `roleRef anonymous`
+		nizsie. Na verejny formular treba tri veci naraz (RUNBOOK 8) a
+		chybajuca ktorakolvek sa prejavi ako 401 alebo prazdna obrazovka,
+		nie ako zrozumitelna chyba:
+		  1. JWT podpisovy kluc (`tools/bootstrap.sh`),
+		  2. `anonymousRole` tu,
+		  3. `create` pre rolu `anonymous` na urovni PROCESU - zakladanie casu
+		     je zvlast pravo a `perform` na prechode ho nenahradi.
+	-->
+	<anonymousRole>true</anonymousRole>
 	<transitionRole>false</transitionRole>
 	<!--
 		Žiadosť o úver: entita (RUNBOOK 7), nie úkon - jeden case = jedna
@@ -80,7 +114,7 @@ stav_label: f.stav_label, ziadatel: f.ziadatel;
 
 change stav_label value { "rozpisane" }
 change ziadatel value { [loggedUser().id] }
-changeCaseProperty("title").about { "Nová žiadosť o úver" }
+changeCaseProperty("title").about { "New loan application" }
 changeCaseProperty("color").about { "grey" }
 				]]></action>
 			</actions>
@@ -108,7 +142,20 @@ changeCaseProperty("color").about { "grey" }
 		</caseLogic>
 	</roleRef>
 	<roleRef>
+		<id>anonymous</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
 		<id>referent</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>riaditel</id>
 		<caseLogic>
 			<view>true</view>
 		</caseLogic>
@@ -128,6 +175,10 @@ changeCaseProperty("color").about { "grey" }
 	<role>
 		<id>referent</id>
 		<title name="referent_title">Úverový referent</title>
+	</role>
+	<role>
+		<id>riaditel</id>
+		<title name="riaditel_title">Riaditeľ</title>
 	</role>
 	<role>
 		<id>system</id>
@@ -168,6 +219,51 @@ changeCaseProperty("color").about { "grey" }
 		<title name="skore_title">Kreditné skóre (300-900)</title>
 		<desc name="skore_desc">Celé číslo od 300 do 900.</desc>
 	</data>
+	<data type="number">
+		<id>doba_splacania</id>
+		<title name="doba_splacania_title">Doba splácania (mesiacov)</title>
+		<desc name="doba_splacania_desc">Od 12 do 360 mesiacov. Závisí od nej splátka, a teda aj DTI.</desc>
+		<init>60</init>
+	</data>
+	<!--
+		VYSLEDKY KALKULACKY. Pocita ich `prepocet(...)` a prepisuje pri kazdej
+		zmene vstupu, takze ziadatel vidi splatku aj DTI hned, este pred
+		podanim. `editable` nie su zamerne - rucne prepisanie by znamenalo, ze
+		rozhodnutie stoji na cisle, ktore nikto nevyratal.
+	-->
+	<data type="number">
+		<id>urok_sadzba</id>
+		<title name="urok_sadzba_title">Úroková sadzba (% p. a.)</title>
+		<desc name="urok_sadzba_desc">Odvodená od kreditného skóre. Ručne sa neupravuje.</desc>
+	</data>
+	<data type="number">
+		<id>splatka</id>
+		<title name="splatka_title">Mesačná splátka (EUR)</title>
+		<component>
+			<name>currency</name>
+		</component>
+	</data>
+	<data type="number" immediate="true">
+		<id>dti</id>
+		<title name="dti_title">DTI — splátka k príjmu (%)</title>
+		<desc name="dti_desc">Akú časť mesačného príjmu zoberie splátka. Práve na tomto stojí rozhodnutie.</desc>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>dti_pasmo</id>
+		<title name="dti_pasmo_title">Pásmo DTI</title>
+		<options>
+			<option key="ok" name="dti_pasmo_opt_ok">do 30 % — v poriadku</option>
+			<option key="hranicne" name="dti_pasmo_opt_hranicne">30–45 % — na posúdenie</option>
+			<option key="vysoke" name="dti_pasmo_opt_vysoke">nad 45 % — neunesie</option>
+		</options>
+	</data>
+	<data type="text">
+		<id>vypocet</id>
+		<title name="vypocet_title">Ako sa to vyrátalo</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
 	<data type="text">
 		<id>cislo_ziadosti</id>
 		<title name="cislo_ziadosti_title">Číslo žiadosti</title>
@@ -193,6 +289,7 @@ changeCaseProperty("color").about { "grey" }
 			<option key="rozpisane" name="stav_label_opt_rozpisane">Rozpísaná</option>
 			<option key="vyhodnocovanie" name="stav_label_opt_vyhodnocovanie">Vyhodnocuje sa</option>
 			<option key="na_preskumani" name="stav_label_opt_na_preskumani">Na manuálnom posúdení</option>
+			<option key="u_riaditela" name="stav_label_opt_u_riaditela">U riaditeľa</option>
 			<option key="schvalena" name="stav_label_opt_schvalena">Schválená</option>
 			<option key="zamietnuta" name="stav_label_opt_zamietnuta">Zamietnutá</option>
 		</options>
@@ -203,12 +300,18 @@ changeCaseProperty("color").about { "grey" }
 		<desc name="rozhodnutie_desc">Nastavuje ho pravidlo bodovania. Ručne sa neupravuje.</desc>
 		<options>
 			<option key="schvalit" name="rozhodnutie_opt_schvalit">Schváliť</option>
+			<option key="riaditel" name="rozhodnutie_opt_riaditel">Schváliť, ale podpisuje riaditeľ</option>
 			<option key="preskumat" name="rozhodnutie_opt_preskumat">Poslať na manuálne posúdenie</option>
 			<option key="zamietnut" name="rozhodnutie_opt_zamietnut">Zamietnuť</option>
 		</options>
 	</data>
 	<data type="number">
 		<id>go_schvalit</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>go_riaditel</id>
 		<title/>
 		<init>0</init>
 	</data>
@@ -235,6 +338,7 @@ changeCaseProperty("color").about { "grey" }
 		<title name="rozhodnutie_referenta_title">Rozhodnutie referenta</title>
 		<options>
 			<option key="schvalit" name="rozhodnutie_referenta_opt_schvalit">Schváliť</option>
+			<option key="riaditel" name="rozhodnutie_referenta_opt_riaditel">Schváliť a poslať riaditeľovi</option>
 			<option key="zamietnut" name="rozhodnutie_referenta_opt_zamietnut">Zamietnuť</option>
 		</options>
 	</data>
@@ -244,9 +348,49 @@ changeCaseProperty("color").about { "grey" }
 		<init>0</init>
 	</data>
 	<data type="number">
+		<id>go_r_riaditel</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="number">
 		<id>go_r_zamietnut</id>
 		<title/>
 		<init>0</init>
+	</data>
+	<data type="number">
+		<id>go_d_schvalit</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>go_d_zamietnut</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="i18n">
+		<id>div_vypocet</id>
+		<title/>
+		<init name="div_vypocet_init">Čo z toho vychádza</init>
+	</data>
+	<data type="i18n">
+		<id>div_riaditel</id>
+		<title/>
+		<init name="div_riaditel_init">Rozhodnutie riaditeľa</init>
+	</data>
+	<data type="text">
+		<id>komentar_riaditela</id>
+		<title name="komentar_riaditela_title">Komentár riaditeľa</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>rozhodnutie_riaditela</id>
+		<title name="rozhodnutie_riaditela_title">Rozhodnutie riaditeľa</title>
+		<options>
+			<option key="schvalit" name="rozhodnutie_riaditela_opt_schvalit">Schváliť</option>
+			<option key="zamietnut" name="rozhodnutie_riaditela_opt_zamietnut">Zamietnuť</option>
+		</options>
 	</data>
 	<data type="text">
 		<id>vybavil</id>
@@ -257,6 +401,92 @@ changeCaseProperty("color").about { "grey" }
 		<title name="vybavene_o_title">Vybavené</title>
 	</data>
 
+	<function scope="process" name="sadzba_podla_skore"><![CDATA[
+{ def sk ->
+    // Urokova sadzba podla kreditneho skore. Nie je to ceninik banky, je to
+    // ukazka - ale je monotonna a spojita v pasmach, takze sa na nej da
+    // ukazat, preco vyssie skore znamena nizsiu splatku a tym nizsie DTI.
+    int v = (sk ?: 0) as Integer
+    if (v >= 800) return 5.9d
+    if (v >= 700) return 7.9d
+    if (v >= 600) return 10.9d
+    if (v >= 500) return 14.9d
+    return 19.9d
+}
+	]]></function>
+	<function scope="process" name="anuita"><![CDATA[
+{ def suma, def sadzbaRocna, def mesiacov ->
+    // Anuitna splatka: s * i / (1 - (1+i)^-n), kde i je MESACNA sadzba.
+    // Nulova sadzba by delila nulou, preto vetva - a nulova sa da nastavit,
+    // ked niekto zmeni `sadzba_podla_skore`.
+    double s = (suma ?: 0) as Double
+    double r = (sadzbaRocna ?: 0) as Double
+    int n = (mesiacov ?: 0) as Integer
+    if (s <= 0 || n <= 0) return 0.0d
+    double i = r / 100.0d / 12.0d
+    if (i <= 0) return Math.round((s / n) * 100.0d) / 100.0d
+    double v = s * i / (1.0d - Math.pow(1.0d + i, -n))
+    return Math.round(v * 100.0d) / 100.0d
+}
+	]]></function>
+	<function scope="process" name="pasmo_dti"><![CDATA[
+{ def hodnota ->
+    double d = (hodnota ?: 0) as Double
+    if (d <= 30.0d) return "ok"
+    if (d <= 45.0d) return "hranicne"
+    return "vysoke"
+}
+	]]></function>
+	<function scope="process" name="limit_uveru"><![CDATA[
+{ ->
+    // Nad tuto sumu podpisuje este riaditel. Zije vo VLASTNEJ konfiguracii
+    // uveru, nie v `admin/nastavenia/sc_nastavenia`: tamta siet patri aplikacii
+    // Objednavky a faktury, ktora zije vo vlastnom repe - zavislost by isla
+    // obratenym smerom a `pfapp install` by to pole raz ticho zmazal.
+    // Ked konfiguracia neexistuje alebo je prazdna, plati zabudovanych 50 000:
+    // appka musi fungovat aj tam, kde konfiguracnu siet nikto nenaimportoval.
+    def cfg = najnovsiCase("financie/uver/uv_nastavenia")
+    def v = cfg?.dataSet?.get("uvn_limit")?.value
+    if (v == null) return 50000.0d
+    double d = (v as Number).doubleValue()
+    return d > 0 ? d : 50000.0d
+}
+	]]></function>
+	<function scope="process" name="prepocet"><![CDATA[
+{ def suma_uveru, def prijem, def skore, def doba_splacania,
+  def urok_sadzba, def splatka, def dti, def dti_pasmo, def vypocet ->
+    // KALKULACKA. Vola sa z `set` udalosti kazdeho vstupu, takze ziadatel vidi
+    // splatku aj DTI hned pri pisani - a z `t_rozhodnutie`, aby rozhodnutie
+    // nikdy nestalo na cisle, ktore niekto medzitym prepisal.
+    double suma = ((suma_uveru.value ?: 0) as Number).doubleValue()
+    double prijemVal = ((prijem.value ?: 0) as Number).doubleValue()
+    int sk = ((skore.value ?: 0) as Number).intValue()
+    int mes = ((doba_splacania.value ?: 0) as Number).intValue()
+
+    double sadzba = sadzba_podla_skore(sk)
+    double mesacne = anuita(suma, sadzba, mes)
+    double pomer = (prijemVal > 0) ? (Math.round(mesacne / prijemVal * 1000.0d) / 10.0d) : 0.0d
+
+    change urok_sadzba value { sadzba }
+    change splatka value { mesacne }
+    change dti value { pomer }
+    change dti_pasmo value { pasmo_dti(pomer) }
+
+    // Hodnoty datovych poli su po ANGLICKY - aplikacia ma anglictinu ako
+    // default a tieto retazce nemaju preklad, takze slovenska veta by na
+    // anglickom portali trcala uprostred formulara.
+    def riadky = []
+    if (suma <= 0 || mes <= 0 || prijemVal <= 0) {
+        riadky << "Fill in the amount, income and repayment period - then the instalment can be worked out."
+    } else {
+        riadky << ("Score " + sk + " -> interest " + sadzba + " % p.a.")
+        riadky << ("Loan " + suma + " EUR over " + mes + " months -> instalment " + mesacne + " EUR per month")
+        riadky << ("Instalment " + mesacne + " EUR of income " + prijemVal + " EUR -> DTI " + pomer + " %")
+    }
+    change vypocet value { riadky.join("\n") }
+    return pomer
+}
+	]]></function>
 	<transition>
 		<id>t_podat</id>
 		<x>304</x>
@@ -265,6 +495,18 @@ changeCaseProperty("color").about { "grey" }
 		<icon>send</icon>
 		<!-- Osobná úloha na čerstvom case-e - `auto` je v poriadku (B12/B21). -->
 		<assignPolicy>auto</assignPolicy>
+		<!--
+			Podava anonym z verejneho formulara aj prihlaseny clovek. Obe roly
+			su tu zamerne: `anonymous` kvoli verejnemu odkazu, `default` preto,
+			aby si zamestnanec mohol ziadost podat aj z portalu bez toho, aby
+			mu niekto musel pridelovat rolu.
+		-->
+		<roleRef>
+			<id>anonymous</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
 		<roleRef>
 			<id>default</id>
 			<logic>
@@ -290,38 +532,137 @@ changeCaseProperty("color").about { "grey" }
 				<id>suma_uveru</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
 				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>suma_uveru_set</id>
+					<actions phase="post">
+						<action id="8"><![CDATA[
+suma_uveru: f.suma_uveru, prijem: f.prijem, skore: f.skore, doba_splacania: f.doba_splacania,
+urok_sadzba: f.urok_sadzba, splatka: f.splatka, dti: f.dti, dti_pasmo: f.dti_pasmo,
+vypocet: f.vypocet;
+
+prepocet(suma_uveru, prijem, skore, doba_splacania,
+         urok_sadzba, splatka, dti, dti_pasmo, vypocet)
+						]]></action>
+					</actions>
+				</event>
 			</dataRef>
 			<dataRef>
 				<id>prijem</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
 				<layout><x>3</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>prijem_set</id>
+					<actions phase="post">
+						<action id="9"><![CDATA[
+suma_uveru: f.suma_uveru, prijem: f.prijem, skore: f.skore, doba_splacania: f.doba_splacania,
+urok_sadzba: f.urok_sadzba, splatka: f.splatka, dti: f.dti, dti_pasmo: f.dti_pasmo,
+vypocet: f.vypocet;
+
+prepocet(suma_uveru, prijem, skore, doba_splacania,
+         urok_sadzba, splatka, dti, dti_pasmo, vypocet)
+						]]></action>
+					</actions>
+				</event>
 			</dataRef>
 			<dataRef>
 				<id>skore</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
 				<layout><x>0</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>skore_set</id>
+					<actions phase="post">
+						<action id="10"><![CDATA[
+suma_uveru: f.suma_uveru, prijem: f.prijem, skore: f.skore, doba_splacania: f.doba_splacania,
+urok_sadzba: f.urok_sadzba, splatka: f.splatka, dti: f.dti, dti_pasmo: f.dti_pasmo,
+vypocet: f.vypocet;
+
+prepocet(suma_uveru, prijem, skore, doba_splacania,
+         urok_sadzba, splatka, dti, dti_pasmo, vypocet)
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>doba_splacania</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>doba_splacania_set</id>
+					<actions phase="post">
+						<action id="11"><![CDATA[
+suma_uveru: f.suma_uveru, prijem: f.prijem, skore: f.skore, doba_splacania: f.doba_splacania,
+urok_sadzba: f.urok_sadzba, splatka: f.splatka, dti: f.dti, dti_pasmo: f.dti_pasmo,
+vypocet: f.vypocet;
+
+prepocet(suma_uveru, prijem, skore, doba_splacania,
+         urok_sadzba, splatka, dti, dti_pasmo, vypocet)
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<!--
+				VYSLEDKY KALKULACKY rovno vo formulari. Ziadatel vidi splatku aj
+				DTI este pred odoslanim - to je cely zmysel toho, ze sa pocita
+				zive a nie az v systemovom prechode. `visible`, nie `editable`:
+				rozhodnutie stoji na tychto cislach.
+			-->
+			<dataRef>
+				<id>div_vypocet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>urok_sadzba</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>splatka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>dti</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>dti_pasmo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>vypocet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 		</dataGroup>
 		<event type="finish">
 			<id>t_podat_finish</id>
 			<actions phase="pre">
 				<action id="2"><![CDATA[
-meno_ziadatela: f.meno_ziadatela, suma_uveru: f.suma_uveru, prijem: f.prijem, skore: f.skore;
+meno_ziadatela: f.meno_ziadatela, suma_uveru: f.suma_uveru, prijem: f.prijem, skore: f.skore,
+doba_splacania: f.doba_splacania;
 
 // Validacie, ktore `required` neoveri. Odmietnutie vrati HTTP 200 a dovod
 // v tele ako `error` - test na stavovy kod ho prehliadne.
 if (!((meno_ziadatela.value ?: "") as String).trim()) {
-    throw new IllegalStateException("Meno žiadateľa musí byť vyplnené.")
+    throw new IllegalStateException("The applicant name must be filled in.")
 }
 if (((suma_uveru.value ?: 0) as Double) <= 0) {
-    throw new IllegalStateException("Suma úveru musí byť kladné číslo.")
+    throw new IllegalStateException("The loan amount must be a positive number.")
 }
 if (((prijem.value ?: 0) as Double) <= 0) {
-    throw new IllegalStateException("Mesačný príjem musí byť kladné číslo.")
+    throw new IllegalStateException("The monthly income must be a positive number.")
 }
 def sk = (skore.value ?: 0) as Integer
 if (sk < 300 || sk > 900) {
-    throw new IllegalStateException("Kreditné skóre musí byť medzi 300 a 900.")
+    throw new IllegalStateException("The credit score must be between 300 and 900.")
+}
+def mes = (doba_splacania.value ?: 0) as Integer
+if (mes < 12 || mes > 360) {
+    throw new IllegalStateException("The repayment period must be between 12 and 360 months.")
 }
 				]]></action>
 			</actions>
@@ -368,26 +709,45 @@ async.run {
 			<actions phase="pre">
 				<action id="4"><![CDATA[
 skore: f.skore, suma_uveru: f.suma_uveru, prijem: f.prijem, rozhodnutie: f.rozhodnutie,
-go_schvalit: f.go_schvalit, go_preskumat: f.go_preskumat, go_zamietnut: f.go_zamietnut;
+doba_splacania: f.doba_splacania, urok_sadzba: f.urok_sadzba, splatka: f.splatka,
+dti: f.dti, dti_pasmo: f.dti_pasmo, vypocet: f.vypocet,
+go_schvalit: f.go_schvalit, go_riaditel: f.go_riaditel,
+go_preskumat: f.go_preskumat, go_zamietnut: f.go_zamietnut;
 
-// "DMN tabulka" z predlohy - kreditne skore a pomer sumy k prijmu. Presne
-// jedna vetva sa nastavi na 1, zvysne na 0 (Pattern 2, rozsireny na tri
-// vystupy) - routovacie priznaky MUSIA byt v phase="pre" (C4).
+// KALKULACKA SA PREPOCITA ZNOVA, aj ked ju formular pocital pri kazdom
+// stlaceni klavesu. Rozhodnutie nesmie stat na cisle, ktore niekto medzitym
+// prepisal cez API - vstupy su `suma`, `prijem`, `skore` a `doba`, vystupy
+// dopocita siet sama.
+def pomer = prepocet(suma_uveru, prijem, skore, doba_splacania,
+                     urok_sadzba, splatka, dti, dti_pasmo, vypocet)
+
+// "DMN tabulka": kreditne skore a DTI. Presne jedna vetva sa nastavi na 1,
+// zvysne na 0 (Pattern 2, rozsireny na styri vystupy) - routovacie priznaky
+// MUSIA byt v phase="pre" (C4), v `post` by sa token pohol s nulami a zmizol.
+//
+// Poradie podmienok je poradie prisnosti: co zamietne skore, uz sa DTI
+// nepyta, a co neunesie DTI, nezachrani ani vyborne skore.
 def sk = (skore.value ?: 0) as Integer
-def suma = (suma_uveru.value ?: 0) as Double
-def prijemVal = (prijem.value ?: 0) as Double
+def suma = ((suma_uveru.value ?: 0) as Number).doubleValue()
+def pasmo = pasmo_dti(pomer)
+def limit = limit_uveru()
 
 def vysledok
 if (sk < 500) {
     vysledok = "zamietnut"
-} else if (sk >= 700 && suma <= prijemVal * 10) {
-    vysledok = "schvalit"
+} else if (pasmo == "vysoke") {
+    vysledok = "zamietnut"
+} else if (pasmo == "ok" && sk >= 700) {
+    // Jednoznacny pripad - automat ho uzavrie sam. Nad limitom ho vsak este
+    // podpisuje riaditel; to nie je pochybnost o ziadosti, je to suma.
+    vysledok = (suma > limit) ? "riaditel" : "schvalit"
 } else {
     vysledok = "preskumat"
 }
 
 change rozhodnutie value { vysledok }
 change go_schvalit  value { vysledok == "schvalit"  ? 1 : 0 }
+change go_riaditel  value { vysledok == "riaditel"  ? 1 : 0 }
 change go_preskumat value { vysledok == "preskumat" ? 1 : 0 }
 change go_zamietnut value { vysledok == "zamietnut" ? 1 : 0 }
 				]]></action>
@@ -396,9 +756,11 @@ change go_zamietnut value { vysledok == "zamietnut" ? 1 : 0 }
 				<action id="5"><![CDATA[
 rozhodnutie: f.rozhodnutie, stav_label: f.stav_label;
 
-def stavPodla = ["schvalit": "schvalena", "preskumat": "na_preskumani", "zamietnut": "zamietnuta"]
+def stavPodla = ["schvalit": "schvalena", "riaditel": "u_riaditela",
+                 "preskumat": "na_preskumani", "zamietnut": "zamietnuta"]
 change stav_label value { stavPodla[rozhodnutie.value as String] }
-def farba = ["schvalit": "green", "preskumat": "orange", "zamietnut": "red"]
+def farba = ["schvalit": "green", "riaditel": "orange",
+             "preskumat": "orange", "zamietnut": "red"]
 changeCaseProperty("color").about { farba[rozhodnutie.value as String] }
 				]]></action>
 			</actions>
@@ -476,29 +838,43 @@ changeCaseProperty("color").about { farba[rozhodnutie.value as String] }
 			<actions phase="pre">
 				<action id="6"><![CDATA[
 komentar_referenta: f.komentar_referenta, rozhodnutie_referenta: f.rozhodnutie_referenta,
-go_r_schvalit: f.go_r_schvalit, go_r_zamietnut: f.go_r_zamietnut;
+suma_uveru: f.suma_uveru,
+go_r_schvalit: f.go_r_schvalit, go_r_riaditel: f.go_r_riaditel, go_r_zamietnut: f.go_r_zamietnut;
 
 if (!((komentar_referenta.value ?: "") as String).trim()) {
-    throw new IllegalStateException("Komentár referenta musí byť vyplnený.")
+    throw new IllegalStateException("The reviewer comment must be filled in.")
 }
-if (rozhodnutie_referenta.value == "schvalit") {
-    change go_r_schvalit value { 1 }
-    change go_r_zamietnut value { 0 }
-} else {
-    change go_r_schvalit value { 0 }
-    change go_r_zamietnut value { 1 }
+
+// Nad limitom podpisuje este riaditel - aj ked referent schvalil. Referent
+// si to moze vybrat aj sam (volba "Schváliť a poslať riaditeľovi"), ale nad
+// limitom to NIE JE jeho volba: suma rozhoduje, nie nazor.
+def suma = ((suma_uveru.value ?: 0) as Number).doubleValue()
+def kam = rozhodnutie_referenta.value as String
+if (kam == "schvalit" && suma > limit_uveru()) {
+    kam = "riaditel"
 }
+
+change go_r_schvalit  value { kam == "schvalit" ? 1 : 0 }
+change go_r_riaditel  value { kam == "riaditel" ? 1 : 0 }
+change go_r_zamietnut value { kam == "zamietnut" ? 1 : 0 }
 				]]></action>
 			</actions>
 			<actions phase="post">
 				<action id="7"><![CDATA[
 rozhodnutie_referenta: f.rozhodnutie_referenta, stav_label: f.stav_label,
+go_r_riaditel: f.go_r_riaditel, go_r_schvalit: f.go_r_schvalit,
 vybavil: f.vybavil, vybavene_o: f.vybavene_o;
 
 change vybavil value { kto(loggedUser()) }
 change vybavene_o value { java.time.LocalDateTime.now() }
-change stav_label value { rozhodnutie_referenta.value == "schvalit" ? "schvalena" : "zamietnuta" }
-changeCaseProperty("color").about { rozhodnutie_referenta.value == "schvalit" ? "green" : "red" }
+
+// Stav sa cita z PRIZNAKOV, nie z volby referenta - nad limitom sa jeho
+// "schváliť" zmenilo na "u riaditeľa" a stav to musi povedat rovnako.
+def stav = (((go_r_riaditel.value ?: 0) as Number).intValue() == 1) ? "u_riaditela"
+         : ((((go_r_schvalit.value ?: 0) as Number).intValue() == 1) ? "schvalena" : "zamietnuta")
+change stav_label value { stav }
+def farby = ["u_riaditela": "orange", "schvalena": "green", "zamietnuta": "red"]
+changeCaseProperty("color").about { farby[stav] }
 				]]></action>
 			</actions>
 		</event>
@@ -602,6 +978,51 @@ changeCaseProperty("color").about { rozhodnutie_referenta.value == "schvalit" ? 
 				<logic><behavior>visible</behavior></logic>
 				<layout><x>0</x><y>9</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
+			<!--
+				Vysledok kalkulacky a rozhodnutie riaditela patria do prehladu:
+				ziadatel ma vidiet, PRECO to dopadlo tak, ako dopadlo - nie len
+				ze zamietnute.
+			-->
+			<dataRef>
+				<id>splatka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>dti</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>dti_pasmo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>5</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>vypocet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>rozhodnutie_riaditela</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>komentar_riaditela</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>doba_splacania</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>17</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>urok_sadzba</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>17</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
 			<dataRef>
 				<id>vybavil</id>
 				<logic><behavior>visible</behavior></logic>
@@ -613,6 +1034,116 @@ changeCaseProperty("color").about { rozhodnutie_referenta.value == "schvalit" ? 
 				<layout><x>3</x><y>10</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 		</dataGroup>
+	</transition>
+
+	<transition>
+		<id>t_riaditel</id>
+		<x>1072</x>
+		<y>16</y>
+		<label name="t_riaditel_label">Schválenie riaditeľom</label>
+		<icon>gavel</icon>
+		<!--
+			Zdielana uloha vsetkych riaditelov, takze `manual` - `auto` by ju
+			priradila tomu, kto ju vyrobil, a to je pri automatickom rozhodnuti
+			systemovy ucet (B12/B21). `cancel` sa nezakazuje: zakaz znamena,
+			ze raz priradenu ulohu nema kto pustit.
+		-->
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>riaditel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_riaditel</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_zadanie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>meno_ziadatela</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>suma_uveru</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>splatka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>dti</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>dti_pasmo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>vypocet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>komentar_referenta</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_riaditel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>rozhodnutie_riaditela</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>komentar_riaditela</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_riaditel_finish</id>
+			<actions phase="pre">
+				<action id="12"><![CDATA[
+rozhodnutie_riaditela: f.rozhodnutie_riaditela,
+go_d_schvalit: f.go_d_schvalit, go_d_zamietnut: f.go_d_zamietnut;
+
+def volba = rozhodnutie_riaditela.value as String
+if (volba != "schvalit" && volba != "zamietnut") {
+    throw new IllegalStateException("The director must pick approve or reject.")
+}
+change go_d_schvalit  value { volba == "schvalit" ? 1 : 0 }
+change go_d_zamietnut value { volba == "zamietnut" ? 1 : 0 }
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="13"><![CDATA[
+rozhodnutie_riaditela: f.rozhodnutie_riaditela, stav_label: f.stav_label,
+vybavil: f.vybavil, vybavene_o: f.vybavene_o;
+
+change vybavil value { kto(loggedUser()) }
+change vybavene_o value { java.time.LocalDateTime.now() }
+change stav_label value { rozhodnutie_riaditela.value == "schvalit" ? "schvalena" : "zamietnuta" }
+changeCaseProperty("color").about { rozhodnutie_riaditela.value == "schvalit" ? "green" : "red" }
+				]]></action>
+			</actions>
+		</event>
 	</transition>
 
 	<place>
@@ -644,6 +1175,14 @@ changeCaseProperty("color").about { rozhodnutie_referenta.value == "schvalit" ? 
 		<x>880</x>
 		<y>208</y>
 		<label>Na manuálnom posúdení</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_u_riaditela</id>
+		<x>1072</x>
+		<y>112</y>
+		<label>With the director</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
@@ -708,6 +1247,14 @@ changeCaseProperty("color").about { rozhodnutie_referenta.value == "schvalit" ? 
 		<reference>go_schvalit</reference>
 	</arc>
 	<arc>
+		<id>a_rozhodnutie_riaditel</id>
+		<type>regular</type>
+		<sourceId>t_rozhodnutie</sourceId>
+		<destinationId>p_u_riaditela</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_riaditel</reference>
+	</arc>
+	<arc>
 		<id>a_rozhodnutie_preskumanie</id>
 		<type>regular</type>
 		<sourceId>t_rozhodnutie</sourceId>
@@ -739,11 +1286,42 @@ changeCaseProperty("color").about { rozhodnutie_referenta.value == "schvalit" ? 
 		<reference>go_r_schvalit</reference>
 	</arc>
 	<arc>
+		<id>a_manualne_riaditel</id>
+		<type>regular</type>
+		<sourceId>t_manualne_preskumanie</sourceId>
+		<destinationId>p_u_riaditela</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_r_riaditel</reference>
+	</arc>
+	<arc>
 		<id>a_manualne_zamietnuta</id>
 		<type>regular</type>
 		<sourceId>t_manualne_preskumanie</sourceId>
 		<destinationId>p_zamietnuta</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>go_r_zamietnut</reference>
+	</arc>
+	<arc>
+		<id>a_riaditel_in</id>
+		<type>regular</type>
+		<sourceId>p_u_riaditela</sourceId>
+		<destinationId>t_riaditel</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_riaditel_schvalena</id>
+		<type>regular</type>
+		<sourceId>t_riaditel</sourceId>
+		<destinationId>p_schvalena</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_d_schvalit</reference>
+	</arc>
+	<arc>
+		<id>a_riaditel_zamietnuta</id>
+		<type>regular</type>
+		<sourceId>t_riaditel</sourceId>
+		<destinationId>p_zamietnuta</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_d_zamietnut</reference>
 	</arc>
 </document>

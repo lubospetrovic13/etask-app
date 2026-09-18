@@ -17,7 +17,7 @@
     "it/majetok/*",
     "financie/*",
     "admin/nastavenia/*",
-    "uver/*"
+    "financie/uver/*"
   ],
   "users": [
     {

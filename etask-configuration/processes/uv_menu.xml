@@ -1,5 +1,5 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>uver/uv_menu</id>
+	<id>financie/uver/uv_menu</id>
 	<version>1.0.0</version>
 	<initials>UVM</initials>
 	<title name="net_title">Menu žiadosť o úver</title>
@@ -42,15 +42,15 @@ def created = []
 def unchanged = []
 def failed = []
 
-def siet = "uver/uv_ziadost"
+def siet = "financie/uver/uv_ziadost"
 def vsetky = "processIdentifier:\"" + siet + "\""
 def stlpce = "meta-title" +
-        ",uver/uv_ziadost-stav_label" +
-        ",uver/uv_ziadost-cislo_ziadosti" +
-        ",uver/uv_ziadost-meno_ziadatela" +
-        ",uver/uv_ziadost-suma_uveru" +
-        ",uver/uv_ziadost-skore" +
-        ",uver/uv_ziadost-podane_o"
+        ",financie/uver/uv_ziadost-stav_label" +
+        ",financie/uver/uv_ziadost-cislo_ziadosti" +
+        ",financie/uver/uv_ziadost-meno_ziadatela" +
+        ",financie/uver/uv_ziadost-suma_uveru" +
+        ",financie/uver/uv_ziadost-dti" +
+        ",financie/uver/uv_ziadost-podane_o"
 
 def views = [
         // Nazov prveho zobrazenia je TITULOK SIETE, nie kopia toho retazca.
@@ -78,6 +78,11 @@ def views = [
          // preformulovania popisku. Kym tam bol popisok, stacilo zmenit text
          // stavu a zobrazenie prestalo nachadzat cokolvek. Bez chyby.
          query: vsetky + " AND dataSet.stav_label.keyValue:\"na_preskumani\"",
+         nets: [siet], roles: [:], headers: stlpce],
+        [id: "uv_u_riaditela",
+         name: i18n("U riaditeľa · Žiadosť o úver", ["en": "With the director · Loan application"]),
+         type: "Case", icon: "gavel",
+         query: vsetky + " AND dataSet.stav_label.keyValue:\"u_riaditela\"",
          nets: [siet], roles: [:], headers: stlpce],
         [id: "uv_schvalene",
          name: i18n("Schválené · Žiadosť o úver", ["en": "Approved · Loan application"]),
@@ -117,7 +122,7 @@ views.each { v ->
                 // Elasticsearch, polozky menu Mongo. Po vymene ES indexu maju
                 // uzly nove id, polozka visi na starom a priecinok v bocnom
                 // paneli je PRAZDNY - bez chyby a bez logu (RUNBOOK 4).
-                pripoj_do_uzla(existing, "uver")
+                pripoj_do_uzla(existing, "financie/uver")
                 unchanged << id
                 return
             }
@@ -128,7 +133,7 @@ views.each { v ->
         }
         def item = createOrUpdateMenuItem(
                 id,                 // menu_item_identifier
-                "uver",          // URI cesta - musi sedet s uriNodes
+                "financie/uver", // URI cesta - musi sedet s uriNodes
                 v.type as String,
                 v.query as String,
                 v.icon as String,

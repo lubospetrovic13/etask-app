@@ -96,6 +96,7 @@
     "ob_objednavka.xml",
     "sc_menu.xml",
     "sc_nastavenia.xml",
+    "uv_nastavenia.xml",
     "uv_ziadost.xml",
     "uv_menu.xml"
   ],
@@ -139,7 +140,7 @@
       "rebuildOnNewVersion": true
     },
     {
-      "net": "uver/uv_menu",
+      "net": "financie/uver/uv_menu",
       "rebuildOnNewVersion": true
     }
   ],
@@ -271,7 +272,7 @@
       ],
       "requiredProcessRoles": []
     },
-    "uver": {
+    "financie/uver": {
       "icon": "account_balance",
       "requiredAuthorities": [],
       "requiredProcessRoles": []
