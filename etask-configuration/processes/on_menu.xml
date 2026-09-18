@@ -1,8 +1,8 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>hr/onboarding/on_menu</id>
+	<id>onboarding/on_menu</id>
 	<version>1.0.0</version>
-	<initials>NZM</initials>
-	<title name="net_title">Menu Nástup nového zamestnanca</title>
+	<initials>NAM</initials>
+	<title name="net_title">Menu Nástup zamestnanca</title>
 
 	<!--
 		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
@@ -12,7 +12,7 @@
 	-->
 	<i18n locale="en">
 		<i18nString name="net_title">Employee onboarding menu</i18nString>
-		<i18nString name="hr_title">HR officer</i18nString>
+		<i18nString name="personalista_title">HR officer</i18nString>
 		<i18nString name="t_on_menu_label">Menu state</i18nString>
 	</i18n>
 	<icon>menu</icon>
@@ -42,14 +42,20 @@ def created = []
 def unchanged = []
 def failed = []
 
-def siet = "hr/onboarding/on_nastup"
+def siet = "onboarding/on_nastup"
 def vsetky = "processIdentifier:\"" + siet + "\""
 def stlpce = "meta-title" +
-        ",hr/onboarding/on_nastup-on_stav_label" +
-        ",hr/onboarding/on_nastup-on_datum_nastupu" +
-        ",hr/onboarding/on_nastup-on_it_stav" +
-        ",hr/onboarding/on_nastup-on_hr_stav" +
-        ",hr/onboarding/on_nastup-on_maj_stav"
+        ",onboarding/on_nastup-on_stav_label" +
+        ",onboarding/on_nastup-on_oddelenie" +
+        ",onboarding/on_nastup-on_nastup_datum" +
+        ",onboarding/on_nastup-on_schvalovatel_meno"
+
+// Filtrovanie podla DATOVEHO POLA, nie podla polohy tokenu. Ide to, lebo
+// `on_stav_label` ma `immediate="true"` a engine ho indexuje pod
+// `dataSet.on_stav_label`. KLUC je v `.keyValue` - `.textValue` drzi PRELOZENE
+// POPISKY (vsetky jazyky naraz), takze dopyt na kluc cez `.textValue` nenajde
+// NIKDY NIC a nic to nepovie.
+def stav = { String kluc -> "dataSet.on_stav_label.keyValue:\"" + kluc + "\"" }
 
 def views = [
         // Nazov prveho zobrazenia je TITULOK SIETE, nie kopia toho retazca.
@@ -58,39 +64,36 @@ def views = [
         // a druhy vyskyt by nikto nenasiel - nazvy zobrazeni su v Groovy akcii,
         // kde `pfi18n` nedosiahne.
         [id: "on_vsetky", name: petriNetService.getNewestVersionByIdentifier(siet).title,
-         type: "Case", icon: "badge",
+         type: "Case", icon: "how_to_reg",
          query: vsetky, nets: [siet], roles: [:], headers: stlpce],
-        // Filtrovanie podla DATOVEHO POLA, nie podla polohy tokenu. Ide to,
-        // lebo `on_stav_label` ma `immediate="true"` a engine ho
-        // indexuje pod `dataSet.on_stav_label`. KLUC je v `.keyValue` -
-        // `.textValue` drzi PRELOZENE POPISKY (vsetky jazyky naraz), takze
-        // dopyt na kluc cez `.textValue` nenajde NIKDY NIC a nic to nepovie.
         // Nazov nesie DOMENU appky. Polozky menu su case-y jednej siete pre
         // cely portal a nazov v nich unikatny nie je - dve appky s polozkou
         // "Rozpísané" sa na dashboarde (kde nie su priecinky) nedaju odlisit
         // a kod, ktory si polozku hlada podla nazvu, dostane tu druhu.
-        // Podla KLUCA moznosti, nie podla popisku: stav je `enumeration_map`,
-        // aby sa dal prelozit - a kluc je nezavisly od jazyka aj od
-        // preformulovania popisku. Kym tam bol popisok, stacilo zmenit text
-        // stavu a zobrazenie prestalo nachadzat cokolvek. Bez chyby.
-        [id: "on_prebieha",
-         name: i18n("Prebieha príprava · Nástup nového zamestnanca",
-                 ["en": "In preparation · Employee onboarding"]),
-         type: "Case", icon: "hourglass_top",
-         query: vsetky + " AND dataSet.on_stav_label.keyValue:\"prebieha\"",
+        [id: "on_rozpisane",
+         name: i18n("Rozpísané · Nástupy", ["en": "Drafts · Onboarding"]),
+         type: "Case", icon: "edit_note",
+         query: vsetky + " AND " + stav("navrh"),
          nets: [siet], roles: [:], headers: stlpce],
-        // Tri vetvy hotove, caka sa uz len na nadriadeneho.
-        [id: "on_pripravene",
-         name: i18n("Pripravené na nástup · Nástup nového zamestnanca",
-                 ["en": "Ready for day one · Employee onboarding"]),
-         type: "Case", icon: "how_to_reg",
-         query: vsetky + " AND dataSet.on_stav_label.keyValue:\"pripravene\"",
+        [id: "on_na_schvalenie",
+         name: i18n("Na schválenie · Nástupy", ["en": "Awaiting approval · Onboarding"]),
+         type: "Case", icon: "how_to_vote",
+         query: vsetky + " AND " + stav("schvalenie"),
          nets: [siet], roles: [:], headers: stlpce],
-        [id: "on_nastupili",
-         name: i18n("Nastúpili · Nástup nového zamestnanca",
-                 ["en": "Onboarded · Employee onboarding"]),
+        [id: "on_provisioning",
+         name: i18n("Zakladajú sa účty · Nástupy", ["en": "Provisioning · Onboarding"]),
+         type: "Case", icon: "key",
+         query: vsetky + " AND " + stav("provisioning"),
+         nets: [siet], roles: [:], headers: stlpce],
+        [id: "on_hotove",
+         name: i18n("Nastúpení · Nástupy", ["en": "Onboarded · Onboarding"]),
          type: "Case", icon: "task_alt",
-         query: vsetky + " AND dataSet.on_stav_label.keyValue:\"nastupil\"",
+         query: vsetky + " AND " + stav("hotovo"),
+         nets: [siet], roles: [:], headers: stlpce],
+        [id: "on_zamietnute",
+         name: i18n("Zamietnuté · Nástupy", ["en": "Rejected · Onboarding"]),
+         type: "Case", icon: "block",
+         query: vsetky + " AND " + stav("zamietnute"),
          nets: [siet], roles: [:], headers: stlpce],
 ]
 
@@ -120,7 +123,7 @@ views.each { v ->
                 // Elasticsearch, polozky menu Mongo. Po vymene ES indexu maju
                 // uzly nove id, polozka visi na starom a priecinok v bocnom
                 // paneli je PRAZDNY - bez chyby a bez logu (RUNBOOK 4).
-                pripoj_do_uzla(existing, "hr/onboarding")
+                pripoj_do_uzla(existing, "onboarding")
                 unchanged << id
                 return
             }
@@ -131,7 +134,7 @@ views.each { v ->
         }
         def item = createOrUpdateMenuItem(
                 id,                 // menu_item_identifier
-                "hr/onboarding",          // URI cesta - musi sedet s uriNodes
+                "onboarding",       // URI cesta - musi sedet s uriNodes
                 v.type as String,
                 v.query as String,
                 v.icon as String,
@@ -147,9 +150,9 @@ views.each { v ->
     }
 }
 
-def summary = "Menu Nástup nového zamestnanca – " + (created.size() + unchanged.size()) + "/" + views.size()
+def summary = "Menu Nástup zamestnanca – " + (created.size() + unchanged.size()) + "/" + views.size()
 if (failed) {
-    summary = "CHYBA menu Nástup nového zamestnanca – nepodarilo sa: " + failed.join(", ")
+    summary = "CHYBA menu Nástup zamestnanca – nepodarilo sa: " + failed.join(", ")
 }
 changeCaseProperty("title").about { summary }
 				]]></action>
@@ -186,15 +189,15 @@ changeCaseProperty("title").about { summary }
 }
 	]]></function>
 	<roleRef>
-		<id>hr</id>
+		<id>personalista</id>
 		<caseLogic>
 			<create>true</create>
 			<view>true</view>
 		</caseLogic>
 	</roleRef>
 	<role>
-		<id>hr</id>
-		<title name="hr_title">Personalista</title>
+		<id>personalista</id>
+		<title name="personalista_title">Personalista</title>
 	</role>
 	<transition>
 		<id>t_on_menu</id>
@@ -204,7 +207,7 @@ changeCaseProperty("title").about { summary }
 		<icon>menu</icon>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
-			<id>hr</id>
+			<id>personalista</id>
 			<logic>
 				<perform>true</perform>
 			</logic>

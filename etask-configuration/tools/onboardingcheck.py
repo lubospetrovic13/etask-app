@@ -1,25 +1,15 @@
 #!/usr/bin/env python3
 """
-onboardingcheck - akceptacny test appky Nástup nového zamestnanca proti
-BEZIACEMU enginu.
+onboardingcheck - akceptacny test appky Nástup zamestnanca proti BEZIACEMU enginu.
 
-Overuje to, co sa z XML ani z importu zistit neda: ze karta je vidno spravnym
-uctom, ze zobrazenia maju stlpce, a ze priebeh pripadu robi to, co ma.
-
-Tazisko je na dvoch veciach, ktore su cele o beznom stave siete a v XML
-vyzeraju rovnako spravne aj ked spravne nie su:
-
-  * TRI VETVY BEZIA NARAZ a kazda patri inej role. Kontroluje sa, ze po podani
-    existuju vsetky tri ulohy sucasne a ze kazdu vidi prave jej rola.
-  * AND-JOIN. `t_on_den_nastupu` ma tri regular vstupne obluky, takze uloha
-    „den nastupu" NEEXISTUJE, kym nie su hotove vsetky tri vetvy. Testuje sa po
-    kazdej vetve zvlast - keby bol join napisany ako guard v Groovy, uloha by
-    tam bola uz po prvej vetve a test by to chytil.
+Overuje to, co sa z XML ani z importu zistit neda: ze kartu vidia spravne ucty,
+ze zobrazenia maju stlpce, ze ziadost dostane na schvalenie PRAVE TEN vybrany
+nadriadeny (a nikto iny), a ze na konci vznikne ucet, ktorym sa da prihlasit.
 
 Klient a pomocnici su v `tools/pftestlib.py` - aj s pascami, na ktore sa v tomto
 repozitari naletelo (prihlasenie vracia 405 s tokenom v hlavicke, telo setData
 je zanorene pod id ulohy, odmietnutie prichadza ako 200 s `error` v tele,
-`/api/task/case` neoveruje opravnenia - preto `tasks_raw` vs. `tasks_of`).
+`/api/task/case` neoveruje opravnenia).
 
 Predpoklad: bezi stack (tools/up.sh) a role su pridelene (tools/pfseed.py).
 
@@ -27,39 +17,80 @@ Predpoklad: bezi stack (tools/up.sh) a role su pridelene (tools/pfseed.py).
     python3 tools/onboardingcheck.py --wipe
 
 Exit 0 = vsetko preslo, 1 = nieco zlyhalo.
+
+Pozor na `admin@test.local`: ma ROLE_ADMIN, ktora obchadza VSETKY opravnenia
+Petriflow. Hranice sa preto overuju na ucte bez roli, nie na nom (RUNBOOK 11).
 """
 
+import base64
 import sys
 import time
 
 import pftestlib as pf
 
-NET = "hr/onboarding/on_nastup"
-MENU = "hr/onboarding/on_menu"
-CARD = "hr/onboarding"
+NET = "onboarding/on_nastup"
+MENU = "onboarding/on_menu"
+CARD = "onboarding"
 
-# Ucty podla rol. `admin@test.local` ma ROLE_ADMIN, ktora obchadza vsetky
-# opravnenia Petriflow - hranice sa preto overuju na uctoch BEZ nej.
-HR_EMAIL = "admin@test.local"        # rola hr (zadavatel)
-IT_EMAIL = "operator@test.local"     # roly it + nadriadeny, bez ROLE_ADMIN
-MAJ_EMAIL = "druhy@test.local"       # rola majetok, bez ROLE_ADMIN
-NIC_EMAIL = "viewer@test.local"      # bez procesnych rol
+HR_EMAIL = "admin@test.local"        # rola `personalista`
+IT_EMAIL = "druhy@test.local"        # rola `it_spravca`
+CUDZI_EMAIL = "viewer@test.local"    # ziadna z troch roli
 
-POHLADY = [
-    "Nástup nového zamestnanca",
-    "Prebieha príprava · Nástup nového zamestnanca",
-    "Pripravené na nástup · Nástup nového zamestnanca",
-    "Nastúpili · Nástup nového zamestnanca",
+# Schvalovatela si test NEVYBERA podla mena - vyberie prvu moznost, ktoru mu
+# siet ponukne, a az potom sa z `on_schvalovatelia` dozvie, komu ziadost
+# pridelil. Tak test prezije zmenu v seed.json aj premenovanie uctov.
+HESLA = {
+    "super@netgrif.com": pf.SUPER_PASS,
+    "admin@test.local": pf.TEST_PASS,
+    "operator@test.local": pf.TEST_PASS,
+    "druhy@test.local": pf.TEST_PASS,
+    "viewer@test.local": pf.TEST_PASS,
+}
+
+# Stale rovnaky, aby test nenechaval za sebou novy ucet pri kazdom spusteni.
+# Prvy beh ho zaklada, dalsie prejdu vetvou "ucet uz v instancii bol" - a tym
+# sa otestuje aj ona.
+NOVY_EMAIL = "test.nastup@ditec.local"
+# Heslo ide do pola ako BASE64 - `formPassword` v delegate ho dekoduje, lebo
+# frontend ho tak posiela. Plain text prejde ako platny base64 a dekoduje sa
+# na smeti, ktore instancia odmietne ako prislabe heslo - a hlaska o tom
+# nepovie ani slovo (min. dlzka je 8, `test1234` ju splna).
+NOVE_HESLO = "Nastup2026!"
+NOVE_HESLO_B64 = base64.b64encode(NOVE_HESLO.encode()).decode()
+
+VIEWS = [
+    "Nástup zamestnanca",
+    "Rozpísané · Nástupy",
+    "Na schválenie · Nástupy",
+    "Zakladajú sa účty · Nástupy",
+    "Nastúpení · Nástupy",
+    "Zamietnuté · Nástupy",
 ]
 
 
-def user_id(cl, email):
-    st, r = cl.post("/api/user/search?size=300", {"fulltext": email})
-    users = (r.get("_embedded") or {}).get("users", []) if isinstance(r, dict) else []
-    for u in users:
-        if (u.get("email") or "").lower() == email.lower():
-            return u.get("id")
-    return None
+def stav(cl, case_id):
+    """Stav pripadu tak, ako ho vidi read-only pohlad `t_on_prehlad`.
+
+    Vo formularoch, v ktorych sa pracuje, stav ZAMERNE nie je - kde pripad
+    stoji, povie uloha, ktoru ma clovek pred sebou. Preto sa cita odtialto.
+    """
+    t = pf.tasks_of(cl, case_id)
+    if "t_on_prehlad" not in t:
+        return None
+    return pf.values(cl, t["t_on_prehlad"]).get("on_stav_label")
+
+
+def userlist(hodnota):
+    """Pouzivatelia z pola typu `userList`.
+
+    Hodnota NIE JE zoznam - je to `{"userValues": [{id, email, fullName, ...}]}`.
+    Kto caka zoznam, dostane prazdno a nic to nepovie.
+    """
+    if isinstance(hodnota, dict):
+        return hodnota.get("userValues") or []
+    if isinstance(hodnota, list):
+        return hodnota
+    return []
 
 
 def main():
@@ -67,27 +98,25 @@ def main():
     if "--wipe" in sys.argv:
         return pf.wipe_cases(boss, NET, "onboardingcheck")
 
+    print("=== 1. karta v bocnom menu ===")
     hr = pf.Client(HR_EMAIL, pf.TEST_PASS)
     it = pf.Client(IT_EMAIL, pf.TEST_PASS)
-    maj = pf.Client(MAJ_EMAIL, pf.TEST_PASS)
-    nic = pf.Client(NIC_EMAIL, pf.TEST_PASS)
+    cudzi = pf.Client(CUDZI_EMAIL, pf.TEST_PASS)
 
-    print("=== 1. karta v bocnom menu ===")
-    for nazov, cl, ocakavane in [("hr", hr, True), ("it", it, True),
-                                 ("majetok", maj, True), ("bez roly", nic, False)]:
-        # `deep=True`: appka zije v kategorii, takze `hr/onboarding` uz
-        # NIE JE dietatom korena - tam je len `hr`.
-        paths = pf.uri_paths(cl, deep=True)
-        pf.check(f"{nazov} {'vidi' if ocakavane else 'nevidi'} kartu '{CARD}'",
-                 (CARD in paths) == ocakavane, paths)
-        if not ocakavane:
-            # Bez tejto kontroly by test presiel aj vtedy, keby ucet nevidel
-            # ziadnu kartu - a nedokazoval by nic.
-            pf.check("bez roly pritom ine karty vidi", len(paths) > 0, paths)
+    for nazov, cl in [("personalista", hr), ("IT správca", it)]:
+        paths = pf.uri_paths(cl)
+        pf.check(f"{nazov} vidi kartu '{CARD}'", CARD in paths, paths)
+    # Viditelnost karty riadi `uriNodes` v processes.json - a ten sa PAKUJE DO
+    # JARU. V instancii postavenej zo starsieho manifestu polozka pre
+    # `onboarding` chyba, uzol je vtedy viditelny pre kazdeho prihlaseneho
+    # a tato kontrola zlyha bez toho, aby bola chyba v sieti.
+    pf.check(f"ucet bez roly kartu '{CARD}' nevidi", CARD not in pf.uri_paths(cudzi),
+             f"{pf.uri_paths(cudzi)} - ak je karta vidno, bezi engine zo starsieho "
+             f"manifestu (uriNodes sa pakuje do jaru)")
 
     print("\n=== 2. zobrazenia a stlpce ===")
     items = pf.menu_items(boss, prefix="on_")
-    for want in POHLADY:
+    for want in VIEWS:
         if not pf.check(f"zobrazenie '{want}' existuje", want in items, sorted(items)):
             continue
         st, tl = boss.get(f"/api/task/case/{items[want]}")
@@ -111,174 +140,180 @@ def main():
                  f"treba {sorted(need)}, ma {sorted(have)}")
 
     mt = [c["title"] for c in pf.cases_of(boss, MENU, size=20)]
-    pf.check(f"bootstrap case menu hlasi {len(POHLADY)}/{len(POHLADY)}",
-             any(f"{len(POHLADY)}/{len(POHLADY)}" in t for t in mt), mt)
+    pf.check(f"bootstrap case menu hlasi {len(VIEWS)}/{len(VIEWS)}",
+             any(f"{len(VIEWS)}/{len(VIEWS)}" in t for t in mt), mt)
 
-    print("\n=== 3. podanie ===")
+    print("\n=== 3. ziadost ===")
     net = pf.newest_net(hr, NET)
     print(f"  siet {net['identifier']} v{net['version']}")
-    case_id, _ = pf.new_case(hr, net["stringId"])
-
-    # Prehlad zadavatela je tu uz PRED podanim: visi na read arcu z `p_alive`,
-    # ktore nikto nekonzumuje (B25). Bez neho by zadavatel po podani nemal
-    # ziadnu ulohu, a teda ani kde precitat, v akom stave jeho pripad je.
+    case_id, case = pf.new_case(hr, net["stringId"])
     t = pf.tasks_of(hr, case_id)
-    pf.check("hned po zalozeni su podanie AJ prehlad",
-             sorted(t) == ["t_on_podanie", "t_on_prehlad"], sorted(t))
-    podanie = t.get("t_on_podanie")
-    if not podanie:
+    # `t_on_prehlad` visi na read arcu z miesta, ktore nikto nekonzumuje, takze
+    # je dostupny cely zivot pripadu - aj hned na zaciatku (B25).
+    pf.check("na zaciatku su ulohy 'ziadost' a 'prehlad'",
+             sorted(t) == ["t_on_prehlad", "t_on_ziadost"], sorted(t))
+    ziadost = t.get("t_on_ziadost")
+    if not ziadost:
         return pf.report("onboardingcheck")
 
-    meno = f"Test Nastupujuci {int(time.time())}"
-    zaklad = {
-        "on_meno": {"type": "text", "value": meno},
-        "on_pozicia": {"type": "text", "value": "Analytik"},
-        "on_oddelenie": {"type": "enumeration_map", "value": "it"},
-        "on_datum_nastupu": {"type": "date", "value": "2026-10-01"},
+    # Priradenie spusta `assign` udalost, ktora stava moznosti schvalovatela.
+    # `change ... options {}` v `create` udalosti pripadu sa NEUCHOVA (B11),
+    # takze bez tohto kroku by bol vyber prazdny.
+    pf.assign(hr, ziadost)
+    moznosti = pf.options(hr, ziadost, "on_schvalovatel_vyber")
+    pf.check("vyber nadriadeneho ma moznosti", bool(moznosti), moznosti)
+    # Kto ziadost pise, vie siet z `on_ziadatel` - a presne toho ma zo zoznamu
+    # schvalovatelov vyhodit. Porovnava sa ID, nie meno: mien podobnych
+    # "Admin ..." je v testovacej instancii viac a heuristika na meno
+    # hlasila chybu tam, kde ziadna nebola.
+    prehlad0 = pf.tasks_of(hr, case_id).get("t_on_prehlad")
+    ja = userlist(pf.values(hr, prehlad0).get("on_ziadatel")) if prehlad0 else []
+    moje_id = (ja[0].get("id") if ja else None)
+    pf.check("zadavatel sam sebe v ponuke nie je", moje_id not in moznosti,
+             f"zadavatel {moje_id}, v ponuke {sorted(moznosti)}")
+    if not moznosti:
+        return pf.report("onboardingcheck")
+    vybrany = sorted(moznosti)[0]
+
+    # Formular pracovnej ulohy stav NEUKAZUJE - je to procesny udaj, nie udaj,
+    # ktory by clovek pri pisani ziadosti potreboval.
+    polia = pf.values(hr, ziadost)
+    pf.check("formular ziadosti stav NEobsahuje", "on_stav_label" not in polia,
+             sorted(polia))
+
+    # Odmietnutie prichadza ako HTTP 200 s `error` v tele, nie ako 4xx.
+    pf.set_data(hr, ziadost, {"on_meno": {"type": "text", "value": ""}})
+    st, r = pf.finish(hr, ziadost)
+    pf.check("ziadost bez mena je odmietnuta", pf.err_body(r), str(r)[:110])
+
+    priezvisko = f"Testovic{int(time.time()) % 100000}"
+    zadanie = {
+        "on_meno": {"type": "text", "value": "Jozef"},
+        "on_priezvisko": {"type": "text", "value": priezvisko},
+        "on_pozicia": {"type": "text", "value": "Vývojár"},
+        "on_oddelenie": {"type": "enumeration_map", "value": "vyvoj"},
+        "on_uvazok": {"type": "enumeration_map", "value": "trvaly"},
+        "on_nastup_datum": {"type": "date", "value": "2026-10-01"},
+        "on_firemny_email": {"type": "text", "value": NOVY_EMAIL},
+        "on_systemy": {"type": "multichoice_map", "value": ["entra", "atlassian", "netgrif"]},
+        "on_schvalovatel_vyber": {"type": "enumeration_map", "value": vybrany},
     }
+    pf.set_data(hr, ziadost, zadanie)
+    st, r = pf.finish(hr, ziadost)
+    pf.check("podanie preslo", pf.ok_body(r), str(r)[:110])
+    pf.check("stav je 'schvalenie'", stav(hr, case_id) == "schvalenie", stav(hr, case_id))
 
-    # Nadriadeny BEZ roly musi byt odmietnuty. `roleRef` a `userRef` sa na
-    # prechode zjednocuju, takze smerovanie na konkretnu osobu je cez `userRef`
-    # a rolu drzi tento guard - keby vypadol, potvrdit by mohol ktokolvek,
-    # koho HR do pola napise, a nikto by si toho nevsimol.
-    pf.set_data(hr, podanie, dict(zaklad, **{
-        "on_nadriadeny": {"type": "userList", "value": [user_id(boss, NIC_EMAIL)]}}))
-    st, r = pf.finish(hr, podanie)
-    pf.check("nadriadeny bez roly je odmietnuty", pf.err_body(r), str(r)[:140])
-
-    # Odmietnute DOKONCIT nesmie zmazat read-only prehlad (B8b) - preto visi
-    # z `p_alive`, a nie z miesta, ktore nejaky prechod konzumuje.
-    pf.check("prehlad odmietnute DOKONCIT prezil",
-             "t_on_prehlad" in pf.tasks_of(hr, case_id), sorted(pf.tasks_of(hr, case_id)))
-
-    pf.set_data(hr, podanie, {
-        "on_nadriadeny": {"type": "userList", "value": [user_id(boss, IT_EMAIL)]}})
-    st, r = pf.finish(hr, podanie)
-    pf.check("podanie preslo", pf.ok_body(r), str(r)[:140])
-
-    print("\n=== 4. tri vetvy bezia naraz, kazda pre svoju rolu ===")
     raw = pf.tasks_raw(boss, case_id)
-    pf.check("po podani existuju vsetky tri vetvy sucasne",
-             {"t_on_it", "t_on_hr", "t_on_majetok"} <= set(raw), sorted(raw))
-    pf.check("IT vidi svoju vetvu a prehlad, nie cudzie",
-             sorted(pf.tasks_of(it, case_id)) == ["t_on_it", "t_on_prehlad"],
+    pf.check("uloha schvalenia vznikla", "t_on_schvalenie" in raw, sorted(raw))
+    pf.check("ucet bez roli z pripadu nevidi nic",
+             not pf.tasks_of(cudzi, case_id), sorted(pf.tasks_of(cudzi, case_id)))
+
+    print("\n=== 4. ziadost ma len VYBRANY nadriadeny ===")
+    prehlad = pf.tasks_of(hr, case_id).get("t_on_prehlad")
+    schv = userlist(pf.values(hr, prehlad).get("on_schvalovatelia")) if prehlad else []
+    email = (schv[0].get("email") if schv else None)
+    if not pf.check("v `on_schvalovatelia` je vybrany clovek", bool(email), email):
+        return pf.report("onboardingcheck")
+    print(f"  schvaluje: {email}")
+    if email not in HESLA:
+        pf.check(f"heslo k uctu {email} test pozna", False,
+                 "doplň ho do HESLA v tomto súbore")
+        return pf.report("onboardingcheck")
+    schvalovatel = pf.Client(email, HESLA[email])
+    pf.check("vybrany nadriadeny ulohu vidi",
+             "t_on_schvalenie" in pf.tasks_of(schvalovatel, case_id),
+             sorted(pf.tasks_of(schvalovatel, case_id)))
+    # IT ma rolu `it_spravca`, nie `veduci`, a `userRef` na neho nemieri -
+    # schvalovaciu ulohu vidiet nesmie. Toto je ta hranica, kvoli ktorej na
+    # prechode NIE JE `roleRef` (zjednocoval by sa s `userRef`).
+    pf.check("IT spravca schvalovaciu ulohu NEvidi",
+             "t_on_schvalenie" not in pf.tasks_of(it, case_id),
              sorted(pf.tasks_of(it, case_id)))
-    pf.check("majetok vidi svoju vetvu a prehlad, nie cudzie",
-             sorted(pf.tasks_of(maj, case_id)) == ["t_on_majetok", "t_on_prehlad"],
-             sorted(pf.tasks_of(maj, case_id)))
-    pf.check("HR vidi svoju vetvu a prehlad, nie cudzie",
-             sorted(pf.tasks_of(hr, case_id)) == ["t_on_hr", "t_on_prehlad"],
+
+    print("\n=== 5. vratenie na doplnenie ===")
+    uloha = pf.tasks_of(schvalovatel, case_id).get("t_on_schvalenie")
+    pf.set_data(schvalovatel, uloha,
+                {"on_rozhodnutie": {"type": "enumeration_map", "value": "vratit"}})
+    st, r = pf.finish(schvalovatel, uloha)
+    pf.check("vratenie bez komentara je odmietnute", pf.err_body(r), str(r)[:110])
+
+    pf.set_data(schvalovatel, uloha, {
+        "on_rozhodnutie": {"type": "enumeration_map", "value": "vratit"},
+        "on_komentar": {"type": "text", "value": "Doplň telefón na nastupujúceho."}})
+    st, r = pf.finish(schvalovatel, uloha)
+    pf.check("vratenie preslo", pf.ok_body(r), str(r)[:110])
+    pf.check("stav je spat na 'navrh'", stav(hr, case_id) == "navrh", stav(hr, case_id))
+    ziadost2 = pf.tasks_of(hr, case_id).get("t_on_ziadost")
+    pf.check("zadavatelovi sa uloha znova otvorila", bool(ziadost2),
              sorted(pf.tasks_of(hr, case_id)))
+    if ziadost2:
+        pf.assign(hr, ziadost2)
+        pf.check("a vidi v nej komentar, preco sa vratila",
+                 "telefón" in ((pf.values(hr, ziadost2).get("on_komentar") or "")),
+                 pf.values(hr, ziadost2).get("on_komentar"))
 
-    def prehlad(cl=hr):
-        tid = pf.tasks_of(cl, case_id).get("t_on_prehlad")
-        return pf.values(cl, tid) if tid else {}
+    print("\n=== 6. schvalenie ===")
+    pf.set_data(hr, ziadost2, zadanie)
+    pf.finish(hr, ziadost2)
+    uloha = pf.tasks_of(schvalovatel, case_id).get("t_on_schvalenie")
+    pf.set_data(schvalovatel, uloha,
+                {"on_rozhodnutie": {"type": "enumeration_map", "value": "schvalit"}})
+    st, r = pf.finish(schvalovatel, uloha)
+    pf.check("nadriadeny schvalil", pf.ok_body(r), str(r)[:110])
+    pf.check("stav je 'provisioning'", stav(hr, case_id) == "provisioning", stav(hr, case_id))
 
-    v = prehlad()
-    pf.check("zadavatel vidi stav 'prebieha'", v.get("on_stav_label") == "prebieha",
-             v.get("on_stav_label"))
-    # Toto je odpoved na "na ktoru vetvu sa caka". Tri `enumeration_map` polia,
-    # nie jeden `text`: text je String, ktory sa neprekladá.
-    pf.check("zadavatel vidi, ze sa caka na vsetky tri vetvy",
-             [v.get("on_it_stav"), v.get("on_hr_stav"), v.get("on_maj_stav")]
-             == ["caka", "caka", "caka"],
-             [v.get("on_it_stav"), v.get("on_hr_stav"), v.get("on_maj_stav")])
+    print("\n=== 7. vytvorenie uctov ===")
+    u = pf.tasks_of(it, case_id).get("t_on_provisioning")
+    if not pf.check("IT vidi ulohu vytvorenia uctov", bool(u), sorted(pf.tasks_of(it, case_id))):
+        return pf.report("onboardingcheck")
 
-    print("\n=== 5. AND-join: den nastupu neexistuje, kym nie su hotove vsetky tri ===")
+    pf.assign(it, u)
+    st, r = pf.finish(it, u)
+    pf.check("ukoncenie bez protokolu je odmietnute", pf.err_body(r), str(r)[:110])
 
-    def den_existuje():
-        return "t_on_den_nastupu" in pf.tasks_raw(boss, case_id)
+    # `saveWhileTyping` na hesle a na textovych poliach je tu podstatne: bez
+    # neho by akcia tlacidla citala hodnoty z pred pisania (RUNBOOK 6).
+    pf.set_data(it, u, {
+        "on_heslo": {"type": "text", "value": NOVE_HESLO_B64},
+        "on_entra_skupiny": {"type": "text", "value": "GRP-VYVOJ"},
+        "on_atlassian_tim": {"type": "text", "value": "ETASK"},
+        "on_profil": {"type": "enumeration_map", "value": "zamestnanec"}})
+    st, r = pf.set_data(it, u, {"btn_on_provision": {"type": "button", "value": 0}})
+    pf.check("tlacidlo 'Vytvoriť účty' preslo", pf.ok_body(r), str(r)[:160])
 
-    # -- IT
-    t_it = pf.tasks_of(it, case_id)["t_on_it"]
-    pf.assign(it, t_it)
-    pf.set_data(it, t_it, {"on_it_ucet": {"type": "boolean", "value": True},
-                           "on_it_notebook": {"type": "boolean", "value": False},
-                           "on_it_email": {"type": "text", "value": "test@firma.sk"}})
-    st, r = pf.finish(it, t_it)
-    # `required` na `boolean` prejde aj s `false` - preto guard vo `finish`.
-    pf.check("IT bez notebooku je odmietnute", pf.err_body(r), str(r)[:140])
-    pf.set_data(it, t_it, {"on_it_notebook": {"type": "boolean", "value": True}})
-    pf.check("IT vetva dokoncena", pf.ok_body(pf.finish(it, t_it)[1]))
-    pf.check("po 1/3 vetvach den nastupu NEEXISTUJE", not den_existuje(),
-             sorted(pf.tasks_raw(boss, case_id)))
+    v = pf.values(it, u)
+    protokol = (v.get("on_protokol") or "")
+    pf.check("protokol ma riadok pre Entra ID", "Entra ID" in protokol, protokol[:200])
+    pf.check("protokol ma riadok pre Atlassian", "Atlassian" in protokol, protokol[:200])
+    pf.check("protokol nesie skupiny z formulara", "GRP-VYVOJ" in protokol, protokol[:200])
+    pf.check("Netgrif ucet je zapisany", v.get("on_ucet") == NOVY_EMAIL, v.get("on_ucet"))
 
-    # -- HR
-    t_hr = pf.tasks_of(hr, case_id)["t_on_hr"]
-    pf.assign(hr, t_hr)
-    pf.set_data(hr, t_hr, {"on_hr_zmluva": {"type": "boolean", "value": True},
-                           "on_hr_gdpr": {"type": "boolean", "value": True},
-                           "on_hr_bozp": {"type": "boolean", "value": True}})
-    pf.check("HR vetva dokoncena", pf.ok_body(pf.finish(hr, t_hr)[1]))
-    pf.check("po 2/3 vetvach den nastupu NEEXISTUJE", not den_existuje(),
-             sorted(pf.tasks_raw(boss, case_id)))
-    v = prehlad()
-    pf.check("zadavatel vidi, ze sa caka uz len na majetok",
-             [v.get("on_it_stav"), v.get("on_hr_stav"), v.get("on_maj_stav")]
-             == ["hotovo", "hotovo", "caka"],
-             [v.get("on_it_stav"), v.get("on_hr_stav"), v.get("on_maj_stav")])
-    pf.check("stav je stale 'prebieha'", v.get("on_stav_label") == "prebieha",
-             v.get("on_stav_label"))
-
-    # -- Majetok
-    t_maj = pf.tasks_of(maj, case_id)["t_on_majetok"]
-    pf.assign(maj, t_maj)
-    pf.set_data(maj, t_maj, {"on_maj_zariadenie": {"type": "text", "value": "Dell Latitude"},
-                             "on_maj_inv": {"type": "text", "value": "INV-1"}})
-    pf.check("majetkova vetva dokoncena", pf.ok_body(pf.finish(maj, t_maj)[1]))
-    pf.check("az po 3/3 vetvach den nastupu EXISTUJE", den_existuje(),
-             sorted(pf.tasks_raw(boss, case_id)))
-    v = prehlad()
-    pf.check("stav je 'pripravene'", v.get("on_stav_label") == "pripravene",
-             v.get("on_stav_label"))
-
-    print("\n=== 6. potvrdzuje nadriadeny, nie ktokolvek ===")
-    den = pf.tasks_raw(boss, case_id)["t_on_den_nastupu"]
-    pf.check("cudzia rola si den nastupu nepriradi", pf.assign(maj, den)[0] == 403,
-             pf.assign(maj, den)[0])
-    pf.check("zadavatel den nastupu ani nevidi",
-             "t_on_den_nastupu" not in pf.tasks_of(hr, case_id),
-             sorted(pf.tasks_of(hr, case_id)))
-    pf.check("nadriadeny si den nastupu priradi", pf.assign(it, den)[0] == 200)
-    st, r = pf.finish(it, den)
-    pf.check("nepotvrdeny nastup je odmietnuty", pf.err_body(r), str(r)[:140])
-    pf.set_data(it, den, {"on_potvrdene": {"type": "boolean", "value": True}})
-    pf.check("nastup potvrdeny", pf.ok_body(pf.finish(it, den)[1]))
-
-    print("\n=== 7. vysledok ===")
-    pf.check("na konci zostava uz len prehlad",
-             sorted(pf.tasks_raw(boss, case_id)) == ["t_on_prehlad"],
-             sorted(pf.tasks_raw(boss, case_id)))
-    v = prehlad()
-    pf.check("stav je 'nastupil'", v.get("on_stav_label") == "nastupil",
-             v.get("on_stav_label"))
-    pf.check("je zapisane, kto potvrdil", bool(v.get("on_potvrdil")), v.get("on_potvrdil"))
-    pf.check("priebeh nesie vsetky styri kroky",
-             len([r for r in (v.get("on_priebeh") or "").split("\n") if r.strip()]) >= 5,
-             v.get("on_priebeh"))
-    st, c = hr.get(f"/api/workflow/case/{case_id}")
-    pf.check("nazov pripadu nesie meno, nie stav", meno in (c["title"] or ""), c["title"])
+    st, r = pf.finish(it, u)
+    pf.check("ukoncenie nastupu preslo", pf.ok_body(r), str(r)[:110])
+    pf.check("stav je 'hotovo'", stav(it, case_id) == "hotovo", stav(it, case_id))
+    st, c = boss.get(f"/api/workflow/case/{case_id}")
+    pf.check("nazov pripadu nesie cloveka, nie stav", priezvisko in (c["title"] or ""), c["title"])
     pf.check("farba pripadu je zelena", c.get("color") == "green", c.get("color"))
+    pf.check("na konci zostava len read-only pohlad",
+             sorted(pf.tasks_of(it, case_id)) == ["t_on_prehlad"], sorted(pf.tasks_of(it, case_id)))
 
-    print("\n=== 8. stav sa preklada, a zobrazenie filtruje podla KLUCA ===")
-    # `text` by v anglickom portali zostal slovensky - preto je stav
-    # `enumeration_map` a akcia zapisuje kluc.
-    en = pf.Client(HR_EMAIL, pf.TEST_PASS, lang="en")
-    tid = pf.tasks_of(en, case_id).get("t_on_prehlad")
-    opts = pf.options(en, tid, "on_stav_label") if tid else {}
-    pf.check("stav ma anglicky preklad", opts.get("nastupil") == "Onboarded", opts)
+    print("\n=== 8. novy clovek sa vie prihlasit ===")
+    # Toto je cela pointa zadania: po dobehnuti procesu ma clovek pristup
+    # do tejto aplikacie. Entra ID a Atlassian su zatial simulovane.
+    novy = pf.Client(NOVY_EMAIL, NOVE_HESLO, allow_fail=True)
+    if pf.check("vytvoreny ucet sa prihlasi", bool(novy.token), NOVY_EMAIL):
+        paths = pf.uri_paths(novy)
+        pf.check(f"a kartu '{CARD}' zatial nevidi (profil 'zamestnanec')",
+                 CARD not in paths,
+                 f"{paths} - to iste ako vyssie: uriNodes zo starsieho jaru")
 
-    q = f'processIdentifier:"{NET}" AND dataSet.on_stav_label.keyValue:"nastupil"'
-    st, r = hr.post("/api/workflow/case/search?size=100", {"query": q})
+    print("\n=== 9. zobrazenie 'Nastúpení' filtruje podla datoveho pola ===")
+    # Podla KLUCA moznosti - popisok sa prekladom meni, kluc nie.
+    q = f'processIdentifier:"{NET}" AND dataSet.on_stav_label.keyValue:"hotovo"'
+    st, r = boss.post("/api/workflow/case/search?size=100", {"query": q})
     ids = [x["stringId"] for x in (r.get("_embedded") or {}).get("cases", [])] \
         if isinstance(r, dict) else []
-    pf.check("zobrazenie 'Nastúpili' pripad najde", case_id in ids, f"{len(ids)} pripadov")
-
-    q2 = f'processIdentifier:"{NET}" AND dataSet.on_stav_label.keyValue:"prebieha"'
-    st, r = hr.post("/api/workflow/case/search?size=100", {"query": q2})
-    ids2 = [x["stringId"] for x in (r.get("_embedded") or {}).get("cases", [])] \
-        if isinstance(r, dict) else []
-    pf.check("v 'Prebieha príprava' uz nie je", case_id not in ids2, f"{len(ids2)} pripadov")
+    pf.check("ukonceny pripad je medzi 'Nastúpení'", case_id in ids, f"{len(ids)} pripadov")
 
     return pf.report("onboardingcheck")
 

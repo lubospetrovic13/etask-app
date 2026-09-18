@@ -1,8 +1,8 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
-	<id>hr/onboarding/on_nastup</id>
+	<id>onboarding/on_nastup</id>
 	<version>1.0.0</version>
-	<initials>NZM</initials>
-	<title name="net_title">Nástup nového zamestnanca</title>
+	<initials>NAS</initials>
+	<title name="net_title">Nástup zamestnanca</title>
 
 	<!--
 		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
@@ -12,130 +12,154 @@
 	-->
 	<i18n locale="en">
 		<i18nString name="net_title">Employee onboarding</i18nString>
-		<i18nString name="hr_title">HR officer</i18nString>
-		<i18nString name="it_title">IT administrator</i18nString>
-		<i18nString name="majetok_title">Asset manager</i18nString>
-		<i18nString name="nadriadeny_title">Line manager</i18nString>
-
+		<i18nString name="personalista_title">HR officer</i18nString>
+		<i18nString name="veduci_title">Line manager</i18nString>
+		<i18nString name="it_spravca_title">IT administrator</i18nString>
 		<i18nString name="empty_button"></i18nString>
 
-		<i18nString name="div_on_zadanie_init">New hire</i18nString>
-		<i18nString name="div_on_vetvy_init">Preparation</i18nString>
-		<i18nString name="div_on_it_init">IT</i18nString>
-		<i18nString name="div_on_hr_init">HR</i18nString>
-		<i18nString name="div_on_maj_init">Assets</i18nString>
-		<i18nString name="div_on_vysledok_init">Day one</i18nString>
-		<i18nString name="div_on_priebeh_init">History</i18nString>
+		<i18nString name="div_on_osoba_init">New joiner</i18nString>
+		<i18nString name="div_on_zaradenie_init">Role and start date</i18nString>
+		<i18nString name="div_on_pristupy_init">Accounts to create</i18nString>
+		<i18nString name="div_on_schvalenie_init">Approval</i18nString>
+		<i18nString name="div_on_rozhodnutie_init">Decision</i18nString>
+		<i18nString name="div_on_ucty_init">Account creation</i18nString>
+		<i18nString name="div_on_priebeh_init">Audit trail</i18nString>
 
-		<i18nString name="on_meno_title">Full name</i18nString>
+		<i18nString name="on_meno_title">First name</i18nString>
+		<i18nString name="on_priezvisko_title">Surname</i18nString>
+		<i18nString name="on_sukromny_email_title">Private e-mail</i18nString>
+		<i18nString name="on_sukromny_email_desc">Where the joining instructions are sent before the company mailbox exists.</i18nString>
+		<i18nString name="on_telefon_title">Phone</i18nString>
+		<i18nString name="on_nastup_datum_title">Start date</i18nString>
 		<i18nString name="on_pozicia_title">Position</i18nString>
 		<i18nString name="on_oddelenie_title">Department</i18nString>
-		<i18nString name="on_oddelenie_opt_it">IT</i18nString>
+		<i18nString name="on_oddelenie_opt_vyvoj">Development</i18nString>
+		<i18nString name="on_oddelenie_opt_prevadzka">Operations</i18nString>
 		<i18nString name="on_oddelenie_opt_obchod">Sales</i18nString>
-		<i18nString name="on_oddelenie_opt_vyroba">Production</i18nString>
-		<i18nString name="on_oddelenie_opt_ekonomika">Finance</i18nString>
-		<i18nString name="on_oddelenie_opt_personalistika">HR</i18nString>
-		<i18nString name="on_oddelenie_opt_ine">Other</i18nString>
-		<i18nString name="on_datum_nastupu_title">Start date</i18nString>
-		<i18nString name="on_nadriadeny_title">Line manager</i18nString>
-		<i18nString name="on_nadriadeny_desc">This person is asked to confirm day one. They must hold the Line manager role.</i18nString>
+		<i18nString name="on_oddelenie_opt_financie">Finance</i18nString>
+		<i18nString name="on_oddelenie_opt_hr">HR</i18nString>
+		<i18nString name="on_uvazok_title">Contract type</i18nString>
+		<i18nString name="on_uvazok_opt_trvaly">Full time</i18nString>
+		<i18nString name="on_uvazok_opt_skrateny">Part time</i18nString>
+		<i18nString name="on_uvazok_opt_dohoda">Agreement</i18nString>
+		<i18nString name="on_uvazok_opt_externista">Contractor</i18nString>
+		<i18nString name="on_firemny_email_title">Company e-mail</i18nString>
+		<i18nString name="on_firemny_email_desc">Suggested from the name. It is the sign-in name of all three accounts.</i18nString>
+		<i18nString name="on_systemy_title">Accounts to create</i18nString>
+		<i18nString name="on_systemy_desc">Nothing gets created that is not ticked here.</i18nString>
+		<i18nString name="on_systemy_opt_entra">Entra ID</i18nString>
+		<i18nString name="on_systemy_opt_atlassian">Atlassian (Jira, Confluence)</i18nString>
+		<i18nString name="on_systemy_opt_netgrif">Netgrif (this application)</i18nString>
+		<i18nString name="on_poznamka_title">Note</i18nString>
+
+		<i18nString name="on_schvalovatel_vyber_title">Who approves it</i18nString>
+		<i18nString name="on_schvalovatel_vyber_desc">The onboarding goes to this one manager. Nobody else will see it to approve.</i18nString>
+		<i18nString name="on_schvalovatelia_title">Approver</i18nString>
+		<i18nString name="on_schvalovatel_meno_title">Approver</i18nString>
+		<i18nString name="on_rozhodnutie_title">Decision</i18nString>
+		<i18nString name="on_rozh_opt_schvalit">Approve</i18nString>
+		<i18nString name="on_rozh_opt_vratit">Send back for correction</i18nString>
+		<i18nString name="on_rozh_opt_zamietnut">Reject</i18nString>
+		<i18nString name="on_komentar_title">Comment</i18nString>
+
+		<i18nString name="on_entra_skupiny_title">Entra ID groups</i18nString>
+		<i18nString name="on_atlassian_tim_title">Atlassian team / projects</i18nString>
+		<i18nString name="on_profil_title">Netgrif profile</i18nString>
+		<i18nString name="on_profil_desc">Which process role the account gets. "Employee" only signs in.</i18nString>
+		<i18nString name="on_profil_opt_zamestnanec">Employee (sign-in only)</i18nString>
+		<i18nString name="on_profil_opt_personalista">HR officer</i18nString>
+		<i18nString name="on_profil_opt_veduci">Line manager</i18nString>
+		<i18nString name="on_profil_opt_it_spravca">IT administrator</i18nString>
+		<i18nString name="on_heslo_title">Initial password</i18nString>
+		<i18nString name="on_heslo_desc">Erased from the case once the account exists. Hand it over in person.</i18nString>
+		<i18nString name="btn_on_provision_placeholder">Create the accounts</i18nString>
+		<i18nString name="btn_on_provision_desc">Walks the ticked systems. Entra ID and Atlassian are simulated for now - that is where the connectors go.</i18nString>
+		<i18nString name="on_protokol_title">Provisioning log</i18nString>
+		<i18nString name="on_ucet_title">Netgrif account</i18nString>
 
 		<i18nString name="on_stav_label_title">Status</i18nString>
-		<i18nString name="on_stav_label_desc">A field of its own, so it can be a column and be searched on.</i18nString>
-		<i18nString name="on_stav_label_opt_rozpisane">Draft</i18nString>
-		<i18nString name="on_stav_label_opt_prebieha">In preparation</i18nString>
-		<i18nString name="on_stav_label_opt_pripravene">Ready for day one</i18nString>
-		<i18nString name="on_stav_label_opt_nastupil">Onboarded</i18nString>
-
-		<i18nString name="on_it_stav_title">IT</i18nString>
-		<i18nString name="on_it_stav_opt_caka">Pending</i18nString>
-		<i18nString name="on_it_stav_opt_hotovo">Done</i18nString>
-		<i18nString name="on_hr_stav_title">HR</i18nString>
-		<i18nString name="on_hr_stav_opt_caka">Pending</i18nString>
-		<i18nString name="on_hr_stav_opt_hotovo">Done</i18nString>
-		<i18nString name="on_maj_stav_title">Assets</i18nString>
-		<i18nString name="on_maj_stav_opt_caka">Pending</i18nString>
-		<i18nString name="on_maj_stav_opt_hotovo">Done</i18nString>
-
-		<i18nString name="on_it_ucet_title">User account created</i18nString>
-		<i18nString name="on_it_email_title">Work e-mail</i18nString>
-		<i18nString name="on_it_notebook_title">Laptop prepared</i18nString>
-		<i18nString name="on_it_pozn_title">IT note</i18nString>
-		<i18nString name="on_hr_zmluva_title">Employment contract signed</i18nString>
-		<i18nString name="on_hr_gdpr_title">GDPR briefing handed over</i18nString>
-		<i18nString name="on_hr_bozp_title">Health and safety training done</i18nString>
-		<i18nString name="on_hr_pozn_title">HR note</i18nString>
-		<i18nString name="on_maj_zariadenie_title">Assigned equipment</i18nString>
-		<i18nString name="on_maj_inv_title">Asset number</i18nString>
-		<i18nString name="on_maj_pozn_title">Asset note</i18nString>
-
-		<i18nString name="on_potvrdene_title">The employee has started</i18nString>
-		<i18nString name="on_den_pozn_title">Line manager note</i18nString>
-		<i18nString name="on_podal_title">Submitted by</i18nString>
+		<i18nString name="on_stav_label_desc">A field of its own, so it can be a column and be searched on. It is deliberately absent from the forms people work in - the task they hold says where the case is.</i18nString>
+		<i18nString name="on_stav_label_opt_navrh">Draft</i18nString>
+		<i18nString name="on_stav_label_opt_schvalenie">Awaiting approval</i18nString>
+		<i18nString name="on_stav_label_opt_provisioning">Accounts being created</i18nString>
+		<i18nString name="on_stav_label_opt_hotovo">Done</i18nString>
+		<i18nString name="on_stav_label_opt_zamietnute">Rejected</i18nString>
+		<i18nString name="on_ziadatel_title">Requested by</i18nString>
+		<i18nString name="on_ziadatel_meno_title">Requested by</i18nString>
 		<i18nString name="on_podane_o_title">Submitted</i18nString>
-		<i18nString name="on_potvrdil_title">Confirmed by</i18nString>
-		<i18nString name="on_potvrdene_o_title">Confirmed</i18nString>
-		<i18nString name="on_priebeh_title">History</i18nString>
-		<i18nString name="on_priebeh_desc">Who did what and when. Names, not role titles - a name reads the same in every language.</i18nString>
+		<i18nString name="on_hotovo_o_title">Completed</i18nString>
+		<i18nString name="on_historia_title">Audit trail</i18nString>
 
-		<i18nString name="t_on_podanie_label">Onboarding request</i18nString>
-		<i18nString name="t_on_podanie_finish_t">Submit</i18nString>
-		<i18nString name="t_on_it_label">IT setup</i18nString>
-		<i18nString name="t_on_it_finish_t">IT done</i18nString>
-		<i18nString name="t_on_hr_label">HR paperwork</i18nString>
-		<i18nString name="t_on_hr_finish_t">HR done</i18nString>
-		<i18nString name="t_on_majetok_label">Asset assignment</i18nString>
-		<i18nString name="t_on_majetok_finish_t">Assets assigned</i18nString>
-		<i18nString name="t_on_den_nastupu_label">Day one</i18nString>
-		<i18nString name="t_on_den_nastupu_finish_t">Confirm onboarding</i18nString>
-		<i18nString name="t_on_prehlad_label">Onboarding status</i18nString>
+		<i18nString name="t_on_ziadost_label">Onboarding request</i18nString>
+		<i18nString name="t_on_ziadost_finish">Submit for approval</i18nString>
+		<i18nString name="t_on_schvalenie_label">Manager approval</i18nString>
+		<i18nString name="t_on_schvalenie_finish">Record the decision</i18nString>
+		<i18nString name="t_on_provisioning_label">Create the accounts</i18nString>
+		<i18nString name="t_on_provisioning_finish">Close the onboarding</i18nString>
+		<i18nString name="t_on_prehlad_label">Onboarding overview</i18nString>
 	</i18n>
-	<icon>badge</icon>
+	<icon>how_to_reg</icon>
 	<defaultRole>false</defaultRole>
 	<anonymousRole>false</anonymousRole>
 	<transitionRole>false</transitionRole>
 	<!--
-		HR poda nastup. Podanie rozdeli zeton do TROCH miest naraz (AND-split),
-		takze tri vetvy bezia paralelne, kazda pre svoju rolu. `t_on_den_nastupu`
-		ma tri REGULAR vstupne obluky (AND-join), takze ho engine povoli az ked
-		ma zeton kazde z troch miest - "kym nie su hotove vsetky tri, neda sa
-		dokoncit" je teda vlastnost SIETE, nie guard v Groovy, ktory by sa dal
-		obist alebo zabudnut.
+		PRIPAD = NASTUPUJUCI CLOVEK, nie ukon. Jeden pripad drzi cely nabor od
+		ziadosti po zalozene ucty (cheatsheet, "Pripad = entita, ci ukon?").
 
-		  p_novy - t_on_podanie -+- p_it  - t_on_it       - p_it_ok  -+
-		                         +- p_hr  - t_on_hr       - p_hr_ok  -+- t_on_den_nastupu - p_hotovy
-		                         +- p_maj - t_on_majetok  - p_maj_ok -+
+		  p_navrh -> t_on_ziadost -> p_schvalenie -> t_on_schvalenie
+		          -> p_provisioning -> t_on_provisioning -> p_koniec
 
-		  p_alive (zeton od zalozenia, NIKTO ho nekonzumuje) -read- t_on_prehlad
+		JEDNO SCHVALENIE, a schvaluje ho JEDEN VYBRANY nadriadeny - nie
+		ktokolvek s rolou. `roleRef` sa v prechode uvadza staticky, takze
+		"schvali to TENTO clovek" sa deklarativne napisat neda; ide to cez
+		`userList` pole a `userRef` na nom (RUNBOOK 11). Rola `veduci` na tom
+		prechode preto BYT NESMIE - `roleRef` a `userRef` sa ZJEDNOCUJU,
+		neprienikaju, takze by stacilo mat rolu a smerovanie by bolo na nic.
 
-		`p_alive` je vzor z PETRIFLOW_LEARNINGS B25: zadavatel po podani nema
-		ziadnu vlastnu ulohu, takze bez tohto miesta nema kde precitat, v akom
-		stave jeho pripad je. Miesto, ktore ziadny prechod nekonzumuje, drzi
-		`t_on_prehlad` povoleny cely zivot pripadu - a odmietnute DOKONCIT na
-		inom prechode ho nezmaze (to je B8b).
+		Schvalenie ma tri vychody: DALEJ, SPAT na doplnenie (token sa vrati do
+		`p_navrh`) a ZAMIETNUT (token ide rovno do `p_koniec`). Vetvenie je cez
+		arc s `multiplicity=0` a `reference` na ciselne pole `go_*`; tie
+		priznaky sa nastavuju vo `phase="pre"` - v `post` sa token pohne
+		s nulami a zmizne (reference C4).
 
-		Stav je SAMOSTATNE POLE s `immediate="true"`, nie len poloha tokenu:
-		inak sa neda dat do stlpca zoznamu ani podla neho hladat. A su to
-		`enumeration_map` polia, nie `text`: `TextField` drzi obycajny `String`,
-		ktory engine neprelozi. "Na ktoru vetvu sa caka" preto nesu TRI stavove
-		polia (`on_it_stav`, `on_hr_stav`, `on_maj_stav`) - prelozitelne,
-		stlpcovatelne a dopytovatelne podla KLUCA, nezavisle od jazyka.
+		STAV NIE JE V PRACOVNYCH FORMULAROCH. Kto ma pred sebou ulohu, vie
+		z nej, kde pripad je; pole `on_stav_label` je tu kvoli STLPCU
+		a DOPYTU zobrazeni a zobrazuje sa len v read-only prehlade. Preto ho
+		nevidi ani zadavatel, kym ziadost pise.
 
-		Kto potvrdzuje den nastupu, sa deklarativne roleRefom napisat neda:
-		`roleRef` a `userRef` sa ZJEDNOCUJU, nie prienikaju (RUNBOOK 11). Preto
-		je na `t_on_den_nastupu` iba `userRef on_nadriadeny` a rola `nadriadeny`
-		zostava autoritativna tym, ze podanie overi, ci ju vybrana osoba ma.
+		`p_sledovanie` drzi zeton, ktory NIKTO nekonzumuje - `t_on_prehlad` na
+		read arcu z neho je preto dostupny cely zivot pripadu, aj kym ziadost
+		lezi u schvalovatela (B25). Read arc z konzumovaneho miesta by bol
+		chyba: odmietnute DOKONCIT ulohu zmaze a uz ju neobnovi (B8b).
+
+		ZATIAL BEZ INTEGRACII:
+		  * Netgrif (tato aplikacia) - ucet vznika SKUTOCNE, `createNewUser`
+		    + `setProcessRole`.
+		  * Entra ID a Atlassian - SIMULOVANE, zapisu sa do protokolu
+		    s fiktivnym identifikatorom. Miesto, kam pride skutocne volanie,
+		    je oznacene v akcii `btn_on_provision_set`; patri do delegatu
+		    (vrstva 2), nie do siete - je to I/O na cudzie API.
 	-->
 	<caseEvents>
 		<event type="create">
 			<id>on_create</id>
 			<actions phase="post">
 				<action id="1"><![CDATA[
-on_stav_label: f.on_stav_label, on_meno: f.on_meno, on_pozicia: f.on_pozicia;
+on_stav_label: f.on_stav_label, on_meno: f.on_meno, on_priezvisko: f.on_priezvisko,
+on_ziadatel: f.on_ziadatel, on_ziadatel_meno: f.on_ziadatel_meno,
+on_pozicia: f.on_pozicia, on_historia: f.on_historia, on_protokol: f.on_protokol,
+on_systemy: f.on_systemy;
 
+def ja = loggedUser()
 // KLUC moznosti, nie popisok - popisok si engine prelozi sam.
-change on_stav_label value { "rozpisane" }
-changeCaseProperty("title").about { nazov(on_meno, on_pozicia) }
+change on_stav_label value { "navrh" }
+change on_ziadatel value { [ja.id] }
+change on_ziadatel_meno value { kto(ja) }
+change on_historia value { "" }
+change on_protokol value { "" }
+// Vsetky tri ucty su default - odskrtnut sa da, ale bezny nastup ich chce.
+change on_systemy value { ["entra", "atlassian", "netgrif"] }
+changeCaseProperty("title").about { nazov(on_priezvisko, on_meno, on_pozicia) }
 changeCaseProperty("color").about { "grey" }
 				]]></action>
 			</actions>
@@ -148,121 +172,198 @@ changeCaseProperty("color").about { "grey" }
 }
 	]]></function>
 	<function scope="process" name="nazov"><![CDATA[
-{ def meno, def pozicia ->
+{ def on_priezvisko, def on_meno, def on_pozicia ->
     // BEZ STAVU: `Case.title` je v engine obycajny `String`, takze sa
     // neprekladá - slovensky stav v nazve by bol v anglickom portali jedina
-    // slovenska vec v kazdom zozname. Stav nesie pole `on_stav_label`.
+    // slovenska vec v kazdom zozname. Stav nesie pole `on_stav_label`
+    // a stlpec. Podrobne RUNBOOK 9.
+    def p = ((on_priezvisko.value ?: "") as String).trim()
+    def m = ((on_meno.value ?: "") as String).trim()
+    def poz = ((on_pozicia.value ?: "") as String).trim()
+    def clovek = ([p, m].findAll { it }).join(" ")
+    if (!clovek) return ((useCase.visualId ?: "?") as String)
+    return poz ? (clovek + " – " + poz) : clovek
+}
+	]]></function>
+	<function scope="process" name="do_historie"><![CDATA[
+{ def on_historia, def riadok ->
+    def stare = ((on_historia.value ?: "") as String)
+    def novy = java.time.LocalDateTime.now().withNano(0).toString() + "  " + (riadok as String)
+    def vsetky = ([novy] + (stare ? stare.split("\n") as List : []))
+    // Strop, aby pole nerastlo donekonecna - stare riadky su v audite enginu.
+    if (vsetky.size() > 60) vsetky = vsetky[0..59]
+    change on_historia value { vsetky.join("\n") }
+}
+	]]></function>
+	<function scope="process" name="ako_zoznam"><![CDATA[
+{ def pole ->
+    // `multichoice_map` vracia raz Collection, raz obal s `.value`, raz String.
+    def raw = pole.value
+    if (raw == null) return []
+    if (raw instanceof Collection) return raw.collect { it as String }
+    if (raw.hasProperty("value") && raw.value instanceof Collection) {
+        return raw.value.collect { it as String }
+    }
+    def s = (raw as String).trim()
+    return s ? [s] : []
+}
+	]]></function>
+	<function scope="process" name="bez_diakritiky"><![CDATA[
+{ def text ->
+    def s = ((text ?: "") as String)
+    s = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+    s = s.replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+    return s.toLowerCase().replaceAll("[^a-z0-9]+", "")
+}
+	]]></function>
+	<function scope="process" name="je_email"><![CDATA[
+{ def hodnota ->
+    def mail = ((hodnota ?: "") as String).trim()
+    return mail ==~ /^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/
+}
+	]]></function>
+	<function scope="process" name="id_z_userlistu"><![CDATA[
+{ def pole ->
+    // Hodnota `userList` pola je UserListFieldValue s `userValues`, NIE zoznam
+    // id - `.collect { it.id }` priamo na nej vyhodi
+    // "No such property: id for class ... UserListFieldValue" uprostred akcie,
+    // teda po tom, co uz cast zmien prebehla.
     //
-    // Kym meno nie je vyplnene, nazov nesie cislo pripadu (`visualId`) - to je
-    // lepsie nez prazdny riadok v zozname.
-    def m = ((meno.value ?: "") as String).trim()
-    def p = ((pozicia.value ?: "") as String).trim()
-    if (!m) return ((useCase.visualId ?: "?") as String)
-    return p ? (m + " · " + p) : m
+    // A `u?._id` na jednotlivom UserFieldValue vyhodi to iste: `?.` chrani
+    // pred null, nie pred chybajucou property.
+    def raw = pole?.value
+    if (raw == null) return []
+    def users = raw.hasProperty("userValues") ? raw.userValues : (raw instanceof List ? raw : null)
+    if (!users) return []
+    return users.collect { u ->
+        if (u == null) return null
+        if (u instanceof String) return u
+        if (u instanceof Map) return (u["_id"] ?: u["id"])
+        return u.hasProperty("id") ? u.id : null
+    }.findAll { it != null }.collect { it as String }
 }
 	]]></function>
-	<function scope="process" name="zapis"><![CDATA[
-{ def pole, def riadok ->
-    // Priebeh drzi MENA ludi, nie nazvy roli: `text` pole je String, ktory sa
-    // neprekladá, a meno je jazykovo neutralne (B25).
-    def ts = java.time.LocalDateTime.now()
-            .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
-    def doteraz = ((pole.value ?: "") as String)
-    change pole value { (doteraz ? doteraz + "\n" : "") + ts + " · " + riadok }
-}
-	]]></function>
-	<function scope="process" name="vetvy_hotove"><![CDATA[
-{ def a, def b ->
-    // Dopocitanie stavu pripadu po dokonceni vetvy. Volajuci sem posiela
-    // stavove polia ZVYSNYCH DVOCH vetiev - to svoje prave prepisal a `change`
-    // sa do `.value` v tej istej akcii spolahlivo nepremietne.
-    return (((a.value ?: "") as String) == "hotovo") && (((b.value ?: "") as String) == "hotovo")
+	<function scope="process" name="nadriadeni"><![CDATA[
+{ def ja ->
+    // Kto smie tento nastup schvalit. `usersWithRoleAll` je primitivum delegata
+    // ("kto vsetko ma rolu X"); `usersWithRole` filtruje ZADANY zoznam, co je
+    // ina otazka.
+    //
+    // ZADAVATEL SA ZO ZOZNAMU VYHADZUJE. Styri oci tak nezacinaju odmietnutim,
+    // ale tym, ze si clovek sam seba ani nevie vybrat. Guard vo `finish`
+    // zostava ako druha linia - pole sa da prepisat cez API.
+    def mojeId = (ja?.id ?: "") as String
+    def out = [:]
+    usersWithRoleAll("veduci", "onboarding/on_nastup").each { String id ->
+        if (id == mojeId) return
+        def u = null
+        try { u = userService.findById(id, false) } catch (Exception e) { u = null }
+        // Kluc moznosti je userId - hex ObjectId, takze v nom nie je `.` ani `$`
+        // (Mongo to v nazvoch poli zakazuje, C17).
+        out.put(id, u != null ? kto(u) : id)
+    }
+    return out
 }
 	]]></function>
 	<roleRef>
-		<id>hr</id>
+		<id>personalista</id>
 		<caseLogic>
 			<create>true</create>
 			<view>true</view>
+			<!--
+				Mazanie má LEN personalista, teda ten, kto žiadosť zakladá.
+				Je to na omyly a testovacie prípady; kto nástup schvaľuje ani
+				kto zakladá účty, ho mazať nemá - z toho by sa stalo tiché
+				zahladenie stopy.
+
+				V zozname prípadov to zapína `[showDeleteMenu]="true"`, ale
+				položku ukáže len tomu, komu `hasCasePermission(case, DELETE)`
+				povie áno - čiže toto oprávnenie. Bez neho je menu prázdne.
+			-->
+			<delete>true</delete>
 		</caseLogic>
 	</roleRef>
 	<roleRef>
-		<id>it</id>
+		<id>veduci</id>
 		<caseLogic>
 			<view>true</view>
 		</caseLogic>
 	</roleRef>
 	<roleRef>
-		<id>majetok</id>
+		<id>it_spravca</id>
 		<caseLogic>
 			<view>true</view>
 		</caseLogic>
 	</roleRef>
-	<!--
-		Nadriadeny vidi pripad preto, ze je v `on_nadriadeny`, nie preto, ze ma
-		rolu: rola `nadriadeny` tu zamerne NIE JE v caseLogic, inak by kazdy
-		veduci videl nastupy vsetkych oddeleni.
-	-->
-	<userRef>
-		<id>on_nadriadeny</id>
-		<caseLogic>
-			<view>true</view>
-		</caseLogic>
-	</userRef>
 	<role>
-		<id>hr</id>
-		<title name="hr_title">Personalista</title>
+		<id>personalista</id>
+		<title name="personalista_title">Personalista</title>
 	</role>
 	<role>
-		<id>it</id>
-		<title name="it_title">IT správca</title>
+		<id>veduci</id>
+		<title name="veduci_title">Vedúci</title>
 	</role>
 	<role>
-		<id>majetok</id>
-		<title name="majetok_title">Správca majetku</title>
+		<id>it_spravca</id>
+		<title name="it_spravca_title">IT správca</title>
 	</role>
-	<role>
-		<id>nadriadeny</id>
-		<title name="nadriadeny_title">Nadriadený</title>
-	</role>
+
 	<data type="i18n">
-		<id>div_on_zadanie</id>
+		<id>div_on_osoba</id>
 		<title/>
-		<init name="div_on_zadanie_init">Nastupujúci</init>
+		<init name="div_on_osoba_init">Nastupujúci</init>
 	</data>
 	<data type="i18n">
-		<id>div_on_vetvy</id>
+		<id>div_on_zaradenie</id>
 		<title/>
-		<init name="div_on_vetvy_init">Príprava</init>
+		<init name="div_on_zaradenie_init">Zaradenie a nástup</init>
 	</data>
 	<data type="i18n">
-		<id>div_on_it</id>
+		<id>div_on_pristupy</id>
 		<title/>
-		<init name="div_on_it_init">IT</init>
+		<init name="div_on_pristupy_init">Účty, ktoré sa majú vytvoriť</init>
 	</data>
 	<data type="i18n">
-		<id>div_on_hr</id>
+		<id>div_on_schvalenie</id>
 		<title/>
-		<init name="div_on_hr_init">Personalistika</init>
+		<init name="div_on_schvalenie_init">Schválenie</init>
 	</data>
 	<data type="i18n">
-		<id>div_on_maj</id>
+		<id>div_on_rozhodnutie</id>
 		<title/>
-		<init name="div_on_maj_init">Majetok</init>
+		<init name="div_on_rozhodnutie_init">Rozhodnutie</init>
 	</data>
 	<data type="i18n">
-		<id>div_on_vysledok</id>
+		<id>div_on_ucty</id>
 		<title/>
-		<init name="div_on_vysledok_init">Deň nástupu</init>
+		<init name="div_on_ucty_init">Vytvorenie účtov</init>
 	</data>
 	<data type="i18n">
 		<id>div_on_priebeh</id>
 		<title/>
 		<init name="div_on_priebeh_init">Priebeh</init>
 	</data>
+
 	<data type="text" immediate="true">
 		<id>on_meno</id>
-		<title name="on_meno_title">Meno a priezvisko</title>
+		<title name="on_meno_title">Meno</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>on_priezvisko</id>
+		<title name="on_priezvisko_title">Priezvisko</title>
+	</data>
+	<data type="text">
+		<id>on_sukromny_email</id>
+		<title name="on_sukromny_email_title">Súkromný e-mail</title>
+		<desc name="on_sukromny_email_desc">Kam idú pokyny k nástupu, kým firemná schránka neexistuje.</desc>
+	</data>
+	<data type="text">
+		<id>on_telefon</id>
+		<title name="on_telefon_title">Telefón</title>
+	</data>
+	<data type="date" immediate="true">
+		<id>on_nastup_datum</id>
+		<title name="on_nastup_datum_title">Dátum nástupu</title>
 	</data>
 	<data type="text" immediate="true">
 		<id>on_pozicia</id>
@@ -272,186 +373,308 @@ changeCaseProperty("color").about { "grey" }
 		<id>on_oddelenie</id>
 		<title name="on_oddelenie_title">Oddelenie</title>
 		<options>
-			<option key="it" name="on_oddelenie_opt_it">IT</option>
+			<option key="vyvoj" name="on_oddelenie_opt_vyvoj">Vývoj</option>
+			<option key="prevadzka" name="on_oddelenie_opt_prevadzka">Prevádzka</option>
 			<option key="obchod" name="on_oddelenie_opt_obchod">Obchod</option>
-			<option key="vyroba" name="on_oddelenie_opt_vyroba">Výroba</option>
-			<option key="ekonomika" name="on_oddelenie_opt_ekonomika">Ekonomika</option>
-			<option key="personalistika" name="on_oddelenie_opt_personalistika">Personalistika</option>
-			<option key="ine" name="on_oddelenie_opt_ine">Iné</option>
+			<option key="financie" name="on_oddelenie_opt_financie">Financie</option>
+			<option key="hr" name="on_oddelenie_opt_hr">HR</option>
 		</options>
 	</data>
-	<data type="date" immediate="true">
-		<id>on_datum_nastupu</id>
-		<title name="on_datum_nastupu_title">Dátum nástupu</title>
-	</data>
-	<data type="userList">
-		<id>on_nadriadeny</id>
-		<title name="on_nadriadeny_title">Nadriadený</title>
-		<desc name="on_nadriadeny_desc">Túto osobu appka požiada o potvrdenie v deň nástupu. Musí mať rolu Nadriadený.</desc>
-	</data>
-	<data type="enumeration_map" immediate="true">
-		<id>on_stav_label</id>
-		<title name="on_stav_label_title">Stav</title>
-		<desc name="on_stav_label_desc">Samostatné pole, aby sa dalo dať do stĺpca a hľadať podľa neho.</desc>
+	<data type="enumeration_map">
+		<id>on_uvazok</id>
+		<title name="on_uvazok_title">Typ úväzku</title>
 		<options>
-			<option key="rozpisane" name="on_stav_label_opt_rozpisane">Rozpísané</option>
-			<option key="prebieha" name="on_stav_label_opt_prebieha">Prebieha príprava</option>
-			<option key="pripravene" name="on_stav_label_opt_pripravene">Pripravené na nástup</option>
-			<option key="nastupil" name="on_stav_label_opt_nastupil">Nastúpil</option>
+			<option key="trvaly" name="on_uvazok_opt_trvaly">Trvalý pracovný pomer</option>
+			<option key="skrateny" name="on_uvazok_opt_skrateny">Skrátený úväzok</option>
+			<option key="dohoda" name="on_uvazok_opt_dohoda">Dohoda</option>
+			<option key="externista" name="on_uvazok_opt_externista">Externista</option>
 		</options>
 	</data>
-	<data type="enumeration_map" immediate="true">
-		<id>on_it_stav</id>
-		<title name="on_it_stav_title">IT</title>
+	<data type="text" immediate="true">
+		<id>on_firemny_email</id>
+		<title name="on_firemny_email_title">Firemný e-mail</title>
+		<desc name="on_firemny_email_desc">Navrhne sa z mena. Je prihlasovacím menom všetkých troch účtov.</desc>
+	</data>
+	<data type="multichoice_map">
+		<id>on_systemy</id>
+		<title name="on_systemy_title">Účty, ktoré sa majú vytvoriť</title>
+		<desc name="on_systemy_desc">Nevytvorí sa nič, čo tu nie je zaškrtnuté.</desc>
+		<!--
+			BEZ `immediate="true"`: na `multichoice_map` zhadzuje indexaciu
+			casu (B13/B22, ENGINE_ISSUES E5). Filtruje sa podla stavu, nie
+			podla tohto pola, takze stlpec z neho nepotrebujeme.
+		-->
 		<options>
-			<option key="caka" name="on_it_stav_opt_caka">Čaká sa</option>
-			<option key="hotovo" name="on_it_stav_opt_hotovo">Hotovo</option>
+			<option key="entra" name="on_systemy_opt_entra">Entra ID</option>
+			<option key="atlassian" name="on_systemy_opt_atlassian">Atlassian (Jira, Confluence)</option>
+			<option key="netgrif" name="on_systemy_opt_netgrif">Netgrif (táto aplikácia)</option>
 		</options>
 	</data>
-	<data type="enumeration_map" immediate="true">
-		<id>on_hr_stav</id>
-		<title name="on_hr_stav_title">Personalistika</title>
-		<options>
-			<option key="caka" name="on_hr_stav_opt_caka">Čaká sa</option>
-			<option key="hotovo" name="on_hr_stav_opt_hotovo">Hotovo</option>
-		</options>
-	</data>
-	<data type="enumeration_map" immediate="true">
-		<id>on_maj_stav</id>
-		<title name="on_maj_stav_title">Majetok</title>
-		<options>
-			<option key="caka" name="on_maj_stav_opt_caka">Čaká sa</option>
-			<option key="hotovo" name="on_maj_stav_opt_hotovo">Hotovo</option>
-		</options>
-	</data>
-	<data type="boolean">
-		<id>on_it_ucet</id>
-		<title name="on_it_ucet_title">Používateľský účet vytvorený</title>
-		<component>
-			<name>toggle</name>
-		</component>
-		<init>false</init>
-	</data>
 	<data type="text">
-		<id>on_it_email</id>
-		<title name="on_it_email_title">Pracovný e-mail</title>
-	</data>
-	<data type="boolean">
-		<id>on_it_notebook</id>
-		<title name="on_it_notebook_title">Notebook pripravený</title>
-		<component>
-			<name>toggle</name>
-		</component>
-		<init>false</init>
-	</data>
-	<data type="text">
-		<id>on_it_pozn</id>
-		<title name="on_it_pozn_title">Poznámka IT</title>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="boolean">
-		<id>on_hr_zmluva</id>
-		<title name="on_hr_zmluva_title">Pracovná zmluva podpísaná</title>
-		<component>
-			<name>toggle</name>
-		</component>
-		<init>false</init>
-	</data>
-	<data type="boolean">
-		<id>on_hr_gdpr</id>
-		<title name="on_hr_gdpr_title">GDPR poučenie odovzdané</title>
-		<component>
-			<name>toggle</name>
-		</component>
-		<init>false</init>
-	</data>
-	<data type="boolean">
-		<id>on_hr_bozp</id>
-		<title name="on_hr_bozp_title">Školenie BOZP absolvované</title>
-		<component>
-			<name>toggle</name>
-		</component>
-		<init>false</init>
-	</data>
-	<data type="text">
-		<id>on_hr_pozn</id>
-		<title name="on_hr_pozn_title">Poznámka personalistiky</title>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="text">
-		<id>on_maj_zariadenie</id>
-		<title name="on_maj_zariadenie_title">Pridelené zariadenie</title>
-	</data>
-	<data type="text">
-		<id>on_maj_inv</id>
-		<title name="on_maj_inv_title">Inventárne číslo</title>
-	</data>
-	<data type="text">
-		<id>on_maj_pozn</id>
-		<title name="on_maj_pozn_title">Poznámka majetku</title>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="boolean">
-		<id>on_potvrdene</id>
-		<title name="on_potvrdene_title">Zamestnanec nastúpil</title>
-		<component>
-			<name>toggle</name>
-		</component>
-		<init>false</init>
-	</data>
-	<data type="text">
-		<id>on_den_pozn</id>
-		<title name="on_den_pozn_title">Poznámka nadriadeného</title>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="text">
-		<id>on_podal</id>
-		<title name="on_podal_title">Podal</title>
-	</data>
-	<data type="dateTime">
-		<id>on_podane_o</id>
-		<title name="on_podane_o_title">Podané</title>
-	</data>
-	<data type="text">
-		<id>on_potvrdil</id>
-		<title name="on_potvrdil_title">Potvrdil</title>
-	</data>
-	<data type="dateTime">
-		<id>on_potvrdene_o</id>
-		<title name="on_potvrdene_o_title">Potvrdené</title>
-	</data>
-	<data type="text">
-		<id>on_priebeh</id>
-		<title name="on_priebeh_title">Priebeh</title>
-		<desc name="on_priebeh_desc">Kto čo kedy urobil. Mená, nie názvy rolí - meno znie rovnako v každom jazyku.</desc>
+		<id>on_poznamka</id>
+		<title name="on_poznamka_title">Poznámka</title>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 
+	<data type="enumeration_map">
+		<id>on_schvalovatel_vyber</id>
+		<title name="on_schvalovatel_vyber_title">Kto to má schváliť</title>
+		<desc name="on_schvalovatel_vyber_desc">Nástup pôjde tomuto jednému vedúcemu. Nikto iný ho na schválenie neuvidí.</desc>
+		<!-- Moznosti stava `nadriadeni(...)` pri otvoreni ulohy - staticky
+		     zoznam ludi v XML byt nemoze. -->
+	</data>
+	<data type="userList">
+		<id>on_schvalovatelia</id>
+		<title name="on_schvalovatelia_title">Schvaľovateľ</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>on_schvalovatel_meno</id>
+		<title name="on_schvalovatel_meno_title">Schvaľovateľ</title>
+	</data>
+	<data type="enumeration_map">
+		<id>on_rozhodnutie</id>
+		<title name="on_rozhodnutie_title">Rozhodnutie</title>
+		<options>
+			<option key="schvalit" name="on_rozh_opt_schvalit">Schváliť</option>
+			<option key="vratit" name="on_rozh_opt_vratit">Vrátiť na doplnenie</option>
+			<option key="zamietnut" name="on_rozh_opt_zamietnut">Zamietnuť</option>
+		</options>
+	</data>
+	<data type="text">
+		<id>on_komentar</id>
+		<title name="on_komentar_title">Komentár</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+
+	<data type="text">
+		<id>on_entra_skupiny</id>
+		<title name="on_entra_skupiny_title">Skupiny v Entra ID</title>
+		<component>
+			<!-- `textarea`, nie `text`: komponent menom `text` neexistuje ani
+			     v kniznici, ani v appke - vykreslil by sa default a `pfview`
+			     to hlasi ako chybu. Zoznam skupin je aj tak viacriadkovy. -->
+			<name>textarea</name>
+			<properties>
+				<!--
+					Tlacidlo „Vytvoriť účty“ je v tom istom dataGroupe a cita
+					toto pole - blur a klik su jedna poziadavka, takze bez
+					ukladania pocas pisania by akcia dostala prazdno (RUNBOOK 6).
+				-->
+				<property key="saveWhileTyping">true</property>
+			</properties>
+		</component>
+	</data>
+	<data type="text">
+		<id>on_atlassian_tim</id>
+		<title name="on_atlassian_tim_title">Atlassian tím / projekty</title>
+		<component>
+			<!-- `textarea`, nie `text`: komponent menom `text` neexistuje ani
+			     v kniznici, ani v appke - vykreslil by sa default a `pfview`
+			     to hlasi ako chybu. Zoznam skupin je aj tak viacriadkovy. -->
+			<name>textarea</name>
+			<properties>
+				<!--
+					Tlacidlo „Vytvoriť účty“ je v tom istom dataGroupe a cita
+					toto pole - blur a klik su jedna poziadavka, takze bez
+					ukladania pocas pisania by akcia dostala prazdno (RUNBOOK 6).
+				-->
+				<property key="saveWhileTyping">true</property>
+			</properties>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>on_profil</id>
+		<title name="on_profil_title">Profil v Netgrife</title>
+		<desc name="on_profil_desc">Akú procesnú rolu účet dostane. Zamestnanec sa len prihlási.</desc>
+		<options>
+			<option key="zamestnanec" name="on_profil_opt_zamestnanec">Zamestnanec (len prihlásenie)</option>
+			<option key="personalista" name="on_profil_opt_personalista">Personalista</option>
+			<option key="veduci" name="on_profil_opt_veduci">Vedúci</option>
+			<option key="it_spravca" name="on_profil_opt_it_spravca">IT správca</option>
+		</options>
+	</data>
+	<data type="text">
+		<id>on_heslo</id>
+		<title name="on_heslo_title">Počiatočné heslo</title>
+		<desc name="on_heslo_desc">Po vytvorení sa z prípadu zmaže. Odovzdajte ho osobne.</desc>
+		<component>
+			<name>password</name>
+			<properties>
+				<!--
+					Tlacidlo „Vytvoriť účty“ je v tom istom dataGroupe, a blur
+					aj klik su JEDNA poziadavka - bez ukladania pocas pisania by
+					akcia precitala heslo z pred pisania, teda prazdno (RUNBOOK 6).
+				-->
+				<property key="saveWhileTyping">true</property>
+			</properties>
+		</component>
+	</data>
+	<data type="button">
+		<id>btn_on_provision</id>
+		<title/>
+		<desc name="btn_on_provision_desc">Prejde zaškrtnuté systémy. Entra ID a Atlassian sú zatiaľ simulované - tam prídu konektory.</desc>
+		<placeholder name="btn_on_provision_placeholder">Vytvoriť účty</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_on_provision_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+on_systemy: f.on_systemy, on_meno: f.on_meno, on_priezvisko: f.on_priezvisko,
+on_firemny_email: f.on_firemny_email, on_heslo: f.on_heslo, on_profil: f.on_profil,
+on_entra_skupiny: f.on_entra_skupiny, on_atlassian_tim: f.on_atlassian_tim,
+on_protokol: f.on_protokol, on_ucet: f.on_ucet, on_historia: f.on_historia;
+
+def mail = ((on_firemny_email.value ?: "") as String).trim()
+if (!je_email(mail)) {
+    throw new java.lang.IllegalStateException("Firemný e-mail nemá platný tvar: " + mail)
+}
+def systemy = ako_zoznam(on_systemy)
+if (!systemy) {
+    throw new java.lang.IllegalStateException("Nie je zaškrtnutý žiadny účet.")
+}
+
+def riadky = []
+def znacka = (bez_diakritiky(on_priezvisko.value) + "-" +
+        String.format("%04d", (new java.util.Random()).nextInt(10000)))
+
+// ---------------------------------------------------------------------------
+// SEM PRIDU SKUTOCNE KONEKTORY. Kazdy z nich je I/O na cudzie API, teda
+// primitivum v `EtaskActionDelegate` (vrstva 2), volane odtialto menom -
+// napr. `entraCreateUser(mail, meno, priezvisko, skupiny)`. V sieti zostane
+// tento zoznam a jeho vysledok; HTTP klient, token a retry patria do delegatu.
+// Dovtedy sa krok zapise do protokolu s fiktivnym identifikatorom, aby sa dal
+// cely proces prejst a odprezentovat.
+// ---------------------------------------------------------------------------
+def skupiny = ((on_entra_skupiny.value ?: "") as String).trim()
+def tim = ((on_atlassian_tim.value ?: "") as String).trim()
+if (systemy.contains("entra")) {
+    riadky << ("[SIMULACIA] Entra ID účet " + mail + (skupiny ? (", skupiny: " + skupiny) : "") +
+            " -> objectId=ent-" + znacka)
+}
+if (systemy.contains("atlassian")) {
+    riadky << ("[SIMULACIA] Atlassian účet " + mail + (tim ? (", tím: " + tim) : "") +
+            " -> accountId=atl-" + znacka)
+}
+
+// Netgrif ucet vznika SKUTOCNE - `createNewUser` je primitivum delegatu.
+// Toto je ta cast zadania, ktora ma po dobehnuti procesu realny vysledok:
+// clovek sa vie prihlasit do tejto aplikacie.
+if (systemy.contains("netgrif")) {
+    if (((on_ucet.value ?: "") as String).trim()) {
+        riadky << ("Netgrif účet už existuje: " + ((on_ucet.value ?: "") as String).trim())
+    } else if (findUserByEmail(mail) != null) {
+        change on_ucet value { mail }
+        riadky << ("Netgrif účet už v inštancii bol: " + mail)
+    } else if (!registrationService.isPasswordSufficient(formPassword(on_heslo.value))) {
+        throw new java.lang.IllegalStateException("Počiatočné heslo nespĺňa požiadavky inštancie.")
+    } else {
+        def novy = createNewUser(((on_meno.value ?: "") as String).trim(),
+                                 ((on_priezvisko.value ?: "") as String).trim(),
+                                 mail, formPassword(on_heslo.value), ["ROLE_USER"])
+        change on_ucet value { mail }
+        riadky << ("Netgrif účet vytvorený: " + mail + " (ROLE_USER)")
+        def profil = ((on_profil.value ?: "zamestnanec") as String)
+        if (profil && profil != "zamestnanec") {
+            if (setProcessRole(novy.stringId as String, profil, "onboarding/on_nastup", "vsetky", true)) {
+                riadky << ("procesná rola: " + profil)
+            } else {
+                riadky << ("NEPODARILO SA prideliť procesnú rolu " + profil)
+            }
+        }
+        // Heslo sa z pripadu maze hned po vytvoreni uctu.
+        change on_heslo value { "" }
+    }
+}
+
+def stare = ((on_protokol.value ?: "") as String)
+change on_protokol value { (riadky.join("\n") + (stare ? ("\n" + stare) : "")) }
+do_historie(on_historia, "účty vytvoril " + kto(loggedUser()) + " (" + riadky.size() + " položiek)")
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>on_protokol</id>
+		<title name="on_protokol_title">Protokol provisioningu</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text" immediate="true">
+		<id>on_ucet</id>
+		<title name="on_ucet_title">Účet v Netgrife</title>
+	</data>
+
+	<data type="enumeration_map" immediate="true">
+		<id>on_stav_label</id>
+		<title name="on_stav_label_title">Stav</title>
+		<desc name="on_stav_label_desc">Samostatné pole, aby sa dalo dať do stĺpca a hľadať podľa neho. Vo formulároch, v ktorých sa pracuje, zámerne nie je — kde prípad stojí, povie úloha, ktorú má človek pred sebou.</desc>
+		<options>
+			<option key="navrh" name="on_stav_label_opt_navrh">Rozpísané</option>
+			<option key="schvalenie" name="on_stav_label_opt_schvalenie">Na schválenie</option>
+			<option key="provisioning" name="on_stav_label_opt_provisioning">Zakladajú sa účty</option>
+			<option key="hotovo" name="on_stav_label_opt_hotovo">Hotovo</option>
+			<option key="zamietnute" name="on_stav_label_opt_zamietnute">Zamietnuté</option>
+		</options>
+	</data>
+	<data type="userList">
+		<id>on_ziadatel</id>
+		<title name="on_ziadatel_title">Zadávateľ</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>on_ziadatel_meno</id>
+		<title name="on_ziadatel_meno_title">Zadal</title>
+	</data>
+	<data type="dateTime">
+		<id>on_podane_o</id>
+		<title name="on_podane_o_title">Podané</title>
+	</data>
+	<data type="dateTime">
+		<id>on_hotovo_o</id>
+		<title name="on_hotovo_o_title">Ukončené</title>
+	</data>
+	<data type="text">
+		<id>on_historia</id>
+		<title name="on_historia_title">Priebeh</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+
+	<!-- Routovacie priznaky. Zamerne v ziadnom dataGroupe - su vnutorny stav. -->
+	<data type="number">
+		<id>go_vpred</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>go_spat</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>go_zamietnute</id>
+		<title/>
+		<init>0</init>
+	</data>
+
 	<transition>
-		<id>t_on_podanie</id>
-		<x>140</x>
-		<y>180</y>
-		<label name="t_on_podanie_label">Podanie nástupu</label>
-		<icon>badge</icon>
+		<id>t_on_ziadost</id>
+		<x>60</x>
+		<y>100</y>
+		<label name="t_on_ziadost_label">Žiadosť o nástup</label>
+		<icon>person_add</icon>
 		<!--
 			`auto` je v poriadku na OSOBNU ulohu jedneho aktera. Na zdielanu
-			(vetvy nizsie) patri `manual` - auto ju priradi tomu, kto ju
-			VYROBIL, teda tomu, kto dokoncil predchadzajuci prechod
-			(PETRIFLOW_LEARNINGS B21).
+			(pult, front, prepazka) patri `manual` (B12/B21).
 		-->
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
-			<id>hr</id>
+			<id>personalista</id>
 			<!--
 				`perform` je skratka pre assign+cancel+finish+view+set,
 				`delegate` v nej NIE JE. `cancel` nezakazuj - uvolnuje ulohu,
@@ -466,7 +689,7 @@ changeCaseProperty("color").about { "grey" }
 			<cols>6</cols>
 			<layout>grid</layout>
 			<dataRef>
-				<id>div_on_zadanie</id>
+				<id>div_on_osoba</id>
 				<logic><behavior>visible</behavior></logic>
 				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
@@ -477,77 +700,161 @@ changeCaseProperty("color").about { "grey" }
 				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>on_pozicia</id>
+				<id>on_priezvisko</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
 				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>on_oddelenie</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<id>on_sukromny_email</id>
+				<logic><behavior>editable</behavior></logic>
 				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>on_datum_nastupu</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<id>on_telefon</id>
+				<logic><behavior>editable</behavior></logic>
 				<layout><x>3</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>on_nadriadeny</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<id>div_on_zaradenie</id>
+				<logic><behavior>visible</behavior></logic>
 				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>on_pozicia</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_oddelenie</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_uvazok</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_nastup_datum</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_firemny_email</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_on_pristupy</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>on_systemy</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_poznamka</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_on_schvalenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>on_schvalovatel_vyber</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<!--
+				Komentar z posledneho rozhodnutia. Ked sa ziadost vrati na
+				doplnenie, je to jedine miesto, kde sa zadavatel dozvie preco.
+			-->
+			<dataRef>
+				<id>on_komentar</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 		</dataGroup>
+		<event type="assign">
+			<id>t_on_ziadost_assign</id>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+on_schvalovatel_vyber: f.on_schvalovatel_vyber;
+
+// Pri KAZDOM otvoreni znova. `change ... options { }` v `create` udalosti
+// pripadu sa neuchova (B11), a zoznam veducich sa medzitym meni.
+change on_schvalovatel_vyber options { nadriadeni(loggedUser()) }
+				]]></action>
+			</actions>
+		</event>
+		<event type="delegate">
+			<id>t_on_ziadost_delegate</id>
+			<title name="empty_button"></title>
+		</event>
 		<event type="finish">
-			<id>t_on_podanie_finish</id>
-			<title name="t_on_podanie_finish_t">Podať</title>
+			<id>t_on_ziadost_finish</id>
+			<title name="t_on_ziadost_finish">Podať na schválenie</title>
 			<actions phase="pre">
-				<action id="2"><![CDATA[
-on_meno: f.on_meno, on_pozicia: f.on_pozicia, on_datum_nastupu: f.on_datum_nastupu,
-on_nadriadeny: f.on_nadriadeny;
+				<action id="4"><![CDATA[
+on_meno: f.on_meno, on_priezvisko: f.on_priezvisko, on_systemy: f.on_systemy,
+on_nastup_datum: f.on_nastup_datum, on_schvalovatel_vyber: f.on_schvalovatel_vyber;
 
 // Sem validacie, ktore `required` neoveri. Odmietnutie vrati HTTP 200
-// a dovod v tele ako `error` - test na stavovy kod taky blok prehliadne.
-if (!((on_meno.value ?: "") as String).trim()) {
-    throw new java.lang.IllegalStateException("Meno nastupujúceho musí byť vyplnené.")
+// a dovod v tele ako `error` - test na stavovy kod ho prehliadne.
+if (!((on_meno.value ?: "") as String).trim() || !((on_priezvisko.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException("Meno aj priezvisko musia byť vyplnené.")
 }
-if (!((on_pozicia.value ?: "") as String).trim()) {
-    throw new java.lang.IllegalStateException("Pozícia musí byť vyplnená.")
+if (!ako_zoznam(on_systemy)) {
+    throw new java.lang.IllegalStateException("Vyber aspoň jeden účet, ktorý sa má vytvoriť.")
 }
-if (on_datum_nastupu.value == null) {
+if (on_nastup_datum.value == null) {
     throw new java.lang.IllegalStateException("Dátum nástupu musí byť vyplnený.")
 }
-
-// Rola zostava autoritativna. `roleRef` a `userRef` sa na prechode ZJEDNOCUJU,
-// takze "potvrdi to nadriadeny TOHTO nastupu" sa deklarativne napisat neda -
-// smerovanie ide cez `userRef on_nadriadeny` a rolu overuje tento guard.
-// `usersWithRole` je prienik: zo zadanych ludi vrati tych, co rolu maju.
-def vybrani = userIdsOf(on_nadriadeny.value)
-if (!vybrani) {
-    throw new java.lang.IllegalStateException("Nadriadený musí byť vybraný - bez neho nemá kto potvrdiť deň nástupu.")
+def vybrany = ((on_schvalovatel_vyber.value ?: "") as String).trim()
+if (!vybrany) {
+    throw new java.lang.IllegalStateException("Vyber vedúceho, ktorý má nástup schváliť.")
 }
-if (vybrani.size() > 1) {
-    throw new java.lang.IllegalStateException("Nadriadený musí byť práve jeden.")
-}
-if (!usersWithRole(on_nadriadeny.value, "nadriadeny")) {
-    throw new java.lang.IllegalStateException("Vybraná osoba nemá rolu Nadriadený, takže by úlohu v deň nástupu neuvidela.")
+if (vybrany == ((loggedUser()?.id ?: "") as String)) {
+    throw new java.lang.IllegalStateException("Vlastnú žiadosť si schváliť nemôžeš.")
 }
 				]]></action>
 			</actions>
 			<actions phase="post">
-				<action id="3"><![CDATA[
-on_meno: f.on_meno, on_pozicia: f.on_pozicia, on_stav_label: f.on_stav_label,
-on_it_stav: f.on_it_stav, on_hr_stav: f.on_hr_stav, on_maj_stav: f.on_maj_stav,
-on_podal: f.on_podal, on_podane_o: f.on_podane_o, on_priebeh: f.on_priebeh;
+				<action id="5"><![CDATA[
+on_meno: f.on_meno, on_priezvisko: f.on_priezvisko, on_pozicia: f.on_pozicia,
+on_stav_label: f.on_stav_label, on_podane_o: f.on_podane_o, on_historia: f.on_historia,
+on_firemny_email: f.on_firemny_email, on_schvalovatel_vyber: f.on_schvalovatel_vyber,
+on_schvalovatelia: f.on_schvalovatelia, on_schvalovatel_meno: f.on_schvalovatel_meno,
+on_komentar: f.on_komentar;
 
-change on_stav_label value { "prebieha" }
-// Tri vetvy startuju naraz - zeton sa z podania rozdeli do troch miest.
-change on_it_stav value { "caka" }
-change on_hr_stav value { "caka" }
-change on_maj_stav value { "caka" }
-change on_podal value { kto(loggedUser()) }
+change on_stav_label value { "schvalenie" }
 change on_podane_o value { java.time.LocalDateTime.now() }
-zapis(on_priebeh, "Nástup podaný — " + kto(loggedUser()))
-changeCaseProperty("title").about { nazov(on_meno, on_pozicia) }
+// Navrh firemneho mailu, ked ho zadavatel nechal prazdny.
+if (!((on_firemny_email.value ?: "") as String).trim()) {
+    change on_firemny_email value {
+        bez_diakritiky(on_meno.value) + "." + bez_diakritiky(on_priezvisko.value) + "@ditec.sk"
+    }
+}
+// Vybrany clovek ide do `userList` - na nom visi `userRef` schvalovacieho
+// prechodu. Bez tohto kroku by ulohu nemal kto prevziat.
+def id = ((on_schvalovatel_vyber.value ?: "") as String).trim()
+change on_schvalovatelia value { [id] }
+def u = null
+try { u = userService.findById(id, false) } catch (Exception e) { u = null }
+change on_schvalovatel_meno value { u != null ? kto(u) : id }
+// Komentar z predchadzajuceho kola sa vycisti - inak by pri druhom podani
+// visel pri ziadosti stary dovod vratenia. V `on_historia` zostava.
+change on_komentar value { "" }
+do_historie(on_historia, "podal " + kto(loggedUser()) +
+        ", schvaľuje " + (u != null ? kto(u) : id))
+changeCaseProperty("title").about { nazov(on_priezvisko, on_meno, on_pozicia) }
 changeCaseProperty("color").about { "blue" }
 				]]></action>
 			</actions>
@@ -555,290 +862,190 @@ changeCaseProperty("color").about { "blue" }
 	</transition>
 
 	<transition>
-		<id>t_on_it</id>
-		<x>380</x>
-		<y>60</y>
-		<label name="t_on_it_label">IT príprava</label>
-		<icon>computer</icon>
-		<!-- Zdielana uloha celej roly: `manual`, nie `auto`. -->
-		<assignPolicy>manual</assignPolicy>
-		<roleRef>
-			<id>it</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<dataGroup>
-			<id>g_on_it</id>
-			<cols>6</cols>
-			<layout>grid</layout>
-			<dataRef>
-				<id>div_on_it</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>on_meno</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_datum_nastupu</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_it_ucet</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_it_notebook</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>3</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_it_email</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_it_pozn</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-		</dataGroup>
-		<event type="finish">
-			<id>t_on_it_finish</id>
-			<title name="t_on_it_finish_t">IT hotové</title>
-			<actions phase="pre">
-				<action id="4"><![CDATA[
-on_it_ucet: f.on_it_ucet, on_it_notebook: f.on_it_notebook, on_it_email: f.on_it_email;
-
-// `required` na `boolean` prejde aj s hodnotou `false` - preto guard.
-if (!(on_it_ucet.value as Boolean)) {
-    throw new java.lang.IllegalStateException("Účet ešte nie je vytvorený.")
-}
-if (!(on_it_notebook.value as Boolean)) {
-    throw new java.lang.IllegalStateException("Notebook ešte nie je pripravený.")
-}
-if (!((on_it_email.value ?: "") as String).trim()) {
-    throw new java.lang.IllegalStateException("Pracovný e-mail musí byť vyplnený.")
-}
-				]]></action>
-			</actions>
-			<actions phase="post">
-				<action id="5"><![CDATA[
-on_it_stav: f.on_it_stav, on_hr_stav: f.on_hr_stav, on_maj_stav: f.on_maj_stav,
-on_stav_label: f.on_stav_label, on_priebeh: f.on_priebeh;
-
-change on_it_stav value { "hotovo" }
-zapis(on_priebeh, "IT hotové — " + kto(loggedUser()))
-if (vetvy_hotove(on_hr_stav, on_maj_stav)) {
-    change on_stav_label value { "pripravene" }
-    zapis(on_priebeh, "Všetky tri vetvy hotové — čaká sa na potvrdenie nadriadeného.")
-}
-				]]></action>
-			</actions>
-		</event>
-	</transition>
-
-	<transition>
-		<id>t_on_hr</id>
-		<x>380</x>
-		<y>180</y>
-		<label name="t_on_hr_label">Personalistika</label>
-		<icon>assignment_ind</icon>
-		<assignPolicy>manual</assignPolicy>
-		<roleRef>
-			<id>hr</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<dataGroup>
-			<id>g_on_hr</id>
-			<cols>6</cols>
-			<layout>grid</layout>
-			<dataRef>
-				<id>div_on_hr</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>on_meno</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_datum_nastupu</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_hr_zmluva</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_hr_gdpr</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_hr_bozp</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_hr_pozn</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-		</dataGroup>
-		<event type="finish">
-			<id>t_on_hr_finish</id>
-			<title name="t_on_hr_finish_t">Personalistika hotová</title>
-			<actions phase="pre">
-				<action id="6"><![CDATA[
-on_hr_zmluva: f.on_hr_zmluva, on_hr_gdpr: f.on_hr_gdpr, on_hr_bozp: f.on_hr_bozp;
-
-if (!(on_hr_zmluva.value as Boolean)) {
-    throw new java.lang.IllegalStateException("Pracovná zmluva ešte nie je podpísaná.")
-}
-if (!(on_hr_gdpr.value as Boolean)) {
-    throw new java.lang.IllegalStateException("GDPR poučenie ešte nie je odovzdané.")
-}
-if (!(on_hr_bozp.value as Boolean)) {
-    throw new java.lang.IllegalStateException("Školenie BOZP ešte nie je absolvované.")
-}
-				]]></action>
-			</actions>
-			<actions phase="post">
-				<action id="7"><![CDATA[
-on_it_stav: f.on_it_stav, on_hr_stav: f.on_hr_stav, on_maj_stav: f.on_maj_stav,
-on_stav_label: f.on_stav_label, on_priebeh: f.on_priebeh;
-
-change on_hr_stav value { "hotovo" }
-zapis(on_priebeh, "Personalistika hotová — " + kto(loggedUser()))
-if (vetvy_hotove(on_it_stav, on_maj_stav)) {
-    change on_stav_label value { "pripravene" }
-    zapis(on_priebeh, "Všetky tri vetvy hotové — čaká sa na potvrdenie nadriadeného.")
-}
-				]]></action>
-			</actions>
-		</event>
-	</transition>
-
-	<transition>
-		<id>t_on_majetok</id>
-		<x>380</x>
-		<y>300</y>
-		<label name="t_on_majetok_label">Pridelenie majetku</label>
-		<icon>inventory_2</icon>
-		<assignPolicy>manual</assignPolicy>
-		<roleRef>
-			<id>majetok</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<dataGroup>
-			<id>g_on_maj</id>
-			<cols>6</cols>
-			<layout>grid</layout>
-			<dataRef>
-				<id>div_on_maj</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>on_meno</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_datum_nastupu</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_maj_zariadenie</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_maj_inv</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_maj_pozn</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-		</dataGroup>
-		<event type="finish">
-			<id>t_on_majetok_finish</id>
-			<title name="t_on_majetok_finish_t">Majetok pridelený</title>
-			<actions phase="pre">
-				<action id="8"><![CDATA[
-on_maj_zariadenie: f.on_maj_zariadenie, on_maj_inv: f.on_maj_inv;
-
-if (!((on_maj_zariadenie.value ?: "") as String).trim()) {
-    throw new java.lang.IllegalStateException("Pridelené zariadenie musí byť vyplnené.")
-}
-if (!((on_maj_inv.value ?: "") as String).trim()) {
-    throw new java.lang.IllegalStateException("Inventárne číslo musí byť vyplnené.")
-}
-				]]></action>
-			</actions>
-			<actions phase="post">
-				<action id="9"><![CDATA[
-on_it_stav: f.on_it_stav, on_hr_stav: f.on_hr_stav, on_maj_stav: f.on_maj_stav,
-on_stav_label: f.on_stav_label, on_priebeh: f.on_priebeh,
-on_maj_zariadenie: f.on_maj_zariadenie, on_maj_inv: f.on_maj_inv;
-
-change on_maj_stav value { "hotovo" }
-zapis(on_priebeh, "Majetok pridelený (" + (on_maj_zariadenie.value ?: "") +
-        ", inv. " + (on_maj_inv.value ?: "") + ") — " + kto(loggedUser()))
-if (vetvy_hotove(on_it_stav, on_hr_stav)) {
-    change on_stav_label value { "pripravene" }
-    zapis(on_priebeh, "Všetky tri vetvy hotové — čaká sa na potvrdenie nadriadeného.")
-}
-				]]></action>
-			</actions>
-		</event>
-	</transition>
-
-	<transition>
-		<id>t_on_den_nastupu</id>
-		<x>600</x>
-		<y>180</y>
-		<label name="t_on_den_nastupu_label">Deň nástupu</label>
+		<id>t_on_schvalenie</id>
+		<x>280</x>
+		<y>100</y>
+		<label name="t_on_schvalenie_label">Schválenie nadriadeným</label>
 		<icon>how_to_reg</icon>
-		<assignPolicy>manual</assignPolicy>
+		<!-- Osobna uloha jedneho vybraneho cloveka - `auto` (B12). -->
+		<assignPolicy>auto</assignPolicy>
 		<!--
-			Ziadny `roleRef`. `roleRef` a `userRef` sa ZJEDNOCUJU, takze rola
-			`nadriadeny` by tu znamenala "potvrdi to ktorykolvek veduci" a
-			smerovanie na konkretneho nadriadeneho by nebolo k nicomu
-			(RUNBOOK 11). Rolu overuje guard v podani.
+			LEN `userRef`, ZIADNY `roleRef`. Zjednocuju sa, neprienikaju, takze
+			rola `veduci` na tomto prechode by znamenala, ze nastup schvali
+			ktorykolvek veduci a vyber nadriadeneho by nebol na nic (RUNBOOK 11).
 		-->
 		<userRef>
-			<id>on_nadriadeny</id>
+			<id>on_schvalovatelia</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
 		</userRef>
 		<dataGroup>
-			<id>g_on_den</id>
+			<id>g_on_schval_zadanie</id>
 			<cols>6</cols>
 			<layout>grid</layout>
 			<dataRef>
-				<id>div_on_vysledok</id>
+				<id>div_on_osoba</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>on_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_priezvisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_pozicia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_oddelenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_nastup_datum</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_uvazok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_firemny_email</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_ziadatel_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_on_pristupy</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<!-- Schvalovatel smie zoznam uctov upravit - to je castejsie
+			     rozhodnutie nez vratenie celej ziadosti. -->
+			<dataRef>
+				<id>on_systemy</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_poznamka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<dataGroup>
+			<id>g_on_schval_rozhodnutie</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_on_rozhodnutie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>on_rozhodnutie</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_komentar</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="delegate">
+			<id>t_on_schvalenie_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_on_schvalenie_finish</id>
+			<title name="t_on_schvalenie_finish">Zapísať rozhodnutie</title>
+			<actions phase="pre">
+				<action id="6"><![CDATA[
+on_rozhodnutie: f.on_rozhodnutie, on_komentar: f.on_komentar, on_ziadatel: f.on_ziadatel,
+go_vpred: f.go_vpred, go_spat: f.go_spat, go_zamietnute: f.go_zamietnute;
+
+// Druha linia styroch oci: pole `on_schvalovatelia` sa da prepisat cez API,
+// takze samotny vyber nestaci.
+def moje = ((loggedUser()?.id ?: "") as String)
+if (moje in id_z_userlistu(on_ziadatel)) {
+    throw new java.lang.IllegalStateException("Vlastnú žiadosť si schváliť nemôžeš.")
+}
+
+// Routovacie priznaky patria do `phase="pre"`. V `post` sa token pohne
+// s nulami a zmizne (reference C4).
+def volba = ((on_rozhodnutie.value ?: "") as String)
+if (!(volba in ["schvalit", "vratit", "zamietnut"])) {
+    throw new java.lang.IllegalStateException(
+            "Vyber, či nástup schvaľuješ, vraciaš na doplnenie alebo zamietaš.")
+}
+if (volba != "schvalit" && !((on_komentar.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException(
+            "Vrátenie aj zamietnutie potrebuje komentár - inak zadávateľ nevie, čo opraviť.")
+}
+change go_vpred value { volba == "schvalit" ? 1 : 0 }
+change go_spat value { volba == "vratit" ? 1 : 0 }
+change go_zamietnute value { volba == "zamietnut" ? 1 : 0 }
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="7"><![CDATA[
+on_rozhodnutie: f.on_rozhodnutie, on_komentar: f.on_komentar,
+on_stav_label: f.on_stav_label, on_historia: f.on_historia, on_hotovo_o: f.on_hotovo_o;
+
+def volba = ((on_rozhodnutie.value ?: "") as String)
+change on_stav_label value {
+    volba == "schvalit" ? "provisioning" : (volba == "vratit" ? "navrh" : "zamietnute")
+}
+changeCaseProperty("color").about { volba == "schvalit" ? "blue" : (volba == "vratit" ? "orange" : "red") }
+if (volba == "zamietnut") {
+    change on_hotovo_o value { java.time.LocalDateTime.now() }
+}
+def k = ((on_komentar.value ?: "") as String).trim()
+do_historie(on_historia, "nadriadený: " + volba + " (" + kto(loggedUser()) + ")" +
+        (k ? (" – " + k) : ""))
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+
+	<transition>
+		<id>t_on_provisioning</id>
+		<x>500</x>
+		<y>100</y>
+		<label name="t_on_provisioning_label">Vytvorenie účtov</label>
+		<icon>key</icon>
+		<!-- Zdielana uloha celeho IT - `manual` (B12). -->
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>it_spravca</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_on_ucty</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_on_ucty</id>
 				<logic><behavior>visible</behavior></logic>
 				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
@@ -849,57 +1056,91 @@ if (vetvy_hotove(on_it_stav, on_hr_stav)) {
 				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>on_pozicia</id>
+				<id>on_priezvisko</id>
 				<logic><behavior>visible</behavior></logic>
 				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>on_datum_nastupu</id>
+				<id>on_nastup_datum</id>
 				<logic><behavior>visible</behavior></logic>
 				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>on_it_email</id>
+				<id>on_firemny_email</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_systemy</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>on_maj_zariadenie</id>
+				<id>on_entra_skupiny</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_atlassian_tim</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_profil</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_heslo</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_on_provision</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_ucet</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>3</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>on_potvrdene</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_den_pozn</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<id>on_protokol</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 		</dataGroup>
+		<event type="delegate">
+			<id>t_on_provisioning_delegate</id>
+			<title name="empty_button"></title>
+		</event>
 		<event type="finish">
-			<id>t_on_den_nastupu_finish</id>
-			<title name="t_on_den_nastupu_finish_t">Potvrdiť nástup</title>
+			<id>t_on_provisioning_finish</id>
+			<title name="t_on_provisioning_finish">Ukončiť nástup</title>
 			<actions phase="pre">
-				<action id="10"><![CDATA[
-on_potvrdene: f.on_potvrdene;
+				<action id="8"><![CDATA[
+on_protokol: f.on_protokol, on_systemy: f.on_systemy, on_ucet: f.on_ucet;
 
-if (!(on_potvrdene.value as Boolean)) {
-    throw new java.lang.IllegalStateException("Nástup potvrdíte prepnutím „Zamestnanec nastúpil“.")
+if (!((on_protokol.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException(
+            "Najprv stlač „Vytvoriť účty“ - protokol je prázdny.")
+}
+if (ako_zoznam(on_systemy).contains("netgrif") && !((on_ucet.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException("Účet v Netgrife ešte nevznikol.")
 }
 				]]></action>
 			</actions>
 			<actions phase="post">
-				<action id="11"><![CDATA[
-on_stav_label: f.on_stav_label, on_potvrdil: f.on_potvrdil,
-on_potvrdene_o: f.on_potvrdene_o, on_priebeh: f.on_priebeh;
+				<action id="9"><![CDATA[
+on_stav_label: f.on_stav_label, on_hotovo_o: f.on_hotovo_o, on_historia: f.on_historia,
+on_heslo: f.on_heslo;
 
-change on_stav_label value { "nastupil" }
-change on_potvrdil value { kto(loggedUser()) }
-change on_potvrdene_o value { java.time.LocalDateTime.now() }
-zapis(on_priebeh, "Nástup potvrdený — " + kto(loggedUser()))
+change on_stav_label value { "hotovo" }
+change on_hotovo_o value { java.time.LocalDateTime.now() }
+// Heslo v pripade nezostava ani ked ucet v Netgrife nevznikal.
+change on_heslo value { "" }
+do_historie(on_historia, "nástup ukončil " + kto(loggedUser()))
 changeCaseProperty("color").about { "green" }
 				]]></action>
 			</actions>
@@ -908,52 +1149,151 @@ changeCaseProperty("color").about { "green" }
 
 	<transition>
 		<id>t_on_prehlad</id>
-		<x>140</x>
-		<y>420</y>
-		<label name="t_on_prehlad_label">Stav nástupu</label>
-		<icon>fact_check</icon>
+		<x>280</x>
+		<y>240</y>
+		<label name="t_on_prehlad_label">Prehľad nástupu</label>
+		<icon>visibility</icon>
 		<assignPolicy>auto</assignPolicy>
 		<!--
-			Read arc z `p_alive`, ktore NIKTO nekonzumuje - takze tento pohlad
-			je dostupny cely zivot pripadu a odmietnute DOKONCIT na inom
-			prechode ho nezmaze (B8b, B25).
-
-			Vsetky styri titulky udalosti su PRAZDNE: nie je co dokoncit ani
-			rusit, a skryt tlacidlo takto je lepsie nez odoberat opravnenie -
-			`view` musi zostat (RUNBOOK 11). Prazdny titulok potrebuje prazdny
-			preklad v KAZDOM jazyku, inak sa tlacidlo v druhom jazyku vrati;
-			preto jeden kluc `empty_button` pre vsetky.
+			Read-only pohlad na cely zivot pripadu - JEDINE miesto, kde sa stav
+			zobrazuje. Nie je co dokoncit ani rusit, takze su vsetky styri
+			tlacidla skryte prazdnym titulkom - lepsie nez odobrat opravnenie,
+			lebo `view` musi zostat (RUNBOOK 11).
 		-->
+		<userRef>
+			<id>on_ziadatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<userRef>
+			<id>on_schvalovatelia</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
 		<roleRef>
-			<id>hr</id>
+			<id>personalista</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
 		</roleRef>
 		<roleRef>
-			<id>it</id>
+			<id>it_spravca</id>
 			<logic>
-				<view>true</view>
+				<perform>true</perform>
 			</logic>
 		</roleRef>
-		<roleRef>
-			<id>majetok</id>
-			<logic>
-				<view>true</view>
-			</logic>
-		</roleRef>
-		<userRef>
-			<id>on_nadriadeny</id>
-			<logic>
-				<view>true</view>
-			</logic>
-		</userRef>
+		<dataGroup>
+			<id>g_on_prehlad</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>on_stav_label</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_nastup_datum</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_schvalovatel_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_on_osoba</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>on_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_priezvisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_pozicia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_oddelenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_firemny_email</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_ucet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_on_pristupy</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>on_systemy</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_protokol</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_on_priebeh</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>on_historia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_podane_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_hotovo_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>14</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<!--
+				Skryte, ale V dataGroupe: pole, ktore nie je v ziadnom, nevrati
+				`GET /api/task/{id}/data` - ani skryte - takze by sa nedalo
+				otestovat, ze na nom visi `userRef`.
+			-->
+			<dataRef>
+				<id>on_ziadatel</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>on_schvalovatelia</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>3</x><y>15</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
 		<event type="assign">
 			<id>t_on_prehlad_assign</id>
-			<title name="empty_button"></title>
-		</event>
-		<event type="finish">
-			<id>t_on_prehlad_finish</id>
 			<title name="empty_button"></title>
 		</event>
 		<event type="cancel">
@@ -964,305 +1304,126 @@ changeCaseProperty("color").about { "green" }
 			<id>t_on_prehlad_delegate</id>
 			<title name="empty_button"></title>
 		</event>
-		<dataGroup>
-			<id>g_on_prehlad</id>
-			<cols>6</cols>
-			<layout>grid</layout>
-			<dataRef>
-				<id>on_stav_label</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_datum_nastupu</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_on_vetvy</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<!--
-				Tri stavove polia = odpoved na "na ktoru vetvu sa caka".
-				`enumeration_map`, takze sa prekladaju - `text` by v anglickom
-				portali zostal slovensky.
-			-->
-			<dataRef>
-				<id>on_it_stav</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_hr_stav</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_maj_stav</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_on_zadanie</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>on_meno</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_pozicia</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_oddelenie</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_nadriadeny</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_it_email</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_maj_zariadenie</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_maj_inv</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_on_priebeh</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>on_priebeh</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_podal</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_podane_o</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_potvrdil</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>on_potvrdene_o</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>13</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-		</dataGroup>
+		<event type="finish">
+			<id>t_on_prehlad_finish</id>
+			<title name="empty_button"></title>
+		</event>
 	</transition>
 
 	<place>
-		<id>p_novy</id>
-		<x>40</x>
-		<y>180</y>
+		<id>p_navrh</id>
+		<x>-40</x>
+		<y>100</y>
 		<label>Rozpísané</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 	<place>
-		<id>p_it</id>
-		<x>260</x>
-		<y>60</y>
-		<label>Čaká na IT</label>
+		<id>p_schvalenie</id>
+		<x>180</x>
+		<y>100</y>
+		<label>Na schválenie</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
-		<id>p_hr</id>
-		<x>260</x>
-		<y>180</y>
-		<label>Čaká na personalistiku</label>
+		<id>p_provisioning</id>
+		<x>400</x>
+		<y>100</y>
+		<label>Zakladajú sa účty</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
-		<id>p_maj</id>
-		<x>260</x>
-		<y>300</y>
-		<label>Čaká na majetok</label>
+		<id>p_koniec</id>
+		<x>600</x>
+		<y>100</y>
+		<label>Ukončené</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
-		<id>p_it_ok</id>
-		<x>500</x>
-		<y>60</y>
-		<label>IT hotové</label>
-		<tokens>0</tokens>
-		<static>false</static>
-	</place>
-	<place>
-		<id>p_hr_ok</id>
-		<x>500</x>
-		<y>180</y>
-		<label>Personalistika hotová</label>
-		<tokens>0</tokens>
-		<static>false</static>
-	</place>
-	<place>
-		<id>p_maj_ok</id>
-		<x>500</x>
-		<y>300</y>
-		<label>Majetok hotový</label>
-		<tokens>0</tokens>
-		<static>false</static>
-	</place>
-	<place>
-		<id>p_hotovy</id>
-		<x>700</x>
-		<y>180</y>
-		<label>Nastúpil</label>
-		<tokens>0</tokens>
-		<static>false</static>
-	</place>
-	<place>
-		<id>p_alive</id>
-		<x>40</x>
-		<y>420</y>
-		<label>Živé</label>
+		<id>p_sledovanie</id>
+		<x>180</x>
+		<y>240</y>
+		<label>Sledovanie</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 
 	<arc>
-		<id>a_on_podanie_in</id>
+		<id>a_navrh_ziadost</id>
 		<type>regular</type>
-		<sourceId>p_novy</sourceId>
-		<destinationId>t_on_podanie</destinationId>
+		<sourceId>p_navrh</sourceId>
+		<destinationId>t_on_ziadost</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_ziadost_schvalenie</id>
+		<type>regular</type>
+		<sourceId>t_on_ziadost</sourceId>
+		<destinationId>p_schvalenie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_schvalenie_in</id>
+		<type>regular</type>
+		<sourceId>p_schvalenie</sourceId>
+		<destinationId>t_on_schvalenie</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<!--
-		AND-split: jedno dokoncenie podania polozi zeton do troch miest naraz,
-		takze vsetky tri vetvy su povolene sucasne a navzajom na seba necakaju.
+		Tri vychody jedneho rozhodnutia. `multiplicity=0` + `reference` na
+		ciselne pole: prejde ten arc, ktoreho priznak ma 1. Priznaky sa
+		nastavuju vo `phase="pre"` - v `post` uz je neskoro (C4).
 	-->
 	<arc>
-		<id>a_on_podanie_it</id>
+		<id>a_schvalenie_dalej</id>
 		<type>regular</type>
-		<sourceId>t_on_podanie</sourceId>
-		<destinationId>p_it</destinationId>
+		<sourceId>t_on_schvalenie</sourceId>
+		<destinationId>p_provisioning</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_vpred</reference>
+	</arc>
+	<arc>
+		<id>a_schvalenie_spat</id>
+		<type>regular</type>
+		<sourceId>t_on_schvalenie</sourceId>
+		<destinationId>p_navrh</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_spat</reference>
+	</arc>
+	<arc>
+		<id>a_schvalenie_zamietnute</id>
+		<type>regular</type>
+		<sourceId>t_on_schvalenie</sourceId>
+		<destinationId>p_koniec</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_zamietnute</reference>
+	</arc>
+	<arc>
+		<id>a_provisioning_in</id>
+		<type>regular</type>
+		<sourceId>p_provisioning</sourceId>
+		<destinationId>t_on_provisioning</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a_on_podanie_hr</id>
+		<id>a_provisioning_koniec</id>
 		<type>regular</type>
-		<sourceId>t_on_podanie</sourceId>
-		<destinationId>p_hr</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_podanie_maj</id>
-		<type>regular</type>
-		<sourceId>t_on_podanie</sourceId>
-		<destinationId>p_maj</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_it_in</id>
-		<type>regular</type>
-		<sourceId>p_it</sourceId>
-		<destinationId>t_on_it</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_it_out</id>
-		<type>regular</type>
-		<sourceId>t_on_it</sourceId>
-		<destinationId>p_it_ok</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_hr_in</id>
-		<type>regular</type>
-		<sourceId>p_hr</sourceId>
-		<destinationId>t_on_hr</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_hr_out</id>
-		<type>regular</type>
-		<sourceId>t_on_hr</sourceId>
-		<destinationId>p_hr_ok</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_maj_in</id>
-		<type>regular</type>
-		<sourceId>p_maj</sourceId>
-		<destinationId>t_on_majetok</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_maj_out</id>
-		<type>regular</type>
-		<sourceId>t_on_majetok</sourceId>
-		<destinationId>p_maj_ok</destinationId>
+		<sourceId>t_on_provisioning</sourceId>
+		<destinationId>p_koniec</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<!--
-		AND-join: tri regular vstupy. Engine povoli `t_on_den_nastupu` az ked ma
-		zeton KAZDE z troch miest - dovtedy uloha vobec neexistuje, takze sa
-		neda ani priradit, ani dokoncit.
+		READ arc z miesta, ktore NIKTO nekonzumuje - pohlad je preto dostupny
+		cely zivot pripadu, nie az na konci (B25). Read arc z konzumovaneho
+		miesta by odmietnute DOKONCIT zmazalo a uz neobnovilo (B8b).
 	-->
 	<arc>
-		<id>a_on_den_it</id>
-		<type>regular</type>
-		<sourceId>p_it_ok</sourceId>
-		<destinationId>t_on_den_nastupu</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_den_hr</id>
-		<type>regular</type>
-		<sourceId>p_hr_ok</sourceId>
-		<destinationId>t_on_den_nastupu</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_den_maj</id>
-		<type>regular</type>
-		<sourceId>p_maj_ok</sourceId>
-		<destinationId>t_on_den_nastupu</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_den_out</id>
-		<type>regular</type>
-		<sourceId>t_on_den_nastupu</sourceId>
-		<destinationId>p_hotovy</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a_on_prehlad</id>
+		<id>a_sledovanie_prehlad</id>
 		<type>read</type>
-		<sourceId>p_alive</sourceId>
+		<sourceId>p_sledovanie</sourceId>
 		<destinationId>t_on_prehlad</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
