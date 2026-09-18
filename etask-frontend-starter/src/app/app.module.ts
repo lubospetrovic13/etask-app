@@ -5,6 +5,8 @@ import {BrowserModule} from '@angular/platform-browser';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {
   AuthenticationComponentModule,
+  EmailSubmissionFormComponentModule,
+  ForgottenPasswordFormComponentModule,
   CaseViewComponentModule,
   DashboardComponentModule,
   DataFieldsComponentModule,
@@ -26,6 +28,7 @@ import {
 } from '@netgrif/components';
 import {
   AuthenticationModule,
+  SignUpModule,
   ConfigurationService,
   GroupNavigationComponentResolverService,
   MaterialModule,
@@ -68,6 +71,9 @@ import {EtaskTabbedCaseViewComponent} from './views/side-nav/cases/etask-tabbed-
 import {SideNavCasesCaseViewComponent} from './views/side-nav/cases/side-nav-cases-case-view.component';
 import {EmptyViewComponent} from './views/side-nav/emptyView/empty-view.component';
 import {ETaskBreadcrumbsComponent} from './views/side-nav/e-task-breadcrumbs/e-task-breadcrumbs.component';
+import {FolderViewComponent} from './views/side-nav/folder/folder-view.component';
+import {RecoverComponent} from './views/auth/recover/recover.component';
+import {ResetPasswordComponent} from './views/auth/reset-password/reset-password.component';
 import {ETaskDoubleDrawerComponent} from './views/side-nav/etask-double-drawer/e-task-double-drawer.component';
 import {EtaskLanguageSelectorComponent} from './views/side-nav/etask-language-selector/etask-language-selector.component';
 import {UriNodeTitlePipe} from './views/side-nav/uri-node-title.pipe';
@@ -101,6 +107,9 @@ import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-vie
     PublicSingleTaskViewComponent,
     ETaskDoubleDrawerComponent,
     ETaskBreadcrumbsComponent,
+    FolderViewComponent,
+    RecoverComponent,
+    ResetPasswordComponent,
     EtaskLanguageSelectorComponent,
     UriNodeTitlePipe,
     WorkflowPanelComponent,
@@ -121,8 +130,16 @@ import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-vie
     MaterialModule,
     FlexLayoutModule,
     AuthenticationModule,
+    // Nesie `SignUpService`, ktory je `providedIn: SignUpModule`, nie root.
+    // Obrazovka obnovy hesla ho potrebuje; bez tohto importu spadne DI
+    // (`NullInjectorError`) a zostane prazdna stranka bez hlasky.
+    SignUpModule,
     SideMenuComponentModule,
     AuthenticationComponentModule,
+    // Formulare obnovy hesla: `nc-email-submission-form` (zadanie adresy)
+    // a `nc-forgotten-password-form` (nastavenie noveho hesla z tokenu).
+    EmailSubmissionFormComponentModule,
+    ForgottenPasswordFormComponentModule,
     TranslateLibModule,
     LoginFormComponentModule,
     ToolbarComponentModule,

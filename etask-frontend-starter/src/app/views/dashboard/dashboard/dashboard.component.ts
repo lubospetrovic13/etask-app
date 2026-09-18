@@ -1,29 +1,24 @@
 import {Component, OnDestroy, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {
-  AccessService,
   Case,
-  DynamicNavigationRouteProviderService,
   FILTER_IDENTIFIERS,
   FILTER_VIEW_TASK_TRANSITION_ID,
   FilterExtractionService,
-  LanguageService,
   LoadingEmitter,
-  LoggerService,
-  RoleAccess,
   TaskResourceService,
   User,
   UserService,
   ViewNavigationItem,
 } from '@netgrif/components-core';
-import {Observable, Subscription, from, of} from 'rxjs';
-import {concatMap, first, map, switchMap} from 'rxjs/operators';
+import {Subscription} from 'rxjs';
+import {map} from 'rxjs/operators';
 import custom_views from '../../../../assets/custom_views.json';
 import {UriNodeTitlePipe} from '../../side-nav/uri-node-title.pipe';
-import {localisedViewTitle} from '../../side-nav/view-title';
 import icons from '../../../../assets/uriNodeIcons.json';
 import {ETaskUriNodeResource} from '../service/etask-uri-resource.service';
 import {EtaskUriService} from '../service/etask-uri.service';
+import {ViewNavigationResolverService} from '../../side-nav/view-navigation-resolver.service';
 
 
 @Component({
@@ -47,11 +42,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private _taskResource: TaskResourceService,
     private _router: Router,
     private _filterExtraction: FilterExtractionService,
-    private _dynamicRoutingService: DynamicNavigationRouteProviderService,
-    private _accessService: AccessService,
     private _nodeTitle: UriNodeTitlePipe,
-    private _language: LanguageService,
-    private _log: LoggerService,
+    private _viewResolver: ViewNavigationResolverService,
   ) {
     this._loading = new LoadingEmitter();
   }
@@ -82,7 +74,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             // teda overit typ, nie len null/undefined.
             const filteredViews = (Array.isArray(cases.content) ? cases.content : []).filter(it => custom_views.includes(it.immediateData.find(f => f.stringId === 'menu_item_identifier')?.value))
               .sort((a, b) => this.getViewOrder(a) - this.getViewOrder(b));
-            return filteredViews.map(it => this.resolveFilterCaseToViewNavigationItem(it)).filter(it => !!it);
+            return filteredViews.map(it => this._viewResolver.resolve(it)).filter(it => !!it);
           }),
         ).subscribe(views => {
           this.customViews = views;
@@ -98,107 +90,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Open a dashboard card: land on the first view the folder can offer.
+   * Klik na kartu = vstup DO PRIEČINKA, nie do zobrazenia.
    *
-   * This used to be `activeNode = node` + `navigate(['portal'])`, and it left
-   * the user at the root of the tree - measured: the drawer's `currentNode` was
-   * `root` right after the click. Two things were wrong and both are fixed:
+   * Predtým tu bol `entryFor`, ktorý zostupoval do podpriečinkov a otvoril
+   * prvé zobrazenie, ktoré našiel. Vzniklo to ako oprava toho, že `portal`
+   * bola prázdna obrazovka, takže karta priečinka „nič nerobila" - lenže
+   * dôsledok bol, že klik na „Financie" hodil človeka do konkrétneho
+   * zobrazenia o dve úrovne nižšie a nedalo sa z toho prečítať, kde je.
    *
-   *   1. `activeNode` was written into a *different instance* of the service.
-   *      `EtaskUriService` and the library's `UriService` were two tokens, so
-   *      Angular built two objects, each with its own `_activeNode$`. The
-   *      drawer listened to the other one. `app.module.ts` now aliases them
-   *      (`useExisting`), so setting `activeNode` really does move the drawer.
-   *   2. A folder that only holds other folders has no views of its own, so
-   *      `firstViewPath` fell back to `portal` - a valid route with an empty
-   *      content area. The card "worked" and looked like it did nothing.
-   *      Hence `entryFor`: descend into child folders and open the first view
-   *      that actually exists.
-   *
-   * `activeNode` is set to the node that OWNS the opened view, because that is
-   * what it means in the library - the folder the open view belongs to - and
-   * that is what the drawer shows.
+   * Prázdnu obrazovku rieši `FolderViewComponent`, takže hádať sa už nemusí.
    */
   public openNode(node: ETaskUriNodeResource) {
-    this.entryFor(node).subscribe(
-      entry => {
-        if (!entry) {
-          // Priecinok bez zobrazeni a bez deti: otvorit sa nema co. Aspon
-          // prepneme strom na neho, aby bolo vidno, ze je prazdny.
-          this._uri.activeNode = node;
-          this._router.navigate(['portal']);
-          return;
-        }
-        this._uri.activeNode = entry.node;
-        this._router.navigate([entry.path]);
-      },
-      error => {
-        this._log.error('Nepodarilo sa načítať zobrazenia priečinka', error);
-        this._router.navigate(['portal']);
-      });
-  }
-
-  /**
-   * First openable view in this folder, or in its subfolders.
-   *
-   * Depth is capped: the URI tree is a tree, and a bug in the data (a node
-   * whose child is its own ancestor) would otherwise turn this into an
-   * infinite walk instead of a wrong answer.
-   */
-  private entryFor(node: ETaskUriNodeResource, depth: number = 0):
-    Observable<{ node: ETaskUriNodeResource, path: string } | undefined> {
-    return this._uri.getCasesOfNode(node, FILTER_IDENTIFIERS).pipe(
-      switchMap(page => {
-        // Rovnaka pasca ako v ngOnInit vyssie: na 0 vysledkoch je `page.content`
-        // surovy HAL objekt, nie `[]`/`undefined` - `?? []` ho nechyti. Presne
-        // preto tento fallback nikdy nenasiel view ani na priecinku, ktory ho
-        // ma (napr. "Financie"): sam osebe ziadny nema, ale tato vynimka zhodila
-        // cely `entryFor` skor, nez sa stihol pozriet na jeho deti.
-        const path = this.firstViewPath(Array.isArray(page?.content) ? page.content : []);
-        if (path !== 'portal') {
-          return of({node, path});
-        }
-        if (depth >= 3) {
-          return of(undefined);
-        }
-        return this._uri.getChildNodes(node).pipe(
-          switchMap(children => {
-            const sorted = ((children ?? []) as Array<ETaskUriNodeResource>)
-              .filter(child => !child.hidden)
-              .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
-            if (!sorted.length) {
-              return of(undefined);
-            }
-            // `concatMap` a nie `mergeMap`: priecinky sa maju prehladat
-            // v poradi, v akom ich vidi clovek, nie v poradi, v akom stihne
-            // odpovedat server - inak by ta karta otvarala raz Faktury,
-            // raz Objednavky.
-            return from(sorted).pipe(
-              concatMap(child => this.entryFor(child, depth + 1)),
-              first(entry => !!entry, undefined),
-            );
-          }),
-        );
-      }),
-    );
-  }
-
-  /**
-   * Path of the alphabetically first view the user may open, or `portal`.
-   *
-   * Sorted by title so the card is predictable: the same folder opens the same
-   * view every time, regardless of the order the server happened to return.
-   */
-  private firstViewPath(cases: Array<Case>): string {
-    // `navigation` je v type `boolean | {title?, icon?, ...}` - bez tejto
-    // stráže build neprejde.
-    const title = (v: ViewNavigationItem): string =>
-      (typeof v.navigation === 'object' && !!v.navigation ? (v.navigation.title ?? '') : '');
-    const views = cases
-      .map(c => this.resolveFilterCaseToViewNavigationItem(c))
-      .filter(v => !!v)
-      .sort((a, b) => title(a).localeCompare(title(b)));
-    return views.length ? views[0].routing.path : 'portal';
+    this._uri.activeNode = node;
+    this._router.navigate(['portal', 'folder']);
   }
 
   /**
@@ -286,50 +190,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /* util */
   private getViewOrder(aCase: Case) {
     return custom_views.indexOf(aCase.immediateData.find(f => f.stringId === 'menu_item_identifier')?.value);
-  }
-
-  /* from AbstractNavigationDoubleDrawerComponent */
-  protected resolveFilterCaseToViewNavigationItem(filter: Case): ViewNavigationItem | undefined {
-    const item: ViewNavigationItem = {
-      access: {},
-      navigation: {
-        icon: filter.immediateData.find(f => f.stringId === 'icon_name')?.value,
-        title: localisedViewTitle(filter, this._language.getLanguage()),
-      },
-      routing: {
-        path: this.getFilterRoutingPath(filter),
-      },
-      id: filter.stringId,
-      resource: filter,
-    };
-    const resolvedRoles = this.resolveAccessRoles(filter, 'allowed_roles');
-    const resolvedBannedRoles = this.resolveAccessRoles(filter, 'banned_roles');
-    if (!!resolvedRoles) item.access['role'] = resolvedRoles;
-    if (!!resolvedBannedRoles) item.access['bannedRole'] = resolvedBannedRoles;
-    if (!this._accessService.canAccessView(item, item.routingPath)) return;
-    return item;
-  }
-
-  /* from AbstractNavigationDoubleDrawerComponent */
-  protected getFilterRoutingPath(filterCase: Case) {
-    const viewTaskId = filterCase.tasks.find(taskPair => taskPair.transition === FILTER_VIEW_TASK_TRANSITION_ID).task;
-    const url = this._dynamicRoutingService.route;
-    return `/${url}/${viewTaskId}`;
-  }
-
-  /* from AbstractNavigationDoubleDrawerComponent */
-  protected resolveAccessRoles(filter: Case, roleType: string): Array<RoleAccess> | undefined {
-    const allowedRoles = filter.immediateData.find(f => f.stringId === roleType)?.options;
-    if (!allowedRoles || Object.keys(allowedRoles).length === 0) return undefined;
-    const roles = [];
-    Object.keys(allowedRoles).forEach(combined => {
-      const parts = combined.split(':');
-      roles.push({
-        processId: parts[1],
-        roleId: parts[0],
-      });
-    });
-    return roles;
   }
 
   ngOnDestroy(): void {

@@ -16,9 +16,11 @@
     "cases": "prípadov"
   },
   "menu": {
-    "views": "Zobrazenia",
+    "emptyFolder": "V tomto priečinku zatiaľ nič nie je.",
+    "folders": "Priečinky",
+    "root-folders": "Kategórie",
     "settings": "Nastavenia",
-    "root-folders": "Kategórie"
+    "views": "Zobrazenia"
   },
   "workflow": {
     "publicUrl": "Verejná URL",
@@ -32,7 +34,8 @@
     "searchField": {
       "identifier": "Identifikátor",
       "initials": "Skratka"
-    }
+    },
+    "anonymousView": "Verejný formulár"
   },
   "snackbar": {
     "filterDeleteSuccess": "Filter úspešne vymazaný. Aktualizujem zobrazenie.",
@@ -44,13 +47,42 @@
     "theme": {
       "toDark": "Tmavý režim",
       "toLight": "Svetlý režim"
+    },
+    "login": {
+      "forgotten": "Zabudnuté heslo?"
     }
   },
   "uriNode": {
     "faktury": "Faktúry",
     "general": "Všeobecné",
     "objednavky": "Objednávky",
+    "onboarding": "Nástupy zamestnancov",
     "schvalovanie": "Objednávky a faktúry",
     "service_desk": "Service Desk"
+  },
+  "view": {
+    "publicForm": {
+      "title": "Podanie požiadavky",
+      "footer": "Formulár pre podanie požiadavky do Netgrif eTask"
+    }
+  },
+  "auth": {
+    "backToLogin": "Späť na prihlásenie",
+    "recover": {
+      "askAgain": "Požiadať o nový odkaz",
+      "done": "Heslo je nastavené, môžeš sa prihlásiť.",
+      "failed": "Heslo sa nepodarilo nastaviť.",
+      "intro": "Zvoľ si nové heslo. Po jeho nastavení sa ním rovno prihlásiš.",
+      "invalidToken": "Odkaz je neplatný alebo mu vypršala platnosť.",
+      "noToken": "Odkaz neobsahuje token. Otvor ho priamo z mailu.",
+      "title": "Nastavenie nového hesla"
+    },
+    "reset": {
+      "failed": "Žiadosť o obnovu hesla sa nepodarilo odoslať.",
+      "intro": "Zadaj adresu, ktorou sa prihlasuješ. Pošleme na ňu odkaz na nastavenie nového hesla.",
+      "sent": "Ak účet s tou adresou existuje, odkaz na obnovu je na ceste.",
+      "sentInfo": "Ak účet s tou adresou existuje, odkaz je na ceste. Skontroluj si schránku.",
+      "title": "Zabudnuté heslo"
+    }
   }
 }

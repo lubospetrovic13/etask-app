@@ -10,6 +10,9 @@ import {PublicTaskViewComponent} from './views/public/public-task-view/public-ta
 import {PublicWorkflowViewComponent} from './views/public/public-workflow-view/public-workflow-view.component';
 import {SideNavCasesCaseViewComponent} from './views/side-nav/cases/side-nav-cases-case-view.component';
 import {EmptyViewComponent} from './views/side-nav/emptyView/empty-view.component';
+import {FolderViewComponent} from './views/side-nav/folder/folder-view.component';
+import {RecoverComponent} from './views/auth/recover/recover.component';
+import {ResetPasswordComponent} from './views/auth/reset-password/reset-password.component';
 import {SidenavComponent} from './views/side-nav/sidenav.component';
 import {SideNavTasksTaskViewComponent} from './views/side-nav/tasks/side-nav-tasks-task-view.component';
 import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-view.component';
@@ -25,6 +28,9 @@ export class EtaskFrontendViewService extends ViewService {
     super([{id: 'RoleAssignmentComponent', class: RoleAssignmentComponent},
       {id: 'WorkflowViewComponent', class: WorkflowViewComponent},
       {id: 'EmptyViewComponent', class: EmptyViewComponent},
+      {id: 'FolderViewComponent', class: FolderViewComponent},
+      {id: 'ResetPasswordComponent', class: ResetPasswordComponent},
+      {id: 'RecoverComponent', class: RecoverComponent},
       {id: 'SideNavTasksTaskViewComponent', class: SideNavTasksTaskViewComponent},
       {id: 'SideNavCasesCaseViewComponent', class: SideNavCasesCaseViewComponent},
       {id: 'SidenavComponent', class: SidenavComponent},
