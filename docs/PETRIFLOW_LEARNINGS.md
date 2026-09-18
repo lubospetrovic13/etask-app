@@ -732,6 +732,75 @@ Prečo `najnovsiCase` a nie `findCase`: verziu siete určuje engine
 spadla a konfiguračný prípad sa prestal zakladať. Chyba bola vidno až tak, že
 obrazovka nastavení bola prázdna.
 
+### B28. Osobná karta „moje X" potrebuje rolu `default` a doplnenie pri nasadení
+
+Vzor „každý má jednu vlastnú kartu" (moje vozidlo, môj profil, moje nastavenia)
+sa stavia ako zobrazenie typu **Task** nad slučkovým prechodom, ktorý má
+`userRef` na vlastníka a **žiadny** `roleRef` — zoznam úloh filtruje podľa
+oprávnení, takže každý uvidí presne svoj jeden riadok (B27, bod 4).
+
+Má to dve slabé miesta a obe sa prejavia rovnako: **položka menu je, obrazovka
+je prázdna a nikde sa nepovie prečo.**
+
+**1. Kto rolu nemá, nezaloží ani vlastný prípad.** Keď `caseLogic/create` visí
+na doménovej roli (`zamestnanec`), musí tú rolu dostať každý jeden účet
+v inštancii. Pri prvom kole ľudí sa to nespraví nikdy. Na proces, ktorý je
+z definície pre všetkých, patrí systémová rola `default` — má ju každý
+prihlásený, nedeklaruje sa v `<role>` a `pflint` ju pozná:
+
+```xml
+<defaultRole>true</defaultRole>
+...
+<roleRef>
+    <id>default</id>
+    <caseLogic><create>true</create></caseLogic>
+</roleRef>
+<userRef>
+    <id>pp_vlastnik</id>
+    <caseLogic><view>true</view></caseLogic>
+</userRef>
+```
+
+`default` dostáva **iba** `create`. Keby dostal aj `view`, videl by každý
+prihlásený obsah kariet všetkých kolegov v dopytoch nad prípadmi. Vidieť ju má
+vlastník, a to zariadi `userRef`.
+
+**2. Lenivé založenie prípadu nestačí.** Založiť kartu až pri prvom použití
+appky je správne (nikto nemá hľadať, kde si má najprv niečo založiť), ale kto
+appku ešte nepoužil, otvorí položku a nevidí nič — a to vyzerá ako rozbitá
+appka, nie ako prázdny začiatok. Doplnenie patrí do **create akcie menu siete**
+s `rebuildOnNewVersion`: je to jediný bod, ktorý beží pri každom nasadení
+a nemá vlastnú obrazovku, ktorú by musel niekto nájsť.
+
+```groovy
+def maju = [] as Set
+(findCases { it.processIdentifier.eq(profil_siet) } ?: []).each { c ->
+    def uid = (c.dataSet?.get("pp_userid")?.value ?: "") as String
+    if (uid) maju.add(uid)
+}
+userOptions().each { String uid, String popis ->
+    if (maju.contains(uid)) return
+    def u = userService.findById(uid, false)
+    if (u == null || !isRealUser(u)) return
+    createCase(profil_siet, "Moje vozidlo", "blue", u)   // posledny argument!
+}
+```
+
+Posledný argument nie je kozmetika. Karta si vlastníka berie z **autora**
+prípadu, nie z `loggedUser()` — bez neho by všetky karty patrili tomu, kto
+spustil import, on by videl 43 riadkov „Moje vozidlo" a ostatní ani jeden.
+V create akcii tej karty preto nesmie byť `loggedUser()`:
+
+```groovy
+def ja = null
+try { ja = userService.findById(useCase.author.id as String, false) } catch (Exception e) { ja = null }
+if (ja == null) ja = loggedUser()
+```
+
+Tlačidlo v konfiguračnej appke je na to zlé miesto: prípad nastavení si drží
+verziu siete, v ktorej vznikol, takže na už bežiacej inštancii by nové tlačidlo
+nebolo vidno nikdy.
+
 ## C. Mimo Petriflow, ale stálo to čas
 
 ### C1. Groovy nekontroluje volania metód pri kompilácii
