@@ -1,0 +1,56 @@
+# Overenie na ČISTEJ databáze vedľa bežiaceho dev stacku.
+#
+# Načo to je: `CLAUDE.md` po zásahu do poradia štartu, uzlov URI, manifestu
+# alebo runnerov vyžaduje beh na prázdnej databáze. Bežiaca inštancia nesie
+# stav z minulých behov a presne ten maskuje chyby poradia - uzly a prípady,
+# ktoré tam už sú, prekryjú to, že ich prvý beh vôbec nevyrobí. Takto vznikli
+# dve chyby, ktoré prežili celý zelený reťazec nástrojov (`pfdoc analyza 7`).
+#
+# Načo je tento súbor navyše: `up.sh --fresh` zmaže volumes dev stacku, teda
+# aj dáta, na ktorých sa práve pracuje. Tu ide o overenie, nie o nasadenie,
+# takže sa spustí druhý stack s vlastným menom projektu (`-p etask-fresh`),
+# vlastnými volumes a posunutými portami. Dev stack o tom nevie.
+#
+#   cd deploy
+#   docker compose -p etask-fresh -f docker-compose.dev.yml -f docker-compose.fresh.yml up -d --build
+#   docker compose -p etask-fresh -f docker-compose.dev.yml -f docker-compose.fresh.yml logs -f backend
+#
+# Po overení:
+#   docker compose -p etask-fresh -f docker-compose.dev.yml -f docker-compose.fresh.yml down -v
+#
+# `!override` nie je ozdoba: Compose zoznamy portov ZLUČUJE, nie prepisuje,
+# takže bez neho druhý stack publikuje aj pôvodné porty a zrazí sa s dev
+# stackom hneď pri štarte. Vyžaduje Compose 2.24+.
+#
+# Porty sú posunuté o 10000 (Mongo o 1), aby sa nedalo omylom merať na zlom
+# stacku: portál 14200, backend 18080, Elastic 19200, Mailpit 18025,
+# Mongo 27018.
+
+services:
+  mongo:
+    ports: !override
+      - "27018:27017"
+
+  elastic:
+    ports: !override
+      - "19200:9200"
+      - "19300:9300"
+
+  mailpit:
+    ports: !override
+      - "18025:8025"
+      - "11025:1025"
+
+  backend:
+    # Vlastný tag, inak by build prepísal `etask-backend:dev`. Bežiaci dev
+    # stack by si toho nevšimol (drží už spustený kontajner), ale najbližšie
+    # `up -d` na deve by zdvihlo obraz postavený z TEJTO vetvy - teda napr.
+    # šablónu bez aplikácií tam, kde ich človek čaká.
+    image: etask-backend:fresh
+    ports: !override
+      - "18080:8080"
+
+  frontend:
+    image: etask-frontend:fresh
+    ports: !override
+      - "14200:80"
