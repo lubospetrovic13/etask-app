@@ -1,0 +1,372 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>hr/cesty/pc_profil</id>
+	<version>1.0.0</version>
+	<initials>PCP</initials>
+	<title name="net_title">Moje vozidlo</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">My vehicle</i18nString>
+		<i18nString name="zamestnanec_title">Employee</i18nString>
+		<i18nString name="empty_button"></i18nString>
+		<i18nString name="div_pp_vozidlo_init">Vehicle</i18nString>
+		<i18nString name="div_pp_predvolby_init">Defaults for a new claim</i18nString>
+		<i18nString name="pp_spz_title">Registration plate</i18nString>
+		<i18nString name="pp_palivo_title">Fuel</i18nString>
+		<i18nString name="pp_spotreba_title">Consumption per 100 km (from the registration certificate)</i18nString>
+		<i18nString name="pp_spotreba_desc">Only needed when you drive your own vehicle.</i18nString>
+		<i18nString name="pp_palivo_opt_benzin_95">Petrol 95</i18nString>
+		<i18nString name="pp_palivo_opt_benzin_98">Petrol 98</i18nString>
+		<i18nString name="pp_palivo_opt_benzin_98_100">Premium petrol 98-100</i18nString>
+		<i18nString name="pp_palivo_opt_lpg">LPG</i18nString>
+		<i18nString name="pp_palivo_opt_nafta">Diesel</i18nString>
+		<i18nString name="pp_palivo_opt_nafta_premium">Premium diesel</i18nString>
+		<i18nString name="pp_palivo_opt_cng">CNG</i18nString>
+		<i18nString name="pp_palivo_opt_lng">LNG</i18nString>
+		<i18nString name="pp_palivo_opt_biolng">bioLNG</i18nString>
+		<i18nString name="pp_palivo_opt_vodik">Hydrogen</i18nString>
+		<i18nString name="pp_palivo_opt_el_ac">Electricity - AC charging</i18nString>
+		<i18nString name="pp_palivo_opt_el_dc">Electricity - DC charging</i18nString>
+		<i18nString name="pp_palivo_opt_el_ultra">Electricity - ultra charging</i18nString>
+		<i18nString name="pp_doprava_title">Usual means of transport</i18nString>
+		<i18nString name="pp_doprava_opt_auto">Private car</i18nString>
+		<i18nString name="pp_doprava_opt_firemne_auto">Company car</i18nString>
+		<i18nString name="pp_doprava_opt_motocykel">Private motorcycle</i18nString>
+		<i18nString name="pp_doprava_opt_firemny_motocykel">Company motorcycle</i18nString>
+		<i18nString name="pp_doprava_opt_autobus">Bus</i18nString>
+		<i18nString name="pp_doprava_opt_vlak">Train</i18nString>
+		<i18nString name="pp_doprava_opt_lietadlo">Plane</i18nString>
+		<i18nString name="pp_miesto_zac_title">Usual place of departure</i18nString>
+		<i18nString name="pp_miesto_zac_desc">Pre-filled into every new trip; you can still change it there.</i18nString>
+		<i18nString name="pp_cena_phm_title">Usual fuel price (EUR per litre/kg/kWh)</i18nString>
+		<i18nString name="pp_vlastnik_title">Owner</i18nString>
+		<i18nString name="pp_meno_title">Employee</i18nString>
+		<i18nString name="pp_ulozene_o_title">Saved</i18nString>
+		<i18nString name="t_pp_udaje_label">My vehicle</i18nString>
+		<i18nString name="t_pp_udaje_finish">Save</i18nString>
+	</i18n>
+	<icon>directions_car</icon>
+	<defaultRole>true</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		JEDEN PRIPAD NA CLOVEKA. Drzi to, co sa pri kazdom vyuctovani
+		prepisovalo znova: ŠPZ, palivo, spotrebu a obvyklu dopravu.
+
+		  p_profil <.....> t_pp_udaje
+
+		Uloha je slucka (regular arc tam aj spat), takze sa da otvorit
+		a ulozit kolkokrat treba - rovnaky vzor ako pult v `pu_zalozenie`.
+
+		KTO HO VIDI: na `t_pp_udaje` visi `userRef pp_vlastnik` a NIC INE.
+		Zoznam uloh (`/api/task/search`) filtruje podla opravneni, takze
+		zobrazenie typu Task s dopytom `transitionId:"t_pp_udaje"` ukaze
+		kazdemu PRESNE JEDEN riadok - jeho vlastny. Preto v dopyte nie je
+		ziadna zmienka o pouzivatelovi: takou sa polozka menu parametrizovat
+		neda (je to jeden case pre cely portal), ale netreba ju.
+
+		Dopyt zamerne NEOBSAHUJE `processId`: ten sa razi per verzia siete,
+		takze po kazdom re-importe by zobrazenie prestalo nachadzat cokolvek
+		a nic by to nepovedalo. `transitionId` je stabilny a v tejto instancii
+		jedinecny - preto je tak pomenovany.
+
+		PRIPAD ZAKLADA `pc_vyuctovanie` SAM, ked clovek zaklada prve
+		vyuctovanie a profil este nema (`profil(...)` v tej sieti). Bez toho by
+		musel clovek vediet, ze si ma najprv niekde nieco zalozit - a to je
+		presne ten druh kroku, ktory nikto neurobi.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>pp_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+pp_vlastnik: f.pp_vlastnik, pp_userid: f.pp_userid, pp_meno: f.pp_meno;
+
+// Vlastnik je AUTOR pripadu, nie prihlaseny clovek.
+//
+// Pri beznom zalozeni je to ten isty clovek a na spravani sa nic nemeni.
+// Rozdiel nastane, ked profil zaklada NIEKTO INY: `createCase(..., IUser)`
+// v `pc_nastavenia` zaklada chybajuce profily hromadne a prihlaseny je vtedy
+// spravca. S `loggedUser()` by vsetky take profily patrili spravcovi, on by
+// videl 25 riadkov "Moje vozidlo" a kolegovia ziadny - a nikde by sa to
+// neohlasilo, lebo zalozenie by prebehlo bez chyby.
+def ja = null
+try {
+    ja = userService.findById(useCase.author.id as String, false)
+} catch (Exception e) {
+    ja = null
+}
+if (ja == null) ja = loggedUser()
+change pp_vlastnik value { [ja.id] }
+change pp_userid value { ja.id as String }
+change pp_meno value { kto(ja) }
+changeCaseProperty("title").about { "Moje vozidlo – " + kto(ja) }
+changeCaseProperty("color").about { "blue" }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="kto"><![CDATA[
+{ def u ->
+    // `?.` chrani pred null, nie pred chybajucou property - a na chybajucej
+    // vyhodi MissingPropertyException uprostred akcie.
+    return (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+}
+	]]></function>
+	<!--
+		`default` je systemova rola, ktoru ma KAZDY prihlaseny - nemusi sa
+		deklarovat v `<role>` a `pflint` ju pozna ako zabudovanu.
+
+		Preco tu je: na pracovnu cestu ide hocikto, takze podmienit zalozenie
+		rolou `zamestnanec` znamena pridelit rolu kazdemu jednemu uctu v
+		instancii. To sa pri prvom kole ludi nespravi a prejavi sa to tak, ze
+		appka "nic nerobi" - menu polozka je, formular sa nezalozi a nikde sa
+		nepovie preco. Rola `zamestnanec` ZOSTAVA a znamena to iste; `default`
+		je len to, co ma clovek uz tym, ze je prihlaseny.
+	-->
+	<roleRef>
+		<id>default</id>
+		<caseLogic>
+			<create>true</create>
+		</caseLogic>
+	</roleRef>
+	<!--
+		Vidiet profil ma LEN jeho vlastnik. `default` preto dostava iba
+		`create` - inak by kazdy prihlaseny videl v dopytoch nad pripadmi
+		evidencne cisla a spotreby vsetkych kolegov.
+	-->
+	<userRef>
+		<id>pp_vlastnik</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</userRef>
+	<roleRef>
+		<id>zamestnanec</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>zamestnanec</id>
+		<title name="zamestnanec_title">Zamestnanec</title>
+	</role>
+
+	<data type="i18n">
+		<id>div_pp_vozidlo</id>
+		<title/>
+		<init name="div_pp_vozidlo_init">Vozidlo</init>
+	</data>
+	<data type="i18n">
+		<id>div_pp_predvolby</id>
+		<title/>
+		<init name="div_pp_predvolby_init">Predvoľby pre nové vyúčtovanie</init>
+	</data>
+	<data type="userList">
+		<id>pp_vlastnik</id>
+		<title name="pp_vlastnik_title">Vlastník</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>pp_userid</id>
+		<title/>
+		<!-- Podla neho si `pc_vyuctovanie` najde profil. `immediate`, aby sa
+		     dalo hladat; kluc je hex ObjectId, takze v nom nie je `.` ani `$`. -->
+	</data>
+	<data type="text" immediate="true">
+		<id>pp_meno</id>
+		<title name="pp_meno_title">Zamestnanec</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>pp_spz</id>
+		<title name="pp_spz_title">ŠPZ vozidla</title>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>pp_palivo</id>
+		<title name="pp_palivo_title">Druh paliva</title>
+		<!-- KLUCE musia sedet s `pc_palivo` vo `pc_vyuctovanie` - kopiruje sa
+		     kluc, nie popisok, a nesediaci kluc by sa ulozil a ticho nezobrazil. -->
+		<options>
+			<option key="benzin_95" name="pp_palivo_opt_benzin_95">Benzín natural 95</option>
+			<option key="benzin_98" name="pp_palivo_opt_benzin_98">Benzín natural 98</option>
+			<option key="benzin_98_100" name="pp_palivo_opt_benzin_98_100">Prémiový benzín 98 – 100</option>
+			<option key="lpg" name="pp_palivo_opt_lpg">LPG</option>
+			<option key="nafta" name="pp_palivo_opt_nafta">Motorová nafta</option>
+			<option key="nafta_premium" name="pp_palivo_opt_nafta_premium">Prémiová motorová nafta</option>
+			<option key="cng" name="pp_palivo_opt_cng">CNG</option>
+			<option key="lng" name="pp_palivo_opt_lng">LNG</option>
+			<option key="biolng" name="pp_palivo_opt_biolng">bioLNG</option>
+			<option key="vodik" name="pp_palivo_opt_vodik">Vodík</option>
+			<option key="el_ac" name="pp_palivo_opt_el_ac">El. energia AC nabíjanie</option>
+			<option key="el_dc" name="pp_palivo_opt_el_dc">El. energia DC nabíjanie</option>
+			<option key="el_ultra" name="pp_palivo_opt_el_ultra">El. energia ultra nabíjanie</option>
+		</options>
+	</data>
+	<data type="number" immediate="true">
+		<id>pp_spotreba</id>
+		<title name="pp_spotreba_title">Spotreba na 100 km (podľa TP)</title>
+		<desc name="pp_spotreba_desc">Treba ju len vtedy, keď sa jazdí súkromným vozidlom.</desc>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>pp_doprava</id>
+		<title name="pp_doprava_title">Obvyklý dopravný prostriedok</title>
+		<options>
+			<option key="auto" name="pp_doprava_opt_auto">Súkromné vozidlo</option>
+			<option key="firemne_auto" name="pp_doprava_opt_firemne_auto">Firemné vozidlo</option>
+			<option key="motocykel" name="pp_doprava_opt_motocykel">Súkromný motocykel</option>
+			<option key="firemny_motocykel" name="pp_doprava_opt_firemny_motocykel">Firemný motocykel</option>
+			<option key="autobus" name="pp_doprava_opt_autobus">Autobus</option>
+			<option key="vlak" name="pp_doprava_opt_vlak">Vlak</option>
+			<option key="lietadlo" name="pp_doprava_opt_lietadlo">Lietadlo</option>
+		</options>
+	</data>
+	<data type="text" immediate="true">
+		<id>pp_miesto_zac</id>
+		<title name="pp_miesto_zac_title">Obvyklé miesto začatia</title>
+		<desc name="pp_miesto_zac_desc">Predvyplní sa do každej novej cesty; tam sa dá prepísať.</desc>
+	</data>
+	<data type="number" immediate="true">
+		<id>pp_cena_phm</id>
+		<title name="pp_cena_phm_title">Obvyklá cena PHM (€ za liter/kg/kWh)</title>
+	</data>
+	<data type="dateTime">
+		<id>pp_ulozene_o</id>
+		<title name="pp_ulozene_o_title">Uložené</title>
+	</data>
+
+	<transition>
+		<id>t_pp_udaje</id>
+		<x>140</x>
+		<y>80</y>
+		<label name="t_pp_udaje_label">Moje vozidlo</label>
+		<icon>directions_car</icon>
+		<!-- Osobna uloha jedneho cloveka - `auto` (B12). -->
+		<assignPolicy>auto</assignPolicy>
+		<!--
+			LEN `userRef`. Rola `zamestnanec` tu byt NESMIE: `roleRef`
+			a `userRef` sa ZJEDNOCUJU, takze by profil kohokolvek videl
+			a prepisal ktokolvek so zamestnaneckou rolou - a zobrazenie typu
+			Task by kazdemu ukazalo vsetky riadky namiesto jedneho.
+		-->
+		<userRef>
+			<id>pp_vlastnik</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_pp_udaje</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_pp_vozidlo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pp_spz</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pp_palivo</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pp_spotreba</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_pp_predvolby</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pp_doprava</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pp_miesto_zac</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pp_cena_phm</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pp_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pp_ulozene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pp_userid</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pp_vlastnik</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>3</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="cancel">
+			<id>t_pp_udaje_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_pp_udaje_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_pp_udaje_finish</id>
+			<title name="t_pp_udaje_finish">Uložiť</title>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+pp_ulozene_o: f.pp_ulozene_o, pp_meno: f.pp_meno;
+
+change pp_ulozene_o value { java.time.LocalDateTime.now() }
+changeCaseProperty("title").about { "Moje vozidlo – " + ((pp_meno.value ?: "") as String) }
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<place>
+		<id>p_profil</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Profil</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_pp_in</id>
+		<type>regular</type>
+		<sourceId>p_profil</sourceId>
+		<destinationId>t_pp_udaje</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_pp_out</id>
+		<type>regular</type>
+		<sourceId>t_pp_udaje</sourceId>
+		<destinationId>p_profil</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

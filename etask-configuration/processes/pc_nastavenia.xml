@@ -1,0 +1,589 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>hr/cesty/pc_nastavenia</id>
+	<version>1.0.0</version>
+	<initials>PCN</initials>
+	<title name="net_title">Nastavenia pracovných ciest</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Travel expense settings</i18nString>
+		<i18nString name="spravca_title">Administrator</i18nString>
+		<i18nString name="div_firma_init">Company</i18nString>
+		<i18nString name="div_stravne_init">Meal allowance (EUR per time band)</i18nString>
+		<i18nString name="div_zrazky_init">Free meals provided - deduction (% of the highest band)</i18nString>
+		<i18nString name="div_nahrady_init">Mileage and fuel</i18nString>
+		<i18nString name="div_sablona_init">The accountant's form</i18nString>
+		<i18nString name="div_stav_init">State</i18nString>
+		<i18nString name="pcn_spolocnost_title">Company name</i18nString>
+		<i18nString name="pcn_sidlo_title">Registered address</i18nString>
+		<i18nString name="pcn_strav_5_12_title">5 to 12 hours</i18nString>
+		<i18nString name="pcn_strav_12_18_title">Over 12 up to 18 hours</i18nString>
+		<i18nString name="pcn_strav_nad_18_title">Over 18 hours</i18nString>
+		<i18nString name="pcn_strav_desc">Up to five hours there is no meal allowance. These are the rates the law sets; the accountant changes them when they change.</i18nString>
+		<i18nString name="pcn_zraz_ranajky_title">Breakfast (%)</i18nString>
+		<i18nString name="pcn_zraz_obed_title">Lunch (%)</i18nString>
+		<i18nString name="pcn_zraz_vecera_title">Dinner (%)</i18nString>
+		<i18nString name="pcn_zraz_desc">A deduction is always a percentage of the highest band, not of the band the trip falls into.</i18nString>
+		<i18nString name="pcn_km_auto_title">Basic allowance - car (EUR/km)</i18nString>
+		<i18nString name="pcn_km_motocykel_title">Basic allowance - motorcycle (EUR/km)</i18nString>
+		<i18nString name="pcn_koef_phm_title">Fuel consumption coefficient</i18nString>
+		<i18nString name="pcn_koef_phm_desc">The form multiplies the consumption from the registration certificate by this. 1.1 means the ten per cent for city driving.</i18nString>
+		<i18nString name="pcn_sablona_title">Blank xlsx form</i18nString>
+		<i18nString name="pcn_sablona_desc">The workbook the accountant sends. The application only fills values into it - it never rewrites its formulas, so a new version is an upload here, not a change in code.</i18nString>
+		<i18nString name="pcn_harok_title">Sheet to fill in</i18nString>
+		<i18nString name="pcn_mapovanie_title">Cell mapping (JSON)</i18nString>
+		<i18nString name="pcn_mapovanie_desc">Which value goes into which cell. When the accountant moves a column, this is the only thing that changes.</i18nString>
+		<i18nString name="pcn_vysledok_title">What the last save did</i18nString>
+		<i18nString name="pcn_ulozil_title">Saved by</i18nString>
+		<i18nString name="pcn_ulozene_o_title">Saved</i18nString>
+		<i18nString name="t_pcn_label">Travel expense settings</i18nString>
+		<i18nString name="t_pcn_finish">Save settings</i18nString>
+		<i18nString name="empty_button"></i18nString>
+	</i18n>
+	<icon>tune</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		KONFIGURACIA PRACOVNYCH CIEST. Jedna obrazovka, jeden case na verziu
+		siete (vzor B27), vidi ju spravca.
+
+		Su tu tri druhy vecí a kazda je tu z ineho dovodu:
+
+		  1. SADZBY (stravne, zrazky, €/km, koeficient PHM). Urcuje ich zakon
+		     a menia sa - keby boli v sieti, kazda zmena sadzby by bola nova
+		     verzia siete a stare vyuctovania by sa prepocitali zle.
+		  2. SABLONA. Tlacivo drzi uctovna firma a raz za cas ho prepise.
+		     Preto je to PRILOHA, nie subor v repozitari: nova verzia tlaciva
+		     je nahratie sem.
+		  3. MAPOVANIE. Ktora hodnota ide do ktorej bunky. Ked uctovna firma
+		     presunie stlpec, meni sa tento jeden text a nic viac.
+
+		Sadzby sa zamerne NEPOUZIVAJU na prepis vzorcov v tlacive. Tlacivo si
+		stravne aj nahrady pocita samo a to je na nom to najcennejsie; appka
+		pocita to iste len preto, aby clovek videl sumu skor, nez tlacivo
+		otvori, a aby sa dala schvalovat.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>pcn_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+pcn_spolocnost: f.pcn_spolocnost, pcn_sidlo: f.pcn_sidlo,
+pcn_strav_5_12: f.pcn_strav_5_12, pcn_strav_12_18: f.pcn_strav_12_18,
+pcn_strav_nad_18: f.pcn_strav_nad_18, pcn_zraz_ranajky: f.pcn_zraz_ranajky,
+pcn_zraz_obed: f.pcn_zraz_obed, pcn_zraz_vecera: f.pcn_zraz_vecera,
+pcn_km_auto: f.pcn_km_auto, pcn_km_motocykel: f.pcn_km_motocykel,
+pcn_koef_phm: f.pcn_koef_phm, pcn_harok: f.pcn_harok, pcn_mapovanie: f.pcn_mapovanie;
+
+// Case sa pri novej verzii siete zaklada nanovo (inak by na nom chybali nove
+// polia). Sadzby su UDAJ, nie odraz nicoho, takze sa musia preniest - bez toho
+// by kazdy re-import ticho vratil hodnoty na default a prislo by sa na to az
+// na vyuctovani, ktore vyslo inak nez minuly mesiac.
+def stary = najnovsiCase("hr/cesty/pc_nastavenia")
+def predch = (stary != null && stary.stringId != useCase.stringId) ? stary : null
+def prev = { String id, def dflt ->
+    def v = predch?.dataSet?.get(id)?.value
+    return v != null ? v : dflt
+}
+
+change pcn_spolocnost   value { prev("pcn_spolocnost", "Netgrif, s.r.o.") as String }
+// pflang:off  - adresa slovenskej firmy a nazov harku v cudzom zosite; oboje
+// ide do tlaciva tak, ako je, a prelozit sa nema co
+change pcn_sidlo        value { prev("pcn_sidlo", "Dúbravská cesta 14, Bratislava, 841 04") as String }
+change pcn_strav_5_12   value { (prev("pcn_strav_5_12", 9.30d) as Number).doubleValue() }
+change pcn_strav_12_18  value { (prev("pcn_strav_12_18", 13.80d) as Number).doubleValue() }
+change pcn_strav_nad_18 value { (prev("pcn_strav_nad_18", 20.60d) as Number).doubleValue() }
+change pcn_zraz_ranajky value { (prev("pcn_zraz_ranajky", 25.0d) as Number).doubleValue() }
+change pcn_zraz_obed    value { (prev("pcn_zraz_obed", 40.0d) as Number).doubleValue() }
+change pcn_zraz_vecera  value { (prev("pcn_zraz_vecera", 35.0d) as Number).doubleValue() }
+change pcn_km_auto      value { (prev("pcn_km_auto", 0.313d) as Number).doubleValue() }
+change pcn_km_motocykel value { (prev("pcn_km_motocykel", 0.09d) as Number).doubleValue() }
+change pcn_koef_phm     value { (prev("pcn_koef_phm", 1.1d) as Number).doubleValue() }
+change pcn_harok        value { prev("pcn_harok", "Tuzemská cesta") as String }
+// pflang:on
+change pcn_mapovanie    value { (prev("pcn_mapovanie", null) as String) ?: vychodzie_mapovanie() }
+
+changeCaseProperty("title").about { "Travel expense settings" }
+changeCaseProperty("color").about { "blue" }
+postav_menu()
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="kto"><![CDATA[
+{ def u ->
+    // `?.` chrani pred null, nie pred chybajucou property - a na chybajucej
+    // vyhodi MissingPropertyException uprostred akcie.
+    return (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+}
+	]]></function>
+	<function scope="process" name="vychodzie_mapovanie"><![CDATA[
+{ ->
+    // Mapovanie pre tlacivo "Vyúčtovanie pracovných ciest od 01.01.2026".
+    //
+    // GEOMETRIA RIADKOV: jedna cesta zabera DVA riadky tlaciva - "Odchod"
+    // a "Príchod". Zapis "C+1" preto znamena stlpec C v druhom riadku dvojice.
+    // `prvy` je prvy datovy riadok, `krok` vyska jednej cesty, `max` pocet
+    // ciest, ktore sa do tlaciva zmestia.
+    //
+    // ZAPISUJU SA LEN VSTUPY. Stlpce I (stravne), J (zakladna nahrada)
+    // a L (nahrada za PHM) su vo vzorcoch tlaciva a zostavaju nedotknute -
+    // po otvoreni v Exceli sa prepocitaju samy. Vynimka je K (priemerna cena
+    // PHM): tam ma tlacivo vzorec, ktory ju hlada v tabulke tyzdennych cien
+    // Statistickeho uradu, a tu cenu zadava ziadatel, takze ju prepiseme.
+    return groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+            hlavicka: [
+                    spolocnost : "C4",
+                    sidlo      : "C6",
+                    obdobie    : "G4",
+                    zamestnanec: "G6",
+                    palivo     : "M2",
+                    spotreba   : "M4",
+                    spz        : "M6",
+                    preddavok  : "M76"
+            ],
+            riadky  : [
+                    prvy       : 12,
+                    krok       : 2,
+                    max        : 31,
+                    datum      : "A",
+                    cas_od     : "C",
+                    cas_do     : "C+1",
+                    miesto_zac : "D",
+                    miesto_kon : "D+1",
+                    rokovanie  : "E",
+                    doprava    : "F",
+                    strava     : "G",
+                    km_tam     : "H",
+                    km_spat    : "H+1",
+                    cena_phm   : "K",
+                    ubytovanie : "M",
+                    ine        : "N"
+            ],
+            podpisy : [
+                    zamestnanec : [bunka: "A78", sirka: 3, vyska: 3],
+                    schvalovatel: [bunka: "D78", sirka: 3, vyska: 3]
+            ]
+    ]))
+}
+	]]></function>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def id ->
+    try { return findMenuItem(id) } catch (Exception e) { return null }
+}
+	]]></function>
+	<function scope="process" name="postav_menu"><![CDATA[
+{ ->
+    // Zobrazenie typu TASK, nie Case: otvori rovno formular. Dopyt NESMIE stat
+    // na `processIdentifier` - task dokument ho nema, ma len `processId` razene
+    // per verziu siete. Preto sa zuzuje na `transitionId` A `processId` TEJTO
+    // verzie: `rebuildOnNewVersion` zaklada jeden case na verziu, takze bez
+    // toho by zoznam po druhom re-importe ukazal dva riadky a clovek by
+    // nevedel, ktory je ten platny.
+    def id = "pc_nastavenia_view"
+    def siet = "hr/cesty/pc_nastavenia"
+    def nazov = i18n("Nastavenia pracovných ciest", ["en": "Travel expense settings"])
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            // Update cesta `createOrUpdateMenuItem` nefunguje, polozka sa vzdy
+            // zahodi a postavi znova. PORADIE: najprv polozka, potom filter -
+            // naopak to padne, lebo `deleteMenuItem` si filter este raz nacita.
+            def current = getFilterFromMenuItem(existing)
+            deleteMenuItem(existing)
+            if (current != null) deleteFilter(current)
+        }
+        createOrUpdateMenuItem(
+                id,
+                "hr/cesty",              // URI cesta - musi sedet s uriNodes
+                "Task",
+                "transitionId:\"t_pcn\" AND processId:\"" +
+                        (useCase.petriNetId as String) + "\"",
+                "tune",
+                nazov,
+                [siet],
+                ["spravca": siet],   // v menu ju vidi len spravca
+                [:])
+    } catch (Exception e) {
+        // Menu nesmie zhodit zalozenie konfiguracneho casu - bez neho by appka
+        // prisla aj o sadzby, nielen o polozku v menu.
+        changeCaseProperty("color").about { "orange" }
+    }
+}
+	]]></function>
+	<roleRef>
+		<id>spravca</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>spravca</id>
+		<title name="spravca_title">Správca</title>
+	</role>
+	<data type="i18n">
+		<id>div_firma</id>
+		<title/>
+		<init name="div_firma_init">Spoločnosť</init>
+	</data>
+	<data type="i18n">
+		<id>div_stravne</id>
+		<title/>
+		<init name="div_stravne_init">Stravné (€ podľa časového pásma)</init>
+	</data>
+	<data type="i18n">
+		<id>div_zrazky</id>
+		<title/>
+		<init name="div_zrazky_init">Zabezpečené bezplatné stravovanie — zrážka (% z najvyššieho pásma)</init>
+	</data>
+	<data type="i18n">
+		<id>div_nahrady</id>
+		<title/>
+		<init name="div_nahrady_init">Náhrady za kilometre a PHM</init>
+	</data>
+	<data type="i18n">
+		<id>div_sablona</id>
+		<title/>
+		<init name="div_sablona_init">Tlačivo od účtovnej firmy</init>
+	</data>
+	<data type="i18n">
+		<id>div_stav</id>
+		<title/>
+		<init name="div_stav_init">Stav</init>
+	</data>
+	<data type="text">
+		<id>pcn_spolocnost</id>
+		<title name="pcn_spolocnost_title">Názov spoločnosti</title>
+		<init>Netgrif, s.r.o.</init>
+	</data>
+	<data type="text">
+		<id>pcn_sidlo</id>
+		<title name="pcn_sidlo_title">Sídlo</title>
+		<init>Dúbravská cesta 14, Bratislava, 841 04</init>
+	</data>
+	<data type="number">
+		<id>pcn_strav_5_12</id>
+		<title name="pcn_strav_5_12_title">5 až 12 hodín</title>
+		<desc name="pcn_strav_desc">Do piatich hodín stravné nepatrí. Sú to sadzby podľa zákona; účtovná firma ich mení, keď sa menia.</desc>
+		<init>9.30</init>
+	</data>
+	<data type="number">
+		<id>pcn_strav_12_18</id>
+		<title name="pcn_strav_12_18_title">nad 12 hodín až 18 hodín</title>
+		<init>13.80</init>
+	</data>
+	<data type="number">
+		<id>pcn_strav_nad_18</id>
+		<title name="pcn_strav_nad_18_title">nad 18 hodín</title>
+		<init>20.60</init>
+	</data>
+	<data type="number">
+		<id>pcn_zraz_ranajky</id>
+		<title name="pcn_zraz_ranajky_title">Raňajky (%)</title>
+		<desc name="pcn_zraz_desc">Zrážka je vždy percento z najvyššieho pásma, nie z pásma, do ktorého cesta spadla.</desc>
+		<init>25</init>
+	</data>
+	<data type="number">
+		<id>pcn_zraz_obed</id>
+		<title name="pcn_zraz_obed_title">Obed (%)</title>
+		<init>40</init>
+	</data>
+	<data type="number">
+		<id>pcn_zraz_vecera</id>
+		<title name="pcn_zraz_vecera_title">Večera (%)</title>
+		<init>35</init>
+	</data>
+	<data type="number">
+		<id>pcn_km_auto</id>
+		<title name="pcn_km_auto_title">Základná náhrada — osobné auto (€/km)</title>
+		<init>0.313</init>
+	</data>
+	<data type="number">
+		<id>pcn_km_motocykel</id>
+		<title name="pcn_km_motocykel_title">Základná náhrada — motocykel (€/km)</title>
+		<init>0.09</init>
+	</data>
+	<data type="number">
+		<id>pcn_koef_phm</id>
+		<title name="pcn_koef_phm_title">Koeficient spotreby PHM</title>
+		<desc name="pcn_koef_phm_desc">Tlačivo ním násobí spotrebu podľa technického preukazu. 1,1 je tých desať percent za jazdu v meste.</desc>
+		<init>1.1</init>
+	</data>
+	<data type="file">
+		<id>pcn_sablona</id>
+		<title name="pcn_sablona_title">Prázdne tlačivo (xlsx)</title>
+		<desc name="pcn_sablona_desc">Zošit, ktorý posiela účtovná firma. Aplikácia doň iba dopĺňa hodnoty — nikdy neprepisuje jeho vzorce, takže nová verzia je nahratie sem, nie zmena v kóde.</desc>
+	</data>
+	<data type="text">
+		<id>pcn_harok</id>
+		<title name="pcn_harok_title">Hárok, ktorý sa vypĺňa</title>
+		<init>Tuzemská cesta</init>
+	</data>
+	<data type="text">
+		<id>pcn_mapovanie</id>
+		<title name="pcn_mapovanie_title">Mapovanie buniek (JSON)</title>
+		<desc name="pcn_mapovanie_desc">Ktorá hodnota ide do ktorej bunky. Keď účtovná firma presunie stĺpec, mení sa jedine toto.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>pcn_vysledok</id>
+		<title name="pcn_vysledok_title">Čo spravilo posledné uloženie</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>pcn_ulozil</id>
+		<title name="pcn_ulozil_title">Uložil</title>
+	</data>
+	<data type="dateTime">
+		<id>pcn_ulozene_o</id>
+		<title name="pcn_ulozene_o_title">Uložené</title>
+	</data>
+	<transition>
+		<id>t_pcn</id>
+		<x>180</x>
+		<y>80</y>
+		<label name="t_pcn_label">Nastavenia pracovných ciest</label>
+		<icon>tune</icon>
+		<!-- Osobna uloha na konfiguracnom pulte - `auto` je v poriadku (B12). -->
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>spravca</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_pcn</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_firma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pcn_spolocnost</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_sidlo</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_stravne</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pcn_strav_5_12</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_strav_12_18</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_strav_nad_18</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_zrazky</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pcn_zraz_ranajky</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_zraz_obed</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>2</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_zraz_vecera</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>4</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_nahrady</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pcn_km_auto</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_km_motocykel</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>2</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_koef_phm</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>4</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_sablona</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pcn_sablona</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_harok</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_mapovanie</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>5</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_stav</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pcn_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>16</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_ulozil</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>18</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pcn_ulozene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>18</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="cancel">
+			<id>t_pcn_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_pcn_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_pcn_finish</id>
+			<title name="t_pcn_finish">Uložiť nastavenia</title>
+			<actions phase="pre">
+				<action id="2"><![CDATA[
+pcn_strav_5_12: f.pcn_strav_5_12, pcn_strav_12_18: f.pcn_strav_12_18,
+pcn_strav_nad_18: f.pcn_strav_nad_18, pcn_km_auto: f.pcn_km_auto,
+pcn_km_motocykel: f.pcn_km_motocykel, pcn_koef_phm: f.pcn_koef_phm,
+pcn_mapovanie: f.pcn_mapovanie;
+
+// Hodnoty a hlasky su po ANGLICKY - aplikacia ma anglictinu ako default
+// a tieto retazce preklad nemaju (CLAUDE.md, Jazyk).
+def kladne = { def pole, String co ->
+    def v = pole.value
+    if (v == null || (v as Number).doubleValue() <= 0) {
+        throw new java.lang.IllegalStateException(co + " must be greater than zero.")
+    }
+    return (v as Number).doubleValue()
+}
+def s1 = kladne(pcn_strav_5_12, "The meal allowance for 5 to 12 hours")
+def s2 = kladne(pcn_strav_12_18, "The meal allowance for 12 to 18 hours")
+def s3 = kladne(pcn_strav_nad_18, "The meal allowance for over 18 hours")
+kladne(pcn_km_auto, "The basic allowance per kilometre by car")
+kladne(pcn_km_motocykel, "The basic allowance per kilometre by motorcycle")
+kladne(pcn_koef_phm, "The fuel consumption coefficient")
+
+// Pasma musia rast. Keby nerastli, dlhsia cesta by dala mensie stravne nez
+// kratsia - a nikto by si toho nevsimol, lebo obe cisla by boli "nejake".
+if (!(s1 <= s2 && s2 <= s3)) {
+    throw new java.lang.IllegalStateException(
+            "The meal allowance bands have to increase: 5-12 h <= 12-18 h <= over 18 h.")
+}
+
+// Mapovanie musi byt citatelny JSON, inak by sa to prejavilo az pri exporte
+// - teda na cudzom vyuctovani, nie tu, kde to clovek prave pokazil.
+def raw = ((pcn_mapovanie.value ?: "") as String).trim()
+if (!raw) {
+    throw new java.lang.IllegalStateException("The cell mapping cannot be empty.")
+}
+def mapa
+try {
+    mapa = new groovy.json.JsonSlurper().parseText(raw)
+} catch (Exception e) {
+    throw new java.lang.IllegalStateException("The cell mapping is not valid JSON: " + e.message)
+}
+["hlavicka", "riadky", "podpisy"].each { String kluc ->
+    if (!(mapa instanceof Map) || mapa.get(kluc) == null) {
+        throw new java.lang.IllegalStateException(
+                "The cell mapping is missing the '" + kluc + "' section.")
+    }
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+pcn_sablona: f.pcn_sablona, pcn_harok: f.pcn_harok,
+pcn_vysledok: f.pcn_vysledok, pcn_ulozil: f.pcn_ulozil, pcn_ulozene_o: f.pcn_ulozene_o;
+
+change pcn_ulozil value { kto(loggedUser()) }
+change pcn_ulozene_o value { java.time.LocalDateTime.now() }
+change pcn_vysledok value {
+    def nazovSablony = pcn_sablona.value?.name
+    return "sheet: " + ((pcn_harok.value ?: "(first)") as String) +
+            ", form: " + (nazovSablony ? (nazovSablony as String) : "NOT UPLOADED - the xlsx export will not work")
+}
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>60</x>
+		<y>80</y>
+		<label>Alive</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<!--
+		READ arc: ulozenie token nepohne, takze sa uloha hned otvori znova
+		a konfiguracia sa da menit dokola. Regularny arc by po prvom ulozeni
+		obrazovku zavrel a uz by ju nemal kto otvorit (B8).
+	-->
+	<arc>
+		<id>a_pcn</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_pcn</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

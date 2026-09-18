@@ -1,0 +1,292 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>hr/cesty/pc_menu</id>
+	<version>1.0.0</version>
+	<initials>PCM</initials>
+	<title name="net_title">Menu pracovné cesty</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Travel expenses menu</i18nString>
+		<i18nString name="zamestnanec_title">Employee</i18nString>
+		<i18nString name="t_pc_menu_label">Menu state</i18nString>
+	</i18n>
+	<icon>menu</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Skelet z tools/pfnew.py. Kazdy vzor tu je kvoli konkretnej pasci:
+
+		  * `createOrUpdateMenuItem` sa vola s DEVIATIMI argumentmi. Existuje
+		    dvakrat - projektova (7-9) a enginova (11) - a rozlisuju sa len
+		    aritou. Pri osmich si Groovy vyberie enginovu a padne to.
+		  * Jej UPDATE cesta nefunguje, takze polozka sa vzdy zahodi a postavi
+		    znova. PORADIE: najprv `deleteMenuItem`, POTOM `deleteFilter` -
+		    naopak to padne, lebo deleteMenuItem si filter jeste raz nacita.
+		  * `nets` (allowedNets) musi byt, inak sa nevykreslia stlpce
+		    z datovych poli - a to bez akehokolvek hlasenia.
+		  * URI cesta MUSI sedet s klucom v `uriNodes` v processes.json, inak
+		    polozka vznikne bez karty, na ktorej by bola vidno.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>pc_menu_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+def created = []
+def unchanged = []
+def failed = []
+
+def siet = "hr/cesty/pc_vyuctovanie"
+def profil_siet = "hr/cesty/pc_profil"
+def vsetky = "processIdentifier:\"" + siet + "\""
+def stlpce = "meta-title" +
+        ",hr/cesty/pc_vyuctovanie-pc_stav_label" +
+        ",hr/cesty/pc_vyuctovanie-pc_obdobie" +
+        ",hr/cesty/pc_vyuctovanie-pc_ziadatel_meno" +
+        ",hr/cesty/pc_vyuctovanie-pc_pocet_ciest" +
+        ",hr/cesty/pc_vyuctovanie-pc_spolu" +
+        ",hr/cesty/pc_vyuctovanie-pc_doplatok"
+
+def views = [
+        // Nazov prveho zobrazenia je TITULOK SIETE, nie kopia toho retazca.
+        // Titulok siete je I18nString a ma svoj preklad v bloku `<i18n>`, takze
+        // sa preklada na jednom mieste; kopia by znamenala prelozit to dvakrat
+        // a druhy vyskyt by nikto nenasiel - nazvy zobrazeni su v Groovy akcii,
+        // kde `pfi18n` nedosiahne.
+        [id: "pc_vsetky", name: petriNetService.getNewestVersionByIdentifier(siet).title,
+         type: "Case", icon: "drive_eta",
+         query: vsetky, nets: [siet], roles: [:], headers: stlpce],
+        // Filtrovanie podla DATOVEHO POLA, nie podla polohy tokenu. Ide to,
+        // lebo `pc_stav_label` ma `immediate="true"` a engine ho indexuje pod
+        // `dataSet.pc_stav_label`. KLUC je v `.keyValue` - `.textValue` drzi
+        // PRELOZENE POPISKY (vsetky jazyky naraz), takze dopyt na kluc cez
+        // `.textValue` nenajde NIKDY NIC a nic to nepovie.
+        //
+        // Nazov nesie DOMENU appky. Polozky menu su case-y jednej siete pre
+        // cely portal a nazov v nich unikatny nie je - dve appky s polozkou
+        // rovnakeho nazvu sa na dashboarde (kde nie su priecinky) nedaju
+        // odlisit.
+        [id: "pc_rozpisane",
+         name: i18n("Rozpísané a vrátené · Pracovné cesty", ["en": "Drafts and returned · Travel expenses"]),
+         type: "Case", icon: "edit_note",
+         query: vsetky + " AND dataSet.pc_stav_label.keyValue:\"rozpisane\"",
+         nets: [siet], roles: [:], headers: stlpce],
+        [id: "pc_na_schvalenie",
+         name: i18n("Na schválenie · Pracovné cesty", ["en": "To approve · Travel expenses"]),
+         type: "Case", icon: "how_to_reg",
+         query: vsetky + " AND dataSet.pc_stav_label.keyValue:\"na_schvalenie\"",
+         nets: [siet], roles: ["veduci": siet], headers: stlpce],
+        [id: "pc_na_spracovanie",
+         name: i18n("Na spracovanie · Pracovné cesty", ["en": "To process · Travel expenses"]),
+         type: "Case", icon: "payments",
+         query: vsetky + " AND dataSet.pc_stav_label.keyValue:\"na_spracovanie\"",
+         nets: [siet], roles: ["mzdy": siet], headers: stlpce],
+        [id: "pc_vybavene",
+         name: i18n("Spracované · Pracovné cesty", ["en": "Processed · Travel expenses"]),
+         type: "Case", icon: "task_alt",
+         query: vsetky + " AND dataSet.pc_stav_label.keyValue:\"vybavene\"",
+         nets: [siet], roles: [:], headers: stlpce],
+        // Zobrazenie typu TASK, nie Case: ma otvorit JEDEN formular - profil
+        // toho, kto je prihlaseny. Zoznam uloh filtruje engine podla
+        // opravneni a na `t_pp_udaje` visi len `userRef pp_vlastnik`, takze
+        // kazdy tu vidi presne jeden riadok, ten svoj.
+        //
+        // V dopyte NIE JE `processIdentifier` - task dokument v indexe ziadny
+        // nema a taky dopyt nenajde NIKDY NIC (RUNBOOK 11). A nie je v nom ani
+        // `processId`: ten sa razi per verzia siete, takze po re-importe
+        // `pc_profil` by zobrazenie ticho zhaslo. `transitionId` je stabilny
+        // a v tejto instancii jedinecny - preto je tak pomenovany.
+        [id: "pc_profil",
+         name: i18n("Moje vozidlo · Pracovné cesty", ["en": "My vehicle · Travel expenses"]),
+         type: "Task", icon: "directions_car",
+         query: "transitionId:\"t_pp_udaje\"",
+         nets: [profil_siet], roles: [:], headers: "meta-title"],
+]
+
+views.each { v ->
+    def id = v.id as String
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            // Porovnava sa dopyt A allowedNets - oboje ide do konstruktora
+            // a na existujucej polozke sa zmenit nedaju.
+            def current = getFilterFromMenuItem(existing)
+            def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
+            def currentNets = ((current?.dataSet?."filter"?.allowedNets ?: []) as List)
+                    .collect { it as String } as Set
+            def wantNets = (v.nets as List).collect { it as String } as Set
+            // Do porovnania patri aj NAZOV, vratane prekladov. Bez toho by uz
+            // nasadena instancia zmeneny nazov (a doplneny preklad) nikdy
+            // nedostala: polozka tam je s tym istym dopytom, takze by sa vzdy
+            // vyhodnotila ako nezmenena.
+            def currentName = current?.dataSet?."i18n_filter_name"?.value
+            def sameName = currentName != null &&
+                    (currentName.defaultValue as String) == (v.name.defaultValue as String) &&
+                    (currentName.translations ?: [:]) == (v.name.translations ?: [:])
+            if (currentQuery == (v.query as String) && currentNets == wantNets && sameName) {
+                nastav_zobrazenie(existing, v.nets as List, v.headers)
+                // Uzol dorovnaj AJ pri nezmenenej polozke: URI uzly zije
+                // Elasticsearch, polozky menu Mongo. Po vymene ES indexu maju
+                // uzly nove id, polozka visi na starom a priecinok v bocnom
+                // paneli je PRAZDNY - bez chyby a bez logu (RUNBOOK 4).
+                pripoj_do_uzla(existing, "hr/cesty")
+                unchanged << id
+                return
+            }
+            deleteMenuItem(existing)
+            if (current != null) {
+                deleteFilter(current)
+            }
+        }
+        def item = createOrUpdateMenuItem(
+                id,                 // menu_item_identifier
+                "hr/cesty",         // URI cesta - musi sedet s uriNodes
+                v.type as String,
+                v.query as String,
+                v.icon as String,
+                v.name,             // I18nString - polozka menu vie byt dvojjazycna
+                v.nets as List,     // allowedNets - bez toho ziadne stlpce
+                v.roles as Map,
+                [:]                 // bannedRoles - dourcuje aritu na projektovu
+        )
+        if (item) { created << id } else { failed << id }
+        nastav_zobrazenie(item, v.nets as List, v.headers)
+    } catch (Exception e) {
+        failed << (id + " (" + e.getClass().simpleName + ": " + e.message + ")")
+    }
+}
+
+// Chybajuce profily vozidiel.
+//
+// Polozka menu "Moje vozidlo" je zobrazenie typu Task nad `t_pp_udaje`, takze
+// ukaze len to, co existuje. Pripad profilu ale vznika az pri PRVOM vyuctovani
+// (`profil(...)` v `pc_vyuctovanie`), takze kto este ziadne nerobil, otvori
+// polozku a vidi prazdny zoznam. Vyzera to ako rozbita appka, nie ako "este si
+// tu nic nemal".
+//
+// Preco prave tu: prestavba menu je jediny bod, ktory sa spusta pri kazdom
+// nasadeni appky a nema vlastnu obrazovku, ktoru by niekto musel najst.
+// Tlacidlo v `pc_nastavenia` by na uz bezucej instancii nikdy nebolo vidno -
+// pripad nastaveni si drzi verziu siete, v ktorej vznikol.
+//
+// Lazy zalozenie v `pc_vyuctovanie` ZOSTAVA: pokryva ludi, ktori pribudnu az
+// po nasadeni. Toto je doplnenie, nie nahrada.
+def profily_hotove = 0
+def profily_nove = 0
+def profily_chyby = 0
+try {
+    // `findCases { it.dataSet... }` NEFUNGUJE (petriflow_reference, gotcha 40),
+    // takze sa uz existujuce profily zozbieraju a filtruje sa v Groovy.
+    def maju = [] as Set
+    (findCases { it.processIdentifier.eq(profil_siet) } ?: []).each { c ->
+        def uid = (c.dataSet?.get("pp_userid")?.value ?: "") as String
+        if (uid) maju.add(uid)
+    }
+    profily_hotove = maju.size()
+    userOptions().each { String uid, String popis ->
+        if (maju.contains(uid)) return
+        def u = null
+        try { u = userService.findById(uid, false) } catch (Exception e) { u = null }
+        // Sluzobne ucty enginu profil vozidla nepotrebuju.
+        if (u == null || !isRealUser(u)) return
+        try {
+            // Posledny argument je podstatny: `pc_profil` si vlastnika berie
+            // z AUTORA pripadu. Bez neho by autorom bol ten, kto sposobil
+            // import, a vsetky profily by patrili jemu.
+            createCase(profil_siet, "Moje vozidlo", "blue", u)
+            profily_nove++
+        } catch (Exception e) {
+            profily_chyby++
+        }
+    }
+} catch (Exception e) {
+    profily_chyby++
+}
+
+def summary = "Menu Pracovne cesty – " + (created.size() + unchanged.size()) + "/" + views.size() +
+        ", profily " + (profily_hotove + profily_nove) + (profily_nove > 0 ? " (+" + profily_nove + ")" : "") +
+        (profily_chyby > 0 ? ", profily CHYBA: " + profily_chyby : "")
+if (failed) {
+    summary = "CHYBA menu Pracovne cesty – nepodarilo sa: " + failed.join(", ")
+}
+changeCaseProperty("title").about { summary }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="nastav_zobrazenie"><![CDATA[
+{ def menuItem, def nets, def headers ->
+    // `enable_case_title`  - vypnuty dialog "Vyplnte nazov pripadu" pri "+".
+    // `default_headers`    - predvolene stlpce zoznamu.
+    // Ani jedno nie je argument `createOrUpdateMenuItem`.
+    if (menuItem == null) return
+    def payload = [:]
+    if (nets) {
+        payload.put("enable_case_title", ["value": false, "type": "boolean"])
+        payload.put("case_require_title_in_creation", ["value": false, "type": "boolean"])
+    }
+    if (headers) {
+        payload.put("default_headers", ["value": headers as String, "type": "text"])
+    }
+    if (payload) {
+        setData("view", menuItem, payload)
+    }
+}
+	]]></function>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def identifier ->
+    // `findMenuItem(id)` z ActionDelegate existujucu polozku nenajde (hlada
+    // v inom rozsahu), takze by sa pri kazdom spusteni zalozila druha sada.
+    def id = ((identifier ?: "") as String).trim()
+    if (!id) return null
+    def items = findCases { it.processIdentifier.eq("preference_filter_item") }
+    return items?.find { ((it.dataSet["menu_item_identifier"]?.value ?: "") as String) == id }
+}
+	]]></function>
+	<roleRef>
+		<id>zamestnanec</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>zamestnanec</id>
+		<title name="zamestnanec_title">Zamestnanec</title>
+	</role>
+	<transition>
+		<id>t_pc_menu</id>
+		<x>112</x>
+		<y>80</y>
+		<label name="t_pc_menu_label">Stav menu</label>
+		<icon>menu</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>zamestnanec</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>32</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_pc_menu</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_pc_menu</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

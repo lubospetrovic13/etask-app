@@ -1,0 +1,2340 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>hr/cesty/pc_vyuctovanie</id>
+	<version>1.0.0</version>
+	<initials>PCV</initials>
+	<title name="net_title">Vyúčtovanie pracovných ciest</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Travel expense claim</i18nString>
+		<i18nString name="zamestnanec_title">Employee</i18nString>
+		<i18nString name="veduci_title">Approver</i18nString>
+		<i18nString name="mzdy_title">Payroll</i18nString>
+
+		<i18nString name="div_obdobie_init">Period and employee</i18nString>
+		<i18nString name="div_vozidlo_init">Vehicle</i18nString>
+		<i18nString name="div_cesta_init">Add a trip</i18nString>
+		<i18nString name="div_zoznam_init">Trips on this claim</i18nString>
+		<i18nString name="div_sucty_init">Totals</i18nString>
+		<i18nString name="div_schvalenie_init">Approval</i18nString>
+		<i18nString name="div_rozhodnutie_init">Approver's decision</i18nString>
+		<i18nString name="div_spracovanie_init">Processing</i18nString>
+		<i18nString name="div_vystup_init">The filled-in form</i18nString>
+		<i18nString name="div_priebeh_init">History</i18nString>
+
+		<i18nString name="pc_ziadatel_title">Employee</i18nString>
+		<i18nString name="pc_ziadatel_desc">Filled in on its own. The right to see this claim hangs on this list.</i18nString>
+		<i18nString name="pc_ziadatel_meno_title">Claimed by</i18nString>
+		<i18nString name="pc_rok_title">Year</i18nString>
+		<i18nString name="pc_mesiac_title">Month</i18nString>
+		<i18nString name="pc_mesiac_opt_01">January</i18nString>
+		<i18nString name="pc_mesiac_opt_02">February</i18nString>
+		<i18nString name="pc_mesiac_opt_03">March</i18nString>
+		<i18nString name="pc_mesiac_opt_04">April</i18nString>
+		<i18nString name="pc_mesiac_opt_05">May</i18nString>
+		<i18nString name="pc_mesiac_opt_06">June</i18nString>
+		<i18nString name="pc_mesiac_opt_07">July</i18nString>
+		<i18nString name="pc_mesiac_opt_08">August</i18nString>
+		<i18nString name="pc_mesiac_opt_09">September</i18nString>
+		<i18nString name="pc_mesiac_opt_10">October</i18nString>
+		<i18nString name="pc_mesiac_opt_11">November</i18nString>
+		<i18nString name="pc_mesiac_opt_12">December</i18nString>
+		<i18nString name="pc_obdobie_title">Period</i18nString>
+		<i18nString name="pc_obdobie_desc">One claim covers one person and one month - that is what the form is.</i18nString>
+
+		<i18nString name="pc_spz_title">Registration plate</i18nString>
+		<i18nString name="pc_palivo_title">Fuel</i18nString>
+		<i18nString name="pc_palivo_opt_benzin_95">Petrol 95</i18nString>
+		<i18nString name="pc_palivo_opt_benzin_98">Petrol 98</i18nString>
+		<i18nString name="pc_palivo_opt_benzin_98_100">Premium petrol 98-100</i18nString>
+		<i18nString name="pc_palivo_opt_lpg">LPG</i18nString>
+		<i18nString name="pc_palivo_opt_nafta">Diesel</i18nString>
+		<i18nString name="pc_palivo_opt_nafta_premium">Premium diesel</i18nString>
+		<i18nString name="pc_palivo_opt_cng">CNG</i18nString>
+		<i18nString name="pc_palivo_opt_lng">LNG</i18nString>
+		<i18nString name="pc_palivo_opt_biolng">bioLNG</i18nString>
+		<i18nString name="pc_palivo_opt_vodik">Hydrogen</i18nString>
+		<i18nString name="pc_palivo_opt_el_ac">Electricity - AC charging</i18nString>
+		<i18nString name="pc_palivo_opt_el_dc">Electricity - DC charging</i18nString>
+		<i18nString name="pc_palivo_opt_el_ultra">Electricity - ultra charging</i18nString>
+		<i18nString name="pc_spotreba_title">Consumption per 100 km (registration certificate)</i18nString>
+		<i18nString name="pc_spotreba_desc">Only needed when a private vehicle is used.</i18nString>
+		<i18nString name="pc_preddavok_title">Advance paid (EUR)</i18nString>
+
+		<i18nString name="pc_c_zaciatok_title">Trip started</i18nString>
+		<i18nString name="pc_c_trvanie_title">Duration (hours)</i18nString>
+		<i18nString name="pc_c_trvanie_desc">Decimals are fine: 1.5 is an hour and a half. The end is worked out for you.</i18nString>
+		<i18nString name="pc_c_miesto_zac_title">Departure from</i18nString>
+		<i18nString name="pc_c_miesto_kon_title">Arrival at</i18nString>
+		<i18nString name="pc_c_rokovanie_title">Place of the meeting or work</i18nString>
+		<i18nString name="pc_c_doprava_title">Means of transport</i18nString>
+		<i18nString name="pc_c_doprava_opt_auto">Private car</i18nString>
+		<i18nString name="pc_c_doprava_opt_firemne_auto">Company car</i18nString>
+		<i18nString name="pc_c_doprava_opt_motocykel">Private motorcycle</i18nString>
+		<i18nString name="pc_c_doprava_opt_firemny_motocykel">Company motorcycle</i18nString>
+		<i18nString name="pc_c_doprava_opt_autobus">Bus</i18nString>
+		<i18nString name="pc_c_doprava_opt_vlak">Train</i18nString>
+		<i18nString name="pc_c_doprava_opt_lietadlo">Plane</i18nString>
+		<i18nString name="pc_c_strava_title">Free meals provided</i18nString>
+		<i18nString name="pc_c_strava_opt_nie">No</i18nString>
+		<i18nString name="pc_c_strava_opt_ranajky">Yes - breakfast</i18nString>
+		<i18nString name="pc_c_strava_opt_obed">Yes - lunch</i18nString>
+		<i18nString name="pc_c_strava_opt_vecera">Yes - dinner</i18nString>
+		<i18nString name="pc_c_strava_opt_ranajky_obed">Yes - breakfast and lunch</i18nString>
+		<i18nString name="pc_c_strava_opt_ranajky_vecera">Yes - breakfast and dinner</i18nString>
+		<i18nString name="pc_c_strava_opt_obed_vecera">Yes - lunch and dinner</i18nString>
+		<i18nString name="pc_c_strava_opt_ranajky_obed_vecera">Yes - breakfast, lunch and dinner</i18nString>
+		<i18nString name="pc_c_km_tam_title">Kilometres there</i18nString>
+		<i18nString name="pc_c_km_spat_title">Kilometres back</i18nString>
+		<i18nString name="pc_c_cena_phm_title">Fuel price (EUR per litre/kg/kWh)</i18nString>
+		<i18nString name="pc_c_cena_phm_desc">The average price for the week of the trip. The form would look it up in a table of its own; here it is typed in, so the table does not have to be kept up to date.</i18nString>
+		<i18nString name="pc_c_ubytovanie_title">Accommodation (EUR)</i18nString>
+		<i18nString name="pc_c_ine_title">Other incidental expenses (EUR)</i18nString>
+		<i18nString name="btn_pc_pridat_placeholder">Add trip</i18nString>
+		<i18nString name="btn_pc_pridat_desc">Adds the trip to the claim and recalculates the totals.</i18nString>
+		<i18nString name="pc_cesty_title">Trips</i18nString>
+		<i18nString name="pc_cesty_json_title">Trips (data)</i18nString>
+		<i18nString name="pc_cesty_json_desc">Source of truth for the list. Nobody edits it by hand.</i18nString>
+		<i18nString name="pc_cesty_vyber_title">Remove from the claim</i18nString>
+		<i18nString name="btn_pc_odobrat_placeholder">Remove ticked</i18nString>
+		<i18nString name="btn_pc_odobrat_desc">Removes every ticked trip and recalculates the totals.</i18nString>
+		<i18nString name="pc_cesty_sprava_title">List status</i18nString>
+		<i18nString name="pc_pocet_ciest_title">Trips</i18nString>
+
+		<i18nString name="pc_stravne_title">Meal allowance (EUR)</i18nString>
+		<i18nString name="pc_zakladna_title">Basic allowance (EUR)</i18nString>
+		<i18nString name="pc_phm_title">Fuel (EUR)</i18nString>
+		<i18nString name="pc_ubytovanie_title">Accommodation (EUR)</i18nString>
+		<i18nString name="pc_ine_title">Other expenses (EUR)</i18nString>
+		<i18nString name="pc_spolu_title">Total (EUR)</i18nString>
+		<i18nString name="pc_doplatok_title">To be paid out (EUR)</i18nString>
+		<i18nString name="pc_doplatok_desc">The total less the advance. A negative figure is what the employee owes back.</i18nString>
+
+		<i18nString name="pc_podpis_zam_title">Employee's signature (PNG)</i18nString>
+		<i18nString name="pc_podpis_zam_desc">Upload it once - every later claim copies it from the previous one.</i18nString>
+		<i18nString name="pc_podpis_schv_title">Approver's signature (PNG)</i18nString>
+		<i18nString name="pc_vystup_title">Filled-in form (xlsx)</i18nString>
+		<i18nString name="pc_vystup_desc">The accountant's own workbook with the values filled in. Its formulas are untouched.</i18nString>
+		<i18nString name="pc_export_sprava_title">What the export did</i18nString>
+
+		<i18nString name="pc_schvalovatel_vyber_title">Who is to approve this</i18nString>
+		<i18nString name="pc_schvalovatel_vyber_desc">The claim goes to this one person. Nobody else will see it to approve.</i18nString>
+		<i18nString name="pc_schvalovatelia_title">Approver</i18nString>
+		<i18nString name="pc_schvalovatel_meno_title">Approver</i18nString>
+		<i18nString name="pc_rozhodnutie_title">Decision</i18nString>
+		<i18nString name="pc_rozhodnutie_opt_schvalit">Approve</i18nString>
+		<i18nString name="pc_rozhodnutie_opt_vratit">Send back for correction</i18nString>
+		<i18nString name="pc_komentar_title">Comment</i18nString>
+		<i18nString name="pc_poznamka_mzdy_title">Payroll note</i18nString>
+		<i18nString name="pc_spracoval_title">Processed by</i18nString>
+		<i18nString name="pc_podane_o_title">Submitted</i18nString>
+		<i18nString name="pc_schvalene_o_title">Approved</i18nString>
+		<i18nString name="pc_vybavene_o_title">Processed</i18nString>
+		<i18nString name="pc_historia_title">History</i18nString>
+
+		<i18nString name="pc_stav_label_title">Claim status</i18nString>
+		<i18nString name="pc_stav_label_desc">A field of its own, so it can be a column and be searched on.</i18nString>
+		<i18nString name="pc_stav_label_opt_rozpisane">Draft</i18nString>
+		<i18nString name="pc_stav_label_opt_na_schvalenie">Awaiting approval</i18nString>
+		<i18nString name="pc_stav_label_opt_na_spracovanie">Awaiting processing</i18nString>
+		<i18nString name="pc_stav_label_opt_vybavene">Processed</i18nString>
+
+		<i18nString name="t_vyplnit_label">Fill in the claim</i18nString>
+		<i18nString name="t_vyplnit_finish">Submit for approval</i18nString>
+		<i18nString name="t_schvalit_label">Approve the claim</i18nString>
+		<i18nString name="t_schvalit_finish">Record the decision</i18nString>
+		<i18nString name="t_spracovat_label">Process the claim</i18nString>
+		<i18nString name="t_spracovat_finish">Mark as processed</i18nString>
+		<i18nString name="t_prehlad_label">Claim overview</i18nString>
+		<i18nString name="empty_button"></i18nString>
+	</i18n>
+	<icon>drive_eta</icon>
+	<defaultRole>true</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		VYUCTOVANIE PRACOVNYCH CIEST. Entita, nie ukon (RUNBOOK 7): jeden case
+		je jeden clovek a jeden mesiac po cely zivot dokladu.
+
+		Toto NIE JE appka, ktora si vymyslela vlastne tlacivo. Tlacivo drzi
+		uctovna firma a raz za cas ho prepise; appka zbiera udaje, ukaze sumu
+		skor, nez ju niekto podpise, a na konci to iste tlacivo VYPLNI - vratane
+		podpisov ako PNG. Preto:
+
+		  * sadzby aj SABLONA su v `hr/cesty/pc_nastavenia`, nie tu. Nova verzia
+		    tlaciva je nahratie prilohy, nie nova verzia siete;
+		  * do tlaciva sa zapisuju len VSTUPY. Stravne, zakladnu nahradu
+		    a nahradu za PHM si tlacivo pocita vlastnymi vzorcami a to je na nom
+		    to najcennejsie. Appka pocita to iste sucasne - nie preto, aby to
+		    prepisala, ale aby sa dalo schvalovat cislo, a nie tabulka.
+
+		Cesty su OPAKOVANE POLOZKY (vzor B26): zdroj pravdy je JSON
+		v `pc_cesty_json`, `pc_cesty` je jeho citatelny vypis. Petriflow
+		opakovanu skupinu poli nema.
+
+		Kto co vidi, drzi model:
+
+		  * `pc_ziadatel` je userList so zapisanym prihlasenym clovekom. Na nom
+		    visi `userRef` s `caseLogic/view` aj `perform` na vyplnani. Rola
+		    `zamestnanec` ma na urovni procesu iba `create` - zamestnanec teda
+		    vie zalozit vlastne vyuctovanie, ale cudzie neuvidi.
+		  * Schvaluje JEDEN clovek, ktoreho si ziadatel vybral. Rola `veduci`
+		    na prechode `t_schvalit` zamerne NIE JE - inak by schvalil ktokolvek
+		    s tou rolou a vyber by nebol na nic. Zostava ako `view`, aby veduci
+		    videl, co mu chodi.
+		  * `t_prehlad` visi na read arcu z `p_vybavene`, teda z miesta, ktore
+		    nikto nekonzumuje (B8b/B25). Kym sa caka, ziadatel nema co robit
+		    a stav si precita zo stlpca v zozname.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>pc_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+pc_stav_label: f.pc_stav_label, pc_ziadatel: f.pc_ziadatel,
+pc_ziadatel_meno: f.pc_ziadatel_meno, pc_rok: f.pc_rok, pc_mesiac: f.pc_mesiac,
+pc_obdobie: f.pc_obdobie, pc_cesty_json: f.pc_cesty_json,
+pc_schvalovatel_vyber: f.pc_schvalovatel_vyber, pc_historia: f.pc_historia,
+pc_spz: f.pc_spz, pc_palivo: f.pc_palivo, pc_spotreba: f.pc_spotreba,
+pc_c_doprava: f.pc_c_doprava, pc_c_miesto_zac: f.pc_c_miesto_zac,
+pc_c_cena_phm: f.pc_c_cena_phm;
+
+def ja = loggedUser()
+change pc_stav_label value { "rozpisane" }
+change pc_ziadatel value { [ja.id] }
+change pc_ziadatel_meno value { kto(ja) }
+change pc_cesty_json value { "[]" }
+change pc_historia value { "" }
+
+// Predvyplneny je MINULY mesiac: vyuctovanie sa pise po tom, co mesiac
+// skoncil, nie v jeho priebehu.
+def m = java.time.LocalDate.now().minusMonths(1)
+change pc_rok value { (m.year as Integer).doubleValue() }
+change pc_mesiac value { String.format("%02d", m.monthValue) }
+change pc_obdobie value { String.format("%02d/%d", m.monthValue, m.year) }
+
+// Moznosti schvalovatelov sa stavaju TU a nie v `create` casu ako
+// `change ... options` - tam sa neuchovaju (B11). Toto je `post` akcia
+// udalosti casu, takze uz zapisuje do ulozeneho datasetu.
+change pc_schvalovatel_vyber options { schvalovatelia(ja) }
+
+// Podpis je "raz nahrany": skopiruje sa z posledneho vlastneho vyuctovania,
+// takze ho clovek prikladá len prvykrat.
+prenes_podpis(ja)
+
+// Vozidlo je "raz nastavene": SPZ, palivo a spotreba pridu z profilu
+// (`hr/cesty/pc_profil`), ktory si clovek nastavi v menu "Moje vozidlo".
+// Ked ho este nema, zalozi sa prazdny - aby ho mal kde vyplnit.
+z_profilu(ja, pc_spz, pc_palivo, pc_spotreba, pc_c_doprava, pc_c_miesto_zac, pc_c_cena_phm)
+
+changeCaseProperty("title").about { nazov_casu(pc_obdobie, pc_ziadatel_meno) }
+changeCaseProperty("color").about { "grey" }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+
+	<function scope="process" name="kto"><![CDATA[
+{ def u ->
+    // `?.` chrani pred null, nie pred chybajucou property - a na chybajucej
+    // vyhodi MissingPropertyException uprostred akcie.
+    return (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+}
+	]]></function>
+	<function scope="process" name="nazov_casu"><![CDATA[
+{ def pc_obdobie, def pc_ziadatel_meno ->
+    // BEZ STAVU: `Case.title` je v engine obycajny `String`, takze sa
+    // neprekladá. Stav nesie pole `pc_stav_label` a stlpec, nie nazov pripadu.
+    def obd = ((pc_obdobie.value ?: "") as String).trim()
+    def meno = ((pc_ziadatel_meno.value ?: "") as String).trim()
+    return "Travel expenses " + (obd ?: "?") + (meno ? (" - " + meno) : "")
+}
+	]]></function>
+	<function scope="process" name="obnov_obdobie"><![CDATA[
+{ def pc_rok, def pc_mesiac, def pc_obdobie, def pc_ziadatel_meno ->
+    // `pc_obdobie` je to, co ide do tlaciva aj do nazvu pripadu, a drzi sa
+    // v samostatnom poli, aby sa dalo hladat a porovnavat (kontrola "jeden
+    // clovek, jeden mesiac" stoji prave na nom).
+    //
+    // Format je "MM/RRRR", nie "Júl 2026": je to hodnota datoveho pola, tie
+    // preklad nemaju (CLAUDE.md, Jazyk) - a slovensky nazov mesiaca by
+    // v anglickom portali trcal, kym cislo je spravne v oboch.
+    int rok = ((pc_rok.value ?: 0) as Number).intValue()
+    String mes = ((pc_mesiac.value ?: "") as String)
+    change pc_obdobie value { (mes && rok > 0) ? (mes + "/" + rok) : "" }
+    changeCaseProperty("title").about { nazov_casu(pc_obdobie, pc_ziadatel_meno) }
+}
+	]]></function>
+	<function scope="process" name="schvalovatelia"><![CDATA[
+{ def ja ->
+    // Kto smie toto vyuctovanie schvalit. `usersWithRoleAll` je primitivum
+    // delegata ("kto vsetko ma rolu X"); `usersWithRole` filtruje ZADANY zoznam,
+    // co je ina otazka.
+    //
+    // ZIADATEL SA ZO ZOZNAMU VYHADZUJE. Styri oci tak nezacinaju odmietnutim,
+    // ale tym, ze si clovek sam seba ani nevie vybrat. Guard vo `finish`
+    // zostava ako druha linia - pole sa da prepisat cez API.
+    def mojeId = (ja?.id ?: "") as String
+    def out = [:]
+    usersWithRoleAll("veduci", "hr/cesty/pc_vyuctovanie").each { String id ->
+        if (id == mojeId) return
+        def u = null
+        try { u = userService.findById(id, false) } catch (Exception e) { u = null }
+        // Kluc moznosti je userId - hex ObjectId, takze v nom nie je `.` ani `$`
+        // (Mongo to v nazvoch poli zakazuje, C17).
+        out.put(id, u != null ? kto(u) : id)
+    }
+    return out
+}
+	]]></function>
+	<function scope="process" name="moje_predchadzajuce"><![CDATA[
+{ def ja ->
+    // Vlastne staršie vyuctovania, od najnovsieho. Dopyt stoji na `author`,
+    // nie na `dataSet` - `findCases { it.dataSet... }` nefunguje (gotcha 40),
+    // a bez zuzenia na autora by to bol sken vsetkych vyuctovani portalu.
+    def mojeId = (ja?.id ?: "") as String
+    if (!mojeId) return []
+    def vsetky = findCases { qCase ->
+        qCase.processIdentifier.eq("hr/cesty/pc_vyuctovanie").and(qCase.author.id.eq(mojeId))
+    }
+    return (vsetky ?: []).findAll { it.stringId != useCase.stringId }
+            .sort { a, b -> (b.creationDate <=> a.creationDate) }
+}
+	]]></function>
+	<function scope="process" name="profil"><![CDATA[
+{ def ja ->
+    // Pripad `hr/cesty/pc_profil` toho cloveka, a ked este nie je, zalozi ho.
+    //
+    // Lazy zalozenie je zamer: inak by clovek musel vediet, ze si ma najprv
+    // niekde nieco nastavit - a to je presne ten krok, ktory nikto neurobi.
+    // Takto mu profil vznikne s prvym vyuctovanim a najde ho v menu.
+    //
+    // `findCases { it.dataSet... }` NEFUNGUJE (petriflow_reference, gotcha 40),
+    // takze sa filtruje v Groovy. Pripadov je jeden na cloveka, nie tisice.
+    def mojeId = (ja?.id ?: "") as String
+    if (!mojeId) return null
+    try {
+        def vsetky = findCases { it.processIdentifier.eq("hr/cesty/pc_profil") }
+        def moj = vsetky?.find { ((it.dataSet?.get("pp_userid")?.value ?: "") as String) == mojeId }
+        if (moj != null) return moj
+        return createCase("hr/cesty/pc_profil")
+    } catch (Exception e) {
+        // Chybajuci profil je nepohodlie (vyplni sa rucne), nie chyba -
+        // zalozenie vyuctovania na nom padnut nesmie.
+        return null
+    }
+}
+	]]></function>
+	<function scope="process" name="z_profilu"><![CDATA[
+{ def ja, def pc_spz, def pc_palivo, def pc_spotreba,
+  def pc_c_doprava, def pc_c_miesto_zac, def pc_c_cena_phm ->
+    // Predvyplnenie z profilu. Prepisat sa da vsetko - profil je predvolba,
+    // nie zamok: kto sel inym autom, cislo zmeni a vyuctovanie je spravne.
+    def p = profil(ja)
+    if (p == null) return false
+    def d = p.dataSet
+    def hodnota = { String kluc -> d?.get(kluc)?.value }
+    def text = { String kluc -> ((hodnota(kluc) ?: "") as String).trim() }
+    def cislo = { String kluc -> ((hodnota(kluc) ?: 0) as Number).doubleValue() }
+
+    if (text("pp_spz")) change pc_spz value { text("pp_spz") }
+    if (text("pp_palivo")) change pc_palivo value { text("pp_palivo") }
+    if (cislo("pp_spotreba") > 0) change pc_spotreba value { cislo("pp_spotreba") }
+    if (text("pp_doprava")) change pc_c_doprava value { text("pp_doprava") }
+    if (text("pp_miesto_zac")) change pc_c_miesto_zac value { text("pp_miesto_zac") }
+    if (cislo("pp_cena_phm") > 0) change pc_c_cena_phm value { cislo("pp_cena_phm") }
+    return true
+}
+	]]></function>
+	<function scope="process" name="prenes_podpis"><![CDATA[
+{ def ja ->
+    // Podpis sa nahrava RAZ. Kazde dalsie vyuctovanie si ho zoberie
+    // z predchadzajuceho - `prenesPrilohu` kopiruje bajty, lebo cesta k prilohe
+    // je razena per case a priradenie cudzej cesty by spravilo dva zaznamy nad
+    // jednym suborom (zmazanie prveho case-u by vyprazdnilo aj druhy).
+    try {
+        def predch = moje_predchadzajuce(ja).find { it.dataSet?.get("pc_podpis_zam")?.value != null }
+        if (predch == null) return false
+        def v = prenesPrilohu(predch.dataSet.get("pc_podpis_zam"), predch.stringId as String, "pc_podpis_zam")
+        return (v?.ok ?: false) as boolean
+    } catch (Exception e) {
+        // Chybajuci podpis je nepohodlie, nie chyba - zalozenie vyuctovania
+        // na nom padnut nesmie.
+        return false
+    }
+}
+	]]></function>
+	<function scope="process" name="nastavenia"><![CDATA[
+{ ->
+    return najnovsiCase("hr/cesty/pc_nastavenia")
+}
+	]]></function>
+	<function scope="process" name="sadzba"><![CDATA[
+{ def kluc, def dflt ->
+    // Sadzby su v konfiguracii appky, nie v sieti: menia sa zakonom a keby boli
+    // v XML, kazda zmena by bola nova verzia siete.
+    try {
+        def c = nastavenia()
+        def v = c?.dataSet?.get(kluc as String)?.value
+        return v != null ? (v as Number).doubleValue() : (dflt as Number).doubleValue()
+    } catch (Exception e) {
+        return (dflt as Number).doubleValue()
+    }
+}
+	]]></function>
+	<function scope="process" name="text_nastavenia"><![CDATA[
+{ def kluc, def dflt ->
+    try {
+        def c = nastavenia()
+        def v = c?.dataSet?.get(kluc as String)?.value
+        def s = v == null ? "" : (v as String)
+        return s ? s : (dflt as String)
+    } catch (Exception e) {
+        return dflt as String
+    }
+}
+	]]></function>
+	<function scope="process" name="minuty"><![CDATA[
+{ def od, def doo ->
+    // "HH:mm" -> minuty od polnoci. Prichod skorsi nez odchod je cesta cez
+    // polnoc, teda +24 h; bez toho by vysla zaporna dlzka a stravne nula.
+    def parse = { String s ->
+        def m = ((s ?: "") as String).trim() =~ /^(\d{1,2}):(\d{2})$/
+        if (!m.matches()) return -1
+        int h = m.group(1) as int
+        int mi = m.group(2) as int
+        if (h > 23 || mi > 59) return -1
+        return h * 60 + mi
+    }
+    int a = parse(od as String)
+    int b = parse(doo as String)
+    if (a < 0 || b < 0) return -1
+    return b >= a ? (b - a) : (b + 1440 - a)
+}
+	]]></function>
+	<function scope="process" name="stravne"><![CDATA[
+{ def min, def strava ->
+    // Casove pasma presne ako v tlacive: do 5 h nic, do 12 h prve pasmo,
+    // do 18 h druhe, nad 18 h tretie.
+    double s1 = sadzba("pcn_strav_5_12", 9.30d)
+    double s2 = sadzba("pcn_strav_12_18", 13.80d)
+    double s3 = sadzba("pcn_strav_nad_18", 20.60d)
+    int m = (min ?: -1) as Integer
+    if (m < 0) return 0.0d
+    double zaklad = (m <= 300) ? 0.0d : ((m <= 720) ? s1 : ((m <= 1080) ? s2 : s3))
+    if (zaklad <= 0.0d) return 0.0d
+
+    // ZRAZKA JE VZDY PERCENTO Z NAJVYSSIEHO PASMA, nie z pasma, do ktoreho
+    // cesta spadla. Tak to ma zakon aj tlacivo, a je to to jedine, co sa tu
+    // da spravit zle bez toho, aby to bolo vidno.
+    double r = sadzba("pcn_zraz_ranajky", 25.0d) / 100.0d * s3
+    double o = sadzba("pcn_zraz_obed", 40.0d) / 100.0d * s3
+    double v = sadzba("pcn_zraz_vecera", 35.0d) / 100.0d * s3
+    def zrazky = ["nie": 0.0d, "ranajky": r, "obed": o, "vecera": v,
+                  "ranajky_obed": r + o, "ranajky_vecera": r + v,
+                  "obed_vecera": o + v, "ranajky_obed_vecera": r + o + v]
+    double zraz = (zrazky.get((strava ?: "nie") as String) ?: 0.0d) as double
+    return Math.max(0.0d, zaklad - zraz)
+}
+	]]></function>
+	<function scope="process" name="zakladna"><![CDATA[
+{ def km, def doprava ->
+    // Zakladna nahrada patri len vlastnemu vozidlu. Firemne auto, vlak
+    // a autobus maju v tlacive prazdny stlpec - preplacaju sa inak.
+    double k = ((km ?: 0) as Number).doubleValue()
+    String d = (doprava ?: "") as String
+    if (d == "auto") return k * sadzba("pcn_km_auto", 0.313d)
+    if (d == "motocykel") return k * sadzba("pcn_km_motocykel", 0.09d)
+    return 0.0d
+}
+	]]></function>
+	<function scope="process" name="phm"><![CDATA[
+{ def km, def doprava, def spotreba, def cena ->
+    String d = (doprava ?: "") as String
+    if (d != "auto" && d != "motocykel") return 0.0d
+    double k = ((km ?: 0) as Number).doubleValue()
+    double sp = ((spotreba ?: 0) as Number).doubleValue()
+    double c = ((cena ?: 0) as Number).doubleValue()
+    return k / 100.0d * sp * sadzba("pcn_koef_phm", 1.1d) * c
+}
+	]]></function>
+	<function scope="process" name="cent"><![CDATA[
+{ def n ->
+    // Zaokruhlenie na centy: 0.1 + 0.2 v doublach nie je 0.3 a v sucte
+    // tridsiatich ciest to je vidno.
+    return Math.round(((n ?: 0) as Number).doubleValue() * 100.0d) / 100.0d
+}
+	]]></function>
+	<function scope="process" name="cesty_zo_json"><![CDATA[
+{ def pc_cesty_json ->
+    def raw = ((pc_cesty_json.value ?: "") as String).trim()
+    if (!raw) return []
+    try {
+        return new groovy.json.JsonSlurper().parseText(raw) as List
+    } catch (Exception e) {
+        // Rozsypany JSON nesmie zhodit celu akciu - prazdny zoznam je horsi
+        // vysledok, ale opravitelny.
+        return []
+    }
+}
+	]]></function>
+	<function scope="process" name="sumy_cesty"><![CDATA[
+{ def c, def spotreba ->
+    double km = (((c.km_tam ?: 0) as Number).doubleValue()) + (((c.km_spat ?: 0) as Number).doubleValue())
+    int min = minuty(c.od, c.doo)
+    return [min       : min,
+            km        : km,
+            stravne   : stravne(min, c.strava),
+            zakladna  : zakladna(km, c.doprava),
+            phm       : phm(km, c.doprava, spotreba, c.cena_phm),
+            ubytovanie: ((c.ubytovanie ?: 0) as Number).doubleValue(),
+            ine       : ((c.ine ?: 0) as Number).doubleValue()]
+}
+	]]></function>
+	<function scope="process" name="riadok_cesty"><![CDATA[
+{ def c, def spotreba ->
+    def s = sumy_cesty(c, spotreba)
+    def fmt = { def n -> String.format(java.util.Locale.US, "%.2f", ((n ?: 0) as Number).doubleValue()) }
+    double spolu = (s.stravne as double) + (s.zakladna as double) + (s.phm as double) +
+            (s.ubytovanie as double) + (s.ine as double)
+    int min = s.min as int
+    String dlzka = min < 0 ? "?" : (String.format("%d:%02d", (int) (min / 60), min % 60) + " h")
+    // Riadok je po ANGLICKY - je to hodnota datoveho pola a tie preklad nemaju
+    // (CLAUDE.md, Jazyk).
+    return ((c.datum ?: "?") as String) + "  ·  " + ((c.od ?: "?") as String) + "-" +
+            ((c.doo ?: "?") as String) + " (" + dlzka + ")  ·  " +
+            ((c.rokovanie ?: "-") as String) + "  ·  " + doprava_popis(c.doprava) +
+            (((s.km as double) > 0) ? ("  ·  " + fmt(s.km) + " km") : "") +
+            "  ·  " + fmt(spolu) + " EUR"
+}
+	]]></function>
+	<function scope="process" name="doprava_popis"><![CDATA[
+{ def kluc ->
+    def m = ["auto": "private car", "firemne_auto": "company car",
+             "motocykel": "private motorcycle", "firemny_motocykel": "company motorcycle",
+             "autobus": "bus", "vlak": "train", "lietadlo": "plane"]
+    return (m.get((kluc ?: "") as String) ?: "-") as String
+}
+	]]></function>
+	<function scope="process" name="doprava_excel"><![CDATA[
+{ def kluc ->
+    // RETAZCE PRE TLACIVO. Vzorce v hárku porovnavaju stlpec F na presne tieto
+    // slova (`IF(F12="Súkromné vozidlo";...)`), takze tu su zamerne po slovensky
+    // a s diakritikou - nie je to preklad, je to hodnota, ktoru tlacivo cita.
+    // Ked ich uctovna firma prepise, prepise sa aj harok `Zoznamy` a tento zoznam.
+    // pflang:off  - CITA TO TLACIVO, NIE CLOVEK
+    def m = ["auto": "Súkromné vozidlo", "firemne_auto": "Firemné vozidlo",
+             "motocykel": "Súkromný motocykel", "firemny_motocykel": "Firemný motocykel",
+             "autobus": "Autobus", "vlak": "Vlak", "lietadlo": "Lietadlo"]
+    // pflang:on
+    return m.get((kluc ?: "") as String)
+}
+	]]></function>
+	<function scope="process" name="strava_excel"><![CDATA[
+{ def kluc ->
+    // Rovnaky dovod ako pri `doprava_excel`: vzorec pre stravne porovnava
+    // stlpec G presne na tieto retazce a odpocitava podla nich zrazku.
+    // pflang:off
+    def m = ["nie": "Nie", "ranajky": "Áno - raňajky", "obed": "Áno - obed",
+             "vecera": "Áno - večera", "ranajky_obed": "Áno - raňajky a obed",
+             "ranajky_vecera": "Áno - raňajky a večera",
+             "obed_vecera": "Áno - obed a večera",
+             "ranajky_obed_vecera": "Áno - raňajky, obed a večera"]
+    // pflang:on
+    return m.get((kluc ?: "") as String)
+}
+	]]></function>
+	<function scope="process" name="palivo_excel"><![CDATA[
+{ def kluc ->
+    // Druh paliva vyberá stlpec v tabulke tyzdennych cien Statistickeho uradu
+    // (harok `Priemerné ceny PHM`), takze sa porovnava na presny nazov.
+    // pflang:off
+    def m = ["benzin_95": "Benzín natural 95", "benzin_98": "Benzín natural 98",
+             "benzin_98_100": "Prémiový benzín 98 - 100", "lpg": "LPG",
+             "nafta": "Motorová nafta", "nafta_premium": "Prémiová motorová nafta",
+             "cng": "CNG", "lng": "LNG", "biolng": "bioLNG", "vodik": "Vodík",
+             "el_ac": "El. energia AC nabíjanie", "el_dc": "El. energia DC nabíjanie",
+             "el_ultra": "El. energia ultra nabíjanie"]
+    // pflang:on
+    return m.get((kluc ?: "") as String)
+}
+	]]></function>
+	<function scope="process" name="prepocet"><![CDATA[
+{ def pc_cesty_json, def pc_spotreba, def pc_preddavok, def pc_stravne, def pc_zakladna,
+  def pc_phm, def pc_ubytovanie, def pc_ine, def pc_spolu, def pc_doplatok, def pc_pocet_ciest ->
+    def list = cesty_zo_json(pc_cesty_json)
+    double sp = ((pc_spotreba.value ?: 0) as Number).doubleValue()
+    double st = 0.0d, za = 0.0d, ph = 0.0d, ub = 0.0d, in_ = 0.0d
+    list.each { c ->
+        def s = sumy_cesty(c, sp)
+        st += (s.stravne as double)
+        za += (s.zakladna as double)
+        ph += (s.phm as double)
+        ub += (s.ubytovanie as double)
+        in_ += (s.ine as double)
+    }
+    // Zakladna nahrada a PHM sa v tlacive scitavaju cez ROUNDUP, ostatne cez
+    // SUM. Dodrziavame to, aby sa appka a tlacivo nelisili o cent - a prave
+    // o cent by sa to lisilo, keby sa tu zaokruhlovalo matematicky.
+    def nahor = { double d -> Math.ceil(d * 100.0d - 1e-9d) / 100.0d }
+    double zaR = nahor(za)
+    double phR = nahor(ph)
+    double spolu = cent(st) + zaR + phR + cent(ub) + cent(in_)
+
+    change pc_stravne value { cent(st) }
+    change pc_zakladna value { zaR }
+    change pc_phm value { phR }
+    change pc_ubytovanie value { cent(ub) }
+    change pc_ine value { cent(in_) }
+    change pc_spolu value { cent(spolu) }
+    change pc_doplatok value { cent(spolu - ((pc_preddavok.value ?: 0) as Number).doubleValue()) }
+    change pc_pocet_ciest value { (list.size() as Integer).doubleValue() }
+}
+	]]></function>
+	<function scope="process" name="render_cesty"><![CDATA[
+{ def pc_cesty_json, def pc_cesty, def pc_cesty_vyber, def pc_spotreba, def pc_preddavok,
+  def pc_stravne, def pc_zakladna, def pc_phm, def pc_ubytovanie, def pc_ine,
+  def pc_spolu, def pc_doplatok, def pc_pocet_ciest ->
+    // Jedno miesto, ktore drzi vykreslenie, moznosti na odobranie a sucty
+    // v zhode s JSONom. Kazdy, kto zoznam meni, konci volanim tejto funkcie.
+    def list = cesty_zo_json(pc_cesty_json)
+    double sp = ((pc_spotreba.value ?: 0) as Number).doubleValue()
+    change pc_cesty value {
+        list ? list.withIndex(1).collect { c, i -> i + ". " + riadok_cesty(c, sp) }.join("\n") : ""
+    }
+    // Kluc moznosti nesmie obsahovat `.` ani `$` (C17), preto id typu "c3"
+    // a nie datum. Id je POCITADLO ulozene v JSONe, nie index v poli: po
+    // odobrani prostrednej cesty by sa indexy posunuli a `multichoice` by
+    // odobral inu cestu, nez clovek vybral.
+    change pc_cesty_vyber options {
+        list.collectEntries { c -> [((c.id ?: "?") as String): riadok_cesty(c, sp)] }
+    }
+    change pc_cesty_vyber value { [] }
+    prepocet(pc_cesty_json, pc_spotreba, pc_preddavok, pc_stravne, pc_zakladna, pc_phm,
+             pc_ubytovanie, pc_ine, pc_spolu, pc_doplatok, pc_pocet_ciest)
+}
+	]]></function>
+	<function scope="process" name="do_historie"><![CDATA[
+{ def pc_historia, def riadok ->
+    def stare = ((pc_historia.value ?: "") as String)
+    def novy = java.time.LocalDateTime.now().withNano(0).toString() + "  " + (riadok as String)
+    def vsetky = ([novy] + (stare ? stare.split("\n") as List : []))
+    // Strop, aby pole nerastlo donekonecna - stare riadky su v audite enginu.
+    if (vsetky.size() > 60) vsetky = vsetky[0..59]
+    change pc_historia value { vsetky.join("\n") }
+}
+	]]></function>
+	<function scope="process" name="excel_bunky"><![CDATA[
+{ def mapa, def hlavicka, def cesty, def spotreba ->
+    // Z mapovania a udajov postavi mapu "bunka -> hodnota". Cele to zije tu,
+    // v sieti, aby zmena tlaciva bola zmena konfiguracie a nie kodu.
+    def bunky = [:]
+    def H = mapa.hlavicka ?: [:]
+    def polozka = { def kluc, def hodnota ->
+        def ref = H.get(kluc as String)
+        if (ref) bunky.put(ref as String, hodnota)
+    }
+    polozka("spolocnost", hlavicka.spolocnost)
+    polozka("sidlo", hlavicka.sidlo)
+    polozka("obdobie", hlavicka.obdobie)
+    polozka("zamestnanec", hlavicka.zamestnanec)
+    polozka("palivo", hlavicka.palivo)
+    polozka("spotreba", hlavicka.spotreba)
+    polozka("spz", hlavicka.spz)
+    polozka("preddavok", hlavicka.preddavok)
+
+    def R = mapa.riadky ?: [:]
+    int prvy = ((R.prvy ?: 12) as Number).intValue()
+    int krok = Math.max(1, ((R.krok ?: 2) as Number).intValue())
+    int max = Math.max(1, ((R.max ?: 31) as Number).intValue())
+
+    // "C" = stlpec C v prvom riadku dvojice, "C+1" = v druhom. Jedna cesta
+    // zabera v tlacive dva riadky (Odchod / Príchod).
+    def bunka = { def spec, int zaklad ->
+        if (!spec) return null
+        def casti = (spec as String).split("\\+")
+        int off = casti.length > 1 ? (casti[1] as int) : 0
+        return casti[0].trim() + (zaklad + off)
+    }
+    def stlpce = ["datum", "cas_od", "cas_do", "miesto_zac", "miesto_kon", "rokovanie",
+                  "doprava", "strava", "km_tam", "km_spat", "ubytovanie", "ine"]
+
+    (0..<max).each { int i ->
+        int zaklad = prvy + i * krok
+        def c = (i < cesty.size()) ? cesty[i] : null
+        if (c == null) {
+            // PRAZDNE RIADKY SA CISTIA. Sablona moze byt zosit z minuleho
+            // mesiaca (clovek nahra to, co dostal), a bez tohto by v tlacive
+            // zostali cudzie cesty pod tymi nasimi. `cena_phm` sa zamerne
+            // NEVYPRAZDNUJE - v tom stlpci ma tlacivo vlastny vzorec a na
+            // nepouzitom riadku je lepsie nechat ho nedotknuty.
+            stlpce.each { String k -> def r = bunka(R.get(k), zaklad); if (r) bunky.put(r, null) }
+            return
+        }
+        def put = { String kluc, def hodnota ->
+            def r = bunka(R.get(kluc), zaklad)
+            if (r) bunky.put(r, hodnota)
+        }
+        put("datum", c.datum ? java.time.LocalDate.parse(c.datum as String) : null)
+        put("cas_od", c.od ? java.time.LocalTime.parse(dopln_cas(c.od)) : null)
+        put("cas_do", c.doo ? java.time.LocalTime.parse(dopln_cas(c.doo)) : null)
+        put("miesto_zac", c.miesto_zac)
+        put("miesto_kon", c.miesto_kon)
+        put("rokovanie", c.rokovanie)
+        put("doprava", doprava_excel(c.doprava))
+        put("strava", strava_excel(c.strava))
+        put("km_tam", ((c.km_tam ?: 0) as Number).doubleValue() ?: null)
+        put("km_spat", ((c.km_spat ?: 0) as Number).doubleValue() ?: null)
+        put("ubytovanie", ((c.ubytovanie ?: 0) as Number).doubleValue() ?: null)
+        put("ine", ((c.ine ?: 0) as Number).doubleValue() ?: null)
+        // Cenu PHM tlacivo hlada vo vlastnej tabulke tyzdennych cien
+        // Statistickeho uradu. Tu ju zadava ziadatel, takze ten vzorec
+        // prepisujeme - je to jediny vzorec, do ktoreho appka siaha.
+        put("cena_phm", ((c.cena_phm ?: 0) as Number).doubleValue() ?: null)
+    }
+    return bunky
+}
+	]]></function>
+	<function scope="process" name="dopln_cas"><![CDATA[
+{ def s ->
+    // `LocalTime.parse` chce "HH:mm" s dvojcifernou hodinou; formular pusti "9:30".
+    def t = ((s ?: "") as String).trim()
+    return (t.length() == 4 && t[1] == ':') ? ("0" + t) : t
+}
+	]]></function>
+	<function scope="process" name="vyrob_excel"><![CDATA[
+{ def pc_cesty_json, def pc_spotreba, def pc_obdobie, def pc_ziadatel_meno, def pc_palivo,
+  def pc_spz, def pc_preddavok, def pc_podpis_zam, def pc_podpis_schv, def pc_export_sprava ->
+    try {
+        def cfg = nastavenia()
+        if (cfg == null) {
+            change pc_export_sprava value { "The application settings case does not exist - no form to fill in." }
+            return false
+        }
+        def raw = ((cfg.dataSet?.get("pcn_mapovanie")?.value ?: "") as String).trim()
+        if (!raw) {
+            change pc_export_sprava value { "The cell mapping is not set in the application settings." }
+            return false
+        }
+        def mapa = new groovy.json.JsonSlurper().parseText(raw)
+
+        def hlavicka = [
+                spolocnost : text_nastavenia("pcn_spolocnost", "Netgrif, s.r.o."),
+                sidlo      : text_nastavenia("pcn_sidlo", ""),
+                obdobie    : ((pc_obdobie.value ?: "") as String),
+                zamestnanec: ((pc_ziadatel_meno.value ?: "") as String),
+                palivo     : palivo_excel(pc_palivo.value),
+                spotreba   : ((pc_spotreba.value ?: 0) as Number).doubleValue() ?: null,
+                spz        : ((pc_spz.value ?: "") as String),
+                preddavok  : ((pc_preddavok.value ?: 0) as Number).doubleValue() ?: null]
+
+        def bunky = excel_bunky(mapa, hlavicka, cesty_zo_json(pc_cesty_json),
+                                ((pc_spotreba.value ?: 0) as Number).doubleValue())
+
+        // Podpisy. Su to PNG prilohy; ktore su nahrate, tie sa vlozia.
+        def P = mapa.podpisy ?: [:]
+        def obrazky = []
+        def pridaj = { def kluc, def pole ->
+            def box = P.get(kluc as String)
+            if (box != null && pole?.value != null) {
+                obrazky << [subor: pole, bunka: box.bunka, sirka: box.sirka, vyska: box.vyska]
+            }
+        }
+        pridaj("zamestnanec", pc_podpis_zam)
+        pridaj("schvalovatel", pc_podpis_schv)
+
+        def nazov = "vyuctovanie-" + ((pc_obdobie.value ?: "") as String).replace("/", "-") + ".xlsx"
+        def v = vyplnXlsx([sablona: cfg.dataSet?.get("pcn_sablona"),
+                           // pflang:off  - nazov harku v cudzom zosite
+                           harok  : text_nastavenia("pcn_harok", "Tuzemská cesta"),
+                           // pflang:on
+                           bunky  : bunky,
+                           obrazky: obrazky,
+                           nazov  : nazov,
+                           pole   : "pc_vystup",
+                           prechod: "t_prehlad"])
+        change pc_export_sprava value { (v?.sprava ?: "") as String }
+        return (v?.ok ?: false) as boolean
+    } catch (Exception e) {
+        // Export nesmie zhodit schvalenie. Vyuctovanie je platne aj bez
+        // tlaciva; tlacivo sa da vyrobit znova, rozhodnutie nie.
+        change pc_export_sprava value { "The form could not be filled in: " + e.message }
+        return false
+    }
+}
+	]]></function>
+
+	<!--
+		`default` je systemova rola, ktoru ma KAZDY prihlaseny - nemusi sa
+		deklarovat v `<role>` a `pflint` ju pozna ako zabudovanu.
+
+		Preco tu je: na pracovnu cestu ide hocikto, takze podmienit zalozenie
+		rolou `zamestnanec` znamena pridelit rolu kazdemu jednemu uctu v
+		instancii. To sa pri prvom kole ludi nespravi a prejavi sa to tak, ze
+		appka "nic nerobi" - menu polozka je, formular sa nezalozi a nikde sa
+		nepovie preco. Rola `zamestnanec` ZOSTAVA a znamena to iste; `default`
+		je len to, co ma clovek uz tym, ze je prihlaseny.
+	-->
+	<roleRef>
+		<id>default</id>
+		<caseLogic>
+			<create>true</create>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>zamestnanec</id>
+		<caseLogic>
+			<create>true</create>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>veduci</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<roleRef>
+		<id>mzdy</id>
+		<caseLogic>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<userRef>
+		<id>pc_ziadatel</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</userRef>
+	<role>
+		<id>zamestnanec</id>
+		<title name="zamestnanec_title">Zamestnanec</title>
+	</role>
+	<role>
+		<id>veduci</id>
+		<title name="veduci_title">Schvaľovateľ</title>
+	</role>
+	<role>
+		<id>mzdy</id>
+		<title name="mzdy_title">Mzdová učtáreň</title>
+	</role>
+
+	<data type="i18n">
+		<id>div_obdobie</id>
+		<title/>
+		<init name="div_obdobie_init">Obdobie a zamestnanec</init>
+	</data>
+	<data type="i18n">
+		<id>div_vozidlo</id>
+		<title/>
+		<init name="div_vozidlo_init">Vozidlo</init>
+	</data>
+	<data type="i18n">
+		<id>div_cesta</id>
+		<title/>
+		<init name="div_cesta_init">Pridať cestu</init>
+	</data>
+	<data type="i18n">
+		<id>div_zoznam</id>
+		<title/>
+		<init name="div_zoznam_init">Cesty na tomto vyúčtovaní</init>
+	</data>
+	<data type="i18n">
+		<id>div_sucty</id>
+		<title/>
+		<init name="div_sucty_init">Súčty</init>
+	</data>
+	<data type="i18n">
+		<id>div_schvalenie</id>
+		<title/>
+		<init name="div_schvalenie_init">Schválenie</init>
+	</data>
+	<data type="i18n">
+		<id>div_rozhodnutie</id>
+		<title/>
+		<init name="div_rozhodnutie_init">Rozhodnutie schvaľovateľa</init>
+	</data>
+	<data type="i18n">
+		<id>div_spracovanie</id>
+		<title/>
+		<init name="div_spracovanie_init">Spracovanie</init>
+	</data>
+	<data type="i18n">
+		<id>div_vystup</id>
+		<title/>
+		<init name="div_vystup_init">Vyplnené tlačivo</init>
+	</data>
+	<data type="i18n">
+		<id>div_priebeh</id>
+		<title/>
+		<init name="div_priebeh_init">Priebeh</init>
+	</data>
+
+	<data type="userList">
+		<id>pc_ziadatel</id>
+		<title name="pc_ziadatel_title">Zamestnanec</title>
+		<desc name="pc_ziadatel_desc">Vyplní sa sám. Na tomto zozname visí právo vyúčtovanie vidieť.</desc>
+	</data>
+	<data type="text" immediate="true">
+		<id>pc_ziadatel_meno</id>
+		<title name="pc_ziadatel_meno_title">Vyúčtoval</title>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_rok</id>
+		<title name="pc_rok_title">Rok</title>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>pc_mesiac</id>
+		<title name="pc_mesiac_title">Mesiac</title>
+		<options>
+			<option key="01" name="pc_mesiac_opt_01">Január</option>
+			<option key="02" name="pc_mesiac_opt_02">Február</option>
+			<option key="03" name="pc_mesiac_opt_03">Marec</option>
+			<option key="04" name="pc_mesiac_opt_04">Apríl</option>
+			<option key="05" name="pc_mesiac_opt_05">Máj</option>
+			<option key="06" name="pc_mesiac_opt_06">Jún</option>
+			<option key="07" name="pc_mesiac_opt_07">Júl</option>
+			<option key="08" name="pc_mesiac_opt_08">August</option>
+			<option key="09" name="pc_mesiac_opt_09">September</option>
+			<option key="10" name="pc_mesiac_opt_10">Október</option>
+			<option key="11" name="pc_mesiac_opt_11">November</option>
+			<option key="12" name="pc_mesiac_opt_12">December</option>
+		</options>
+	</data>
+	<data type="text" immediate="true">
+		<id>pc_obdobie</id>
+		<title name="pc_obdobie_title">Obdobie</title>
+		<desc name="pc_obdobie_desc">Jedno vyúčtovanie je jeden človek a jeden mesiac — tlačivo je presne o tom.</desc>
+	</data>
+
+	<data type="text">
+		<id>pc_spz</id>
+		<title name="pc_spz_title">ŠPZ vozidla</title>
+	</data>
+	<data type="enumeration_map">
+		<id>pc_palivo</id>
+		<title name="pc_palivo_title">Druh paliva</title>
+		<options>
+			<option key="benzin_95" name="pc_palivo_opt_benzin_95">Benzín natural 95</option>
+			<option key="benzin_98" name="pc_palivo_opt_benzin_98">Benzín natural 98</option>
+			<option key="benzin_98_100" name="pc_palivo_opt_benzin_98_100">Prémiový benzín 98 – 100</option>
+			<option key="lpg" name="pc_palivo_opt_lpg">LPG</option>
+			<option key="nafta" name="pc_palivo_opt_nafta">Motorová nafta</option>
+			<option key="nafta_premium" name="pc_palivo_opt_nafta_premium">Prémiová motorová nafta</option>
+			<option key="cng" name="pc_palivo_opt_cng">CNG</option>
+			<option key="lng" name="pc_palivo_opt_lng">LNG</option>
+			<option key="biolng" name="pc_palivo_opt_biolng">bioLNG</option>
+			<option key="vodik" name="pc_palivo_opt_vodik">Vodík</option>
+			<option key="el_ac" name="pc_palivo_opt_el_ac">El. energia AC nabíjanie</option>
+			<option key="el_dc" name="pc_palivo_opt_el_dc">El. energia DC nabíjanie</option>
+			<option key="el_ultra" name="pc_palivo_opt_el_ultra">El. energia ultra nabíjanie</option>
+		</options>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_spotreba</id>
+		<title name="pc_spotreba_title">Spotreba na 100 km (podľa TP)</title>
+		<desc name="pc_spotreba_desc">Treba ju len vtedy, keď sa jazdí súkromným vozidlom.</desc>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_preddavok</id>
+		<title name="pc_preddavok_title">Poskytnutý preddavok (€)</title>
+		<init>0</init>
+	</data>
+
+	<!--
+		ZACIATOK A TRVANIE, nie datum + dva casy v texte. Clovek vie, kedy
+		stretnutie zacalo a ako dlho trvalo; prichod si dopocitaval v hlave
+		a zapisoval ho ako "HH:mm" do textoveho pola, kde sa dal preklepnut
+		tak, ze `minuty(...)` vratila -1 a cesta sa ticho nepridala.
+
+		V JSON-e zostava `datum`/`od`/`doo` - tlacivo aj prepocet stravneho
+		na nich stoja a menit ich kvoli formularu by znamenalo prepisat aj
+		`excel_bunky` a `riadok_cesty`. Prepocet je v `btn_pc_pridat_set`.
+	-->
+	<data type="dateTime" immediate="true">
+		<id>pc_c_zaciatok</id>
+		<title name="pc_c_zaciatok_title">Začiatok cesty</title>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_c_trvanie</id>
+		<title name="pc_c_trvanie_title">Trvanie (hodín)</title>
+		<desc name="pc_c_trvanie_desc">Aj desatinne: 1,5 je hodina a pol. Koniec si aplikácia dopočíta.</desc>
+	</data>
+	<data type="text" immediate="true">
+		<id>pc_c_miesto_zac</id>
+		<title name="pc_c_miesto_zac_title">Miesto začatia</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>pc_c_miesto_kon</id>
+		<title name="pc_c_miesto_kon_title">Miesto skončenia</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>pc_c_rokovanie</id>
+		<title name="pc_c_rokovanie_title">Miesto rokovania resp. výkonu práce</title>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>pc_c_doprava</id>
+		<title name="pc_c_doprava_title">Použitý dopravný prostriedok</title>
+		<options>
+			<option key="auto" name="pc_c_doprava_opt_auto">Súkromné vozidlo</option>
+			<option key="firemne_auto" name="pc_c_doprava_opt_firemne_auto">Firemné vozidlo</option>
+			<option key="motocykel" name="pc_c_doprava_opt_motocykel">Súkromný motocykel</option>
+			<option key="firemny_motocykel" name="pc_c_doprava_opt_firemny_motocykel">Firemný motocykel</option>
+			<option key="autobus" name="pc_c_doprava_opt_autobus">Autobus</option>
+			<option key="vlak" name="pc_c_doprava_opt_vlak">Vlak</option>
+			<option key="lietadlo" name="pc_c_doprava_opt_lietadlo">Lietadlo</option>
+		</options>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>pc_c_strava</id>
+		<title name="pc_c_strava_title">Zabezpečené bezplatné stravovanie</title>
+		<options>
+			<option key="nie" name="pc_c_strava_opt_nie">Nie</option>
+			<option key="ranajky" name="pc_c_strava_opt_ranajky">Áno — raňajky</option>
+			<option key="obed" name="pc_c_strava_opt_obed">Áno — obed</option>
+			<option key="vecera" name="pc_c_strava_opt_vecera">Áno — večera</option>
+			<option key="ranajky_obed" name="pc_c_strava_opt_ranajky_obed">Áno — raňajky a obed</option>
+			<option key="ranajky_vecera" name="pc_c_strava_opt_ranajky_vecera">Áno — raňajky a večera</option>
+			<option key="obed_vecera" name="pc_c_strava_opt_obed_vecera">Áno — obed a večera</option>
+			<option key="ranajky_obed_vecera" name="pc_c_strava_opt_ranajky_obed_vecera">Áno — raňajky, obed a večera</option>
+		</options>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_c_km_tam</id>
+		<title name="pc_c_km_tam_title">Kilometre tam</title>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_c_km_spat</id>
+		<title name="pc_c_km_spat_title">Kilometre späť</title>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_c_cena_phm</id>
+		<title name="pc_c_cena_phm_title">Cena PHM (€ za liter/kg/kWh)</title>
+		<desc name="pc_c_cena_phm_desc">Priemerná cena za týždeň cesty. Tlačivo si ju hľadá vo vlastnej tabuľke; tu sa zadáva, takže tabuľku netreba udržiavať.</desc>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_c_ubytovanie</id>
+		<title name="pc_c_ubytovanie_title">Ubytovanie (€)</title>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_c_ine</id>
+		<title name="pc_c_ine_title">Iné vedľajšie výdavky (€)</title>
+	</data>
+	<data type="button">
+		<id>btn_pc_pridat</id>
+		<title/>
+		<desc name="btn_pc_pridat_desc">Pridá cestu na vyúčtovanie a prepočíta súčty.</desc>
+		<placeholder name="btn_pc_pridat_placeholder">Pridať cestu</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_pc_pridat_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+pc_c_zaciatok: f.pc_c_zaciatok, pc_c_trvanie: f.pc_c_trvanie,
+pc_c_miesto_zac: f.pc_c_miesto_zac, pc_c_miesto_kon: f.pc_c_miesto_kon,
+pc_c_rokovanie: f.pc_c_rokovanie, pc_c_doprava: f.pc_c_doprava, pc_c_strava: f.pc_c_strava,
+pc_c_km_tam: f.pc_c_km_tam, pc_c_km_spat: f.pc_c_km_spat, pc_c_cena_phm: f.pc_c_cena_phm,
+pc_c_ubytovanie: f.pc_c_ubytovanie, pc_c_ine: f.pc_c_ine,
+pc_cesty_json: f.pc_cesty_json, pc_cesty: f.pc_cesty, pc_cesty_vyber: f.pc_cesty_vyber,
+pc_cesty_sprava: f.pc_cesty_sprava, pc_spotreba: f.pc_spotreba, pc_preddavok: f.pc_preddavok,
+pc_stravne: f.pc_stravne, pc_zakladna: f.pc_zakladna, pc_phm: f.pc_phm,
+pc_ubytovanie: f.pc_ubytovanie, pc_ine: f.pc_ine, pc_spolu: f.pc_spolu,
+pc_doplatok: f.pc_doplatok, pc_pocet_ciest: f.pc_pocet_ciest;
+
+// Button nie je `finish`, takze vynimka by tu nemala komu nic povedat -
+// chyba ide do `pc_cesty_sprava` a formular zostane otvoreny.
+// Z "kedy to zacalo" a "ako dlho to trvalo" sa dopocita to, co drzi JSON.
+def zaciatok = (pc_c_zaciatok.value != null) ? (pc_c_zaciatok.value as java.time.LocalDateTime) : null
+double hodin = ((pc_c_trvanie.value ?: 0) as Number).doubleValue()
+def koniec = (zaciatok != null && hodin > 0)
+        ? zaciatok.plusMinutes(Math.round(hodin * 60d) as long) : null
+def datum = (zaciatok != null) ? zaciatok.toLocalDate().toString() : null
+def od = (zaciatok != null) ? String.format("%02d:%02d", zaciatok.getHour(), zaciatok.getMinute()) : ""
+def doo = (koniec != null) ? String.format("%02d:%02d", koniec.getHour(), koniec.getMinute()) : ""
+def doprava = (pc_c_doprava.value ?: "") as String
+
+if (zaciatok == null) {
+    change pc_cesty_sprava value { "Fill in when the trip started." }
+} else if (hodin <= 0) {
+    change pc_cesty_sprava value { "How long did the trip take? Fill in the hours." }
+} else if (hodin > 24) {
+    // `minuty(od, doo)` pocita cez polnoc, takze nad 24 h by sa dlzka zlomila
+    // spat na male cislo a stravne by vyslo nizsie, nez ma byt. Dlhsia cesta
+    // sa zapisuje po dnoch - tak to chce aj tlacivo.
+    change pc_cesty_sprava value { "A trip longer than 24 hours goes in day by day." }
+} else if (!doprava) {
+    change pc_cesty_sprava value { "Pick the means of transport." }
+} else if ((doprava == "auto" || doprava == "motocykel") &&
+           (((pc_c_km_tam.value ?: 0) as Number).doubleValue() +
+            ((pc_c_km_spat.value ?: 0) as Number).doubleValue()) <= 0) {
+    change pc_cesty_sprava value { "A trip by a private vehicle needs the kilometres driven." }
+} else {
+    def list = cesty_zo_json(pc_cesty_json)
+    // Id je pocitadlo, nie index v poli - po odobrani prostrednej cesty by sa
+    // indexy posunuli a zaskrtnutie by ukazovalo na inu cestu.
+    def maxId = 0
+    list.each { c ->
+        def n = ((c.id ?: "c0") as String).replace("c", "")
+        if (n.isInteger() && (n as int) > maxId) maxId = n as int
+    }
+    list << [id        : "c" + (maxId + 1),
+             datum     : datum,
+             od        : od,
+             doo       : doo,
+             miesto_zac: ((pc_c_miesto_zac.value ?: "") as String).trim(),
+             miesto_kon: ((pc_c_miesto_kon.value ?: "") as String).trim(),
+             rokovanie : ((pc_c_rokovanie.value ?: "") as String).trim(),
+             doprava   : doprava,
+             strava    : ((pc_c_strava.value ?: "nie") as String),
+             km_tam    : ((pc_c_km_tam.value ?: 0) as Number).doubleValue(),
+             km_spat   : ((pc_c_km_spat.value ?: 0) as Number).doubleValue(),
+             cena_phm  : ((pc_c_cena_phm.value ?: 0) as Number).doubleValue(),
+             ubytovanie: ((pc_c_ubytovanie.value ?: 0) as Number).doubleValue(),
+             ine       : ((pc_c_ine.value ?: 0) as Number).doubleValue()]
+    // Poradie v tlacive je chronologicke - tak sa to aj kontroluje.
+    list = list.sort { a, b -> ((a.datum ?: "") as String) + ((a.od ?: "") as String) <=>
+                               ((b.datum ?: "") as String) + ((b.od ?: "") as String) }
+    change pc_cesty_json value { groovy.json.JsonOutput.toJson(list) }
+    render_cesty(pc_cesty_json, pc_cesty, pc_cesty_vyber, pc_spotreba, pc_preddavok,
+                 pc_stravne, pc_zakladna, pc_phm, pc_ubytovanie, pc_ine,
+                 pc_spolu, pc_doplatok, pc_pocet_ciest)
+    change pc_cesty_sprava value { "Added: " + datum + " " + od + "-" + doo +
+            " (" + list.size() + " on the claim)" }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>pc_cesty_json</id>
+		<title name="pc_cesty_json_title">Cesty (dáta)</title>
+		<desc name="pc_cesty_json_desc">Zdroj pravdy zoznamu. Ručne sa needituje.</desc>
+	</data>
+	<data type="text">
+		<id>pc_cesty</id>
+		<title name="pc_cesty_title">Cesty</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="multichoice_map">
+		<id>pc_cesty_vyber</id>
+		<title name="pc_cesty_vyber_title">Odobrať z vyúčtovania</title>
+		<!--
+			BEZ `<options>` a BEZ `immediate="true"`: moznosti sa stavaju za behu
+			a `immediate` na `multichoice_map` s runtime moznostami zhodi
+			indexaciu casu (B22, ENGINE_ISSUES E5).
+		-->
+	</data>
+	<data type="button">
+		<id>btn_pc_odobrat</id>
+		<title/>
+		<desc name="btn_pc_odobrat_desc">Odoberie všetky zaškrtnuté cesty a prepočíta súčty.</desc>
+		<placeholder name="btn_pc_odobrat_placeholder">Odobrať vybrané</placeholder>
+		<init>1</init>
+		<event type="set">
+			<id>btn_pc_odobrat_set</id>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+pc_cesty_json: f.pc_cesty_json, pc_cesty: f.pc_cesty, pc_cesty_vyber: f.pc_cesty_vyber,
+pc_cesty_sprava: f.pc_cesty_sprava, pc_spotreba: f.pc_spotreba, pc_preddavok: f.pc_preddavok,
+pc_stravne: f.pc_stravne, pc_zakladna: f.pc_zakladna, pc_phm: f.pc_phm,
+pc_ubytovanie: f.pc_ubytovanie, pc_ine: f.pc_ine, pc_spolu: f.pc_spolu,
+pc_doplatok: f.pc_doplatok, pc_pocet_ciest: f.pc_pocet_ciest;
+
+def vybrane = ((pc_cesty_vyber.value ?: []) as List).collect { it as String } as Set
+if (!vybrane) {
+    change pc_cesty_sprava value { "Nothing is ticked." }
+} else {
+    def list = cesty_zo_json(pc_cesty_json)
+    def zostava = list.findAll { !vybrane.contains((it.id ?: "") as String) }
+    change pc_cesty_json value { groovy.json.JsonOutput.toJson(zostava) }
+    render_cesty(pc_cesty_json, pc_cesty, pc_cesty_vyber, pc_spotreba, pc_preddavok,
+                 pc_stravne, pc_zakladna, pc_phm, pc_ubytovanie, pc_ine,
+                 pc_spolu, pc_doplatok, pc_pocet_ciest)
+    change pc_cesty_sprava value { "Removed: " + (list.size() - zostava.size()) }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>pc_cesty_sprava</id>
+		<title name="pc_cesty_sprava_title">Stav zoznamu</title>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_pocet_ciest</id>
+		<title name="pc_pocet_ciest_title">Počet ciest</title>
+		<init>0</init>
+	</data>
+
+	<data type="number">
+		<id>pc_stravne</id>
+		<title name="pc_stravne_title">Stravné (€)</title>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>pc_zakladna</id>
+		<title name="pc_zakladna_title">Základná náhrada (€)</title>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>pc_phm</id>
+		<title name="pc_phm_title">Náhrada za PHM (€)</title>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>pc_ubytovanie</id>
+		<title name="pc_ubytovanie_title">Ubytovanie (€)</title>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>pc_ine</id>
+		<title name="pc_ine_title">Iné výdavky (€)</title>
+		<init>0</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_spolu</id>
+		<title name="pc_spolu_title">Spolu (€)</title>
+		<init>0</init>
+		<component>
+			<name>currency</name>
+		</component>
+	</data>
+	<data type="number" immediate="true">
+		<id>pc_doplatok</id>
+		<title name="pc_doplatok_title">Na vyplatenie (€)</title>
+		<desc name="pc_doplatok_desc">Súčet mínus preddavok. Záporné číslo je to, čo zamestnanec vracia.</desc>
+		<init>0</init>
+		<component>
+			<name>currency</name>
+		</component>
+	</data>
+
+	<data type="file">
+		<id>pc_podpis_zam</id>
+		<title name="pc_podpis_zam_title">Podpis zamestnanca (PNG)</title>
+		<desc name="pc_podpis_zam_desc">Nahrajte ho raz — každé ďalšie vyúčtovanie si ho skopíruje z predchádzajúceho.</desc>
+		<component>
+			<name>preview</name>
+		</component>
+	</data>
+	<data type="file">
+		<id>pc_podpis_schv</id>
+		<title name="pc_podpis_schv_title">Podpis schvaľovateľa (PNG)</title>
+		<component>
+			<name>preview</name>
+		</component>
+	</data>
+	<data type="file">
+		<id>pc_vystup</id>
+		<title name="pc_vystup_title">Vyplnené tlačivo (xlsx)</title>
+		<desc name="pc_vystup_desc">Zošit účtovnej firmy s doplnenými hodnotami. Jeho vzorce zostali nedotknuté.</desc>
+	</data>
+	<data type="text">
+		<id>pc_export_sprava</id>
+		<title name="pc_export_sprava_title">Čo spravil export</title>
+	</data>
+
+	<data type="enumeration_map">
+		<id>pc_schvalovatel_vyber</id>
+		<title name="pc_schvalovatel_vyber_title">Kto to má schváliť</title>
+		<desc name="pc_schvalovatel_vyber_desc">Vyúčtovanie pôjde tomuto jednému človeku. Nikto iný ho na schválenie neuvidí.</desc>
+		<!-- Moznosti stavia `schvalovatelia(...)` pri zalozeni casu - staticky
+		     zoznam ludi v XML byt nemoze. -->
+	</data>
+	<data type="userList">
+		<id>pc_schvalovatelia</id>
+		<title name="pc_schvalovatelia_title">Schvaľovateľ</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>pc_schvalovatel_meno</id>
+		<title name="pc_schvalovatel_meno_title">Schvaľovateľ</title>
+	</data>
+	<data type="enumeration_map">
+		<id>pc_rozhodnutie</id>
+		<title name="pc_rozhodnutie_title">Rozhodnutie</title>
+		<options>
+			<option key="schvalit" name="pc_rozhodnutie_opt_schvalit">Schváliť</option>
+			<option key="vratit" name="pc_rozhodnutie_opt_vratit">Vrátiť na opravu</option>
+		</options>
+	</data>
+	<data type="text">
+		<id>pc_komentar</id>
+		<title name="pc_komentar_title">Komentár</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="number">
+		<id>go_schvalene</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>go_vratene</id>
+		<title/>
+		<init>0</init>
+	</data>
+	<data type="text">
+		<id>pc_poznamka_mzdy</id>
+		<title name="pc_poznamka_mzdy_title">Poznámka mzdovej učtárne</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>pc_spracoval</id>
+		<title name="pc_spracoval_title">Spracoval</title>
+	</data>
+	<data type="dateTime">
+		<id>pc_podane_o</id>
+		<title name="pc_podane_o_title">Podané</title>
+	</data>
+	<data type="dateTime">
+		<id>pc_schvalene_o</id>
+		<title name="pc_schvalene_o_title">Schválené</title>
+	</data>
+	<data type="dateTime">
+		<id>pc_vybavene_o</id>
+		<title name="pc_vybavene_o_title">Spracované</title>
+	</data>
+	<data type="text">
+		<id>pc_historia</id>
+		<title name="pc_historia_title">Priebeh</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>pc_stav_label</id>
+		<title name="pc_stav_label_title">Stav vyúčtovania</title>
+		<desc name="pc_stav_label_desc">Samostatné pole, aby sa dalo dať do stĺpca a hľadať podľa neho.</desc>
+		<options>
+			<option key="rozpisane" name="pc_stav_label_opt_rozpisane">Rozpísané</option>
+			<option key="na_schvalenie" name="pc_stav_label_opt_na_schvalenie">Čaká na schválenie</option>
+			<option key="na_spracovanie" name="pc_stav_label_opt_na_spracovanie">Čaká na spracovanie</option>
+			<option key="vybavene" name="pc_stav_label_opt_vybavene">Spracované</option>
+		</options>
+	</data>
+
+	<transition>
+		<id>t_vyplnit</id>
+		<x>160</x>
+		<y>200</y>
+		<label name="t_vyplnit_label">Vyplniť vyúčtovanie</label>
+		<icon>edit_note</icon>
+		<!-- Osobna uloha na vlastnom case-e - `auto` je v poriadku (B12/B21). -->
+		<assignPolicy>auto</assignPolicy>
+		<!--
+			Iba ziadatel. Rola `zamestnanec` tu zamerne nie je: mala by ju cela
+			firma a vyuctovanie by potom mohol vyplnat ktokolvek. Zakladanie
+			casu je zvlast pravo a to rola `zamestnanec` ma na urovni procesu.
+		-->
+		<userRef>
+			<id>pc_ziadatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_hlavicka</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_obdobie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<!--
+				`pc_stav_label` a `pc_obdobie` tu nie su na ozdobu. Pole, ktore
+				nie je v ZIADNOM dataGroup prechodu, `GET /api/task/{id}/data`
+				nevrati - ani skryte. Bez nich formular o vlastnom stave
+				a obdobi nevedel nic, hoci ich siet zapisovala.
+			-->
+			<dataRef>
+				<id>pc_stav_label</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_ziadatel_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_obdobie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_mesiac</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>pc_mesiac_set</id>
+					<actions phase="post">
+						<action id="4"><![CDATA[
+pc_rok: f.pc_rok, pc_mesiac: f.pc_mesiac, pc_obdobie: f.pc_obdobie,
+pc_ziadatel_meno: f.pc_ziadatel_meno;
+
+obnov_obdobie(pc_rok, pc_mesiac, pc_obdobie, pc_ziadatel_meno)
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>pc_rok</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>pc_rok_set</id>
+					<actions phase="post">
+						<action id="5"><![CDATA[
+pc_rok: f.pc_rok, pc_mesiac: f.pc_mesiac, pc_obdobie: f.pc_obdobie,
+pc_ziadatel_meno: f.pc_ziadatel_meno;
+
+obnov_obdobie(pc_rok, pc_mesiac, pc_obdobie, pc_ziadatel_meno)
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>div_vozidlo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_spz</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_palivo</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_spotreba</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>pc_spotreba_set</id>
+					<actions phase="post">
+						<action id="6"><![CDATA[
+pc_cesty_json: f.pc_cesty_json, pc_cesty: f.pc_cesty, pc_cesty_vyber: f.pc_cesty_vyber,
+pc_spotreba: f.pc_spotreba, pc_preddavok: f.pc_preddavok,
+pc_stravne: f.pc_stravne, pc_zakladna: f.pc_zakladna, pc_phm: f.pc_phm,
+pc_ubytovanie: f.pc_ubytovanie, pc_ine: f.pc_ine, pc_spolu: f.pc_spolu,
+pc_doplatok: f.pc_doplatok, pc_pocet_ciest: f.pc_pocet_ciest;
+
+// Spotreba vstupuje do nahrady za PHM na KAZDEJ ceste, takze jej zmena musi
+// prepocitat cely zoznam. Bez toho by sucty zostali z predoslej spotreby
+// a nic by to nepovedalo.
+render_cesty(pc_cesty_json, pc_cesty, pc_cesty_vyber, pc_spotreba, pc_preddavok,
+             pc_stravne, pc_zakladna, pc_phm, pc_ubytovanie, pc_ine,
+             pc_spolu, pc_doplatok, pc_pocet_ciest)
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>pc_preddavok</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>pc_preddavok_set</id>
+					<actions phase="post">
+						<action id="7"><![CDATA[
+pc_cesty_json: f.pc_cesty_json, pc_spotreba: f.pc_spotreba, pc_preddavok: f.pc_preddavok,
+pc_stravne: f.pc_stravne, pc_zakladna: f.pc_zakladna, pc_phm: f.pc_phm,
+pc_ubytovanie: f.pc_ubytovanie, pc_ine: f.pc_ine, pc_spolu: f.pc_spolu,
+pc_doplatok: f.pc_doplatok, pc_pocet_ciest: f.pc_pocet_ciest;
+
+prepocet(pc_cesty_json, pc_spotreba, pc_preddavok, pc_stravne, pc_zakladna, pc_phm,
+         pc_ubytovanie, pc_ine, pc_spolu, pc_doplatok, pc_pocet_ciest)
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>pc_podpis_zam</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>5</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<dataGroup>
+			<id>g_cesta</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_cesta</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_zaciatok</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_trvanie</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_miesto_zac</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_miesto_kon</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_rokovanie</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_doprava</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_strava</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_km_tam</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_km_spat</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_cena_phm</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_ubytovanie</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_c_ine</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_pc_pridat</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_cesty_sprava</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<dataGroup>
+			<id>g_zoznam</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_zoznam</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_cesty</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>5</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_cesty_vyber</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>2</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_pc_odobrat</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_cesty_json</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<dataGroup>
+			<id>g_sucty</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_sucty</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_stravne</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_zakladna</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_phm</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_ubytovanie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_ine</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_pocet_ciest</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_spolu</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_doplatok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>3</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<dataGroup>
+			<id>g_schvalenie</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_schvalenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_schvalovatel_vyber</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_komentar</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="cancel">
+			<id>t_vyplnit_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_vyplnit_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_vyplnit_finish</id>
+			<title name="t_vyplnit_finish">Podať na schválenie</title>
+			<actions phase="pre">
+				<action id="8"><![CDATA[
+pc_cesty_json: f.pc_cesty_json, pc_rok: f.pc_rok, pc_mesiac: f.pc_mesiac,
+pc_obdobie: f.pc_obdobie, pc_spotreba: f.pc_spotreba, pc_palivo: f.pc_palivo,
+pc_schvalovatel_vyber: f.pc_schvalovatel_vyber, pc_ziadatel: f.pc_ziadatel;
+
+// Validacie, ktore `required` neoveri. Odmietnutie vrati HTTP 200 a dovod
+// v tele ako `error` - test na stavovy kod taky blok prehliadne.
+def list = cesty_zo_json(pc_cesty_json)
+if (!list) {
+    throw new IllegalStateException("There is no trip on the claim. Add at least one.")
+}
+def rok = ((pc_rok.value ?: 0) as Number).intValue()
+if (rok < 2000 || rok > 2100) {
+    throw new IllegalStateException("The year of the claim looks wrong.")
+}
+if (!((pc_mesiac.value ?: "") as String)) {
+    throw new IllegalStateException("Pick the month the claim is for.")
+}
+
+// Sukromne vozidlo potrebuje spotrebu, palivo a cenu - bez nich by tlacivo
+// vyratalo nahradu za PHM nula a nikto by nepovedal preco.
+def sukromne = list.findAll { (it.doprava == "auto" || it.doprava == "motocykel") }
+if (sukromne) {
+    if (((pc_spotreba.value ?: 0) as Number).doubleValue() <= 0) {
+        throw new IllegalStateException(
+                "A trip by a private vehicle is on the claim, so the consumption from the registration certificate is needed.")
+    }
+    if (!((pc_palivo.value ?: "") as String)) {
+        throw new IllegalStateException(
+                "A trip by a private vehicle is on the claim, so the fuel has to be picked.")
+    }
+    def bezCeny = sukromne.findAll { ((it.cena_phm ?: 0) as Number).doubleValue() <= 0 }
+    if (bezCeny) {
+        throw new IllegalStateException(
+                "These trips by a private vehicle have no fuel price: " +
+                        bezCeny.collect { (it.datum ?: "?") as String }.join(", "))
+    }
+}
+
+def kto_schvali = ((pc_schvalovatel_vyber.value ?: "") as String)
+if (!kto_schvali) {
+    throw new IllegalStateException("Pick who is to approve the claim.")
+}
+// Druha linia styroch oci: zoznam moznosti ziadatela nenesie, ale pole sa da
+// prepisat cez API.
+def mojeId = (loggedUser().id ?: "") as String
+if (kto_schvali == mojeId) {
+    throw new IllegalStateException("The claim cannot be approved by the person who submitted it.")
+}
+
+// JEDEN CLOVEK, JEDEN MESIAC. Tlacivo je mesacny doklad, takze druhe podane
+// vyuctovanie na to iste obdobie je omyl - a bez tejto kontroly by uctaren
+// dostala dve a nevedela, ktore plati. Dopyt stoji na `author`, nie na
+// `dataSet` (`findCases { it.dataSet... }` nefunguje), takze je zuzeny na
+// vlastne pripady tohto cloveka.
+def obd = ((pc_obdobie.value ?: "") as String)
+def dvojnik = findCases { qCase ->
+    qCase.processIdentifier.eq("hr/cesty/pc_vyuctovanie").and(qCase.author.id.eq(mojeId))
+}?.find {
+    it.stringId != useCase.stringId &&
+            ((it.dataSet?.get("pc_obdobie")?.value ?: "") as String) == obd &&
+            ((it.dataSet?.get("pc_stav_label")?.value ?: "") as String) != "rozpisane"
+}
+if (dvojnik != null) {
+    throw new IllegalStateException("A claim for " + obd + " has already been submitted.")
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="9"><![CDATA[
+pc_schvalovatel_vyber: f.pc_schvalovatel_vyber, pc_schvalovatelia: f.pc_schvalovatelia,
+pc_schvalovatel_meno: f.pc_schvalovatel_meno, pc_stav_label: f.pc_stav_label,
+pc_podane_o: f.pc_podane_o, pc_historia: f.pc_historia, pc_obdobie: f.pc_obdobie,
+pc_ziadatel_meno: f.pc_ziadatel_meno, pc_spolu: f.pc_spolu,
+pc_cesty_json: f.pc_cesty_json, pc_spotreba: f.pc_spotreba, pc_palivo: f.pc_palivo,
+pc_spz: f.pc_spz, pc_preddavok: f.pc_preddavok, pc_podpis_zam: f.pc_podpis_zam,
+pc_podpis_schv: f.pc_podpis_schv, pc_export_sprava: f.pc_export_sprava,
+pc_komentar: f.pc_komentar;
+
+def id = ((pc_schvalovatel_vyber.value ?: "") as String)
+// `userRef` na prechode `t_schvalit` stoji na TOMTO poli. Kym sa nezapise,
+// ulohu nema kto prevziat - a nic by to nepovedalo.
+change pc_schvalovatelia value { [id] }
+def u = null
+try { u = userService.findById(id, false) } catch (Exception e) { u = null }
+change pc_schvalovatel_meno value { u != null ? kto(u) : id }
+change pc_stav_label value { "na_schvalenie" }
+change pc_podane_o value { java.time.LocalDateTime.now() }
+// Komentar z predchadzajuceho VRATENIA sa tu cisti. Ziadatel ho uz videl
+// a v `pc_historia` zostava navzdy; keby zostal v poli, zaznam o dalsom
+// rozhodnuti by tvrdil, ze ho schvalovatel napisal znova.
+change pc_komentar value { "" }
+changeCaseProperty("title").about { nazov_casu(pc_obdobie, pc_ziadatel_meno) }
+changeCaseProperty("color").about { "blue" }
+do_historie(pc_historia, "submitted by " + ((pc_ziadatel_meno.value ?: "") as String) +
+        " (" + String.format(java.util.Locale.US, "%.2f", ((pc_spolu.value ?: 0) as Number).doubleValue()) +
+        " EUR) to " + ((pc_schvalovatel_meno.value ?: "") as String))
+
+// Tlacivo sa vyrabia UZ TERAZ, aby schvalovatel videl presne to, co podpisuje,
+// a nie len sumu vo formulari.
+vyrob_excel(pc_cesty_json, pc_spotreba, pc_obdobie, pc_ziadatel_meno, pc_palivo,
+            pc_spz, pc_preddavok, pc_podpis_zam, pc_podpis_schv, pc_export_sprava)
+
+notifikuj(pc_schvalovatelia, "Travel expense claim to approve",
+          "A travel expense claim for " + ((pc_obdobie.value ?: "") as String) + " from " +
+                  ((pc_ziadatel_meno.value ?: "") as String) + " is waiting for your approval.")
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+
+	<transition>
+		<id>t_schvalit</id>
+		<x>416</x>
+		<y>200</y>
+		<label name="t_schvalit_label">Schváliť vyúčtovanie</label>
+		<icon>how_to_reg</icon>
+		<!-- Zdielana uloha - `manual`, aby si ju schvalovatel vedome prevzal (B12). -->
+		<assignPolicy>manual</assignPolicy>
+		<!--
+			Len vybrany schvalovatel. Rola `veduci` tu ZAMERNE nie je: roleRef
+			a userRef sa na pravach spajaju, takze by vyuctovanie schvalil
+			ktokolvek s tou rolou a vyber zo zoznamu by nebol na nic.
+		-->
+		<userRef>
+			<id>pc_schvalovatelia</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_s_prehlad</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_obdobie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_ziadatel_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_obdobie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_zoznam</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_cesty</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>5</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_sucty</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_stravne</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_zakladna</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_phm</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_ubytovanie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_ine</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>10</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_spolu</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>10</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_doplatok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_vystup</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_vystup</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_export_sprava</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<dataGroup>
+			<id>g_s_rozhodnutie</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_rozhodnutie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_rozhodnutie</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_podpis_schv</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_komentar</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="delegate">
+			<id>t_schvalit_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_schvalit_finish</id>
+			<title name="t_schvalit_finish">Zapísať rozhodnutie</title>
+			<actions phase="pre">
+				<action id="10"><![CDATA[
+pc_rozhodnutie: f.pc_rozhodnutie, pc_komentar: f.pc_komentar,
+go_schvalene: f.go_schvalene, go_vratene: f.go_vratene;
+
+// Routovacie priznaky patria do `phase="pre"`. V `post` sa token pohne
+// s nulami a zmizne (reference C4).
+def volba = ((pc_rozhodnutie.value ?: "") as String)
+if (volba != "schvalit" && volba != "vratit") {
+    throw new IllegalStateException("Pick whether the claim is approved or sent back.")
+}
+if (volba == "vratit" && !((pc_komentar.value ?: "") as String).trim()) {
+    throw new IllegalStateException("Sending a claim back needs a comment saying what to correct.")
+}
+change go_schvalene value { volba == "schvalit" ? 1 : 0 }
+change go_vratene value { volba == "vratit" ? 1 : 0 }
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="11"><![CDATA[
+go_schvalene: f.go_schvalene, pc_stav_label: f.pc_stav_label,
+pc_schvalene_o: f.pc_schvalene_o, pc_historia: f.pc_historia, pc_komentar: f.pc_komentar,
+pc_ziadatel: f.pc_ziadatel, pc_obdobie: f.pc_obdobie, pc_ziadatel_meno: f.pc_ziadatel_meno,
+pc_cesty_json: f.pc_cesty_json, pc_spotreba: f.pc_spotreba, pc_palivo: f.pc_palivo,
+pc_spz: f.pc_spz, pc_preddavok: f.pc_preddavok, pc_podpis_zam: f.pc_podpis_zam,
+pc_podpis_schv: f.pc_podpis_schv, pc_export_sprava: f.pc_export_sprava;
+
+boolean schvalene = (((go_schvalene.value ?: 0) as Number).intValue() == 1)
+change pc_stav_label value { schvalene ? "na_spracovanie" : "rozpisane" }
+changeCaseProperty("color").about { schvalene ? "green" : "orange" }
+if (schvalene) {
+    change pc_schvalene_o value { java.time.LocalDateTime.now() }
+}
+do_historie(pc_historia, (schvalene ? "approved" : "sent back") + " by " + kto(loggedUser()) +
+        (((pc_komentar.value ?: "") as String).trim() ? (": " + ((pc_komentar.value ?: "") as String).trim()) : ""))
+
+// Tlacivo sa vyraba znova - teraz uz s podpisom schvalovatela.
+vyrob_excel(pc_cesty_json, pc_spotreba, pc_obdobie, pc_ziadatel_meno, pc_palivo,
+            pc_spz, pc_preddavok, pc_podpis_zam, pc_podpis_schv, pc_export_sprava)
+
+notifikuj(pc_ziadatel,
+          schvalene ? "Travel expense claim approved" : "Travel expense claim sent back",
+          "Your travel expense claim for " + ((pc_obdobie.value ?: "") as String) +
+                  (schvalene ? " was approved and went on to payroll."
+                             : (" was sent back: " + ((pc_komentar.value ?: "") as String))))
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+
+	<transition>
+		<id>t_spracovat</id>
+		<x>672</x>
+		<y>200</y>
+		<label name="t_spracovat_label">Spracovať vyúčtovanie</label>
+		<icon>payments</icon>
+		<!-- Zdielana uloha celej uctarne - `manual` (B12). -->
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>mzdy</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_m_prehlad</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_obdobie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_ziadatel_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_obdobie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_schvalovatel_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_cesty</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>5</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_spolu</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_doplatok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>7</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_vystup</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_vystup</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_export_sprava</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_spracovanie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_poznamka_mzdy</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="delegate">
+			<id>t_spracovat_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_spracovat_finish</id>
+			<title name="t_spracovat_finish">Označiť ako spracované</title>
+			<actions phase="post">
+				<action id="12"><![CDATA[
+pc_stav_label: f.pc_stav_label, pc_spracoval: f.pc_spracoval, pc_vybavene_o: f.pc_vybavene_o,
+pc_historia: f.pc_historia, pc_ziadatel: f.pc_ziadatel, pc_obdobie: f.pc_obdobie,
+pc_poznamka_mzdy: f.pc_poznamka_mzdy, pc_doplatok: f.pc_doplatok,
+pc_cesty_json: f.pc_cesty_json, pc_spotreba: f.pc_spotreba, pc_palivo: f.pc_palivo,
+pc_spz: f.pc_spz, pc_preddavok: f.pc_preddavok, pc_podpis_zam: f.pc_podpis_zam,
+pc_podpis_schv: f.pc_podpis_schv, pc_ziadatel_meno: f.pc_ziadatel_meno,
+pc_export_sprava: f.pc_export_sprava;
+
+change pc_stav_label value { "vybavene" }
+change pc_spracoval value { kto(loggedUser()) }
+change pc_vybavene_o value { java.time.LocalDateTime.now() }
+changeCaseProperty("color").about { "green" }
+do_historie(pc_historia, "processed by " + kto(loggedUser()) +
+        (((pc_poznamka_mzdy.value ?: "") as String).trim()
+                ? (": " + ((pc_poznamka_mzdy.value ?: "") as String).trim()) : ""))
+
+// Posledne vyrobenie tlaciva: co uctaren zakladala, to zostava na case-e.
+vyrob_excel(pc_cesty_json, pc_spotreba, pc_obdobie, pc_ziadatel_meno, pc_palivo,
+            pc_spz, pc_preddavok, pc_podpis_zam, pc_podpis_schv, pc_export_sprava)
+
+notifikuj(pc_ziadatel, "Travel expense claim processed",
+          "Your travel expense claim for " + ((pc_obdobie.value ?: "") as String) +
+                  " has been processed. To be paid out: " +
+                  String.format(java.util.Locale.US, "%.2f", ((pc_doplatok.value ?: 0) as Number).doubleValue()) +
+                  " EUR.")
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+
+	<transition>
+		<id>t_prehlad</id>
+		<x>928</x>
+		<y>96</y>
+		<label name="t_prehlad_label">Prehľad vyúčtovania</label>
+		<icon>visibility</icon>
+		<assignPolicy>auto</assignPolicy>
+		<!--
+			Read-only pohlad. Nie je co dokoncit ani rusit, takze vsetky styri
+			tlacidla su skryte prazdnym titulkom - lepsie nez odobrat
+			opravnenie, lebo `view` musi zostat (RUNBOOK 11).
+		-->
+		<userRef>
+			<id>pc_ziadatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<roleRef>
+			<id>veduci</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<roleRef>
+			<id>mzdy</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_p_prehlad</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_obdobie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_stav_label</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_ziadatel_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_obdobie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_cesty</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>5</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_spolu</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_doplatok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>7</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_vystup</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_vystup</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_export_sprava</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_priebeh</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>pc_podane_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_schvalene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>11</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_vybavene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>11</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_schvalovatel_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_spracoval</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_poznamka_mzdy</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>pc_historia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_prehlad_assign</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="cancel">
+			<id>t_prehlad_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_prehlad_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_prehlad_finish</id>
+			<title name="empty_button"></title>
+		</event>
+	</transition>
+
+	<place>
+		<id>p_koncept</id>
+		<x>32</x>
+		<y>200</y>
+		<label>Rozpísané</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_na_schvalenie</id>
+		<x>288</x>
+		<y>200</y>
+		<label>Čaká na schválenie</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_na_spracovanie</id>
+		<x>544</x>
+		<y>200</y>
+		<label>Čaká na spracovanie</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_vybavene</id>
+		<x>800</x>
+		<y>200</y>
+		<label>Spracované</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+
+	<arc>
+		<id>a_koncept_vyplnit</id>
+		<type>regular</type>
+		<sourceId>p_koncept</sourceId>
+		<destinationId>t_vyplnit</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_vyplnit_schvalenie</id>
+		<type>regular</type>
+		<sourceId>t_vyplnit</sourceId>
+		<destinationId>p_na_schvalenie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_schvalenie_in</id>
+		<type>regular</type>
+		<sourceId>p_na_schvalenie</sourceId>
+		<destinationId>t_schvalit</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_schvalit_spracovanie</id>
+		<type>regular</type>
+		<sourceId>t_schvalit</sourceId>
+		<destinationId>p_na_spracovanie</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_schvalene</reference>
+	</arc>
+	<!--
+		Vratenie posle token spat do `p_koncept`: ziadatelovi sa znova otvori
+		"Vyplniť vyúčtovanie" s povodnymi hodnotami a schvalovatelovi zmizne
+		zo zoznamu. Cyklus moze prebehnut kolkokrat treba; co sa pri prepisani
+		komentara straca, drzi `pc_historia`.
+	-->
+	<arc>
+		<id>a_schvalit_spat</id>
+		<type>regular</type>
+		<sourceId>t_schvalit</sourceId>
+		<destinationId>p_koncept</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>go_vratene</reference>
+	</arc>
+	<arc>
+		<id>a_spracovanie_in</id>
+		<type>regular</type>
+		<sourceId>p_na_spracovanie</sourceId>
+		<destinationId>t_spracovat</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_spracovat_vybavene</id>
+		<type>regular</type>
+		<sourceId>t_spracovat</sourceId>
+		<destinationId>p_vybavene</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<!--
+		READ arc zo `p_vybavene`, teda z miesta, ktore uz nikto nekonzumuje
+		(B8b/B25). Odmietnute `finish` by na regularnom arcu ostatne ulohy toho
+		miesta zmazalo a uz by ich neobnovilo.
+	-->
+	<arc>
+		<id>a_vybavene_prehlad</id>
+		<type>read</type>
+		<sourceId>p_vybavene</sourceId>
+		<destinationId>t_prehlad</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>
