@@ -51,6 +51,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this._sub = this._uri.rootLoaded$.subscribe(() => {
       if (this._uri.root) {
+        // Zoznam sa stavia odznova, nie sa dopĺňa: koreň sa načíta aj po
+        // prihlásení iného človeka (`EtaskUriService`), a bez tohto by sa
+        // karty priečinkov pri každom takom načítaní zdvojili.
+        this.nodes = [];
         this._uri.root.children.forEach(c => this.nodes.push(c as ETaskUriNodeResource));
         // Bez filtrovania podľa rolí: uzly prichádzajú už prefiltrované zo
         // servera (EtaskUriController). Druhý filter v prehliadači vedel len

@@ -145,6 +145,45 @@ def imports():
     return [str(f) for f in manifest.get("import", [])]
 
 
+def manifest_vs_engine(token):
+    """Co je v engine a nie v manifeste, a naopak.
+
+    Preco to tu je: manifest je JEDINE miesto, kde je zapisane, co ma byt
+    nasadene - a nic ho doteraz neoverovalo. Siet, ktora sa do enginu dostala
+    rucnym importom, v nom bezne zije dalej a vsetky kontroly su zelene, lebo
+    bezia proti bezucej instancii alebo proti suborom v processes/. Na cistej
+    databaze taka appka NEEXISTUJE a zisti sa to az tam.
+
+    Presne takto sa stratila cela appka Pracovne cesty: styri siete, 13
+    pripadov, polozky v menu, a v manifeste ani riadok (analyza 8.3).
+
+    Vracia (v_engine_nie_v_manifeste, v_manifeste_nie_v_engine).
+    """
+    st, r = call(token, "POST", "/api/petrinet/search?size=1000", {})
+    refs = (r or {}).get("_embedded", {}).get("petriNetReferences", []) if isinstance(r, dict) else []
+    v_engine = {x["identifier"] for x in refs}
+
+    v_manifeste = set()
+    for f in imports():
+        cesta = PROCESSES / f
+        if not cesta.exists():
+            # Siet z classpath backendu (configuration_tiles) - ta v processes/
+            # nie je a jej identifikator sa tu precitat neda.
+            continue
+        ident = identifier_of(cesta)
+        if ident:
+            v_manifeste.add(ident)
+
+    # Systemove siete enginu sa v manifeste neuvadzaju a nie su chybou.
+    SYSTEMOVE = {"preference_item", "filter", "impersonation_config",
+                 "org_group", "import_filters", "export_filters",
+                 "single_settings", "configuration_tiles",
+                 "impersonation_users_select", "preference_filter_item"}
+    chyba_v_manifeste = sorted(i for i in v_engine - v_manifeste if i not in SYSTEMOVE)
+    chyba_v_engine = sorted(v_manifeste - v_engine)
+    return chyba_v_manifeste, chyba_v_engine
+
+
 def compare():
     """[(path, identifier, stav, verzia)] pre kazdu siet z manifestu."""
     token = login()
@@ -202,6 +241,29 @@ def pull(rows):
     return 1 if zlyhali else 0
 
 
+def manifest_hlaska(rows):
+    """Vypise rozdiel medzi manifestom a enginom. Nezhadzuje beh - je to
+    upozornenie na stav NASADENIA, nie na chybu v sieti."""
+    try:
+        token = login()
+        chyba_v_manifeste, chyba_v_engine = manifest_vs_engine(token)
+    except SystemExit:
+        raise
+    except Exception:
+        return
+    if not chyba_v_manifeste and not chyba_v_engine:
+        return
+    print("")
+    if chyba_v_manifeste:
+        print("pfsync: v ENGINE a NIE v manifeste - na cistej databaze zanikne:")
+        for i in chyba_v_manifeste:
+            print(f"          {i}")
+    if chyba_v_engine:
+        print("pfsync: v MANIFESTE a NIE v engine - up.sh to naimportuje:")
+        for i in chyba_v_engine:
+            print(f"          {i}")
+
+
 def main(argv):
     only_list = "--list" in argv
     do_sync = "--sync" in argv
@@ -218,6 +280,8 @@ def main(argv):
     for path, ident, stav, ver in rows:
         mark = "  " if stav == "SEDI" else "->"
         print(f"{mark} {path.name:24s} {ident:28s} v{ver:8s} {stav}")
+
+    manifest_hlaska(rows)
 
     if not changed:
         print("\npfsync: vsetky siete sedia s tym, co drzi engine")
