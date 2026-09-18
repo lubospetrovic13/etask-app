@@ -219,7 +219,7 @@ changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "koncept") }
 	<function scope="process" name="suma_slovom"><![CDATA[
 { def ob_suma ->
     def v = ob_suma.value
-    if (v == null) return "cena nevyplnená"
+    if (v == null) return "price not filled in"
     return String.format(java.util.Locale.US, "%.2f", (v as Number).doubleValue()) + " €"
 }
 	]]></function>
@@ -265,13 +265,13 @@ changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "koncept") }
     }
     def d = (v as Number).doubleValue()
     if (d <= 0) {
-        change ob_kontrola value { "Predpokladaná cena musí byť väčšia ako nula – takto sa objednávka podať nedá." }
+        change ob_kontrola value { "The estimated price must be greater than zero - the order cannot be submitted like this." }
         return true
     }
     if (d > limit_riaditela()) {
         change ob_kontrola value {
             "Nad " + String.format(java.util.Locale.US, "%.0f", limit_riaditela()) +
-                    " € schvaľuje po stredisku ešte riaditeľ."
+                    " EUR the director approves after the cost centre."
         }
         return true
     }
@@ -337,7 +337,7 @@ changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "koncept") }
 	]]></function>
 	<function scope="process" name="schvalovatelia_strediska"><![CDATA[
 { def ob_stredisko, def ob_zadal, def ob_schvalovatelia, def ob_historia ->
-    // To iste ako v `fa_faktura`: kto smie schvalit TUTO objednavku. Kaskada
+    // To iste ako v `fa_faktura`: kto smie schvalit TUTO objednavku. Retaz
     // (stredisko -> vsetci schvalovatelia -> riaditel) je zamerna a kazdy jej
     // stupen sa zapise do priebehu, aby objednavka v stredisku bez schvalovatela
     // necakala navzdy a bez vysvetlenia.
@@ -349,11 +349,11 @@ changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "koncept") }
     def preco = null
     if (!kandidati) {
         kandidati = bezZadavatela(usersWithRoleAll("schvalovatel"))
-        preco = "stredisko nemá vlastného schvaľovateľa, ide to všetkým schvaľovateľom"
+        preco = "the cost centre has no approver of its own, it goes to all approvers"
     }
     if (!kandidati) {
         kandidati = bezZadavatela(usersWithRoleAll("riaditel"))
-        preco = "nikto okrem riaditeľa nemôže túto objednávku schváliť"
+        preco = "nobody but the director can approve this order"
     }
     change ob_schvalovatelia value { kandidati }
     if (preco) {
@@ -376,13 +376,13 @@ changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "koncept") }
 	<function scope="process" name="veta_o_stave"><![CDATA[
 { def kod ->
     def k = ((kod ?: "") as String)
-    if (k == "na_schvalenie") return "Objednávka čaká na schválenie za stredisko."
-    if (k == "u_riaditela") return "Objednávka je nad limitom a čaká na schválenie riaditeľom."
-    if (k == "na_objednanie") return "Objednávka je schválená - môže sa objednať."
-    if (k == "objednana") return "Objednávka bola objednaná u dodávateľa."
-    if (k == "vratena") return "Objednávka bola vrátená na doplnenie."
-    if (k == "zamietnuta") return "Objednávka bola zamietnutá."
-    return "Objednávka je rozpísaná."
+    if (k == "na_schvalenie") return "The order is awaiting cost centre approval."
+    if (k == "u_riaditela") return "The order is above the limit and awaits the director's approval."
+    if (k == "na_objednanie") return "The order is approved - it can be placed."
+    if (k == "objednana") return "The order was placed with the supplier."
+    if (k == "vratena") return "The order was returned for completion."
+    if (k == "zamietnuta") return "The order was rejected."
+    return "The order is a draft."
 }
 	]]></function>
 	<function scope="process" name="po_zmene_stavu"><![CDATA[
@@ -402,10 +402,10 @@ changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "koncept") }
     def popis = (((ob_predmet.value ?: "") as String).trim() ?: "objednávka")
     def telo = new StringBuilder()
     telo.append(veta_o_stave(k)).append("\n\n")
-    telo.append("Objednávka: ").append(popis).append("\n")
+    telo.append("Order: ").append(popis).append("\n")
     telo.append("Cena:       ").append(suma_slovom(ob_suma)).append("\n")
     telo.append("Stredisko:  ").append(((ob_stredisko.value ?: "-") as String)).append("\n")
-    telo.append("\nPortál eTask → Objednávky a faktúry → Objednávky.\n")
+    telo.append("\neTask portal -> Orders and invoices -> Orders.\n")
 
     def poslane = notifikuj(komu, popis + " – " + veta_o_stave(k), telo.toString())
     if (poslane > 0) {
@@ -422,8 +422,8 @@ changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "koncept") }
     def ja = loggedUser().id as String
     if (zadal.contains(ja)) {
         throw new java.lang.IllegalStateException(
-                "Objednávku, o ktorú ste požiadali, nemôžete schváliť ako " + (rola as String) +
-                        ". Nech ju schváli niekto iný.")
+                "You cannot approve an order you requested yourself as " + (rola as String) +
+                        ". Let somebody else approve it.")
     }
 }
 	]]></function>
@@ -642,11 +642,11 @@ def mn = (ob_p_mnozstvo.value == null) ? 1.0d : (ob_p_mnozstvo.value as Number).
 def cn = (ob_p_cena.value == null) ? 0.0d : (ob_p_cena.value as Number).doubleValue()
 
 if (!nazov) {
-    change ob_polozky_sprava value { "Napíšte, čo sa má objednať." }
+    change ob_polozky_sprava value { "Write what should be ordered." }
 } else if (mn <= 0) {
-    change ob_polozky_sprava value { "Množstvo musí byť väčšie ako nula." }
+    change ob_polozky_sprava value { "The quantity must be greater than zero." }
 } else if (cn < 0) {
-    change ob_polozky_sprava value { "Cena nemôže byť negatívna." }
+    change ob_polozky_sprava value { "The price cannot be negative." }
 } else {
     def list = polozky_zo_json(ob_polozky_json)
     // Id je pocitadlo, nie index: po odobrani riadku by sa indexy precislovali
@@ -668,7 +668,7 @@ if (!nazov) {
               cena     : cn])
     change ob_polozky_json value { groovy.json.JsonOutput.toJson(list) }
     render_polozky(ob_polozky_json, ob_polozky, ob_polozky_vyber, ob_suma, ob_kontrola)
-    change ob_polozky_sprava value { "Pridané: " + nazov + " (" + list.size() + " v zozname)" }
+    change ob_polozky_sprava value { "Added: " + nazov + " (" + list.size() + " v zozname)" }
     change ob_p_nazov value { "" }
     change ob_p_mnozstvo value { null }
     change ob_p_jednotka value { "" }
@@ -704,13 +704,13 @@ ob_suma: f.ob_suma, ob_kontrola: f.ob_kontrola;
 
 def vybrane = ((ob_polozky_vyber.value ?: []) as List).collect { it as String } as Set
 if (!vybrane) {
-    change ob_polozky_sprava value { "Nič nie je zaškrtnuté." }
+    change ob_polozky_sprava value { "Nothing is ticked." }
 } else {
     def list = polozky_zo_json(ob_polozky_json)
     def zostava = list.findAll { pol -> !(((pol.id ?: "") as String) in vybrane) }
     change ob_polozky_json value { groovy.json.JsonOutput.toJson(zostava) }
     render_polozky(ob_polozky_json, ob_polozky, ob_polozky_vyber, ob_suma, ob_kontrola)
-    change ob_polozky_sprava value { "Odobraté: " + (list.size() - zostava.size()) }
+    change ob_polozky_sprava value { "Removed: " + (list.size() - zostava.size()) }
 }
 				]]></action>
 			</actions>
@@ -1030,7 +1030,7 @@ ob_kontrola: f.ob_kontrola;
 def polozky = polozky_zo_json(ob_polozky_json)
 if (!polozky) {
     throw new java.lang.IllegalStateException(
-            "Pridajte aspoň jednu požiadavku - bez nej nie je čo objednať.")
+            "Add at least one line - without it there is nothing to order.")
 }
 
 // Sucet sa prepocita TU a nie len v buttone: kto posle data cez API, formular
@@ -1041,8 +1041,8 @@ render_polozky(ob_polozky_json, ob_polozky, ob_polozky_vyber, ob_suma, ob_kontro
 def v = ob_suma.value
 if (v == null || (v as Number).doubleValue() <= 0) {
     throw new java.lang.IllegalStateException(
-            "Ceny požiadaviek sú nulové. Limit schvaľovania stojí na peniazoch, " +
-                    "takže aj odhad je lepší než nič.")
+            "The line prices are zero. The approval limit stands on money, " +
+                    "so even an estimate is better than nothing.")
 }
 				]]></action>
 			</actions>
@@ -1066,10 +1066,10 @@ change ob_stav_label value { "na_schvalenie" }
 changeCaseProperty("color").about { farba("na_schvalenie") }
 change ob_ziadane_o value { java.time.LocalDateTime.now() }
 change ob_kontrola value { "" }
-zapis_historie(ob_historia, (opakovane ? "doplnené a podané znova: " : "požiadané: ") +
-        pocet + (pocet == 1 ? " požiadavka" : (pocet < 5 ? " požiadavky" : " požiadaviek")) +
-        " za " + suma_slovom(ob_suma) +
-        (nad_limit(ob_suma) ? " (nad limit, pôjde aj riaditeľovi)" : ""))
+zapis_historie(ob_historia, (opakovane ? "completed and resubmitted: " : "requested: ") +
+        pocet + (pocet == 1 ? " line" : " lines") +
+        " for " + suma_slovom(ob_suma) +
+        (nad_limit(ob_suma) ? " (above the limit, it will go to the director too)" : ""))
 changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "na_schvalenie") }
 po_zmene_stavu("na_schvalenie", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia,
         ob_predmet, ob_suma, ob_stredisko)
@@ -1199,7 +1199,7 @@ ob_to_koncept: f.ob_to_koncept, ob_to_uzavreta: f.ob_to_uzavreta;
 // STVORI OCI. Je to tu a nie v udalosti `assign`, hoci tam by to zabralo
 // skor: vynimka z akcie v `assign` vracia HOLE HTTP 500 bez spravy, kym tu
 // vrati engine HTTP 200 a vetu v tele ako `error` (ENGINE_ISSUES E18).
-nie_vlastnu(ob_zadal, "schvaľovateľ strediska")
+nie_vlastnu(ob_zadal, "cost centre approver")
 
 // SMEROVANIE MUSI BYT V phase="pre" (C4) - v `post` by sa token pohol
 // s povodnymi nulami a case by ostal bez tokenu.
@@ -1207,14 +1207,14 @@ def volba = ((ob_rozhodnutie.value ?: "") as String).trim()
 
 if (!volba) {
     throw new java.lang.IllegalStateException(
-            "Vyberte, či objednávku schvaľujete, vraciate na doplnenie alebo zamietate.")
+            "Choose whether you approve the order, return it for completion or reject it.")
 }
 if (!(volba in ["schvalit", "vratit", "zamietnut"])) {
-    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+    throw new java.lang.IllegalStateException("Unknown decision: " + volba)
 }
 if (volba != "schvalit" && !((ob_poznamka.value ?: "") as String).trim()) {
     throw new java.lang.IllegalStateException(
-            "Napíšte dôvod - zadávateľ inak nevie, čo s objednávkou robiť.")
+            "Write the reason - otherwise the clerk does not know what to do with the order.")
 }
 
 boolean naRiaditela = (volba == "schvalit" && nad_limit(ob_suma))
@@ -1241,21 +1241,21 @@ def pozn = ((ob_poznamka.value ?: "") as String).trim()
 def kod
 if (volba == "vratit") {
     kod = "vratena"
-    zapis_historie(ob_historia, "vrátené na doplnenie (" + meno + "): " + pozn)
+    zapis_historie(ob_historia, "returned for completion (" + meno + "): " + pozn)
 } else if (volba == "zamietnut") {
     kod = "zamietnuta"
-    zapis_historie(ob_historia, "zamietnuté strediskom (" + meno + "): " + pozn)
+    zapis_historie(ob_historia, "rejected by the cost centre (" + meno + "): " + pozn)
 } else {
     change ob_schvalil_stredisko value { meno }
     if (nad_limit(ob_suma)) {
         kod = "u_riaditela"
-        zapis_historie(ob_historia, "schválené strediskom (" + meno + "), cena " +
-                suma_slovom(ob_suma) + " je nad limit – ide riaditeľovi" +
+        zapis_historie(ob_historia, "approved by the cost centre (" + meno + "), cena " +
+                suma_slovom(ob_suma) + " is above the limit - going to the director" +
                 (pozn ? ": " + pozn : ""))
     } else {
         kod = "na_objednanie"
         change ob_schvalene_o value { java.time.LocalDateTime.now() }
-        zapis_historie(ob_historia, "schválené strediskom (" + meno + ")" +
+        zapis_historie(ob_historia, "approved by the cost centre (" + meno + ")" +
                 (pozn ? ": " + pozn : ""))
     }
 }
@@ -1385,19 +1385,19 @@ ob_rozhodnutie: f.ob_rozhodnutie, ob_poznamka: f.ob_poznamka, ob_zadal: f.ob_zad
 ob_to_riaditel: f.ob_to_riaditel, ob_to_objednanie: f.ob_to_objednanie,
 ob_to_koncept: f.ob_to_koncept, ob_to_uzavreta: f.ob_to_uzavreta;
 
-nie_vlastnu(ob_zadal, "riaditeľ")
+nie_vlastnu(ob_zadal, "director")
 
 def volba = ((ob_rozhodnutie.value ?: "") as String).trim()
 if (!volba) {
     throw new java.lang.IllegalStateException(
-            "Vyberte, či objednávku schvaľujete, vraciate na doplnenie alebo zamietate.")
+            "Choose whether you approve the order, return it for completion or reject it.")
 }
 if (!(volba in ["schvalit", "vratit", "zamietnut"])) {
-    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+    throw new java.lang.IllegalStateException("Unknown decision: " + volba)
 }
 if (volba != "schvalit" && !((ob_poznamka.value ?: "") as String).trim()) {
     throw new java.lang.IllegalStateException(
-            "Napíšte dôvod - zadávateľ inak nevie, čo s objednávkou robiť.")
+            "Write the reason - otherwise the clerk does not know what to do with the order.")
 }
 
 // Vsetky styri flagy sa nastavuju vzdy: zdielaju ich arcy z troch prechodov
@@ -1424,15 +1424,15 @@ def pozn = ((ob_poznamka.value ?: "") as String).trim()
 def kod
 if (volba == "vratit") {
     kod = "vratena"
-    zapis_historie(ob_historia, "riaditeľ vrátil na doplnenie (" + meno + "): " + pozn)
+    zapis_historie(ob_historia, "director returned it for completion (" + meno + "): " + pozn)
 } else if (volba == "zamietnut") {
     kod = "zamietnuta"
-    zapis_historie(ob_historia, "zamietnuté riaditeľom (" + meno + "): " + pozn)
+    zapis_historie(ob_historia, "rejected by the director (" + meno + "): " + pozn)
 } else {
     kod = "na_objednanie"
     change ob_schvalil_riaditel value { meno }
     change ob_schvalene_o value { java.time.LocalDateTime.now() }
-    zapis_historie(ob_historia, "schválené riaditeľom (" + meno + ")" +
+    zapis_historie(ob_historia, "approved by the director (" + meno + ")" +
             (pozn ? ": " + pozn : ""))
 }
 
@@ -1569,10 +1569,10 @@ ob_to_koncept: f.ob_to_koncept, ob_to_uzavreta: f.ob_to_uzavreta;
 // (`fa_objednavka`). Bez neho je objednavka uzavreta a nespojitelna.
 if (!((ob_cislo.value ?: "") as String).trim()) {
     throw new java.lang.IllegalStateException(
-            "Vyplňte číslo objednávky, ktoré dostal dodávateľ.")
+            "Fill in the order number the supplier was given.")
 }
 if (!((ob_dodavatel.value ?: "") as String).trim()) {
-    throw new java.lang.IllegalStateException("Vyplňte, u koho ste objednali.")
+    throw new java.lang.IllegalStateException("Fill in who you ordered from.")
 }
 
 change ob_to_riaditel   value { 0 as Double }
@@ -1597,7 +1597,7 @@ change ob_stav_label value { "objednana" }
 changeCaseProperty("color").about { farba("objednana") }
 change ob_objednal value { meno }
 change ob_objednane_o value { java.time.LocalDateTime.now() }
-zapis_historie(ob_historia, "objednané (" + meno + ") u " +
+zapis_historie(ob_historia, "ordered (" + meno + ") u " +
         ((ob_dodavatel.value ?: "") as String).trim() + ", objednávka č. " +
         ((ob_cislo.value ?: "") as String).trim())
 changeCaseProperty("title").about { nazov(ob_predmet, ob_suma, "objednana") }

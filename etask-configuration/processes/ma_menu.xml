@@ -120,9 +120,9 @@ views.each { v ->
     }
 }
 
-def summary = "Menu Evidencia zariadení – " + (created.size() + unchanged.size()) + "/" + views.size()
+def summary = "Asset register menu - " + (created.size() + unchanged.size()) + "/" + views.size()
 if (failed) {
-    summary = "CHYBA menu Evidencia zariadení – nepodarilo sa: " + failed.join(", ")
+    summary = "ERROR in Asset register menu - failed: " + failed.join(", ")
 }
 changeCaseProperty("title").about { summary }
 				]]></action>

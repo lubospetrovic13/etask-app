@@ -121,8 +121,7 @@
 	<anonymousRole>false</anonymousRole>
 	<transitionRole>false</transitionRole>
 	<!--
-		Schvalovanie doslych faktur pre Hotel Kaskady (podklad: cenova ponuka
-		z 31. 8. 2026, Faza 1).
+		Schvalovanie doslych faktur.
 
 		Pripad je FAKTURA, nie ukon. Jeden pripad drzi cely jej zivot od zapisu
 		po zauctovanie; keby bol pripad na ukon, o tej istej fakture by boli
@@ -262,7 +261,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
 	<function scope="process" name="suma_slovom"><![CDATA[
 { def fa_suma ->
     def v = fa_suma.value
-    if (v == null) return "suma nevyplnená"
+    if (v == null) return "amount not filled in"
     // Locale.US zamerne: formatovanie sa deje na serveri a nema zavisiet od
     // toho, aky locale ma nahodou JVM. Oddelovac je preto bodka.
     return String.format(java.util.Locale.US, "%.2f", (v as Number).doubleValue()) + " €"
@@ -283,7 +282,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     // jazykovo neutralne a v zozname sa da podla neho odkazat. "—" by bolo
     // nerozlisitelne od kazdej inej rozpisanej faktury.
     def co = dod ?: ((useCase.visualId ?: "?") as String)
-    if (cis) co = co + " č. " + cis
+    if (cis) co = co + " no. " + cis
     def suma = fa_suma.value
     if (suma != null && (suma as Number).doubleValue() > 0) {
         co = co + " · " + suma_slovom(fa_suma)
@@ -321,13 +320,13 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     }
     def d = (v as Number).doubleValue()
     if (d <= 0) {
-        change fa_kontrola value { "Suma musí byť väčšia ako nula – takto sa faktúra podať nedá." }
+        change fa_kontrola value { "The amount must be greater than zero - the invoice cannot be submitted like this." }
         return true
     }
     if (d > limit_riaditela()) {
         change fa_kontrola value {
             "Nad " + String.format(java.util.Locale.US, "%.0f", limit_riaditela()) +
-                    " € schvaľuje po stredisku ešte riaditeľ."
+                    " EUR the director approves after the cost centre."
         }
         return true
     }
@@ -354,14 +353,14 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
         change pole value { hodnota }
         doplnene << (popis as String)
     } else if (stara != nova) {
-        rozdiely << ((popis as String) + ": v prílohe „" + nova + "“, vo formulári „" + stara + "“")
+        rozdiely << ((popis as String) + ": in the attachment \"" + nova + "\", in the form \"" + stara + "\"")
     }
 }
 	]]></function>
 	<function scope="process" name="zdroj_slovom"><![CDATA[
 { def kod ->
-    def m = ["xml" : "XML e-faktúra (čítané)",
-             "text": "PDF, textová vrstva (čítané)",
+    def m = ["xml" : "XML e-invoice (read)",
+             "text": "PDF, text layer (read)",
              "ocr" : "OCR skenu (odhad)",
              "nic" : "nepodarilo sa"]
     return m[(kod ?: "nic") as String] ?: (kod as String)
@@ -372,7 +371,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     // Kto smie schvalit TUTO fakturu: uzivatelia s rolou daneho strediska,
     // bez toho, kto ju zapisal (styri oci uz na vstupe, nie az pri odmietnuti).
     //
-    // Kaskada je zamerna a kazdy stupen sa zapise do priebehu - inak by faktura
+    // Retaz stupnov je zamerna a kazdy sa zapise do priebehu - inak by faktura
     // v stredisku, ktore nikoho nema, cakala navzdy a nikto by nevedel preco.
     def kod = ((fa_stredisko.value ?: "") as String).trim()
     def zadal = (userIdsOf(fa_zadal.value) ?: []).collect { it as String }
@@ -382,11 +381,11 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     def preco = null
     if (!kandidati) {
         kandidati = bezZadavatela(usersWithRoleAll("schvalovatel"))
-        preco = "stredisko nemá vlastného schvaľovateľa, ide to všetkým schvaľovateľom"
+        preco = "the cost centre has no approver of its own, it goes to all approvers"
     }
     if (!kandidati) {
         kandidati = bezZadavatela(usersWithRoleAll("riaditel"))
-        preco = "nikto okrem riaditeľa nemôže túto faktúru schváliť"
+        preco = "nobody but the director can approve this invoice"
     }
     change fa_schvalovatelia value { kandidati }
     if (preco) {
@@ -411,13 +410,13 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
 	<function scope="process" name="veta_o_stave"><![CDATA[
 { def kod ->
     def k = ((kod ?: "") as String)
-    if (k == "na_schvalenie") return "Faktúra čaká na schválenie za stredisko."
-    if (k == "u_riaditela") return "Faktúra je nad limitom a čaká na schválenie riaditeľom."
-    if (k == "na_zauctovanie") return "Faktúra je schválená a čaká na zaúčtovanie."
-    if (k == "vratena") return "Faktúra bola vrátená na doplnenie."
-    if (k == "zamietnuta") return "Faktúra bola zamietnutá."
-    if (k == "zauctovana") return "Faktúra bola zaúčtovaná."
-    return "Faktúra je rozpísaná."
+    if (k == "na_schvalenie") return "The invoice is awaiting cost centre approval."
+    if (k == "u_riaditela") return "The invoice is above the limit and awaits the director's approval."
+    if (k == "na_zauctovanie") return "The invoice is approved and awaits posting."
+    if (k == "vratena") return "The invoice was returned for completion."
+    if (k == "zamietnuta") return "The invoice was rejected."
+    if (k == "zauctovana") return "The invoice was posted."
+    return "The invoice is a draft."
 }
 	]]></function>
 	<function scope="process" name="po_zmene_stavu"><![CDATA[
@@ -437,14 +436,14 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
 
     def dod = ((fa_dodavatel.value ?: "") as String).trim()
     def cis = ((fa_cislo.value ?: "") as String).trim()
-    def popis = (dod ?: "faktúra") + (cis ? " č. " + cis : "")
+    def popis = (dod ?: "invoice") + (cis ? " no. " + cis : "")
 
     def telo = new StringBuilder()
     telo.append(veta_o_stave(k)).append("\n\n")
-    telo.append("Faktúra:   ").append(popis).append("\n")
+    telo.append("Invoice:   ").append(popis).append("\n")
     telo.append("Suma:      ").append(suma_slovom(fa_suma)).append("\n")
     telo.append("Stredisko: ").append(((fa_stredisko.value ?: "-") as String)).append("\n")
-    telo.append("\nPortál eTask → Objednávky a faktúry → Faktúry.\n")
+    telo.append("\neTask portal -> Orders and invoices -> Invoices.\n")
 
     def poslane = notifikuj(komu, popis + " – " + veta_o_stave(k), telo.toString())
     if (poslane > 0) {
@@ -466,7 +465,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
         def cislo = ((c.dataSet["ob_cislo"]?.value ?: "") as String).trim()
         def dod = ((c.dataSet["ob_dodavatel"]?.value ?: "") as String).trim()
         def suma = c.dataSet["ob_suma"]?.value
-        def popis = (cislo ?: "bez čísla") + " · " + (dod ?: "?") +
+        def popis = (cislo ?: "no number") + " · " + (dod ?: "?") +
                 (suma == null ? "" : (" · " + String.format(java.util.Locale.US, "%.2f",
                         (suma as Number).doubleValue()) + " €"))
         // Kluc je id casu - 24 hex znakov, teda ziadna bodka ani dolar, ktore
@@ -489,7 +488,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     // `stringId` nema. Ide sa cez ObjectId (B13).
     def c = findCase { it._id.eq(new org.bson.types.ObjectId(id)) }
     if (c == null) {
-        change fa_objednavka_info value { "Objednávka sa nenašla - vyberte ju znova." }
+        change fa_objednavka_info value { "The purchase order was not found - pick it again." }
         return
     }
     def cislo = ((c.dataSet["ob_cislo"]?.value ?: "") as String).trim()
@@ -503,9 +502,9 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     }
 
     def text = new StringBuilder()
-    text.append(predmet ?: "objednávka")
+    text.append(predmet ?: "purchase order")
     if (objSuma != null) {
-        text.append(" · objednané za ")
+        text.append(" - ordered for ")
                 .append(String.format(java.util.Locale.US, "%.2f", (objSuma as Number).doubleValue()))
                 .append(" €")
     }
@@ -517,7 +516,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
         if (rozdiel > 0.005d) {
             text.append(" · POZOR: fakturuje o ")
                     .append(String.format(java.util.Locale.US, "%.2f", rozdiel))
-                    .append(" € viac, než bolo objednané")
+                    .append(" EUR more than was ordered")
         }
     }
     change fa_objednavka_info value { text.toString() }
@@ -531,8 +530,8 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     def ja = loggedUser().id as String
     if (zadal.contains(ja)) {
         throw new java.lang.IllegalStateException(
-                "Faktúru, ktorú ste zapísali, nemôžete schváliť ako " + (rola as String) +
-                        ". Nech ju schváli niekto iný.")
+                "You cannot approve an invoice you entered yourself as " + (rola as String) +
+                        ". Let somebody else approve it.")
     }
 }
 	]]></function>
@@ -873,21 +872,21 @@ if (r.chyba) {
     def doplnene = []
     def rozdiely = []
 
-    dopln_ak_prazdne(fa_dodavatel, r.dodavatel, "dodávateľ", doplnene, rozdiely)
-    dopln_ak_prazdne(fa_cislo, r.cislo, "číslo faktúry", doplnene, rozdiely)
-    dopln_ak_prazdne(fa_suma, r.suma, "suma", doplnene, rozdiely)
-    dopln_ak_prazdne(fa_datum_splatnosti, r.splatnost, "splatnosť", doplnene, rozdiely)
-    dopln_ak_prazdne(fa_datum_vystavenia, r.vystavenie, "dátum vystavenia", doplnene, rozdiely)
-    dopln_ak_prazdne(fa_ico, r.ico, "IČO", doplnene, rozdiely)
+    dopln_ak_prazdne(fa_dodavatel, r.dodavatel, "supplier", doplnene, rozdiely)
+    dopln_ak_prazdne(fa_cislo, r.cislo, "invoice number", doplnene, rozdiely)
+    dopln_ak_prazdne(fa_suma, r.suma, "amount", doplnene, rozdiely)
+    dopln_ak_prazdne(fa_datum_splatnosti, r.splatnost, "due date", doplnene, rozdiely)
+    dopln_ak_prazdne(fa_datum_vystavenia, r.vystavenie, "issue date", doplnene, rozdiely)
+    dopln_ak_prazdne(fa_ico, r.ico, "company ID", doplnene, rozdiely)
     dopln_ak_prazdne(fa_iban, r.iban, "IBAN", doplnene, rozdiely)
 
     def sprava = new StringBuilder()
-    sprava.append("Zdroj: ").append(zdroj_slovom(r.zdroj))
-    if (doplnene) sprava.append(". Doplnené: ").append(doplnene.join(", "))
-    if (r.nedocitane) sprava.append(". Neprečítané: ").append((r.nedocitane as List).join(", "))
-    if (rozdiely) sprava.append(". POZOR, nesúhlasí – ").append(rozdiely.join("; "))
+    sprava.append("Source: ").append(zdroj_slovom(r.zdroj))
+    if (doplnene) sprava.append(". Filled in: ").append(doplnene.join(", "))
+    if (r.nedocitane) sprava.append(". Not read: ").append((r.nedocitane as List).join(", "))
+    if (rozdiely) sprava.append(". CAREFUL, does not match - ").append(rozdiely.join("; "))
     if (r.poznamka) sprava.append(". ").append(r.poznamka as String)
-    if (!doplnene && !rozdiely && !r.nedocitane) sprava.append(". Nič nové som nenašiel.")
+    if (!doplnene && !rozdiely && !r.nedocitane) sprava.append(". Nothing new was found.")
 
     change fa_nacitanie value { sprava.toString() }
     change fa_zdroj value { zdroj_slovom(r.zdroj) }
@@ -968,7 +967,7 @@ if (r.chyba) {
 		<desc name="fa_ceka_na_desc">Kto má faktúru práve na stole. Sú to mená, aby to bolo rovnaké v každom jazyku.</desc>
 		<!--
 			MENA, nie roly. Pole je `text`, teda `String`, a ten sa nepreklada
-			(RUNBOOK 9) - slovo "riaditeľ" by v anglickom portali bolo jedina
+			(RUNBOOK 9) - slovo "director" by v anglickom portali bolo jedina
 			slovenska vec v zozname. Mena su jazykovo neutralne a navyse
 			uzitocnejsie: zadavatel vidi, komu ma zavolat.
 
@@ -1235,10 +1234,10 @@ fa_suma: f.fa_suma, fa_datum_splatnosti: f.fa_datum_splatnosti;
 // v tele ako `error` - test na stavovy kod ho prehliadne.
 def v = fa_suma.value
 if (v == null || (v as Number).doubleValue() <= 0) {
-    throw new java.lang.IllegalStateException("Suma s DPH musí byť väčšia ako nula.")
+    throw new java.lang.IllegalStateException("The amount incl. VAT must be greater than zero.")
 }
 if (fa_datum_splatnosti.value == null) {
-    throw new java.lang.IllegalStateException("Vyplňte dátum splatnosti.")
+    throw new java.lang.IllegalStateException("Fill in the due date.")
 }
 				]]></action>
 			</actions>
@@ -1261,9 +1260,9 @@ change fa_stav_label value { "na_schvalenie" }
 changeCaseProperty("color").about { farba("na_schvalenie") }
 change fa_zapisane_o value { java.time.LocalDateTime.now() }
 change fa_kontrola value { "" }
-zapis_historie(fa_historia, (opakovane ? "doplnené a podané znova: " : "zapísaná: ") +
-        suma_slovom(fa_suma) + (nad_limit(fa_suma) ? " (nad limit, pôjde aj riaditeľovi)" : "") +
-        (((fa_zdroj.value ?: "") as String) ? ", údaje z: " + fa_zdroj.value : ""))
+zapis_historie(fa_historia, (opakovane ? "completed and resubmitted: " : "entered: ") +
+        suma_slovom(fa_suma) + (nad_limit(fa_suma) ? " (above the limit, it will go to the director too)" : "") +
+        (((fa_zdroj.value ?: "") as String) ? ", data from: " + fa_zdroj.value : ""))
 changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "na_schvalenie") }
 po_zmene_stavu("na_schvalenie", fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
         fa_dodavatel, fa_cislo, fa_suma, fa_stredisko)
@@ -1427,7 +1426,7 @@ fa_to_koncept: f.fa_to_koncept, fa_to_uzavreta: f.fa_to_uzavreta;
 // STVORI OCI. Je to tu a nie v udalosti `assign`, hoci tam by to zabralo
 // skor: vynimka z akcie v `assign` vracia HOLE HTTP 500 bez spravy, kym tu
 // vrati engine HTTP 200 a vetu v tele ako `error` (ENGINE_ISSUES E18).
-nie_vlastnu(fa_zadal, "schvaľovateľ strediska")
+nie_vlastnu(fa_zadal, "cost centre approver")
 
 // SMEROVANIE MUSI BYT V phase="pre". Engine vyhodnoti nasobnosti variable
 // arcov po `pre` a pred `post`; keby sa flagy nastavili v `post`, token by sa
@@ -1437,18 +1436,18 @@ def volba = ((fa_rozhodnutie.value ?: "") as String).trim()
 
 if (!volba) {
     throw new java.lang.IllegalStateException(
-            "Vyberte, či faktúru schvaľujete, vraciate na doplnenie alebo zamietate.")
+            "Choose whether you approve the invoice, return it for completion or reject it.")
 }
 if (!(volba in ["schvalit", "vratit", "zamietnut"])) {
     // Bez tohto by nezname rozhodnutie nechalo vsetky flagy na nule a token by
     // sa z p_na_schvalenie stratil bez toho, aby kdekolvek pribudol.
-    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+    throw new java.lang.IllegalStateException("Unknown decision: " + volba)
 }
 if (volba != "schvalit" && !((fa_poznamka.value ?: "") as String).trim()) {
     // Povinne je to len pri vrateni a zamietnuti, takze sa to neda vyjadrit
     // `required` na dataRefe - ten plati pre vsetky tri moznosti naraz.
     throw new java.lang.IllegalStateException(
-            "Napíšte dôvod - zadávateľ inak nevie, čo s faktúrou robiť.")
+            "Write the reason - otherwise the clerk does not know what to do with the invoice.")
 }
 
 boolean naRiaditela = (volba == "schvalit" && nad_limit(fa_suma))
@@ -1475,23 +1474,23 @@ def pozn = ((fa_poznamka.value ?: "") as String).trim()
 def kod
 if (volba == "vratit") {
     kod = "vratena"
-    zapis_historie(fa_historia, "vrátené na doplnenie (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, "returned for completion (" + meno + "): " + pozn)
 } else if (volba == "zamietnut") {
     kod = "zamietnuta"
-    zapis_historie(fa_historia, "zamietnuté strediskom (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, "rejected by the cost centre (" + meno + "): " + pozn)
 } else {
     change fa_schvalil_stredisko value { meno }
     if (nad_limit(fa_suma)) {
         kod = "u_riaditela"
-        zapis_historie(fa_historia, "schválené strediskom (" + meno + "), suma " +
-                suma_slovom(fa_suma) + " je nad limit – ide riaditeľovi" +
+        zapis_historie(fa_historia, "approved by the cost centre (" + meno + "), suma " +
+                suma_slovom(fa_suma) + " is above the limit - going to the director" +
                 (pozn ? ": " + pozn : ""))
     } else {
         kod = "na_zauctovanie"
         // Kedy bola faktura schvalena, ma zmysel az vtedy, ked je schvalovanie
         // dokoncene - pri postupe k riaditelovi este nie je.
         change fa_schvalene_o value { java.time.LocalDateTime.now() }
-        zapis_historie(fa_historia, "schválené strediskom (" + meno + ")" +
+        zapis_historie(fa_historia, "approved by the cost centre (" + meno + ")" +
                 (pozn ? ": " + pozn : ""))
     }
 }
@@ -1622,19 +1621,19 @@ fa_rozhodnutie: f.fa_rozhodnutie, fa_poznamka: f.fa_poznamka, fa_zadal: f.fa_zad
 fa_to_riaditel: f.fa_to_riaditel, fa_to_zauctovanie: f.fa_to_zauctovanie,
 fa_to_koncept: f.fa_to_koncept, fa_to_uzavreta: f.fa_to_uzavreta;
 
-nie_vlastnu(fa_zadal, "riaditeľ")
+nie_vlastnu(fa_zadal, "director")
 
 def volba = ((fa_rozhodnutie.value ?: "") as String).trim()
 if (!volba) {
     throw new java.lang.IllegalStateException(
-            "Vyberte, či faktúru schvaľujete, vraciate na doplnenie alebo zamietate.")
+            "Choose whether you approve the invoice, return it for completion or reject it.")
 }
 if (!(volba in ["schvalit", "vratit", "zamietnut"])) {
-    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+    throw new java.lang.IllegalStateException("Unknown decision: " + volba)
 }
 if (volba != "schvalit" && !((fa_poznamka.value ?: "") as String).trim()) {
     throw new java.lang.IllegalStateException(
-            "Napíšte dôvod - zadávateľ inak nevie, čo s faktúrou robiť.")
+            "Write the reason - otherwise the clerk does not know what to do with the invoice.")
 }
 
 // Riaditel je posledna uroven schvalenia, takze `fa_to_riaditel` je vzdy 0.
@@ -1662,15 +1661,15 @@ def pozn = ((fa_poznamka.value ?: "") as String).trim()
 def kod
 if (volba == "vratit") {
     kod = "vratena"
-    zapis_historie(fa_historia, "riaditeľ vrátil na doplnenie (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, "director returned it for completion (" + meno + "): " + pozn)
 } else if (volba == "zamietnut") {
     kod = "zamietnuta"
-    zapis_historie(fa_historia, "zamietnuté riaditeľom (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, "rejected by the director (" + meno + "): " + pozn)
 } else {
     kod = "na_zauctovanie"
     change fa_schvalil_riaditel value { meno }
     change fa_schvalene_o value { java.time.LocalDateTime.now() }
-    zapis_historie(fa_historia, "schválené riaditeľom (" + meno + ")" +
+    zapis_historie(fa_historia, "approved by the director (" + meno + ")" +
             (pozn ? ": " + pozn : ""))
 }
 
@@ -1830,19 +1829,19 @@ fa_to_koncept: f.fa_to_koncept, fa_to_uzavreta: f.fa_to_uzavreta;
 def volba = ((fa_uctovanie.value ?: "") as String).trim()
 if (!volba) {
     throw new java.lang.IllegalStateException(
-            "Vyberte, či je faktúra zaúčtovaná, alebo ju vraciate na doplnenie.")
+            "Choose whether the invoice is posted, or you return it for completion.")
 }
 if (!(volba in ["zauctovat", "vratit"])) {
-    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+    throw new java.lang.IllegalStateException("Unknown decision: " + volba)
 }
 if (volba == "zauctovat" && !((fa_doklad.value ?: "") as String).trim()) {
     // Cislo dokladu je jedina stopa, po ktorej sa faktura v eTasku spari
     // s uctovnictvom. Bez neho je "zauctovane" tvrdenie, ktore sa neda overit.
     throw new java.lang.IllegalStateException(
-            "Vyplňte číslo dokladu, pod ktorým je faktúra zaúčtovaná.")
+            "Fill in the document number the invoice is posted under.")
 }
 if (volba == "vratit" && !((fa_poznamka.value ?: "") as String).trim()) {
-    throw new java.lang.IllegalStateException("Napíšte, čo treba na faktúre doplniť.")
+    throw new java.lang.IllegalStateException("Write what needs to be added to the invoice.")
 }
 
 change fa_to_riaditel    value { 0 as Double }
@@ -1867,12 +1866,12 @@ def pozn = ((fa_poznamka.value ?: "") as String).trim()
 def kod
 if (volba == "vratit") {
     kod = "vratena"
-    zapis_historie(fa_historia, "účtovník vrátil na doplnenie (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, "accountant returned it for completion (" + meno + "): " + pozn)
 } else {
     kod = "zauctovana"
     change fa_zauctoval value { meno }
     change fa_zauctovane_o value { java.time.LocalDateTime.now() }
-    zapis_historie(fa_historia, "zaúčtované (" + meno + "), doklad č. " +
+    zapis_historie(fa_historia, "posted (" + meno + "), document no. " +
             ((fa_doklad.value ?: "") as String).trim())
 }
 

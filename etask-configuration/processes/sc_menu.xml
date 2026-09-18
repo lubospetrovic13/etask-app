@@ -220,9 +220,9 @@ views.each { v ->
 // Vysledok patri do nazvu casu, nie do datoveho pola: po zakladani filtrov sa
 // zapis do vlastneho casu neuchova - engine medzitym zakladal ine casy a nas
 // outcome zahodil. changeCaseProperty prezije.
-def summary = "Menu Schvaľovania – " + (created.size() + unchanged.size()) + "/" + views.size()
+def summary = "Approval menu - " + (created.size() + unchanged.size()) + "/" + views.size()
 if (failed) {
-    summary = "CHYBA menu Schvaľovania – nepodarilo sa: " + failed.join(", ")
+    summary = "ERROR in Approval menu - failed: " + failed.join(", ")
 }
 changeCaseProperty("title").about { summary }
 				]]></action>

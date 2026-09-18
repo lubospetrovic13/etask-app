@@ -2,7 +2,7 @@
 	<id>admin/nastavenia/sc_nastavenia</id>
 	<version>1.0.0</version>
 	<initials>SCN</initials>
-	<title name="net_title">Konfigurácia schvaľovania</title>
+	<title name="net_title">Schvaľovanie faktúr a objednávok</title>
 
 	<!--
 		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
@@ -11,14 +11,14 @@
 		a nikdy sa nepouzije (ENGINE_ISSUES E15).
 	-->
 	<i18n locale="en">
-		<i18nString name="net_title">Approval settings</i18nString>
+		<i18nString name="net_title">Invoice and order approval</i18nString>
 		<i18nString name="spravca_title">Administrator</i18nString>
-		<i18nString name="div_limity_init">Limits</i18nString>
+		<i18nString name="div_limity_init">Limits — incoming invoices and purchase orders</i18nString>
 		<i18nString name="div_schvalovatelia_init">Cost centre approvers</i18nString>
 		<i18nString name="div_ostatne_init">Other roles</i18nString>
 		<i18nString name="div_stav_init">State</i18nString>
 		<i18nString name="sc_limit_title">Director's limit (EUR incl. VAT)</i18nString>
-		<i18nString name="sc_limit_desc">Above this amount the director approves after the cost centre. Applies to invoices and orders alike.</i18nString>
+		<i18nString name="sc_limit_desc">Above this amount the director approves after the cost centre. Applies to incoming invoices and purchase orders alike.</i18nString>
 		<i18nString name="sc_hotel_title">Hotel / reception</i18nString>
 		<i18nString name="sc_restauracia_title">Restaurant</i18nString>
 		<i18nString name="sc_wellness_title">Wellness</i18nString>
@@ -77,7 +77,7 @@ sc_limit: f.sc_limit;
 
 prenes_hodnoty(sc_limit)
 postav_menu()
-changeCaseProperty("title").about { "Konfigurácia schvaľovania" }
+changeCaseProperty("title").about { "Invoice and order approval" }
 changeCaseProperty("color").about { "blue" }
 				]]></action>
 			</actions>
@@ -107,12 +107,13 @@ changeCaseProperty("color").about { "blue" }
     // Id prechodu je naprieč sietami unikatne. Zuzuje sa ale este na `processId`
     // TEJTO verzie siete: `bootstrapCase` s `rebuildOnNewVersion` zaklada jeden
     // case NA VERZIU, takze po druhom re-importe by zobrazenie ukazalo dva
-    // riadky "Konfigurácia schvaľovania" a clovek by nevedel, ktory je ten
+    // riadky "Invoice and order approval" a clovek by nevedel, ktory je ten
     // platny. `processId` sa pri kazdom importe meni - a to je tu v poriadku,
     // lebo polozku menu prestavia ta ista akcia, ktora nove `processId` pozna.
     def id = "sc_nastavenia_view"
     def siet = "admin/nastavenia/sc_nastavenia"
-    def nazov = i18n("Konfigurácia schvaľovania", ["en": "Approval settings"])
+    def nazov = i18n("Schvaľovanie faktúr a objednávok",
+                     ["en": "Invoice and order approval"])
     try {
         def existing = menu_item(id)
         if (existing != null) {
@@ -170,8 +171,8 @@ changeCaseProperty("color").about { "blue" }
     // nove polia). Hodnoty, ktore su UDAJ a nie odraz roli, sa preto musia
     // preniest - bez toho by kazdy re-import ticho vratil limit na default.
     def stary = najnovsiCase("admin/nastavenia/sc_nastavenia")
-    def prev = (stary != null && stary.stringId != useCase.stringId)
-            ? stary.dataSet["sc_limit"]?.value : null
+    def predch = (stary != null && stary.stringId != useCase.stringId) ? stary : null
+    def prev = predch?.dataSet?.get("sc_limit")?.value
     change sc_limit value { (prev != null ? prev : 1000.0d) as Double }
 }
 	]]></function>
@@ -230,7 +231,7 @@ changeCaseProperty("color").about { "blue" }
 	<data type="i18n">
 		<id>div_limity</id>
 		<title/>
-		<init name="div_limity_init">Limity</init>
+		<init name="div_limity_init">Limity — došlé faktúry a objednávky</init>
 	</data>
 	<data type="i18n">
 		<id>div_schvalovatelia</id>
@@ -250,7 +251,7 @@ changeCaseProperty("color").about { "blue" }
 	<data type="number" immediate="true">
 		<id>sc_limit</id>
 		<title name="sc_limit_title">Limit riaditeľa (€ s DPH)</title>
-		<desc name="sc_limit_desc">Nad túto sumu schvaľuje po stredisku ešte riaditeľ. Platí rovnako pre faktúry aj objednávky.</desc>
+		<desc name="sc_limit_desc">Nad túto sumu schvaľuje po stredisku ešte riaditeľ. Platí rovnako pre došlé faktúry aj objednávky.</desc>
 		<init>1000</init>
 	</data>
 	<!--
@@ -485,11 +486,14 @@ nacitaj_stav([sc_hotel      : sc_hotel, sc_restauracia: sc_restauracia,
 				<action id="3"><![CDATA[
 sc_limit: f.sc_limit;
 
+// Hodnoty datovych poli a chybove hlasky su po ANGLICKY - aplikacia ma
+// anglictinu ako default a tieto retazce preklad nemaju.
 def v = sc_limit.value
 if (v == null || (v as Number).doubleValue() <= 0) {
     throw new java.lang.IllegalStateException(
-            "Limit riaditeľa musí byť väčší ako nula. Ak nemá schvaľovať nič, " +
-                    "odoberte mu rolu; nula by znamenala, že schvaľuje všetko.")
+            "The director's limit must be greater than zero. If they should " +
+                    "approve nothing, take the role away; zero would mean they " +
+                    "approve everything.")
 }
 				]]></action>
 			</actions>
@@ -511,14 +515,14 @@ uloz_rolu(sc_zadavatelia, "zadavatel", riadky)
 uloz_rolu(sc_uctovnici, "uctovnik", riadky)
 uloz_rolu(sc_riaditelia, "riaditel", riadky)
 
-riadky << ("limit riaditeľa: " +
+riadky << ("director's limit: " +
         String.format(java.util.Locale.US, "%.2f", (sc_limit.value as Number).doubleValue()) + " €")
 if (riadky.size() == 1) {
     riadky << "roly sa nezmenili"
 }
 // Kto rolu prave dostal, musí sa odhlásit a prihlásit - prihlasena session
 // drzi stare stringId roli a zakladanie casu by vratilo 403.
-riadky << "komu sa rola zmenila, nech sa odhlási a prihlási"
+riadky << "anyone whose role changed should log out and log back in"
 
 change sc_vysledok value { riadky.join("\n") }
 change sc_ulozil value { kto(loggedUser()) }

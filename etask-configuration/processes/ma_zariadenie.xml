@@ -49,8 +49,8 @@
 				<action id="1"><![CDATA[
 ma_stav_label: f.ma_stav_label, ma_predmet: f.ma_predmet;
 
-change ma_stav_label value { "Rozpísané" }
-changeCaseProperty("title").about { nazov(ma_predmet, "Rozpísané") }
+change ma_stav_label value { "Draft" }
+changeCaseProperty("title").about { nazov(ma_predmet, "Draft") }
 changeCaseProperty("color").about { "grey" }
 				]]></action>
 			</actions>
@@ -67,7 +67,7 @@ changeCaseProperty("color").about { "grey" }
     // Stav je na ZACIATKU: stlpec Nazov sa v zozname skracuje a to, co je na
     // konci, odpadne prve.
     def p = ((pole.value ?: "") as String).trim()
-    return (stav as String) + " · " + (p ?: "Evidencia zariadení")
+    return (stav as String) + " · " + (p ?: "Asset register")
 }
 	]]></function>
 	<roleRef>
@@ -168,7 +168,7 @@ ma_predmet: f.ma_predmet;
 // Sem validacie, ktore `required` neoveri. Odmietnutie vrati HTTP 200
 // a dovod v tele ako `error` - test na stavovy kod ho prehliadne.
 if (!((ma_predmet.value ?: "") as String).trim()) {
-    throw new java.lang.IllegalStateException("Predmet musí byť vyplnený.")
+    throw new java.lang.IllegalStateException("The subject must be filled in.")
 }
 				]]></action>
 			</actions>
@@ -177,10 +177,10 @@ if (!((ma_predmet.value ?: "") as String).trim()) {
 ma_predmet: f.ma_predmet, ma_stav_label: f.ma_stav_label,
 ma_podal: f.ma_podal, ma_podane_o: f.ma_podane_o;
 
-change ma_stav_label value { "Podané" }
+change ma_stav_label value { "Submitted" }
 change ma_podal value { kto(loggedUser()) }
 change ma_podane_o value { java.time.LocalDateTime.now() }
-changeCaseProperty("title").about { nazov(ma_predmet, "Podané") }
+changeCaseProperty("title").about { nazov(ma_predmet, "Submitted") }
 changeCaseProperty("color").about { "green" }
 				]]></action>
 			</actions>

@@ -131,11 +131,11 @@ def meno = kto(u)
 change dv_ziadatel value { [u.id] }
 change dv_ziadatel_meno value { meno }
 change dv_stav value { "koncept" }
-change dv_stav_label value { "Rozpísaná" }
+change dv_stav_label value { "Draft" }
 changeCaseProperty("color").about { farba("koncept") }
 // Zamestnanec nazov nezadava - polozka menu ma vypnute `enable_case_title`,
 // takze "+" zaklada case rovno a nazov vznikne tu.
-changeCaseProperty("title").about { nazov(dv_od, dv_do, dv_ziadatel_meno, "Rozpísaná") }
+changeCaseProperty("title").about { nazov(dv_od, dv_do, dv_ziadatel_meno, "Draft") }
 				]]></action>
 			</actions>
 		</event>
@@ -160,7 +160,7 @@ changeCaseProperty("title").about { nazov(dv_od, dv_do, dv_ziadatel_meno, "Rozp�
     def po = as_date(dv_do.value)
     // Kym termin nie je vyplneny, nema zmysel pisat "Dovolenka <nic>" - case
     // sa v tej chvili vola podla toho, co to je, nie kedy to je.
-    def co = (od && po) ? ("Dovolenka " + obdobie(od, po)) : "Žiadosť o dovolenku"
+    def co = (od && po) ? ("Dovolenka " + obdobie(od, po)) : "Leave request"
     return (stav as String) + " · " + co + " · " + (meno ?: "?")
 }
 	]]></function>
@@ -214,7 +214,7 @@ changeCaseProperty("title").about { nazov(dv_od, dv_do, dv_ziadatel_meno, "Rozp�
 	]]></function>
 	<function scope="process" name="obdobie"><![CDATA[
 { def od, def po ->
-    if (od == null || po == null) return "termín nevyplnený"
+    if (od == null || po == null) return "dates not filled in"
     def fmt = java.time.format.DateTimeFormatter.ofPattern("d.M.yyyy")
     return od.format(fmt) + " – " + po.format(fmt)
 }
@@ -232,7 +232,7 @@ changeCaseProperty("title").about { nazov(dv_od, dv_do, dv_ziadatel_meno, "Rozp�
     }
     if (po.isBefore(od)) {
         change dv_dni value { null }
-        change dv_kontrola value { "Dátum do je skôr ako dátum od – žiadosť sa takto podať nedá." }
+        change dv_kontrola value { "The end date is before the start date - the request cannot be submitted like this." }
         return true
     }
     change dv_dni value { (java.time.temporal.ChronoUnit.DAYS.between(od, po) + 1) as Double }
@@ -575,10 +575,10 @@ dv_od: f.dv_od, dv_do: f.dv_do;
 def od = as_date(dv_od.value)
 def po = as_date(dv_do.value)
 if (od == null || po == null) {
-    throw new java.lang.IllegalStateException("Vyplňte dátum od aj dátum do.")
+    throw new java.lang.IllegalStateException("Fill in both the start and the end date.")
 }
 if (po.isBefore(od)) {
-    throw new java.lang.IllegalStateException("Dátum do nemôže byť skôr ako dátum od.")
+    throw new java.lang.IllegalStateException("The end date cannot be before the start date.")
 }
 				]]></action>
 			</actions>
@@ -591,15 +591,15 @@ dv_dni: f.dv_dni, dv_historia: f.dv_historia;
 def opakovane = (((dv_stav.value ?: "") as String) == "vratena")
 
 change dv_stav value { "na_schvalenie" }
-change dv_stav_label value { "Čaká na schválenie" }
+change dv_stav_label value { "Awaiting approval" }
 changeCaseProperty("color").about { farba("na_schvalenie") }
 change dv_podane_o value { java.time.LocalDateTime.now() }
 change dv_kontrola value { "" }
-zapis_historie(dv_historia, (opakovane ? "podané znova: " : "podané: ") +
+zapis_historie(dv_historia, (opakovane ? "resubmitted: " : "submitted: ") +
         obdobie(as_date(dv_od.value), as_date(dv_do.value)) +
         " (" + dni_slovom(dv_dni.value) + ")")
 changeCaseProperty("title").about {
-    nazov(dv_od, dv_do, dv_ziadatel_meno, "Čaká na schválenie")
+    nazov(dv_od, dv_do, dv_ziadatel_meno, "Awaiting approval")
 }
 				]]></action>
 			</actions>
@@ -817,17 +817,17 @@ def volba = ((dv_rozhodnutie.value ?: "") as String).trim()
 
 if (!volba) {
     throw new java.lang.IllegalStateException(
-            "Vyberte, či žiadosť schvaľujete, zamietate alebo vraciate na prerobenie.")
+            "Choose whether you approve, reject or return the request for rework.")
 }
 if (!(volba in ["schvalena", "zamietnuta", "vratena"])) {
     // Bez tohto by neznáma hodnota nechala oba flagy na nule a token by sa
     // z p_na_schvalenie stratil bez toho, aby kdekoľvek pribudol.
-    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+    throw new java.lang.IllegalStateException("Unknown decision: " + volba)
 }
 if (volba == "vratena" && !((dv_poznamka.value ?: "") as String).trim()) {
     // Povinné je to len pri vrátení, takže sa to nedá vyjadriť `required`
     // na dataRefe - ten platí pre všetky tri možnosti naraz.
-    throw new java.lang.IllegalStateException("Napíšte, čo má žiadateľ doplniť.")
+    throw new java.lang.IllegalStateException("Write what the applicant needs to add.")
 }
 
 change dv_to_vybavena value { (volba == "vratena" ? 0 : 1) as Double }
@@ -845,22 +845,22 @@ def volba = ((dv_rozhodnutie.value ?: "") as String).trim()
 def meno = kto(loggedUser())
 def pozn = ((dv_poznamka.value ?: "") as String).trim()
 
-def label = ["schvalena": "Schválená", "zamietnuta": "Zamietnutá",
-             "vratena"  : "Vrátená na prerobenie"][volba]
+def label = ["schvalena": "Approved", "zamietnuta": "Rejected",
+             "vratena"  : "Returned for rework"][volba]
 
 change dv_stav value { volba }
 change dv_stav_label value { label }
 changeCaseProperty("color").about { farba(volba) }
 
 if (volba == "vratena") {
-    zapis_historie(dv_historia, "vrátené na prerobenie (" + meno + "): " + pozn)
+    zapis_historie(dv_historia, "returned for rework (" + meno + "): " + pozn)
 } else {
     // Kto a kedy rozhodol sa zapisuje len pri konečnom rozhodnutí. Vrátenie
     // rozhodnutie nie je - žiadosť sa vracia do hry.
     change dv_rozhodol value { meno }
     change dv_rozhodnute_o value { java.time.LocalDateTime.now() }
     zapis_historie(dv_historia,
-            (volba == "schvalena" ? "schválené (" : "zamietnuté (") + meno + ")" +
+            (volba == "schvalena" ? "approved (" : "rejected (") + meno + ")" +
                     (pozn ? ": " + pozn : ""))
 }
 
