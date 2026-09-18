@@ -11,6 +11,7 @@ import {
   WorkflowViewService,
 } from '@netgrif/components-core';
 import {TranslateService} from '@ngx-translate/core';
+import {AnonymousNetsService} from '../anonymous-nets.service';
 
 interface ModelLink {
   path: string;
@@ -28,6 +29,13 @@ export class WorkflowPanelComponent extends AbstractWorkflowPanelComponent imple
   readonly location = location;
   publicUrlTextField: TextField;
 
+  /**
+   * Ma tento proces verejny formular? Riadi odznak aj to, ci sa vobec ukaze
+   * verejna URL. Predtym sa ukazovala pri kazdom procese, aj pri tych, ktore
+   * anonyma nikdy nepustia, takze odkaz skoncil na prihlasovacej obrazovke.
+   */
+  public anonymous = false;
+
   constructor(log: LoggerService,
               translate: TranslateService,
               workflowService: WorkflowViewService,
@@ -35,6 +43,7 @@ export class WorkflowPanelComponent extends AbstractWorkflowPanelComponent imple
               private _config: ConfigurationService,
               private _snackbar: SnackBarService,
               private _http: HttpClient,
+              private _anonymousNets: AnonymousNetsService,
               @Optional() overflowService: OverflowService) {
     super(log, translate, workflowService, petriNetResource, overflowService);
     translate.onLangChange.subscribe(() => {
@@ -47,6 +56,9 @@ export class WorkflowPanelComponent extends AbstractWorkflowPanelComponent imple
     let encodedIdentifier = btoa(this.panelContent.netIdentifier.value);
     encodedIdentifier = encodedIdentifier.endsWith('=') ? encodedIdentifier.substring(0, encodedIdentifier.length - 1) : encodedIdentifier;
     const publicUrl = location.origin + publicViewPath.substring(0, publicViewPath.indexOf('/:')) + '/' + encodedIdentifier;
+    this._anonymousNets.identifiers$().subscribe(identifiers => {
+      this.anonymous = identifiers.has(this.panelContent.netIdentifier.value);
+    });
     this.publicUrlTextField = new TextField(this.panelContent.netIdentifier + '-publicUrl', this._translate.instant('workflow.publicUrl'), publicUrl, {visible: true});
   }
 

@@ -68,24 +68,24 @@ wi_state: f.wi_state, wi_state_label: f.wi_state_label, wi_done: f.wi_done,
 wi_created_by: f.wi_created_by;
 
 change wi_state value { "new" }
-change wi_state_label value { "Nová" }
+change wi_state_label value { "New" }
 change wi_done value { false }
 change wi_created_by value { loggedUser().email }
-changeCaseProperty("title").about { "Nová úloha" }
+changeCaseProperty("title").about { "New work item" }
 				]]></action>
 			</actions>
 		</event>
 	</caseEvents>
 	<function scope="process" name="state_label"><![CDATA[
 { def code ->
-    def m = ["new": "Nová", "progress": "Prebieha", "done": "Hotová", "cancelled": "Zrušená"]
+    def m = ["new": "New", "progress": "Prebieha", "done": "Done", "cancelled": "Cancelled"]
     return m[code as String] ?: (code as String)
 }
 	]]></function>
 	<function scope="process" name="type_label"><![CDATA[
 { def code ->
-    def m = ["analysis": "Analýza", "fix": "Oprava", "test": "Test",
-             "deploy" : "Nasadenie", "other": "Iné"]
+    def m = ["analysis": "Analysis", "fix": "Oprava", "test": "Test",
+             "deploy" : "Nasadenie", "other": "Other"]
     return m[code as String] ?: (code as String)
 }
 	]]></function>
@@ -114,7 +114,7 @@ changeCaseProperty("title").about { "Nová úloha" }
         def note = ((result ?: "") as String).trim()
         if (note) line = line + "\n    " + note
     } else {
-        line = "✕ " + label + "  (zrušená)"
+        line = "✕ " + label + "  (cancelled)"
     }
 
     def prev = ((ticket.dataSet["wi_report"]?.value ?: "") as String)
@@ -387,7 +387,7 @@ btn_start: f.btn_start, btn_done: f.btn_done, btn_cancel: f.btn_cancel;
 // poziadavke, event tlacidla sa spracuje skor).
 def result = ((wi_result.value ?: "") as String).trim()
 if (result.length() < 3) {
-    change wi_message value { "Napíšte prosím krátko, čo sa urobilo." }
+    change wi_message value { "Please write briefly what was done." }
 } else {
     change wi_state value { "done" }
     change wi_state_label value { state_label("done") }

@@ -24,6 +24,7 @@ import icons from '../../../../assets/uriNodeIcons.json';
 import {ETaskUriNodeResource} from '../../dashboard/service/etask-uri-resource.service';
 import {ThemeService} from '../../../theme.service';
 import {localisedViewTitle} from '../view-title';
+import {ETASK_LANGUAGES} from '../etask-language-selector/etask-language-selector.component';
 
 @Component({
   selector: 'app-e-task-double-drawer',
@@ -64,9 +65,16 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
     views: boolean;
     settings: boolean;
   };
+  /**
+   * Jazyky do podmenu pod používateľom. Ten istý zoznam, z ktorého čerpá
+   * `app-etask-language-selector` - aby sa ponuka v menu a ponuka na inej
+   * obrazovke nemohli rozísť.
+   */
+  public readonly langs = ETASK_LANGUAGES;
   public settingsNodes: Array<UriNodeResource>;
   public settingsViews: Array<ViewNavigationItem>;
   private _languageSub: Subscription;
+  private _lang: LanguageService;
 
   constructor(router: Router,
               activatedRoute: ActivatedRoute,
@@ -81,8 +89,11 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
               impersonation: ImpersonationService,
               public themeService: ThemeService,
               dynamicRouteProviderService: DynamicNavigationRouteProviderService) {
+    // `languageService` ide do `super`, ale drží si ho ako `protected` pod iným
+    // menom - a prepínanie jazyka z menu ho potrebuje, tak si ho odložíme.
     super(router, activatedRoute, breakpoint, languageService, userService, accessService, log, config, uriService,
       impersonationUserSelect, impersonation, dynamicRouteProviderService);
+    this._lang = languageService;
     this._impersonation.impersonating$.subscribe(() => {
       this._router.navigate(['dashboard']);
     });
@@ -251,6 +262,15 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
       });
   }
 
+  /** Prepnutie jazyka z podmenu pod používateľom. */
+  public setLang(key: string): void {
+    this._lang.setLanguage(key);
+  }
+
+  public isLang(key: string): boolean {
+    return this.getLang() === key;
+  }
+
   public isRoot(): boolean {
     return this.currentNode.name === 'root';
   }
@@ -272,6 +292,12 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
   public onNodeClick(node: UriNodeResource): void {
     super.onNodeClick(node);
     this._uriService.activeNode = node;
+    // Obsah vpravo musí ísť s ním. Bez tohto zostal otvorený ten istý view
+    // z predošlého priečinka: strom sa prekreslil, obsah nie, a vyzeralo to,
+    // že klik nič neurobil - alebo horšie, že appka je v priečinku, v ktorom
+    // nie je. Cieľom je `FolderViewComponent`, teda obsah priečinka, nie
+    // niektoré z jeho zobrazení - to si človek vyberie sám.
+    this._router.navigate(['portal', 'folder']);
   }
 
   public onHomeClick(): void {

@@ -16,6 +16,26 @@ Prepnúť sa dá, ak sa presunie:
 FE_ROOT=C:/path/to/frontend node tools/sassc.js ...
 ```
 
+## `figmatokens.py` — design tokeny z Figmy do SCSS
+
+```bash
+python3 tools/figmatokens.py .run/figma-tokens.json -o ../etask-frontend-starter/src/styles/_n-tokens.scss
+python3 tools/figmatokens.py .run/figma-tokens.json --tabulka     # len vypíše názov → hodnota
+python3 tools/figmatokens.py .run/figma-tokens.json --kontrola    # čo si v DS odporuje
+```
+
+Netgrif Design System má tokeny napísané rovno ako CSS premenné (`--n-*`), v dvoch
+vrstvách — primitíva a sémantická vrstva cez `var()`. Nástroj tie tabuľky prečíta
+a prepíše do SCSS; nie je to preklad, je to prepis, takže po zmene dizajnu sa
+prebehne znova a rozdiel je vidno v git diffe.
+
+Číta export z `GET /v1/files/:key` (token stačí so scope `file_content:read`).
+
+`--kontrola` existuje preto, že **DS si na troch miestach odporuje sám so sebou**:
+štyri `--n-space-*` majú v stĺpci Value hodnotu o riadok posunutú a päť farebných
+rámp má odtieň 700 popísaný ako 600. Nástroj berie názov, respektíve rebrík, a ten
+rozpor vypíše — nie je to jeho rozhodnutie, ale dizajnérov.
+
 ## `sassc.js` — kompilácia SCSS ako to robí Angular
 
 ```bash

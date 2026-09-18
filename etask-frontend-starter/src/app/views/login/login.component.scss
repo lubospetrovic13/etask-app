@@ -11,3 +11,15 @@
   right: 16px;
   z-index: 2;
 }
+
+.login-recover {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--app-accent);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.login-recover:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,56 @@
+.folder-view {
+  padding: 24px;
+}
+
+.folder-title {
+  margin: 0 0 24px;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 400;
+}
+
+.folder-section + .folder-section {
+  margin-top: 32px;
+}
+
+.folder-section-title {
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-bottom: 12px;
+}
+
+.folder-grid {
+  gap: 12px;
+}
+
+.folder-tile {
+  min-width: 240px;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  box-shadow: var(--app-shadow-1);
+  cursor: pointer;
+}
+
+.folder-tile:hover {
+  border-color: var(--app-primary);
+}
+
+.folder-tile-icon {
+  flex: 0 0 auto;
+}
+
+.folder-tile-label {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.folder-loading,
+.folder-empty {
+  opacity: 0.6;
+  padding: 8px 0;
+}

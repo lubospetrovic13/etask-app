@@ -1,7 +1,46 @@
-<div class="task-tab-background full-height">
-  <div fxLayout="column" fxLayoutAlign="start stretch" class="content-margin full-height">
-    <nc-header #header type="task" class="task-panel-padding-mini"></nc-header>
-    <app-etask-task-list [tasks$]="tasks$" [loading$]="loading$" [selectedHeaders$]="selectedHeaders$"
-                         (taskEvent)="logEvent($event)" fxFlex></app-etask-task-list>
+<!--
+    Verejný formulár, teda to, čo vidí človek bez účtu.
+
+    Nie je to portál bez menu, je to vlastná obrazovka: pruh s logom, farebný
+    akcent, karta s názvom a v nej formulár. Štýly sú v `public-shell.scss`
+    a sú zámerne nezávislé od témy portálu (`PublicLightTheme` v triede
+    komponentu hovorí prečo).
+
+    Čo tu ZÁMERNE nie je:
+
+      * `<nc-header type="task">` - stĺpcová hlavička `Case / Title / Priority /
+        Assignee`. Na zozname úloh v portáli dáva zmysel, na jednom verejnom
+        formulári je to hlavička tabuľky nad jediným riadkom.
+
+      * tlačidlá ZRUŠIŤ a DOKONČIŤ - tie kreslí panel z titulkov udalostí
+        a skrývajú sa v sieti prázdnym titulkom (`empty_button` v `sd_intake`),
+        nie tu. Formulár má vlastnú navigáciu ako dátové polia.
+-->
+<div class="public-shell" fxLayout="column">
+  <div class="public-topbar">
+    <img src="assets/logo.png" alt="Netgrif">
+    <div class="public-language">
+      <app-etask-language-selector [language]="currentLanguage"></app-etask-language-selector>
+    </div>
   </div>
+  <div class="public-accent"></div>
+
+  <div class="public-body" fxLayout="column">
+    <div class="public-card">
+      <div class="public-card-title">{{ 'view.publicForm.title' | translate }}</div>
+      <div class="public-card-body">
+        <!--
+            `preventCollapse` a `hidePanelHeader`: uloha je tu jedina a je to
+            cely obsah stranky. Zbalit sa da len tak, ze si clovek formular
+            zavrie a nema co robit; hlavicka panela nad nim je hlavicka
+            zoznamu s jednym riadkom.
+        -->
+        <app-etask-task-list [tasks$]="tasks$" [loading$]="loading$" [selectedHeaders$]="selectedHeaders$"
+                             [preventCollapse]="true" [hidePanelHeader]="true"
+                             (taskEvent)="logEvent($event)"></app-etask-task-list>
+      </div>
+    </div>
+  </div>
+
+  <div class="public-footer">{{ 'view.publicForm.footer' | translate }}</div>
 </div>

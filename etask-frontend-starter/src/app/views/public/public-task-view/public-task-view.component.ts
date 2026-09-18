@@ -1,4 +1,4 @@
-import {AfterViewInit, Component, ViewChild} from '@angular/core';
+import {AfterViewInit, Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
 import {HeaderComponent} from '@netgrif/components';
 import {
@@ -10,6 +10,7 @@ import {
   ChangedFieldsService,
   ConfigurationService,
   FieldConverterService,
+  LanguageService,
   LoggerService,
   NAE_BASE_FILTER,
   NAE_VIEW_ID_SEGMENT,
@@ -34,6 +35,7 @@ import {
   ViewIdService,
 } from '@netgrif/components-core';
 import {TranslateService} from '@ngx-translate/core';
+import {PublicLightTheme} from '../public-light-theme';
 import {combineLatest} from 'rxjs';
 import {map} from 'rxjs/operators';
 import {publicBaseFilterFactory} from '../factories/etask-search-factory';
@@ -114,11 +116,15 @@ const caseResourceServiceFactory = (userService: UserService, sessionService: Se
     ViewIdService,
   ],
 })
-export class PublicTaskViewComponent extends AbstractTaskViewComponent implements AfterViewInit {
+export class PublicTaskViewComponent extends AbstractTaskViewComponent implements AfterViewInit, OnInit, OnDestroy {
 
   @ViewChild('header') public taskHeaderComponent: HeaderComponent;
 
-  constructor(taskViewService: TaskViewService, publicTaskLoadingService: PublicTaskLoadingService) {
+  /** Verejný formulár je vždy svetlý - dôvod je v triede `PublicLightTheme`. */
+  private readonly _lightTheme = new PublicLightTheme();
+
+  constructor(taskViewService: TaskViewService, publicTaskLoadingService: PublicTaskLoadingService,
+              private _language: LanguageService) {
     super(taskViewService);
     this.loading$ = combineLatest(taskViewService.loading$, publicTaskLoadingService.loading$).pipe(
       map(sources => {
@@ -127,11 +133,27 @@ export class PublicTaskViewComponent extends AbstractTaskViewComponent implement
     );
   }
 
+  public get currentLanguage(): string {
+    return this._language.getLanguage();
+  }
+
+  ngOnInit(): void {
+    this._lightTheme.apply();
+  }
+
   ngAfterViewInit(): void {
-    this.initializeHeader(this.taskHeaderComponent);
+    // `initializeHeader` sa už nevolá: stĺpcová hlavička na verejnom formulári
+    // nie je, takže nie je čo inicializovať.
+  }
+
+  ngOnDestroy(): void {
+    super.ngOnDestroy();
+    // Bez tohto by verejný formulár ticho prepol tému celého portálu tomu,
+    // kto sa naň len pozrel.
+    this._lightTheme.restore();
   }
 
   logEvent(event: TaskEventNotification) {
-    console.log(event);
+    // Ticho - verejný formulár nemá čo písať do konzoly návštevníkovi.
   }
 }

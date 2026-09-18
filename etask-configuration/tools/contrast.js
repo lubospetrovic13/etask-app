@@ -3,12 +3,24 @@
 const fs = require('fs');
 const css = fs.readFileSync(process.argv[2], 'utf8');
 
+// VSETKY bloky daneho selektora, spojene. Od zavedenia `_n-tokens.scss` su
+// `:root` bloky dva - najprv `--n-*` z design systemu, potom `--app-*`, ktore
+// sa na ne odkazuju. Kto zoberie len prvy, nenajde ziadny `--app-*` token
+// a audit spadne na `undefined` namiesto toho, aby nieco zmeral.
 function blockAfter(selector) {
-  const i = css.indexOf(selector + ' {');
-  if (i === -1) return null;
-  const start = css.indexOf('{', i) + 1;
-  const end = css.indexOf('}', start);
-  return css.slice(start, end);
+  const needle = selector + ' {';
+  let out = '', from = 0, found = false;
+  for (;;) {
+    const i = css.indexOf(needle, from);
+    if (i === -1) break;
+    const start = i + needle.length;
+    const end = css.indexOf('}', start);
+    if (end === -1) break;
+    out += css.slice(start, end) + ';';
+    from = end + 1;
+    found = true;
+  }
+  return found ? out : null;
 }
 
 function tokens(block) {
@@ -45,7 +57,31 @@ function ratio(fg, bg) {
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 }
 
-const modes = {light: tokens(blockAfter(':root')), dark: tokens(blockAfter('.app-dark'))};
+// `--app-*` tokeny sa odkazuju na `--n-*` z design systemu (`_n-tokens.scss`),
+// takze surova hodnota je `var(--n-color-neutral-500)` a nie farba. Bez tohto
+// by audit vypisal same `(unparsed)` a vyzeralo by to, ze je vsetko v poriadku.
+//
+// `--n-*` su definovane len v `:root` a rezim neprepinaju, takze sa hladaju
+// tam aj pre tmavy rezim.
+const rootTokens = tokens(blockAfter(':root'));
+
+function resolve(value, scope, depth = 0) {
+  if (!value || depth > 8) return value;
+  const m = value.trim().match(/^var\(\s*(--[\w-]+)\s*(?:,\s*([^)]+))?\)$/);
+  if (!m) return value;
+  const target = scope[m[1]] !== undefined ? scope[m[1]] : rootTokens[m[1]];
+  if (target === undefined) return (m[2] || '').trim() || value;
+  return resolve(target, scope, depth + 1);
+}
+
+function resolved(block) {
+  const raw = tokens(block);
+  const out = {};
+  for (const k of Object.keys(raw)) out[k] = resolve(raw[k], raw);
+  return out;
+}
+
+const modes = {light: resolved(blockAfter(':root')), dark: resolved(blockAfter('.app-dark'))};
 const pairs = [
   ['--app-fg', '--app-bg'], ['--app-fg', '--app-surface'],
   ['--app-fg-muted', '--app-bg'], ['--app-fg-muted', '--app-surface'],

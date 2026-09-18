@@ -38,6 +38,25 @@
 		<i18nString name="zl_sync_placeholder">Reconcile accounts with no case</i18nString>
 		<i18nString name="zl_vysledok_title">What happened</i18nString>
 		<i18nString name="t_pu_novy_label">Create the user</i18nString>
+		<i18nString name="t_pu_pozvi_label">Invite a user</i18nString>
+		<i18nString name="div_pozvanka_init">Invitation</i18nString>
+		<i18nString name="poz_email_title">E-mail</i18nString>
+		<i18nString name="poz_email_desc">The invitation goes here. It also becomes the login name.</i18nString>
+		<i18nString name="poz_proces_title">Process</i18nString>
+		<i18nString name="poz_proces_desc">Optional. Roles picked here are already in place when the person first signs in.</i18nString>
+		<i18nString name="poz_verzia_title">Process version</i18nString>
+		<i18nString name="poz_verzia_desc">"All versions" is what you want almost every time.</i18nString>
+		<i18nString name="poz_roly_title">Roles of the selected process</i18nString>
+		<i18nString name="poz_roly_desc">Filled in once a process is picked. Type to search.</i18nString>
+		<i18nString name="poz_pridaj_placeholder">Add</i18nString>
+		<i18nString name="poz_vycisti_placeholder">Clear</i18nString>
+		<i18nString name="poz_zoznam_title">Role list (internal)</i18nString>
+		<i18nString name="poz_pridelene_title">Roles they will hold</i18nString>
+		<i18nString name="poz_vysledok_title">What happened</i18nString>
+		<i18nString name="poz_odoslat_placeholder">Send the invitation</i18nString>
+		<i18nString name="poz_historia_title">Invitations sent (newest first)</i18nString>
+		<i18nString name="poz_historia_desc">A log of this counter. Who is still waiting for their invitation is on the Users card, in state "Invited".</i18nString>
+		<i18nString name="empty_button"></i18nString>
 	</i18n>
 	<icon>person_add</icon>
 	<defaultCaseName>Nový používateľ</defaultCaseName>
@@ -75,13 +94,16 @@
 			<id>zl_create</id>
 			<actions phase="post">
 				<action id="1"><![CDATA[
-zl_proces: f.zl_proces, zl_pridelene: f.zl_pridelene, zl_authority: f.zl_authority;
+zl_proces: f.zl_proces, zl_pridelene: f.zl_pridelene, zl_authority: f.zl_authority,
+poz_pridelene: f.poz_pridelene, poz_historia: f.poz_historia;
 
 change zl_proces options { processOptions() }
 change zl_authority options { authorityOptions() }
 change zl_authority value { ["ROLE_USER"] }
-change zl_pridelene value { "(zatiaľ nič)" }
-changeCaseProperty("title").about { "Nový používateľ" }
+change zl_pridelene value { "(nothing yet)" }
+change poz_pridelene value { "(nothing yet)" }
+change poz_historia value { "(no invitation yet)" }
+changeCaseProperty("title").about { "New user" }
 changeCaseProperty("color").about { "blue" }
 				]]></action>
 			</actions>
@@ -120,10 +142,10 @@ changeCaseProperty("color").about { "blue" }
 	]]></function>
 	<function scope="process" name="popis_zoznamu"><![CDATA[
 { def polozky ->
-    if (!polozky) return "(zatiaľ nič)"
+    if (!polozky) return "(nothing yet)"
     return polozky.collect { p ->
         def v = (p.verzia == null || p.verzia == "" || p.verzia == "vsetky")
-                ? "všetky verzie" : ("verzia " + (p.verzia as String).replace("_", "."))
+                ? "all versions" : ("verzia " + (p.verzia as String).replace("_", "."))
         return "• " + p.rola + " — " + p.siet + " (" + v + ")"
     }.join("\n")
 }
@@ -143,6 +165,35 @@ changeCaseProperty("color").about { "blue" }
         if (v) out << v
     }
     return out
+}
+	]]></function>
+	<function scope="process" name="kto_posiela"><![CDATA[
+{ ->
+    // Kto pozvanku poslal. `?.` chrani pred null, nie pred chybajucou property,
+    // preto `hasProperty` - `UserFieldValue` a `IUser` sa v tomto lisia
+    // a rozdiel sa prejavi az za behu uprostred akcie.
+    def u = loggedUser()
+    if (u == null) return "(unknown)"
+    return (u.hasProperty("email") && u.email) ? (u.email as String) : (u.stringId as String)
+}
+	]]></function>
+	<function scope="process" name="do_historie"><![CDATA[
+{ def poz_historia, def riadok ->
+    // Pripise zaznam NA ZACIATOK - kto pult otvori, ma poslednu pozvanku
+    // v prvom riadku a nemusi rolovat.
+    //
+    // Strop je tu zamerne: pole je sucastou `dataSet` casu a ten sa cely cita
+    // aj zapisuje pri kazdej zmene. Bez stropu by pult po roku prevadzky nosil
+    // niekolko stotisic znakov v kazdej odpovedi `GET /api/task/{id}/data`.
+    // Uplny zoznam pozvanych nie je toto pole - su to PRIPADY UCTOV, kde kazdy
+    // pozvany clovek ma svoj a da sa podla stavu filtrovat.
+    def limit = 100
+    def stare = ((poz_historia.value ?: "") as String).split("\n").findAll { it.trim() }
+    def vsetky = ([riadok as String] + (stare as List)).take(limit)
+    if (stare.size() + 1 > limit) {
+        vsetky = vsetky.take(limit - 1) + ["... older entries are on the Users card"]
+    }
+    return vsetky.join("\n")
 }
 	]]></function>
 	<function scope="process" name="zaloz_pripad"><![CDATA[
@@ -264,6 +315,81 @@ changeCaseProperty("color").about { "blue" }
 		<title/>
 		<placeholder name="zl_sync_placeholder">Zosúladiť účty bez prípadu</placeholder>
 		<init>1</init>
+	</data>
+	<data type="i18n">
+		<id>div_pozvanka</id>
+		<title/>
+		<init name="div_pozvanka_init">Pozvánka</init>
+	</data>
+	<data type="text">
+		<id>poz_email</id>
+		<title name="poz_email_title">E-mail</title>
+		<desc name="poz_email_desc">Adresa, na ktorú pôjde pozvánka. Je zároveň prihlasovacím menom.</desc>
+	</data>
+	<data type="enumeration_map">
+		<id>poz_proces</id>
+		<title name="poz_proces_title">Proces</title>
+		<desc name="poz_proces_desc">Nepovinné. Role vybrané tu bude mať človek hneď pri prvom prihlásení.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="enumeration_map">
+		<id>poz_verzia</id>
+		<title name="poz_verzia_title">Verzia procesu</title>
+		<desc name="poz_verzia_desc">„Všetky verzie" je to, čo chcete skoro vždy.</desc>
+	</data>
+	<data type="multichoice_map">
+		<id>poz_roly</id>
+		<title name="poz_roly_title">Role vybraného procesu</title>
+		<desc name="poz_roly_desc">Naplní sa po výbere procesu. Píšte pre vyhľadanie.</desc>
+		<component>
+			<name>autocomplete</name>
+		</component>
+	</data>
+	<data type="button">
+		<id>poz_pridaj</id>
+		<title/>
+		<placeholder name="poz_pridaj_placeholder">Pridať</placeholder>
+		<init>1</init>
+	</data>
+	<data type="button">
+		<id>poz_vycisti</id>
+		<title/>
+		<placeholder name="poz_vycisti_placeholder">Vyprázdniť</placeholder>
+		<init>1</init>
+	</data>
+	<data type="text">
+		<id>poz_zoznam</id>
+		<title name="poz_zoznam_title">Zoznam rolí (interné)</title>
+	</data>
+	<data type="text">
+		<id>poz_pridelene</id>
+		<title name="poz_pridelene_title">Role, ktoré bude mať</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="button">
+		<id>poz_odoslat</id>
+		<title/>
+		<placeholder name="poz_odoslat_placeholder">Odoslať pozvánku</placeholder>
+		<init>1</init>
+	</data>
+	<data type="text">
+		<id>poz_vysledok</id>
+		<title name="poz_vysledok_title">Čo sa stalo</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>poz_historia</id>
+		<title name="poz_historia_title">Odoslané pozvánky (od najnovšej)</title>
+		<desc name="poz_historia_desc">Záznam tohto pultu. Kto ešte čaká na pozvánku, je na karte Používatelia v stave „Pozvaný“.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
 	</data>
 	<data type="text">
 		<id>zl_vysledok</id>
@@ -414,7 +540,7 @@ change zl_pridelene value { popis_zoznamu(rozbor_zoznamu(zl_zoznam)) }
 zl_zoznam: f.zl_zoznam, zl_pridelene: f.zl_pridelene;
 
 change zl_zoznam value { "" }
-change zl_pridelene value { "(zatiaľ nič)" }
+change zl_pridelene value { "(nothing yet)" }
 						]]></action>
 					</actions>
 				</event>
@@ -457,10 +583,10 @@ userOptions().each { String id, String popis ->
     pridane << (snap.email as String)
 }
 change zl_vysledok value {
-    "Zosúladenie účtov:\n" +
-    "• prípad už mali: " + uz + "\n" +
-    (pridane ? ("• prípad doplnený (" + pridane.size() + "): " + pridane.join(", "))
-             : "• nič nebolo treba doplniť")
+    "Account reconciliation:\n" +
+    "- already had a case: " + uz + "\n" +
+    (pridane ? ("- case added (" + pridane.size() + "): " + pridane.join(", "))
+             : "- nothing needed adding")
 }
 						]]></action>
 					</actions>
@@ -492,17 +618,17 @@ zl_email: f.zl_email, zl_heslo: f.zl_heslo, zl_authority: f.zl_authority;
 
 def mail = ((zl_email.value ?: "") as String).trim()
 if (!je_email(mail)) {
-    throw new java.lang.IllegalStateException("E-mail nemá platný tvar: " + mail)
+    throw new java.lang.IllegalStateException("The e-mail is not a valid address: " + mail)
 }
 if (findUserByEmail(mail) != null) {
-    throw new java.lang.IllegalStateException("Používateľ s e-mailom " + mail + " už existuje.")
+    throw new java.lang.IllegalStateException("A user with the e-mail " + mail + " already exists.")
 }
 if (!registrationService.isPasswordSufficient(formPassword(zl_heslo.value))) {
-    throw new java.lang.IllegalStateException("Heslo nespĺňa požiadavky instancie.")
+    throw new java.lang.IllegalStateException("The password does not meet this instance's requirements.")
 }
 if (!ako_zoznam(zl_authority).contains("ROLE_USER")) {
     throw new java.lang.IllegalStateException(
-            "Bez ROLE_USER sa používateľ prihlási a neuvidí žiadne zobrazenie.")
+            "Without ROLE_USER the person can log in but will see no views at all.")
 }
 				]]></action>
 			</actions>
@@ -520,8 +646,8 @@ def authorities = ako_zoznam(zl_authority)
 
 def novy = createNewUser(meno, priezvisko, mail, formPassword(zl_heslo.value), authorities)
 def id = novy.stringId as String
-def riadky = ["účet vytvorený: " + mail,
-              "systémové oprávnenia: " + (authorities ? authorities.join(", ") : "žiadne")]
+def riadky = ["account created: " + mail,
+              "system authorities: " + (authorities ? authorities.join(", ") : "none")]
 
 def pridelene = []
 def zlyhane = []
@@ -532,14 +658,14 @@ rozbor_zoznamu(zl_zoznam).each { p ->
         zlyhane << (p.rola + " (" + p.siet + ")")
     }
 }
-riadky << (pridelene ? "procesné role: " + pridelene.join(", ") : "procesné role: žiadne")
+riadky << (pridelene ? "process roles: " + pridelene.join(", ") : "process roles: none")
 if (zlyhane) {
-    riadky << ("NEPODARILO SA prideliť: " + zlyhane.join(", "))
+    riadky << ("COULD NOT assign: " + zlyhane.join(", "))
 }
 
 // Ucet je entita - dostane vlastny pripad. Jeden ucet, jeden pripad.
 def c = zaloz_pripad(id)
-riadky << ("prípad účtu: " + c.stringId)
+riadky << ("account case: " + c.stringId)
 
 // Pult sa vyprazdni a je pripraveny na dalsi ucet. Bez tohto by tu zostali
 // vypisane data predchadzajuceho cloveka - a heslo medzi nimi.
@@ -552,12 +678,293 @@ change zl_proces value { "" }
 change zl_roly value { [] }
 change zl_verzia value { "" }
 change zl_zoznam value { "" }
-change zl_pridelene value { "(zatiaľ nič)" }
+change zl_pridelene value { "(nothing yet)" }
 change zl_vysledok value { riadky.join("\n") }
 
-changeCaseProperty("title").about { "Nový používateľ" }
+changeCaseProperty("title").about { "New user" }
 				]]></action>
 			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_pu_pozvi</id>
+		<x>180</x>
+		<y>200</y>
+		<label name="t_pu_pozvi_label">Pozvať používateľa</label>
+		<icon>mail</icon>
+		<assignPolicy>manual</assignPolicy>
+		<!--
+			POZVANKOVY PULT. Druha cesta, ako vznika ucet - a ta, ktora je
+			v tejto instancii predvolena (`nae.server.auth.open-registration=false`).
+
+			Rozdiel proti `t_pu_novy` nie je kozmeticky: TU SA MENO ANI HESLO
+			NEZADAVA. Ucet vznikne v stave INVITED, prazdny, a meno aj heslo si
+			do neho doplni sam pozvany clovek cez odkaz z mailu
+			(`/api/auth/signup`). Spravca teda nema v ruke cudzie heslo a nema
+			ho ako komu odovzdat - co je cely zmysel pozvanky.
+
+			Vlastne miesto `p_pozvanka`, nie zdielanie `p_pult` s `t_pu_novy`:
+			jedno miesto s jednym tokenom uzivi len JEDNU ulohu naraz, takze
+			priradenim zakladania by pozvanie zmizlo zo zoznamu a naopak.
+
+			Role sa pridelia HNED pri pozvani, nie az po registracii. Ucet
+			existuje od odoslania pozvanky a `registrationService.registerUser`
+			do `processRoles` nesiaha - dopisuje len meno, priezvisko a heslo.
+			Clovek teda uvidi svoju agendu uz pri prvom prihlaseni namiesto
+			prazdneho dashboardu.
+		-->
+		<roleRef>
+			<id>spravca</id>
+			<logic>
+				<!--
+					`perform` je skratka pre assign+cancel+finish+view+set
+					a rozbaluje sa PRVA, takze `finish` za nou ju prebije.
+
+					Pozvanie nie je ukoncenie ulohy - je to UKON, ktory sa
+					na tomto pulte robi opakovane. Preto visi na datovom
+					tlacidle `poz_odoslat` a prechod sa nedokoncuje vobec:
+					nie je co dokoncit, pult je trvale otvoreny.
+
+					Zakaz je tu popri prazdnom `<title>` na udalosti `finish`
+					(to schova tlacidlo vo formulari) zamerne: titul riesi
+					len to, co clovek VIDI, opravnenie to, co engine PUSTI.
+				-->
+				<perform>true</perform>
+				<finish>false</finish>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_pozvanka</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_pozvanka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>poz_email</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_roly</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>poz_proces</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>poz_proces_set</id>
+					<actions phase="post">
+						<action id="9"><![CDATA[
+poz_proces: f.poz_proces, poz_roly: f.poz_roly, poz_verzia: f.poz_verzia;
+
+def siet = (poz_proces.value ?: "") as String
+change poz_roly options { processRoleOptions(siet) }
+change poz_roly value { [] }
+change poz_verzia options { processVersionOptions(siet) }
+change poz_verzia value { "vsetky" }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>poz_verzia</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>poz_roly</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>poz_pridaj</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>poz_pridaj_set</id>
+					<actions phase="pre">
+						<action id="10"><![CDATA[
+poz_proces: f.poz_proces, poz_roly: f.poz_roly, poz_verzia: f.poz_verzia,
+poz_zoznam: f.poz_zoznam, poz_pridelene: f.poz_pridelene;
+
+def siet = (poz_proces.value ?: "") as String
+def verzia = ((poz_verzia.value ?: "vsetky") as String)
+def vybrane = ako_zoznam(poz_roly)
+if (siet && vybrane) {
+    def riadky = rozbor_zoznamu(poz_zoznam).collect { it.rola + "|" + it.siet + "|" + it.verzia }
+    vybrane.each { String rola ->
+        def r = rola + "|" + siet + "|" + verzia
+        if (!riadky.contains(r)) { riadky << r }
+    }
+    change poz_zoznam value { riadky.join("\n") }
+    change poz_roly value { [] }
+}
+change poz_pridelene value { popis_zoznamu(rozbor_zoznamu(poz_zoznam)) }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>poz_vycisti</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>5</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>poz_vycisti_set</id>
+					<actions phase="pre">
+						<action id="11"><![CDATA[
+poz_zoznam: f.poz_zoznam, poz_pridelene: f.poz_pridelene;
+
+change poz_zoznam value { "" }
+change poz_pridelene value { "(nothing yet)" }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>poz_pridelene</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>poz_zoznam</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_sprava</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<!--
+				TOTO je akcia tohto pultu, nie DOKONCIT. Prechod sa nedokoncuje
+				nikdy (`finish` je zakazany vyssie a jeho tlacidlo schovane) -
+				pozvanie je opakovany ukon, nie ukoncenie ulohy.
+			-->
+			<dataRef>
+				<id>poz_odoslat</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>poz_odoslat_set</id>
+					<actions phase="pre">
+						<action id="15"><![CDATA[
+poz_email: f.poz_email, poz_proces: f.poz_proces, poz_roly: f.poz_roly,
+poz_verzia: f.poz_verzia, poz_zoznam: f.poz_zoznam, poz_pridelene: f.poz_pridelene,
+poz_vysledok: f.poz_vysledok, poz_historia: f.poz_historia;
+
+def mail = ((poz_email.value ?: "") as String).trim()
+def ked = java.time.LocalDateTime.now().format(
+        java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+def kto = kto_posiela()
+
+// `pozvi` uz overuje tvar e-mailu, existujuci aktivny ucet aj SMTP a vracia
+// vetu. Preto sa tu NEHADZE vynimka: z datoveho tlacidla by odmietnutie
+// skoncilo ako chyba requestu, nie ako sprava vo formulari - a spravca by sa
+// nedozvedel, co ma opravit.
+def v = pozvi(mail)
+
+if (!v.ok) {
+    // Formular sa ZAMERNE nevyprazdni - je co opravit a poslat znova.
+    change poz_vysledok value { v.sprava as String }
+    change poz_historia value {
+        do_historie(poz_historia, ked + " · " + (mail ?: "(bez adresy)") +
+                " - NOT SENT: " + (v.sprava as String) + " · " + kto)
+    }
+    return
+}
+
+def id = v.userId as String
+def riadky = [v.sprava as String,
+              "the account is INVITED - they set their own name and password"]
+
+def pridelene = []
+def zlyhane = []
+rozbor_zoznamu(poz_zoznam).each { p ->
+    if (setProcessRole(id, p.rola as String, p.siet as String, p.verzia as String, true)) {
+        pridelene << (p.rola + " (" + p.siet + ")")
+    } else {
+        zlyhane << (p.rola + " (" + p.siet + ")")
+    }
+}
+riadky << (pridelene ? "process roles: " + pridelene.join(", ") : "process roles: none")
+if (zlyhane) {
+    riadky << ("COULD NOT assign: " + zlyhane.join(", "))
+}
+
+// Ucet je entita - dostane vlastny pripad, rovnako ako pri zakladani s heslom.
+// PODMIENENE: opakovana pozvanka (vyprsany odkaz) bezi na uz existujucom ucte,
+// ktory pripad uz ma; bez tejto kontroly by vznikol druhy a padol by invariant
+// "jeden ucet = jeden pripad", ktory strazi `pucheck.py`.
+if (zviazane_ucty().contains(id)) {
+    riadky << "the account case already existed"
+} else {
+    def c = zaloz_pripad(id)
+    riadky << ("account case: " + c.stringId)
+}
+
+// Hladanie v texte spravy je krehke - keby sa veta v `pozvi` preformulovala,
+// historia by ticho prestala rozlisovat opakovane poslanie. Drzi to tu preto,
+// ze `pozvi` iny priznak nevracia; ked bude treba, doplni sa do mapy.
+def opakovane = ((v.sprava as String).contains("sent again"))
+change poz_historia value {
+    do_historie(poz_historia, ked + " · " + mail +
+            (opakovane ? " - SENT AGAIN" : " - invited") +
+            " - roles: " + (pridelene ? pridelene.join(", ") : "none") +
+            " · " + kto)
+}
+
+change poz_email value { "" }
+change poz_proces value { "" }
+change poz_roly value { [] }
+change poz_verzia value { "" }
+change poz_zoznam value { "" }
+change poz_pridelene value { "(nothing yet)" }
+change poz_vysledok value { riadky.join("\n") }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>poz_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>poz_historia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>6</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_pu_pozvi_assign</id>
+			<actions phase="post">
+				<action id="12"><![CDATA[
+poz_proces: f.poz_proces;
+
+// Pri kazdom otvoreni znova - novo naimportovana appka by inak v ponuke nebola.
+// A v `create` udalosti pripadu sa `change ... options` NEUCHOVA (LEARNINGS B11),
+// takze toto je jedine miesto, kde ich nastavit ma zmysel.
+change poz_proces options { processOptions() }
+				]]></action>
+			</actions>
+		</event>
+		<!--
+			Prazdny titul schova tlacidlo DOKONCIT vo formulari
+			(`getFinishTitle()` vrati prazdno a `canFinish()` je potom false).
+			Samotne opravnenie `finish` je zakazane na roleRef vyssie - toto
+			riesi len to, co clovek VIDI.
+		-->
+		<event type="finish">
+			<id>t_pu_pozvi_finish</id>
+			<title name="empty_button"></title>
 		</event>
 	</transition>
 	<place>
@@ -580,6 +987,28 @@ changeCaseProperty("title").about { "Nový používateľ" }
 		<type>regular</type>
 		<sourceId>t_pu_novy</sourceId>
 		<destinationId>p_pult</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<place>
+		<id>p_pozvanka</id>
+		<x>60</x>
+		<y>200</y>
+		<label>Pozvánkový pult</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_pozvi_in</id>
+		<type>regular</type>
+		<sourceId>p_pozvanka</sourceId>
+		<destinationId>t_pu_pozvi</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_pozvi_out</id>
+		<type>regular</type>
+		<sourceId>t_pu_pozvi</sourceId>
+		<destinationId>p_pozvanka</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 </document>

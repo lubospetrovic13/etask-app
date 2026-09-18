@@ -179,6 +179,98 @@ Diagnostika, ktorá to ukázala za pár sekúnd — nie hádanie v DevTools, ale
 document.querySelector('cdk-virtual-scroll-viewport').getBoundingClientRect().height  // 0
 ```
 
+### B6. Chýbajúci endpoint v `nae.json` sa prejaví ako večne točiaci spinner
+
+`SignUpService` si adresy skladá v konštruktore z `providers.auth.endpoints`
+a pri chýbajúcom kľúči uloží `undefined`. Metóda potom **vyhodí výnimku
+synchrónne**, ešte pred vytvorením Observable:
+
+```js
+resetPassword(email) {
+    if (!this._resetUrl) {
+        throw new Error('Reset URL is not set in authentication provider endpoints!');
+    }
+    return this._http.post(this._resetUrl, email).pipe(...);
+}
+```
+
+Volajúci komponent zapne spinner, zavolá metódu a spinner vypína až
+v `subscribe`. Ten ale nikdy nevznikne, takže:
+
+* v sieťovej záložke prehliadača **nie je žiadny request**,
+* v logu backendu **nie je žiadny záznam**,
+* v Mailpite **nie je žiadny mail**,
+* a obrazovka sa točí donekonečna.
+
+Všetky štyri príznaky ukazujú na backend, pričom chyba je v jednom riadku
+konfigurácie frontendu. `nae-default` dopĺňa `login`, `logout` a `signup`,
+nie `reset`, `recover` ani `verify` — kto obnovu hesla zapína, musí ich
+dopísať sám:
+
+```json
+"endpoints": {
+  "login": "/auth/login",
+  "logout": "/auth/logout",
+  "signup": "/auth/signup",
+  "reset": "/auth/reset",
+  "recover": "/auth/recover",
+  "verify": "/auth/token/verify"
+}
+```
+
+Diagnostika, ktorá to odlíši od chyby backendu: zavolať endpoint priamo.
+Keď `curl` mail pošle a appka nie, problém je pred requestom, nie za ním.
+
+```bash
+curl -s -X POST "http://localhost:8080/api/auth/reset"      -H "Content-Type: text/plain" -d 'niekto@example.com'
+```
+
+`Content-Type` je `text/plain`: knižnica posiela holý reťazec, nie JSON objekt.
+S `application/json` vráti endpoint **415** a to je len vlastnosť sondy, nie
+príčina problému.
+
+*Za behu — hľadal som chybu v odosielaní mailov, SMTP bolo pritom v poriadku
+celý čas.*
+
+### B7. `fxLayoutGap` pridá inline `max-width: 100%` a prebije šírku zo štýlu
+
+`fxLayoutGap` nastavuje na element **inline** `max-width: 100%` (chráni sa tým
+pred pretečením o veľkosť medzery). Inline štýl vyhrá nad pravidlom zo
+stylesheetu bez ohľadu na špecificitu, takže:
+
+```scss
+.auth-card {
+  width: 100%;
+  max-width: 420px;   // NIKDY sa neuplatní
+}
+```
+
+Prejav: karta sa roztiahne na celú šírku okna. Na úzkom displeji vyzerá
+správne, takže sa to nájde až na širokom monitore. V DevTools to nie je vidieť
+ako prebité pravidlo — obe hodnoty sú `max-width` a tá v stylesheete sa
+zobrazuje normálne.
+
+Diagnostika, ktorá to ukáže hneď: v konzole porovnať vypočítanú hodnotu
+s pravidlami, ktoré na element sedia.
+
+```js
+const el = document.querySelector('.auth-card');
+getComputedStyle(el).maxWidth      // "100%"
+el.getAttribute('style')           // ... max-width: 100%;
+```
+
+Riešenie bez `!important`: dať šírku na `width` a `max-width` nechať na `100%`.
+Inline štýl potom nemá čo prebiť a na úzkom displeji sa karta stále zmenší.
+
+```scss
+.auth-card {
+  width: 420px;
+  max-width: 100%;
+}
+```
+
+*Za behu — obrazovka obnovy hesla.*
+
 ---
 
 ## C. Material 13 je pre-MDC

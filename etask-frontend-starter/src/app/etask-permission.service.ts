@@ -1,5 +1,6 @@
 import {Injectable} from '@angular/core';
 import {
+  Case,
   PermissionService,
   PetriNetReferenceWithPermissions,
   UserComparatorService,
@@ -40,6 +41,28 @@ export class EtaskPermissionService extends PermissionService {
       return true;
     }
     return super.hasNetPermission(action, net);
+  }
+
+  /**
+   * To isté pre prípad, a stojí za tým konkrétny prejav: po stlačení „+“ sa
+   * nový prípad založil, ale appka doň neprelinkovala - zostala v zozname.
+   *
+   * `nc-create-case-button` emituje `caseCreatedEvent` (a tým otvorí tab
+   * s novým prípadom) LEN keď `CaseViewService.viewEnabled(case)` vráti true,
+   * a to je presne `hasCasePermission(case, VIEW)`. Knižničná verzia pozerá
+   * výhradne na `case.permissions[procesná rola]` a `case.users`, takže admin
+   * bez procesnej roly z nej vyjde ako niekto, kto prípad nesmie vidieť -
+   * hoci ho práve založil a engine mu ho ukáže. Nič sa pritom neohlási:
+   * prípad v zozname je, len sa neotvorí.
+   *
+   * Je to tá istá nezrovnalosť s enginom ako pri `hasNetPermission` vyššie
+   * a rieši sa rovnako.
+   */
+  public hasCasePermission(aCase: Case | undefined, permission: string): boolean {
+    if (this.isAdmin()) {
+      return true;
+    }
+    return super.hasCasePermission(aCase, permission);
   }
 
   private isAdmin(): boolean {

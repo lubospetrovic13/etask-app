@@ -235,31 +235,39 @@ def ok_body(r):
 def uri_paths(cl, deep=False):
     """Karty, ktore uzivatel vidi v bocnom menu.
 
-    Bez `deep` su to len deti korena. Odkedy appky zijú v kategoriach
-    (`hr/dovolenky`, `financie/faktury`), je dieťaťom korena uz len kategoria -
-    takze test, ktory hlada `hr/dovolenky` medzi detmi korena, zlyha bez ohladu
-    na to, ci appka funguje. `deep=True` prejde strom do hlbky.
-
-    Kazdy uzol sa doťahuje zvlast, lebo `/api/v2/uri/{uri}` vracia len PRIAME
-    potomkov - a zaroven filtruje podla opravneni, takze vysledok je naozaj to,
-    co ten ucet vidi, nie cely strom.
+    `deep=True` vrati aj vnorene uzly (`hr/cesty`, nielen `hr`). Appka, ktora
+    zije v podpriecinku, sa inak overit neda: v korenovych detoch je len jej
+    kategoria a tu vidi aj ten, kto do appky nesmie.
     """
     st, root = cl.get("/api/v2/uri/root")
-    paths = [c["uriPath"] for c in (root or {}).get("children", [])]
+    deti = (root or {}).get("children", [])
     if not deep:
-        return paths
-    videne, fronta = [], list(paths)
-    while fronta:
-        p = fronta.pop(0)
-        if p in videne:
-            continue
-        videne.append(p)
-        # Standardny base64 - controller pouziva `Base64.getDecoder()`. Pre
-        # nase cesty nevznika '/' ani '+', takze URL to prezije.
-        kluc = base64.b64encode(p.encode("utf-8")).decode()
-        st, node = cl.get("/api/v2/uri/" + kluc)
-        fronta.extend(c["uriPath"] for c in (node or {}).get("children", []))
-    return videne
+        return [c["uriPath"] for c in deti]
+
+    # `children` v odpovedi je VZDY PRAZDNE - naplneny je len `childrenId`,
+    # takze rekurzia cez `children` by nasla len prvu uroven a kontrola
+    # "appku v podpriecinku nevidno" by presla aj ked ju vidno. Deti uzla
+    # vracia `/api/v2/uri/parent/{id}` (to vola aj frontend).
+    def deti_uzla(uzol_id):
+        st2, r = cl.get(f"/api/v2/uri/parent/{uzol_id}")
+        if isinstance(r, list):
+            return r
+        return ((r or {}).get("_embedded") or {}).get("uriNodes", []) or []
+
+    out = []
+
+    def zober(uzol, hlbka=0):
+        if not uzol or hlbka > 6:
+            return
+        cesta = uzol.get("uriPath")
+        if cesta:
+            out.append(cesta)
+        for d in deti_uzla(uzol.get("id")):
+            zober(d, hlbka + 1)
+
+    for c in deti:
+        zober(c)
+    return out
 
 
 def menu_items(cl, prefix=None):

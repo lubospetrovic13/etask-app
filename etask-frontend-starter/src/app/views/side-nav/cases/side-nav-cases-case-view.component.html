@@ -15,7 +15,7 @@
       <div class="transform-div max-width-fix" fxFlex fxLayout="column" fxLayoutAlign="start stretch">
         <nc-header #header [type]="headerType" class="case-header-padding" [ngStyle]="{'width': getWidth()}"></nc-header>
 
-        <nc-case-list (caseClick)="handleCaseClick($event)"
+        <nc-case-list [showDeleteMenu]="true" (caseClick)="handleCaseClick($event)"
                       [selectedHeaders$]="selectedHeaders$" [width]="getWidth()" fxFlex></nc-case-list>
       </div>
     </div>

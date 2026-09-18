@@ -1,0 +1,40 @@
+<!--
+  Breadcrumbs sa sem NEDÁVAJÚ - vykresľuje ich drawer nad obsahom
+  (`e-task-double-drawer.component.html`), takže druhá kópia by bola dva
+  rovnaké riadky pod sebou.
+-->
+<div class="folder-view">
+  <h1 class="folder-title mat-typography">{{ title | uriNodeTitle }}</h1>
+
+  <div *ngIf="loading" class="folder-loading" fxLayout="row" fxLayoutAlign="start center">
+    <mat-spinner color="accent" diameter="24"></mat-spinner>
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <div *ngIf="folders.length" class="folder-section">
+      <div class="folder-section-title mat-typography">{{ 'menu.folders' | translate }}</div>
+      <div class="folder-grid" fxLayout="row wrap">
+        <div *ngFor="let child of folders" class="folder-tile" fxLayout="row" fxLayoutAlign="start center"
+             (click)="openFolder(child)">
+          <mat-icon class="folder-tile-icon">{{ folderIcon(child) }}</mat-icon>
+          <span class="folder-tile-label">{{ child.name | uriNodeTitle }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="views.length" class="folder-section">
+      <div class="folder-section-title mat-typography">{{ 'menu.views' | translate }}</div>
+      <div class="folder-grid" fxLayout="row wrap">
+        <div *ngFor="let view of views" class="folder-tile" fxLayout="row" fxLayoutAlign="start center"
+             (click)="openView(view)">
+          <mat-icon class="folder-tile-icon">{{ viewIcon(view) }}</mat-icon>
+          <span class="folder-tile-label">{{ viewTitle(view) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="isEmpty()" class="folder-empty mat-typography">
+      {{ 'menu.emptyFolder' | translate }}
+    </div>
+  </ng-container>
+</div>

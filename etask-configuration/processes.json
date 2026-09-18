@@ -84,6 +84,10 @@
     "pu_menu.xml",
     "on_nastup.xml",
     "on_menu.xml",
+    "pc_nastavenia.xml",
+    "pc_profil.xml",
+    "pc_vyuctovanie.xml",
+    "pc_menu.xml",
     "dv_ziadost.xml",
     "dv_menu.xml",
     "ma_zariadenie.xml",
@@ -110,7 +114,12 @@
       "rebuildOnNewVersion": true
     },
     {
-      "net": "hr/onboarding/on_menu",
+      "net": "onboarding/on_menu",
+      "rebuildOnNewVersion": true
+    },
+    "hr/cesty/pc_nastavenia",
+    {
+      "net": "hr/cesty/pc_menu",
       "rebuildOnNewVersion": true
     },
     {
@@ -178,15 +187,19 @@
         "veduci"
       ]
     },
-    "hr/onboarding": {
-      "icon": "badge",
+    "onboarding": {
+      "icon": "how_to_reg",
       "requiredAuthorities": [],
       "requiredProcessRoles": [
-        "hr",
-        "it",
-        "majetok",
-        "nadriadeny"
+        "personalista",
+        "veduci",
+        "it_spravca"
       ]
+    },
+    "hr/cesty": {
+      "icon": "directions_car",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": []
     },
     "financie": {
       "icon": "account_balance",

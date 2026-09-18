@@ -83,7 +83,18 @@ export class EtaskTabbedCaseViewComponent extends AbstractTabbedCaseViewComponen
               overflowService: OverflowService,
               @Optional() @Inject(NAE_AUTOSWITCH_TAB_TOKEN) autoswitchToTaskTab: boolean,
               @Optional() @Inject(NAE_OPEN_EXISTING_TAB) openExistingTab: boolean) {
-    super(caseViewService, loggerService, injectedTabData, overflowService, autoswitchToTaskTab, openExistingTab,
+    // `?? true` NIE JE kozmetika. `@Optional()` injektuje `null`, keď token nikto
+    // neposkytol - a default parameter v `AbstractTabbedCaseViewComponent`
+    // (`_autoswitchToTaskTab = true`) sa uplatní len na `undefined`, nie na `null`.
+    // Bez tohto sa do knižničného `openTab(tabContent, autoswitch = false)` pošle
+    // `null`, tab sa otvorí a NEPREPNE sa naň.
+    //
+    // Prejav: klik na prípad aj založenie nového cez „+" pridá tab, ale človek
+    // zostane stáť v zozname. Vyzerá to, že sa prípad nezaložil - pritom sa
+    // založil aj otvoril, len o dva taby vedľa. Ani jedna z tých dvoch ciest
+    // nič nezaloguje.
+    super(caseViewService, loggerService, injectedTabData, overflowService,
+      autoswitchToTaskTab ?? true, openExistingTab ?? true,
       (injectedTabData as any).newCaseButtonConfiguration);
   }
 

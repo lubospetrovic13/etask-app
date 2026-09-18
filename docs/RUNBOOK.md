@@ -539,6 +539,36 @@ Kaskádové pasce (celé v `FRONTEND_LEARNINGS.md`, časť B), skrátene:
 Nástroje na meranie kaskády sú v `tools/` (`cascade.js`, `contrast.js`,
 `css-of.js`) — `tools/README.md` hovorí, kedy ktorý.
 
+### Dve vrstvy tokenov
+
+Farby ani veľkosti sa **nepíšu ručne**. Od septembra 2026 sú v dvoch súboroch
+a to rozdelenie je jediné, čo drží dizajn a aplikáciu oddelene:
+
+| súbor | čo je v ňom | kto ho mení |
+|---|---|---|
+| `src/styles/_n-tokens.scss` | `--n-*` — prepis Netgrif Design System z Figmy | **generátor**, nie človek |
+| `src/styles/_tokens.scss` | `--app-*` — na čo tie tokeny appka používa | človek, a meria pri tom kontrast |
+
+```bash
+cd etask-configuration
+curl -H "X-Figma-Token: $FIGMA_TOKEN"      "https://api.figma.com/v1/files/DvZiv1wChuQM3Mpr4XjwHH" -o .run/figma-tokens.json
+python3 tools/figmatokens.py .run/figma-tokens.json --kontrola   # čo si v DS odporuje
+python3 tools/figmatokens.py .run/figma-tokens.json     -o ../etask-frontend-starter/src/styles/_n-tokens.scss
+node tools/sassc.js ../etask-frontend-starter/src/styles.scss .run/out.css
+node tools/contrast.js .run/out.css                              # musí byť zelené
+```
+
+`_n-tokens.scss` zámerne nevie o eTasku — dá sa presunúť do
+`@netgrif/components` bez zmeny, keby sa tam dizajn raz mal implementovať.
+
+**Odtieň z rampy sa vyberá meraním, nie okom.** Neutrálna rampa DS nemá stupeň
+medzi 2.60:1 a 4.84:1 na bielej, takže placeholder (`--app-fg-faint`) sa berie
+z alfa stupnice. Kto vymení odtieň bez `contrast.js`, dostane formulár bez
+viditeľných polí — presne ten, kvôli ktorému `--app-border-interactive` vznikol.
+
+**`contrast.js` rozbaľuje `var()`.** Bez toho by od zavedenia `--n-*` vypisoval
+samé `(unparsed)` a vyzeralo by to, že je všetko v poriadku.
+
 ---
 
 ## 6. Nový field komponent

@@ -51,9 +51,36 @@
           <mat-icon>clear</mat-icon>
           <span>{{ 'side-menu.impersonation.cease' | translate }}</span>
         </button>
+        <!--
+            Jazyk a téma patria sem, k účtu - nie do stromu priečinkov ani na
+            rail. Sú to nastavenia človeka, nie navigácia: v strome súperili
+            o pozornosť s priečinkami a na raile z nich bola vlajka bez
+            popisu, ktorá vyzerala ako ďalšia sekcia appky.
+        -->
+        <button mat-menu-item [matMenuTriggerFor]="langMenu">
+          <mat-icon>language</mat-icon>
+          <span>{{ 'dataField.i18n.languageSelect' | translate }}</span>
+        </button>
+        <button mat-menu-item (click)="themeService.toggle()">
+          <mat-icon>{{ themeService.isDark() ? 'brightness_7' : 'brightness_4' }}</mat-icon>
+          <span>{{ (themeService.isDark() ? 'app.theme.toLight' : 'app.theme.toDark') | translate }}</span>
+        </button>
         <button mat-menu-item (click)="logout()">
           <mat-icon>exit_to_app</mat-icon>
           <span>{{ 'toolbar.menu.logout' | translate }}</span>
+        </button>
+      </mat-menu>
+
+      <!--
+          Podmenu jazykov. Nepoužíva sa `app-etask-language-selector`, lebo ten
+          si kreslí vlastné `mat-icon-button` s vlajkou - v textovom menu by to
+          bola ikona medzi popiskami. Zoznam jazykov je ale ten istý
+          (`ETASK_LANGUAGES`), takže sa nemôžu rozísť.
+      -->
+      <mat-menu #langMenu="matMenu">
+        <button *ngFor="let lang of langs" mat-menu-item (click)="setLang(lang.key)">
+          <mat-icon>{{ isLang(lang.key) ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+          <span>{{ 'toolbar.menu.' + lang.value | translate }}</span>
         </button>
       </mat-menu>
       <button *ngIf="includeUser" mat-icon-button [matMenuTriggerFor]="userRailMenu"
@@ -62,20 +89,6 @@
               [matTooltipPosition]="'right'">
         <mat-icon>account_circle</mat-icon>
       </button>
-
-      <!--
-          The `&& false` that used to be on this ngIf is gone.
-
-          The library's own template has plain `*ngIf="includeLanguage"` and the input
-          defaults to true, so this copy had switched the language button off by hand.
-          Together with the switcher at line ~215 being behind `isRoot()`, that left the
-          portal with no reachable way to change language on any screen except the root
-          of the drawer tree - while the app hardcoded Slovak on every load anyway, so
-          nobody noticed it was missing.
-      -->
-      <div *ngIf="includeLanguage" fxLayout="row" class="icon-container" fxLayoutAlign="center center">
-        <app-etask-language-selector fxLayout="row" [language]="getLang()"></app-etask-language-selector>
-      </div>
 
       <mat-menu #railMenu="matMenu">
         <button *ngFor='let item of moreMenuItems; trackBy: viewsTrackBy' mat-menu-item
@@ -244,16 +257,6 @@
     <div *ngIf='isRoot()' class="box-container">
       <div *ngIf="!isSettingsEmpty() || !isRightNodesEmpty()" class="line">
         <mat-divider></mat-divider>
-      </div>
-      <div class="tree-node-lang-select mat-typography" fxLayoutAlign="start center">
-        <app-etask-language-selector fxLayout="row" [language]="getLang()"></app-etask-language-selector>
-        <span class="lang-select-text">{{ 'dataField.i18n.languageSelect' | translate }}</span>
-      </div>
-      <div class="tree-node mat-typography" fxLayoutAlign="start center"
-           (click)="themeService.toggle()">
-        <mat-icon class="tree-node-icon">{{ themeService.isDark() ? 'brightness_7' : 'brightness_4' }}</mat-icon>
-        <span fxFlex>{{ (themeService.isDark() ? 'app.theme.toLight' : 'app.theme.toDark') | translate }}</span>
-        <span class="menu-item-focus-overlay"></span>
       </div>
     </div>
   </div>

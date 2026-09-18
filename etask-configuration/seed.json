@@ -11,7 +11,8 @@
   "netScope": [
     "it/service_desk/*",
     "admin/pouzivatelia/*",
-    "hr/onboarding/*",
+    "onboarding/*",
+    "hr/cesty/*",
     "hr/dovolenky/*",
     "it/majetok/*",
     "financie/*",
@@ -25,9 +26,12 @@
         "agent",
         "hr",
         "it",
+        "it_spravca",
         "majetok",
         "manager",
+        "mzdy",
         "nadriadeny",
+        "personalista",
         "referent",
         "riaditel",
         "schv_hotel",
@@ -41,7 +45,8 @@
         "spravca_majetku",
         "uctovnik",
         "veduci",
-        "zadavatel"
+        "zadavatel",
+        "zamestnanec"
       ]
     },
     {
@@ -49,6 +54,8 @@
       "roles": [
         "agent",
         "hr",
+        "mzdy",
+        "personalista",
         "referent",
         "riaditel",
         "schv_restauracia",
@@ -57,7 +64,8 @@
         "spravca",
         "spravca_majetku",
         "uctovnik",
-        "veduci"
+        "veduci",
+        "zamestnanec"
       ]
     },
     {
@@ -70,6 +78,7 @@
         "schvalovatel",
         "specialist",
         "uctovnik",
+        "veduci",
         "zadavatel",
         "zamestnanec"
       ]
@@ -77,6 +86,7 @@
     {
       "email": "druhy@test.local",
       "roles": [
+        "it_spravca",
         "majetok",
         "specialist",
         "zadavatel",

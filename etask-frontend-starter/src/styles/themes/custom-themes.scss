@@ -11,7 +11,9 @@
 // ---------------------------------------------------------------------------
 
 $typography: mat.define-typography-config(
-  $font-family: 'Roboto, monospace',
+  // Pismo DS. Material 13 chce doslovny retazec, `var()` sem nejde -
+  // zdroj pravdy je `--n-font-family-sans` v `_n-tokens.scss`.
+  $font-family: "Inter, 'Helvetica Neue', Arial, sans-serif",
   $headline: mat.define-typography-level(32px, 48px, 700)
 );
 
@@ -21,10 +23,11 @@ $typography: mat.define-typography-config(
 // Themes
 // ---------------------------------------------------------------------------
 
+// Primárna je 700, nie 500: `brand-500` je výplň, nie text (viď `_palettes.scss`).
 $etask-light-theme: mat.define-light-theme(
-  mat.define-palette($etask-blue),
-  mat.define-palette($etask-pink),
-  mat.define-palette(mat.$red-palette)
+  mat.define-palette($ds-brand-light, 700, 400, 900),
+  mat.define-palette($ds-purple-light, 600, 400, 800),
+  mat.define-palette($ds-red-light, 700, 500, 900)
 );
 
 // Material's built-in dark palette paints surfaces in neutral grey (#303030 / #424242).
@@ -44,35 +47,36 @@ $etask-light-theme: mat.define-light-theme(
 
 $etask-dark-theme: app-surfaces(
     mat.define-dark-theme(
-      mat.define-palette($etask-azure-dark, 500, 300, 700),
-      mat.define-palette($etask-coral-dark, 500, 300, 700),
-      mat.define-palette(mat.$red-palette, 400, 300, 700)
+      mat.define-palette($ds-brand-dark, 500, 300, 700),
+      mat.define-palette($ds-purple-dark, 500, 300, 700),
+      mat.define-palette($ds-red-dark, 500, 300, 700)
     ),
     (
-      background: #16171a,
-      card: #1c1d22,
-      dialog: #1c1d22,
-      app-bar: #131418,
-      status-bar: #0f1013,
+      // Neutrály z DS, rovnaké ako `--app-*` v `.app-dark` - inak by karta
+      // Materialu bola iná farba než plocha, na ktorej leží.
+      background: #030713, // neutral-950
+      card: #111826, // neutral-900
+      dialog: #111826,
+      app-bar: #111826,
+      status-bar: #030713,
       hover: rgba(white, 0.06),
-      raised-button: #22242a,
-      selected-button: #2a2c33,
+      raised-button: #1f2938, // neutral-800
+      selected-button: #374050, // neutral-700
       focused-button: rgba(white, 0.12),
-      unselected-chip: #22242a,
-      tooltip: #3a3d46,
+      unselected-chip: #1f2938,
+      tooltip: #374050,
     ),
     (
-      divider: #2a2c33,
-      dividers: #2a2c33,
-      text: #e8eaed,
-      // Material derives the form field label from secondary-text at 70% alpha.
-      // #9aa0a6 there measured 3.97:1 against #16171a - below WCAG AA - so these
-      // two are set from the composited contrast, not picked by eye:
-      // secondary-text gives ~4.9:1 for the label, hint-text ~6.6:1 for <desc>.
-      secondary-text: #b4bac0,
-      hint-text: #9aa0a6,
-      icon: #e8eaed,
-      icons: #e8eaed,
+      divider: #1f2938, // neutral-800
+      dividers: #1f2938,
+      text: #f9fafb, // neutral-50
+      // Material derives the form field label from secondary-text at 70% alpha,
+      // takže sa sem nedáva odtieň, ktorý má prejsť 4.5:1, ale ten, ktorý ho
+      // prejde AŽ PO tom stlmení. `neutral-300` dáva popisku ~5.9:1 na karte.
+      secondary-text: #d1d5dc, // neutral-300
+      hint-text: #99a1af, // neutral-400
+      icon: #f9fafb,
+      icons: #f9fafb,
     )
 );
 

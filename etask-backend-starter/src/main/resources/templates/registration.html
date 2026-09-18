@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<!--
+	Registracna (pozvankova) sablona eTask. Tieni `templates/registration.html`
+	z application-engine jaru - `MailService` berie sablony cez
+	`configuration.getTemplate(...)` z classpathu `/templates` a triedy tohto
+	modulu su na classpathe pred zavislostami.
+
+	POZOR: V TOMTO KOMENTARI NESMIE BYT INTERPOLACIA. FreeMarker spracuva cele
+	telo, HTML komentar mu nic nehovori - takze premenna spomenuta "len na
+	vysvetlenie" sa VYHODNOTI, a ked v modeli nie je, cely mail spadne
+	s "evaluated to null or missing" a nikomu neodide. Preto su nizsie mena
+	premennych bez dolara a zatvoriek.
+
+	Model, ktory sem posiela MailService (iny tu nie je k dispozicii):
+	  server      http(s)://host:port frontendu (nae.mail.redirect-to.*)
+	  token       Base64 z "email:tokenKey"
+	  validity    pocet dni platnosti
+	  expiration  datum vyprsania, dd.MM.yyyy
+	Premenna `name` v tomto maile NIE JE - ucet pozvaneho este nema meno.
+
+	ODKAZ JE NA QUERY PARAMETER, nie na cestu. Enginova sablona dava token do
+	segmentu cesty (/signup/<token>), lenze `encodeToken` je STANDARDNE Base64
+	(`Base64.getEncoder()`), takze token bezne obsahuje `/` - a ten cestu
+	rozbije. Preto `?token=` s builtinom `url`: escapuje `/`, `+` aj `=`,
+	takze sa prenesie presne to, co engine caka spat.
+
+	Kodovanie sa builtinu `url` odovzdava VYSLOVNE (UTF-8). Bez parametra si ho
+	berie z nastavenia `output_encoding` / `url_escaping_charset` freemarker
+	Configuration - a to enginova `MailConfiguration` nenastavuje, takze
+	sablona spadne na "To do URL encoding, the framework that encloses
+	FreeMarker must specify...". Mail potom neodide vobec.
+
+	Dvojjazycne v jednom maile, nie dva maily: v momente pozvania nikto nevie,
+	akym jazykom pozvany clovek hovori - ucet este nema ziadne nastavenie.
+	ANGLICTINA JE PRVA, lebo je to default jazyk aplikacie; slovencina je
+	preklad pod nou.
+-->
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<title>eTask</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f8;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+       style="background-color:#f4f6f8; padding:24px 12px;">
+	<tr>
+		<td align="center">
+			<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560"
+			       style="max-width:560px; width:100%; background-color:#ffffff; border-radius:8px;
+			              border:1px solid #e0e4e8; font-family:Arial,Helvetica,sans-serif;">
+
+				<tr>
+					<td style="padding:28px 32px 8px 32px;">
+						<div style="font-size:22px; font-weight:bold; color:#2196F3; letter-spacing:0.5px;">
+							eTask
+						</div>
+					</td>
+				</tr>
+
+				<!-- EN - hlavny jazyk aplikacie -->
+				<tr>
+					<td style="padding:8px 32px 0 32px; color:#1f2933; font-size:15px; line-height:1.55;">
+						<h1 style="margin:0 0 12px 0; font-size:19px; font-weight:bold; color:#1f2933;">
+							Invitation to eTask
+						</h1>
+						<p style="margin:0 0 12px 0;">
+							Hello, an account has been created for you in eTask. It is not finished yet —
+							you set your own name and password through the button below.
+						</p>
+						<p style="margin:0 0 20px 0;">
+							The link is valid for <strong>${validity} days</strong>, until
+							<strong>${expiration}</strong>. After that, ask your administrator for a new invitation.
+						</p>
+					</td>
+				</tr>
+
+				<tr>
+					<td align="center" style="padding:4px 32px 20px 32px;">
+						<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+							<tr>
+								<td align="center" bgcolor="#2196F3" style="border-radius:4px;">
+									<a href="${server}/signup?token=${token?url('UTF-8')}" target="_blank"
+									   style="display:inline-block; padding:13px 30px; color:#ffffff;
+									          font-family:Arial,Helvetica,sans-serif; font-size:15px;
+									          font-weight:bold; text-decoration:none; border-radius:4px;">
+										Complete registration / Dokončiť registráciu
+									</a>
+								</td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+
+				<!-- SK - preklad -->
+				<tr>
+					<td style="padding:0 32px;">
+						<div style="border-top:1px solid #e0e4e8; height:1px; line-height:1px;">&nbsp;</div>
+					</td>
+				</tr>
+				<tr>
+					<td style="padding:18px 32px 0 32px; color:#52606d; font-size:14px; line-height:1.55;">
+						<h2 style="margin:0 0 10px 0; font-size:16px; font-weight:bold; color:#1f2933;">
+							Pozvánka do aplikácie eTask
+						</h2>
+						<p style="margin:0 0 12px 0;">
+							Dobrý deň, bol vám vytvorený prístup do aplikácie eTask.
+							Účet ešte nie je hotový — meno a heslo si nastavíte sami cez tlačidlo vyššie.
+						</p>
+						<p style="margin:0 0 16px 0;">
+							Odkaz platí <strong>${validity} dní</strong>, teda do
+							<strong>${expiration}</strong>. Po tom čase požiadajte správcu o novú pozvánku.
+						</p>
+					</td>
+				</tr>
+
+				<!-- Fallback: kazdy tretí mailový klient tlacidlo nevykresli. -->
+				<tr>
+					<td style="padding:4px 32px 24px 32px; color:#7b8794; font-size:12px; line-height:1.5;">
+						<p style="margin:0 0 6px 0;">
+							If the button does not work, copy this link into your browser /
+							Ak tlačidlo nefunguje, skopírujte si tento odkaz do prehliadača:
+						</p>
+						<p style="margin:0; word-break:break-all;">
+							<a href="${server}/signup?token=${token?url('UTF-8')}" target="_blank"
+							   style="color:#2196F3; text-decoration:underline;">${server}/signup?token=${token?url('UTF-8')}</a>
+						</p>
+					</td>
+				</tr>
+
+				<tr>
+					<td style="padding:0 32px 26px 32px; color:#9aa5b1; font-size:12px; line-height:1.5;">
+						<div style="border-top:1px solid #e0e4e8; padding-top:14px;">
+							This message was sent by eTask automatically, please do not reply. If you did not
+							expect this invitation, ignore it — an unfinished account cannot be used.<br/>
+							Túto správu poslal systém eTask, neodpovedajte na ňu. Ak ste pozvánku nečakali,
+							správu ignorujte — bez dokončenia registrácie účet nikto nepoužije.
+						</div>
+					</td>
+				</tr>
+
+			</table>
+		</td>
+	</tr>
+</table>
+</body>
+</html>

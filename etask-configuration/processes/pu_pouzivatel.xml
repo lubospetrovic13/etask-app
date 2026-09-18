@@ -84,11 +84,11 @@ pu_vysledok: f.pu_vysledok;
 // objavi sama. Obnovuje sa aj pri kazdom otvoreni ulohy (assign).
 change pu_proces options { processOptions() }
 change pu_authority options { authorityOptions() }
-change pu_stav_label value { "Nezviazaný" }
-change pu_pridelene value { "(zatiaľ nič)" }
+change pu_stav_label value { "Unlinked" }
+change pu_pridelene value { "(nothing yet)" }
 change pu_vysledok value {
-    "Tento prípad nie je zviazaný so žiadnym účtom.\n" +
-    "Účty sa zakladajú v zobrazení „Nový používateľ“. Tento prípad zmažte."
+    "This case is not linked to any account.\n" +
+    "Accounts are created in the \"New user\" view. Delete this case."
 }
 changeCaseProperty("color").about { "red" }
 				]]></action>
@@ -106,8 +106,29 @@ changeCaseProperty("color").about { "red" }
     def cele = (((pu_meno.value ?: "") as String).trim() + " " +
                 ((pu_priezvisko.value ?: "") as String).trim()).trim()
     def mail = ((pu_email.value ?: "") as String).trim()
-    if (!mail) return "Nezviazaný prípad"
+    if (!mail) return "Unlinked case"
     return (cele ? (cele + " · ") : "") + mail
+}
+	]]></function>
+	<function scope="process" name="stav_popis"><![CDATA[
+{ def snap ->
+    // Stav uctu podla `UserState` enginu. Pribudol s pozvankami: ucet
+    // pozvaneho cloveka existuje uz od odoslania pozvanky, ale este nema meno
+    // ani heslo - a bez tohto rozlisenia vyzera v zozname ako hotovy ucet
+    // s prazdnym menom, co sa neda odlisit od chyby.
+    //
+    // BLOCKED nie je ban. Do toho stavu prepne ucet `/api/auth/reset`, teda
+    // ziadost o obnovu hesla, a trva len kym si clovek nove heslo nenastavi.
+    def stav = ((snap?.stav ?: "ACTIVE") as String)
+    if (stav == "INVITED") return "Invited"
+    if (stav == "BLOCKED") return "Waiting for a new password"
+    return "Active"
+}
+	]]></function>
+	<function scope="process" name="stav_farba"><![CDATA[
+{ def snap ->
+    def stav = ((snap?.stav ?: "ACTIVE") as String)
+    return (stav == "ACTIVE") ? "green" : "orange"
 }
 	]]></function>
 	<function scope="process" name="ako_zoznam"><![CDATA[
@@ -141,10 +162,10 @@ changeCaseProperty("color").about { "red" }
 	]]></function>
 	<function scope="process" name="popis_zoznamu"><![CDATA[
 { def polozky ->
-    if (!polozky) return "(zatiaľ nič)"
+    if (!polozky) return "(nothing yet)"
     return polozky.collect { p ->
         def v = (p.verzia == null || p.verzia == "" || p.verzia == "vsetky")
-                ? "všetky verzie" : ("verzia " + (p.verzia as String).replace("_", "."))
+                ? "all versions" : ("verzia " + (p.verzia as String).replace("_", "."))
         return "• " + p.rola + " — " + p.siet + " (" + v + ")"
     }.join("\n")
 }
@@ -386,7 +407,7 @@ if (!id) {
 }
 def snap = userSnapshot(id)
 if (!snap || !snap.email) {
-    change pu_stav_label value { "Účet neexistuje" }
+    change pu_stav_label value { "The account does not exist" }
     changeCaseProperty("color").about { "red" }
     return
 }
@@ -399,10 +420,10 @@ change pu_email value { snap.email }
 change pu_authority value { (snap.authorities ?: []) as List }
 change pu_zoznam value { roly_uctu(snap) }
 change pu_pridelene value { popis_zoznamu(rozbor_zoznamu(pu_zoznam)) }
-change pu_stav_label value { "Aktívny" }
+change pu_stav_label value { stav_popis(snap) }
 change pu_vysledok value { "" }
 changeCaseProperty("title").about { nazov(pu_meno, pu_priezvisko, pu_email) }
-changeCaseProperty("color").about { "green" }
+changeCaseProperty("color").about { stav_farba(snap) }
 						]]></action>
 					</actions>
 				</event>
@@ -495,7 +516,7 @@ change pu_pridelene value { popis_zoznamu(rozbor_zoznamu(pu_zoznam)) }
 pu_zoznam: f.pu_zoznam, pu_pridelene: f.pu_pridelene;
 
 change pu_zoznam value { "" }
-change pu_pridelene value { "(zatiaľ nič)" }
+change pu_pridelene value { "(nothing yet)" }
 						]]></action>
 					</actions>
 				</event>
@@ -552,7 +573,7 @@ if (!id) {
 }
 def snap = userSnapshot(id)
 if (!snap || !snap.email) {
-    change pu_stav_label value { "Účet neexistuje" }
+    change pu_stav_label value { "The account does not exist" }
     changeCaseProperty("color").about { "red" }
     return
 }
@@ -562,9 +583,9 @@ change pu_email value { snap.email }
 change pu_authority value { (snap.authorities ?: []) as List }
 change pu_zoznam value { roly_uctu(snap) }
 change pu_pridelene value { popis_zoznamu(rozbor_zoznamu(pu_zoznam)) }
-change pu_stav_label value { "Aktívny" }
+change pu_stav_label value { stav_popis(snap) }
 changeCaseProperty("title").about { nazov(pu_meno, pu_priezvisko, pu_email) }
-changeCaseProperty("color").about { "green" }
+changeCaseProperty("color").about { stav_farba(snap) }
 				]]></action>
 			</actions>
 		</event>
@@ -577,19 +598,19 @@ pu_userid: f.pu_userid, pu_heslo: f.pu_heslo, pu_authority: f.pu_authority;
 def id = ((pu_userid.value ?: "") as String).trim()
 if (!id) {
     throw new java.lang.IllegalStateException(
-            "Tento prípad nie je zviazaný so žiadnym účtom. Účty sa zakladajú " +
-            "v zobrazení „Nový používateľ“; tento prípad zmažte.")
+            "This case is not linked to any account. Accounts are created " +
+            "in the \"New user\" view; delete this case.")
 }
 if (findUserById(id) == null) {
-    throw new java.lang.IllegalStateException("Účet sa nenašiel: " + id)
+    throw new java.lang.IllegalStateException("Account not found: " + id)
 }
 def heslo = formPassword(pu_heslo.value)
 if (heslo && !registrationService.isPasswordSufficient(heslo)) {
-    throw new java.lang.IllegalStateException("Nové heslo nespĺňa požiadavky instancie.")
+    throw new java.lang.IllegalStateException("The new password does not meet this instance's requirements.")
 }
 if (!ako_zoznam(pu_authority).contains("ROLE_USER")) {
     throw new java.lang.IllegalStateException(
-            "Bez ROLE_USER sa používateľ prihlási a neuvidí žiadne zobrazenie.")
+            "Without ROLE_USER the person can log in but will see no views at all.")
 }
 				]]></action>
 			</actions>
@@ -613,9 +634,9 @@ updateUserProfile(id, ((pu_meno.value ?: "") as String).trim(),
 setUserAuthorities(id, authorities)
 if (heslo) {
     changeUserPassword(id, heslo)
-    riadky << "heslo zmenené"
+    riadky << "password changed"
 }
-riadky << ("systémové oprávnenia: " + (authorities ? authorities.join(", ") : "žiadne"))
+riadky << ("system authorities: " + (authorities ? authorities.join(", ") : "none"))
 
 // Uprava je NASTAVENIE stavu, nie pridavanie - co v zozname nie je, sa odoberie,
 // inak by sa rola nedala nikdy zrusit.
@@ -624,7 +645,7 @@ def chceme = rozbor_zoznamu(pu_zoznam).collect { it.rola + "|" + it.siet } as Se
     (zoznamRoli ?: []).each { rola ->
         if (!chceme.contains((rola as String) + "|" + (siet as String))) {
             setProcessRole(id, rola as String, siet as String, "", false)
-            riadky << ("odobraná rola: " + rola + " (" + siet + ")")
+            riadky << ("role removed: " + rola + " (" + siet + ")")
         }
     }
 }
@@ -638,12 +659,17 @@ rozbor_zoznamu(pu_zoznam).each { p ->
         zlyhane << (p.rola + " (" + p.siet + ")")
     }
 }
-riadky << (pridelene ? "procesné role: " + pridelene.join(", ") : "procesné role: žiadne")
+riadky << (pridelene ? "process roles: " + pridelene.join(", ") : "process roles: none")
 if (zlyhane) {
-    riadky << ("NEPODARILO SA prideliť: " + zlyhane.join(", "))
+    riadky << ("COULD NOT assign: " + zlyhane.join(", "))
 }
 
-change pu_stav_label value { zlyhane ? "Aktívny s výhradou" : "Aktívny" }
+// `predtym` je snapshot PRED zmenami - stav sa musi nacitat znova, inak by
+// ucet, ktoremu prave niekto nastavil heslo, zostal navzdy "Invited".
+def potom = userSnapshot(id)
+change pu_stav_label value {
+    zlyhane ? (stav_popis(potom) + " with a caveat") : stav_popis(potom)
+}
 change pu_vysledok value { riadky.join("\n") }
 change pu_pridelene value { popis_zoznamu(rozbor_zoznamu(pu_zoznam)) }
 change pu_zmenil value { kto(loggedUser()) }
@@ -654,7 +680,7 @@ change pu_zmenene_o value { java.time.LocalDateTime.now() }
 change pu_heslo value { "" }
 
 changeCaseProperty("title").about { nazov(pu_meno, pu_priezvisko, pu_email) }
-changeCaseProperty("color").about { zlyhane ? "orange" : "green" }
+changeCaseProperty("color").about { zlyhane ? "orange" : stav_farba(potom) }
 				]]></action>
 			</actions>
 		</event>

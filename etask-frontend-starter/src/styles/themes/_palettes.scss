@@ -1,61 +1,189 @@
 // Material palette maps for the light and dark themes.
 //
-// Note on tones 50 and 100 of the dark primary ramp: @netgrif/components'
-// `navigation-theme` mixin uses `get-color-from-palette($primary, 50)` for the icon
-// rail and `..., 100)` for the selected rail item - it treats those two tones as
-// surface colours, not as tints. So the dark ramp deliberately puts dark surfaces
-// there, while `define-palette(..., 500, 300, 700)` keeps Material's own
-// default/lighter/darker pointing at real blues.
+// Odtiene sú z Netgrif Design System (`_n-tokens.scss`, rampy Brand / Purple /
+// Red / Neutral). Sú tu opísané ako doslovné hex hodnoty, nie `var(--n-*)`:
+// Material 13 si z palety počíta kontrast a skladá ju v čase kompilácie SCSS,
+// kam sa CSS premenná nedostane. Zdroj pravdy zostáva `_n-tokens.scss`; keď sa
+// tam rampa zmení, prepíšu sa aj tieto mapy.
+//
+// ---------------------------------------------------------------------------
+// DVE VECI, KTORE SA TU DAJU POKAZIT
+// ---------------------------------------------------------------------------
+//
+// 1. ODTIENE 50 A 100 NIE SU TINTY, SU TO PLOCHY. Knižničný `navigation-theme`
+//    z `@netgrif/components` berie `get-color-from-palette($primary, 50)` na
+//    ikonový rail a `..., 100)` na vybranú položku railu. Kto tam naleje svetlé
+//    odtiene brand rampy, dostane v tmavom režime svietiaci tyrkysový rail.
+//    Preto sú na oboch týchto miestach NEUTRÁLY - svetlé v svetlej téme, tmavé
+//    v tmavej - a brand začína až od 200.
+//
+// 2. PRIMÁRNA NIE JE BRAND 500. `brand-500` (#00B5D4) je v návrhu výplň
+//    tlačidla, nie farba textu - na bielej meria 2.18:1, takže všade, kde
+//    Material používa primary ako TEXT (odkaz, aktívny popisok, hint), by
+//    zmizla. Primárna je preto `brand-700` (#18748F, 5.34:1 na bielej)
+//    a samotná jasná výplň sa berie `var(--n-color-brand-500)` tam, kde ju
+//    návrh naozaj chce.
+//
+// `contrast` mapy nie sú odhad: je to farba textu NA tej ploche a vyberá sa
+// tak, aby prešla 4.5:1.
 
-// Brand navy - light mode primary. Unchanged from the original theme.
-$etask-blue: (
-  50: #e0e5eb,
-  100: #b3bdce,
-  200: #8092ad,
-  300: #4d668c,
-  400: #264574,
-  500: #00245b,
-  600: #002053,
-  700: #001b49,
-  800: #001640,
-  900: #000d2f,
-  A100: #687fff,
-  A200: #3554ff,
-  A400: #0229ff,
-  A700: #0024e7,
+// --- Brand, svetlá téma ----------------------------------------------------
+$ds-brand-light: (
+  50: #f9fafb, // neutral-50  - plocha railu, NIE brand tint
+  100: #f3f4f6, // neutral-100 - vybraná položka railu
+  200: #a3f5fe,
+  300: #62eafc,
+  400: #32d3ee,
+  500: #00b5d4, // brand - jasná výplň, potrebuje tmavý text
+  600: #0f91b2,
+  700: #18748f, // primárna: 5.34:1 na bielej, takže znesie aj text
+  800: #0e5e76,
+  900: #114f65,
+  A100: #62eafc,
+  A200: #32d3ee,
+  A400: #00b5d4,
+  A700: #0f91b2,
   contrast: (
     50: rgba(black, 0.87),
     100: rgba(black, 0.87),
     200: rgba(black, 0.87),
+    300: rgba(black, 0.87),
+    400: rgba(black, 0.87),
+    500: rgba(black, 0.87),
+    600: rgba(black, 0.87), // biela by tu bola 3.5:1
+    700: white,
+    800: white,
+    900: white,
+    A100: rgba(black, 0.87),
+    A200: rgba(black, 0.87),
+    A400: rgba(black, 0.87),
+    A700: rgba(black, 0.87),
+  )
+);
+
+// --- Brand, tmavá téma -----------------------------------------------------
+// Stúpajúco svetlejšia, rovnako ako to mala pôvodná azúrová mapa: 500 je
+// interaktívny akcent a sedí s `--app-accent` v `.app-dark`.
+$ds-brand-dark: (
+  50: #030713, // neutral-950 - plocha railu
+  100: #111826, // neutral-900 - vybraná položka railu
+  200: #0e5e76,
+  300: #18748f,
+  400: #0f91b2,
+  500: #32d3ee, // akcent tmavého režimu
+  600: #62eafc,
+  700: #a3f5fe,
+  800: #d4fafe,
+  900: #eafdfe,
+  A100: #a3f5fe,
+  A200: #62eafc,
+  A400: #32d3ee,
+  A700: #0f91b2,
+  contrast: (
+    50: #f9fafb,
+    100: #f9fafb,
+    200: white,
     300: white,
-    400: white,
-    500: white,
+    400: rgba(black, 0.87),
+    500: rgba(black, 0.87),
+    600: rgba(black, 0.87),
+    700: rgba(black, 0.87),
+    800: rgba(black, 0.87),
+    900: rgba(black, 0.87),
+    A100: rgba(black, 0.87),
+    A200: rgba(black, 0.87),
+    A400: rgba(black, 0.87),
+    A700: rgba(black, 0.87),
+  )
+);
+
+// --- Akcent (Material "accent") --------------------------------------------
+// Purple rampa z DS. Akcent má byť iný odtieň než primárna - keď je aj on
+// brandový, zvýraznenia a počty splynú s bežnou chrómou.
+$ds-purple-light: (
+  50: #f5f3ff,
+  100: #ede9fe,
+  200: #ddd6fe,
+  300: #c4b5fd,
+  400: #a78bfa,
+  500: #8b5cf6,
+  600: #7c3aed, // akcent: 5.0:1 na bielej
+  700: #6d28d9,
+  800: #5b21b6,
+  900: #4c1d95,
+  A100: #c4b5fd,
+  A200: #a78bfa,
+  A400: #8b5cf6,
+  A700: #7c3aed,
+  contrast: (
+    50: rgba(black, 0.87),
+    100: rgba(black, 0.87),
+    200: rgba(black, 0.87),
+    300: rgba(black, 0.87),
+    400: rgba(black, 0.87),
+    500: rgba(black, 0.87),
     600: white,
     700: white,
     800: white,
     900: white,
     A100: rgba(black, 0.87),
-    A200: white,
-    A400: white,
+    A200: rgba(black, 0.87),
+    A400: rgba(black, 0.87),
     A700: white,
   )
 );
 
-$etask-pink: (
-  50: #fdeced,
-  100: #fbcfd3,
-  200: #f8afb5,
-  300: #f58e97,
-  400: #f37681,
-  500: #f15e6b,
-  600: #ef5663,
-  700: #ed4c58,
-  800: #eb424e,
-  900: #e7313c,
-  A100: #ffffff,
-  A200: #fff7f8,
-  A400: #ffc4c7,
-  A700: #ffabaf,
+$ds-purple-dark: (
+  50: #030713,
+  100: #111826,
+  200: #5b21b6,
+  300: #6d28d9,
+  400: #7c3aed,
+  500: #a78bfa,
+  600: #c4b5fd,
+  700: #ddd6fe,
+  800: #ede9fe,
+  900: #f5f3ff,
+  A100: #ddd6fe,
+  A200: #c4b5fd,
+  A400: #a78bfa,
+  A700: #7c3aed,
+  contrast: (
+    50: #f9fafb,
+    100: #f9fafb,
+    200: white,
+    300: white,
+    400: white,
+    500: rgba(black, 0.87),
+    600: rgba(black, 0.87),
+    700: rgba(black, 0.87),
+    800: rgba(black, 0.87),
+    900: rgba(black, 0.87),
+    A100: rgba(black, 0.87),
+    A200: rgba(black, 0.87),
+    A400: rgba(black, 0.87),
+    A700: white,
+  )
+);
+
+// --- Warn -------------------------------------------------------------------
+// Red (rose) rampa z DS. Default je 700, rovnaký odtieň ako `--app-danger`,
+// aby chybová hláška z Materialu a naša mali jednu farbu.
+$ds-red-light: (
+  50: #fff1f2,
+  100: #ffe4e6,
+  200: #fecdd3,
+  300: #fda4af,
+  400: #fb7185,
+  500: #f43f5e,
+  600: #e11d48,
+  700: #be123c, // 6.29:1 na bielej
+  800: #9f1239,
+  900: #881337,
+  A100: #fda4af,
+  A200: #fb7185,
+  A400: #f43f5e,
+  A700: #e11d48,
   contrast: (
     50: rgba(black, 0.87),
     100: rgba(black, 0.87),
@@ -74,62 +202,27 @@ $etask-pink: (
   )
 );
 
-// Azure - dark mode primary. 500 is the interactive accent; 50/100 are rail surfaces.
-$etask-azure-dark: (
-  50: #131418,
-  100: #22242a,
-  200: #17457f,
-  300: #1f5fbf,
-  400: #276fdb,
-  500: #2e7df7,
-  600: #4a8ff9,
-  700: #6ba4fa,
-  800: #8fbbfc,
-  900: #b8d4fd,
-  A100: #8fbbfc,
-  A200: #6ba4fa,
-  A400: #2e7df7,
-  A700: #1f5fbf,
+$ds-red-dark: (
+  50: #030713,
+  100: #111826,
+  200: #881337,
+  300: #9f1239,
+  400: #be123c,
+  500: #fb7185,
+  600: #fda4af,
+  700: #fecdd3,
+  800: #ffe4e6,
+  900: #fff1f2,
+  A100: #fecdd3,
+  A200: #fda4af,
+  A400: #fb7185,
+  A700: #be123c,
   contrast: (
-    50: #e8eaed,
-    100: #e8eaed,
+    50: #f9fafb,
+    100: #f9fafb,
     200: white,
     300: white,
     400: white,
-    500: white,
-    600: rgba(black, 0.87),
-    700: rgba(black, 0.87),
-    800: rgba(black, 0.87),
-    900: rgba(black, 0.87),
-    A100: rgba(black, 0.87),
-    A200: rgba(black, 0.87),
-    A400: white,
-    A700: white,
-  )
-);
-
-// Coral - dark mode accent, lifted so it reads against a dark surface.
-$etask-coral-dark: (
-  50: #2a1b1d,
-  100: #3d2427,
-  200: #7a3b42,
-  300: #b0525c,
-  400: #d96b76,
-  500: #f47b86,
-  600: #f68f98,
-  700: #f8a4ac,
-  800: #fabcc2,
-  900: #fcd6da,
-  A100: #fabcc2,
-  A200: #f8a4ac,
-  A400: #f47b86,
-  A700: #d96b76,
-  contrast: (
-    50: #e8eaed,
-    100: #e8eaed,
-    200: white,
-    300: rgba(black, 0.87),
-    400: rgba(black, 0.87),
     500: rgba(black, 0.87),
     600: rgba(black, 0.87),
     700: rgba(black, 0.87),
@@ -138,6 +231,6 @@ $etask-coral-dark: (
     A100: rgba(black, 0.87),
     A200: rgba(black, 0.87),
     A400: rgba(black, 0.87),
-    A700: rgba(black, 0.87),
+    A700: white,
   )
 );

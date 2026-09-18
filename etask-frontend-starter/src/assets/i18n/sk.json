@@ -18,7 +18,9 @@
   "menu": {
     "views": "Zobrazenia",
     "settings": "Nastavenia",
-    "root-folders": "Kategórie"
+    "root-folders": "Kategórie",
+    "emptyFolder": "V tomto priečinku zatiaľ nič nie je.",
+    "folders": "Priečinky"
   },
   "workflow": {
     "publicUrl": "Verejná URL",
@@ -32,7 +34,8 @@
     "searchField": {
       "identifier": "Identifikátor",
       "initials": "Skratka"
-    }
+    },
+    "anonymousView": "Verejný formulár"
   },
   "snackbar": {
     "filterDeleteSuccess": "Filter úspešne vymazaný. Aktualizujem zobrazenie.",
@@ -44,10 +47,14 @@
     "theme": {
       "toDark": "Tmavý režim",
       "toLight": "Svetlý režim"
+    },
+    "login": {
+      "forgotten": "Zabudnuté heslo?"
     }
   },
   "uriNode": {
     "admin": "Správa",
+    "cesty": "Pracovné cesty",
     "dovolenky": "Dovolenky",
     "faktury": "Faktúry",
     "financie": "Financie",
@@ -57,9 +64,35 @@
     "majetok": "Majetok",
     "nastavenia": "Nastavenia",
     "objednavky": "Objednávky",
-    "onboarding": "Nástup zamestnanca",
+    "onboarding": "Nástupy zamestnancov",
     "pouzivatelia": "Používatelia",
+    "schvalovanie": "Objednávky a faktúry",
     "service_desk": "Service Desk",
     "uver": "Úver"
+  },
+  "view": {
+    "publicForm": {
+      "title": "Podanie požiadavky",
+      "footer": "Formulár pre podanie požiadavky do Netgrif eTask"
+    }
+  },
+  "auth": {
+    "backToLogin": "Späť na prihlásenie",
+    "recover": {
+      "askAgain": "Požiadať o nový odkaz",
+      "done": "Heslo je nastavené, môžeš sa prihlásiť.",
+      "failed": "Heslo sa nepodarilo nastaviť.",
+      "intro": "Zvoľ si nové heslo. Po jeho nastavení sa ním rovno prihlásiš.",
+      "invalidToken": "Odkaz je neplatný alebo mu vypršala platnosť.",
+      "noToken": "Odkaz neobsahuje token. Otvor ho priamo z mailu.",
+      "title": "Nastavenie nového hesla"
+    },
+    "reset": {
+      "failed": "Žiadosť o obnovu hesla sa nepodarilo odoslať.",
+      "intro": "Zadaj adresu, ktorou sa prihlasuješ. Pošleme na ňu odkaz na nastavenie nového hesla.",
+      "sent": "Ak účet s tou adresou existuje, odkaz na obnovu je na ceste.",
+      "sentInfo": "Ak účet s tou adresou existuje, odkaz je na ceste. Skontroluj si schránku.",
+      "title": "Zabudnuté heslo"
+    }
   }
 }

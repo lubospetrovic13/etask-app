@@ -10,7 +10,13 @@
   <div class="login-language" fxLayout="row" fxLayoutAlign="end center">
     <app-etask-language-selector [language]="currentLanguage"></app-etask-language-selector>
   </div>
-  <div class="fill-all-space" fxLayout="row" fxLayoutAlign="center center">
+  <div class="fill-all-space" fxLayout="column" fxLayoutAlign="center center">
     <nc-login-form (login)="onLogin($event)"></nc-login-form>
+    <!--
+        Bez tohto odkazu je obnova hesla nedosiahnuteľná: `/reset` je verejná
+        routa, ale nikde z aplikácie na ňu nevedie cesta - a kto sa nevie
+        prihlásiť, ten sa k nej inak nedostane.
+    -->
+    <a class="login-recover" routerLink="/reset">{{ 'app.login.forgotten' | translate }}</a>
   </div>
 </nc-authentication-overlay>

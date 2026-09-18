@@ -69,7 +69,7 @@
 c_active: f.c_active;
 
 change c_active value { true }
-changeCaseProperty("title").about { "Nový zákazník" }
+changeCaseProperty("title").about { "New customer" }
 				]]></action>
 			</actions>
 		</event>

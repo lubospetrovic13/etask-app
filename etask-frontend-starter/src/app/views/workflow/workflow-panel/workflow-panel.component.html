@@ -17,6 +17,12 @@
   <ng-template #content>
     <div class="panel-main-content" fxLayout="column">
       <div class="workflow-panel-body" fxFlex="100">
+        <!-- Odznak je tu, nie v hlavicke: hlavicka je zoznam stlpcov a kazdy
+             dalsi prvok v nej ubera miesto nazvu procesu. -->
+        <div *ngIf="anonymous" class="workflow-public-badge">
+          <mat-icon class="workflow-public-badge-icon">public</mat-icon>
+          <span>{{ 'workflow.anonymousView' | translate }}</span>
+        </div>
         <div fxLayout="row">
           <div fxFlex="50">
             <nc-text-field [dataField]="panelContent.netIdentifier">
@@ -42,7 +48,7 @@
             <nc-date-time-field [dataField]="panelContent.uploaded">
             </nc-date-time-field>
           </div>
-          <div fxLayout="row" fxLayoutAlign="start center" fxFlex="50">
+          <div *ngIf="anonymous" fxLayout="row" fxLayoutAlign="start center" fxFlex="50">
             <nc-text-field [dataField]="publicUrlTextField"
                            (click)="copyToClipboard(publicUrlTextField.value)" fxFlex>
             </nc-text-field>

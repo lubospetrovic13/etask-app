@@ -15,3 +15,22 @@
   margin-right: 8px;
 }
 
+
+.workflow-public-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 4px 10px;
+  border-radius: var(--n-border-radius-full);
+  background: var(--n-color-brand-50);
+  color: var(--n-color-brand-800);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.workflow-public-badge-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}

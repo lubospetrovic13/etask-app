@@ -49,15 +49,14 @@ export class ETaskBreadcrumbsComponent {
   }
 
   /**
-   * Same fallback the dashboard uses for a folder it can't drop you straight
-   * into a view for: point the tree at it and land on `portal`, so the drawer's
-   * own folder/view list becomes the next thing to click - it does not guess
-   * which of the folder's views you meant.
+   * To isté, čo robí klik na priečinok v strome aj na dashboarde: nastaviť
+   * uzol a pristáť na `FolderViewComponent`, teda na obsahu priečinka.
+   * Nehádame, ktoré z jeho zobrazení mal človek na mysli.
    */
   public goToNode(path: string): void {
     this._uri.getNodeByPath(path).subscribe(node => {
       this._uri.activeNode = node;
-      this._router.navigate(['portal']);
+      this._router.navigate(['portal', 'folder']);
     });
   }
 }

@@ -18,7 +18,9 @@
   "menu": {
     "views": "Views",
     "settings": "Settings",
-    "root-folders": "Categories"
+    "root-folders": "Categories",
+    "emptyFolder": "There is nothing in this folder yet.",
+    "folders": "Folders"
   },
   "workflow": {
     "publicUrl": "Public URL",
@@ -32,7 +34,8 @@
     "searchField": {
       "identifier": "Identifier",
       "initials": "Initials"
-    }
+    },
+    "anonymousView": "Public form"
   },
   "snackbar": {
     "filterDeleteSuccess": "Filter deleted successfully. Refreshing view.",
@@ -44,10 +47,14 @@
     "theme": {
       "toDark": "Dark mode",
       "toLight": "Light mode"
+    },
+    "login": {
+      "forgotten": "Forgotten password?"
     }
   },
   "uriNode": {
     "admin": "Administration",
+    "cesty": "Business trips",
     "dovolenky": "Time off",
     "faktury": "Invoices",
     "financie": "Finance",
@@ -59,7 +66,33 @@
     "objednavky": "Orders",
     "onboarding": "Employee onboarding",
     "pouzivatelia": "Users",
+    "schvalovanie": "Orders and invoices",
     "service_desk": "Service Desk",
     "uver": "Loans"
+  },
+  "view": {
+    "publicForm": {
+      "title": "Submit a request",
+      "footer": "Request submission form for Netgrif eTask"
+    }
+  },
+  "auth": {
+    "backToLogin": "Back to sign in",
+    "recover": {
+      "askAgain": "Ask for a new link",
+      "done": "Your password is set, you can sign in.",
+      "failed": "The password could not be set.",
+      "intro": "Choose a new password. Once it is set you can sign in with it right away.",
+      "invalidToken": "The link is invalid or has expired.",
+      "noToken": "The link carries no token. Open it straight from the e-mail.",
+      "title": "Set a new password"
+    },
+    "reset": {
+      "failed": "The password reset request could not be sent.",
+      "intro": "Enter the address you sign in with. We will send a link for setting a new password to it.",
+      "sent": "If an account with that address exists, the recovery link is on its way.",
+      "sentInfo": "If an account with that address exists, the link is on its way. Check your inbox.",
+      "title": "Forgotten password"
+    }
   }
 }
