@@ -1,0 +1,272 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>financie/uver/uv_nastavenia</id>
+	<version>1.0.0</version>
+	<initials>UVN</initials>
+	<title name="net_title">Nastavenia úverov</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Loan settings</i18nString>
+		<i18nString name="spravca_title">Administrator</i18nString>
+		<i18nString name="div_limity_init">Limits</i18nString>
+		<i18nString name="div_stav_init">State</i18nString>
+		<i18nString name="uvn_limit_title">Director's limit (EUR)</i18nString>
+		<i18nString name="uvn_limit_desc">Above this amount a loan is signed off by the director as well, even when the calculator or the loan officer approved it.</i18nString>
+		<i18nString name="uvn_vysledok_title">What the last save did</i18nString>
+		<i18nString name="uvn_ulozil_title">Saved by</i18nString>
+		<i18nString name="uvn_ulozene_o_title">Saved</i18nString>
+		<i18nString name="t_uvn_label">Loan settings</i18nString>
+		<i18nString name="t_uvn_finish">Save settings</i18nString>
+		<i18nString name="empty_button"></i18nString>
+	</i18n>
+	<icon>tune</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		KONFIGURACIA UVEROV. Jedna obrazovka, jeden case na verziu siete
+		(vzor B27), vidi ju spravca.
+
+		PRECO VLASTNA SIET a nie pole v `admin/nastavenia/sc_nastavenia`:
+		tamtá siet patri aplikacii Objednavky a faktury, ktora zije vo VLASTNOM
+		REPE a do checkoutu sa dostava cez `pfapp install`. Limit uveru je
+		nastavenie SABLONY, takze by to bola zavislost obratenym smerom - a co
+		horsie, `pfapp install` by to pole pri najblizsej aktualizacii tej appky
+		ticho zmazal. Prvy pokus to mal presne tak a `pfapp status` to odhalil.
+
+		Sem patri aj to, co je dnes v `uv_ziadost` natvrdo a zakaznik to bude
+		chciet menit: urokove pasma podla skore a hranice DTI. Zatial su v sieti,
+		lebo ich nikto menit nepotreboval - ked bude, pribudnu tu a nie do XML.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>uvn_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+uvn_limit: f.uvn_limit;
+
+// Case sa pri novej verzii siete zaklada nanovo (inak by na nom chybali nove
+// polia). Limit je UDAJ, nie odraz nicoho, takze sa musi preniest - bez toho
+// by kazdy re-import ticho vratil hodnotu na default a nikto by si toho
+// nevsimol, kym by neprisiel uver tesne nad hranicou.
+def stary = najnovsiCase("financie/uver/uv_nastavenia")
+def prev = (stary != null && stary.stringId != useCase.stringId)
+        ? stary?.dataSet?.get("uvn_limit")?.value : null
+change uvn_limit value { (prev != null ? prev : 50000.0d) as Double }
+
+changeCaseProperty("title").about { "Loan settings" }
+changeCaseProperty("color").about { "blue" }
+postav_menu()
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="kto"><![CDATA[
+{ def u ->
+    // `?.` chrani pred null, nie pred chybajucou property - a na chybajucej
+    // vyhodi MissingPropertyException uprostred akcie.
+    return (u.hasProperty("fullName") && u.fullName) ? (u.fullName as String) : (u.email as String)
+}
+	]]></function>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def id ->
+    try { return findMenuItem(id) } catch (Exception e) { return null }
+}
+	]]></function>
+	<function scope="process" name="postav_menu"><![CDATA[
+{ ->
+    // Zobrazenie typu TASK, nie Case: otvori rovno formular. Dopyt NESMIE stat
+    // na `processIdentifier` - task dokument ho nema, ma len `processId` razene
+    // per verziu siete. Preto sa zuzuje na `transitionId` A `processId` TEJTO
+    // verzie: `rebuildOnNewVersion` zaklada jeden case na verziu, takze bez
+    // toho by zoznam po druhom re-importe ukazal dva riadky a clovek by
+    // nevedel, ktory je ten platny.
+    def id = "uv_nastavenia_view"
+    def siet = "financie/uver/uv_nastavenia"
+    def nazov = i18n("Nastavenia úverov", ["en": "Loan settings"])
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            // Update cesta `createOrUpdateMenuItem` nefunguje, polozka sa vzdy
+            // zahodi a postavi znova. PORADIE: najprv polozka, potom filter -
+            // naopak to padne, lebo `deleteMenuItem` si filter este raz nacita.
+            def current = getFilterFromMenuItem(existing)
+            deleteMenuItem(existing)
+            if (current != null) deleteFilter(current)
+        }
+        createOrUpdateMenuItem(
+                id,
+                "financie/uver",          // URI cesta - musi sedet s uriNodes
+                "Task",
+                "transitionId:\"t_uvn\" AND processId:\"" +
+                        (useCase.petriNetId as String) + "\"",
+                "tune",
+                nazov,
+                [siet],
+                ["spravca": siet],   // v menu ju vidi len spravca
+                [:])
+    } catch (Exception e) {
+        // Menu nesmie zhodit zalozenie konfiguracneho casu - bez neho by appka
+        // prisla aj o limit, nielen o polozku v menu.
+        changeCaseProperty("color").about { "orange" }
+    }
+}
+	]]></function>
+	<roleRef>
+		<id>spravca</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>spravca</id>
+		<title name="spravca_title">Správca</title>
+	</role>
+	<data type="i18n">
+		<id>div_limity</id>
+		<title/>
+		<init name="div_limity_init">Limity</init>
+	</data>
+	<data type="i18n">
+		<id>div_stav</id>
+		<title/>
+		<init name="div_stav_init">Stav</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>uvn_limit</id>
+		<title name="uvn_limit_title">Limit riaditeľa (€)</title>
+		<desc name="uvn_limit_desc">Nad túto sumu podpisuje úver ešte riaditeľ, aj keď ho kalkulačka alebo referent schválili.</desc>
+		<init>50000</init>
+	</data>
+	<data type="text">
+		<id>uvn_vysledok</id>
+		<title name="uvn_vysledok_title">Čo spravilo posledné uloženie</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>uvn_ulozil</id>
+		<title name="uvn_ulozil_title">Uložil</title>
+	</data>
+	<data type="dateTime">
+		<id>uvn_ulozene_o</id>
+		<title name="uvn_ulozene_o_title">Uložené</title>
+	</data>
+	<transition>
+		<id>t_uvn</id>
+		<x>180</x>
+		<y>80</y>
+		<label name="t_uvn_label">Nastavenia úverov</label>
+		<icon>tune</icon>
+		<!-- Osobna uloha na konfiguracnom pulte - `auto` je v poriadku (B12). -->
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>spravca</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_uvn</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_limity</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>uvn_limit</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_stav</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>uvn_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>uvn_ulozil</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>uvn_ulozene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="cancel">
+			<id>t_uvn_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_uvn_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_uvn_finish</id>
+			<title name="t_uvn_finish">Uložiť nastavenia</title>
+			<actions phase="pre">
+				<action id="2"><![CDATA[
+uvn_limit: f.uvn_limit;
+
+// Hodnoty a hlasky su po ANGLICKY - aplikacia ma anglictinu ako default
+// a tieto retazce preklad nemaju (CLAUDE.md, Jazyk).
+def v = uvn_limit.value
+if (v == null || (v as Number).doubleValue() <= 0) {
+    throw new java.lang.IllegalStateException(
+            "The director's limit must be greater than zero. Zero would mean " +
+                    "the director signs off every single loan.")
+}
+				]]></action>
+			</actions>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+uvn_limit: f.uvn_limit, uvn_vysledok: f.uvn_vysledok,
+uvn_ulozil: f.uvn_ulozil, uvn_ulozene_o: f.uvn_ulozene_o;
+
+change uvn_ulozil value { kto(loggedUser()) }
+change uvn_ulozene_o value { java.time.LocalDateTime.now() }
+change uvn_vysledok value {
+    "director's limit: " + (uvn_limit.value as String) + " EUR"
+}
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>60</x>
+		<y>80</y>
+		<label>Alive</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<!--
+		READ arc: ulozenie token nepohne, takze sa uloha hned otvori znova
+		a konfiguracia sa da menit dokola. Regularny arc by po prvom ulozeni
+		obrazovku zavrel a uz by ju nemal kto otvorit (B8).
+	-->
+	<arc>
+		<id>a_uvn</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_uvn</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>
