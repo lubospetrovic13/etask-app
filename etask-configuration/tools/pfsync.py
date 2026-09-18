@@ -15,10 +15,17 @@ netreba ziadny marker, checksum subor ani pamat medzi behmi.
     python3 tools/pfsync.py             # co sa rozislo, citatelne
     python3 tools/pfsync.py --list      # len cesty, na rure do pfcheck
     python3 tools/pfsync.py --sync      # rozdielne naimportuje a prideli role
+    python3 tools/pfsync.py --pull      # OPACNY SMER: zoberie verzie z enginu
+                                        # a PREPISE nimi lokalne XML
 
 `--sync` vola tools/pfcheck.sh (import + ground truth z logu) a potom
 tools/pfseed.py (role maju stringId per verziu siete, takze po re-importe treba
 pridelit znova). Presne toto robi aj `tools/up.sh` po starte backendu.
+
+`--pull` je na opacnu situaciu: pozadu je REPOZITAR, nie engine. Instancia
+bezi zo starsieho/ineho stromu a jej siete vedia viac nez lokalne subory -
+vtedy je `--sync` DOWNGRADE, zmazal by funkcionalitu, ktora v XML v repozitari
+nikdy nebola. `--pull` zoberie to, co realne bezi, a zapise to sem.
 
 Nespustat proti produkcii - `--sync` importuje nove verzie sieti.
 
@@ -38,6 +45,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PROCESSES = ROOT / "processes"
+
+# Koniec riadku sa normalizuje na LF. `compare()` porovnava rovnako, takze
+# po `--pull` nesmie v subore zostat CRLF - inak by sa siet javila ako
+# rozidena hned po tom, co sa stiahla.
+CRLF = chr(13) + chr(10)
+LF = chr(10)
 MANIFEST = ROOT / "processes.json"
 
 URL = os.environ.get("PF_URL", "http://127.0.0.1:8080")
@@ -159,9 +172,40 @@ def compare():
     return out
 
 
+def pull(rows):
+    """Stiahne XML rozidenych sieti z enginu a prepise nimi lokalne subory.
+
+    Zapisuje sa presne to, co porovnava `compare()` (LF, bez CRLF) - inak by
+    `pfsync` hned po `--pull` hlasil, ze sa siet zase rozisla.
+    """
+    token = login()
+    zapisane, zlyhali = [], []
+    for path, ident, stav, ver in rows:
+        if stav != "ROZISLO_SA":
+            continue
+        ref = newest(token, ident)
+        st, stored = call(token, "GET", "/api/petrinet/" + ref["stringId"] + "/file", raw=True)
+        if st != 200 or not isinstance(stored, str):
+            zlyhali.append((path.name, "HTTP " + str(st)))
+            continue
+        path.write_text(stored.replace(CRLF, LF), encoding="utf-8", newline=LF)
+        zapisane.append((path.name, ident, ref["version"]))
+    for meno, ident, ver in zapisane:
+        print("  <- {:24s} {:34s} v{}".format(meno, ident, ver))
+    for meno, preco in zlyhali:
+        print("  !! {}: {}".format(meno, preco), file=sys.stderr)
+    print("")
+    print("pfsync: stiahnutych " + str(len(zapisane)) + " sieti z enginu do processes/")
+    if zapisane:
+        print("        Lokalne XML su prepisane - pozri `git diff`.")
+        print("        Potom: pflint, pfgroovy, pfi18n, pfview")
+    return 1 if zlyhali else 0
+
+
 def main(argv):
     only_list = "--list" in argv
     do_sync = "--sync" in argv
+    do_pull = "--pull" in argv
 
     rows = compare()
     changed = [r for r in rows if r[2] != "SEDI"]
@@ -180,6 +224,10 @@ def main(argv):
         return 0
 
     print(f"\npfsync: rozislo sa {len(changed)} sieti")
+    if do_pull:
+        print("        --pull: beriem verzie z ENGINU a prepisujem lokalne XML")
+        print("")
+        return pull(rows)
     if not do_sync:
         print("        engine drzi stary model, LATEST mieri na neho a nove casy")
         print("        vzniknu z neho. Zosuladit: python3 tools/pfsync.py --sync")

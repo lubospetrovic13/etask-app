@@ -162,19 +162,42 @@ def mongo_eval(script):
     return None, "mongosh sa nepodarilo spustit (skus PF_MONGO_CONTAINER alebo PF_DB)"
 
 
+# Dva rozne druhy osirelosti, a druhy nie je zovseobecnenie prveho:
+#
+#   A) processRole EXISTUJE, ale jeho siet nie. Vznikne zlyhanym importom -
+#      ten stihne role vyrobit a siet nechá neexistovat.
+#   B) processRole NEEXISTUJE, ale uzivatel nan stale ukazuje. Vznikne
+#      zmazanim siete: engine k nej zmaze aj role, ale zaznamy v `user`
+#      necha - a serializacia uzivatela potom spadne rovnako ako pri A.
+#
+# Prve vydanie riesilo len A, takze po zmazani duplicitnych sieti hlasilo
+# "osirele role nie su" a uzivatel zostal necitatelny. Obe vetvy musia byt.
 REPAIR_SCRIPT = """
 var netIds = db.petriNet.find({}, {_id: 1}).toArray().map(function (n) { return String(n._id); });
 var orphans = db.processRole.find({}).toArray().filter(function (r) {
     return r.netId && netIds.indexOf(String(r.netId)) < 0;
 });
 var ids = orphans.map(function (r) { return r._id; });
-if (ids.length === 0) { print("ORPHANS 0"); } else {
-    var touched = db.user.updateMany({"processRoles._id": {$in: ids}},
-                                     {$pull: {processRoles: {_id: {$in: ids}}}});
-    var removed = db.processRole.deleteMany({_id: {$in: ids}});
-    print("ORPHANS " + ids.length + " users " + touched.modifiedCount +
-          " deleted " + removed.deletedCount);
+var users = 0, deleted = 0;
+if (ids.length > 0) {
+    users += db.user.updateMany({"processRoles._id": {$in: ids}},
+                               {$pull: {processRoles: {_id: {$in: ids}}}}).modifiedCount;
+    deleted = db.processRole.deleteMany({_id: {$in: ids}}).deletedCount;
 }
+
+// B) visiace odkazy z pouzivatela na rolu, ktora uz nie je.
+var roleIds = {};
+db.processRole.find({}, {_id: 1}).toArray().forEach(function (r) { roleIds[String(r._id)] = 1; });
+var dangling = 0;
+db.user.find({"processRoles.0": {$exists: true}}, {processRoles: 1}).toArray().forEach(function (u) {
+    var bad = (u.processRoles || []).filter(function (r) { return !roleIds[String(r._id)]; })
+                                    .map(function (r) { return r._id; });
+    if (bad.length === 0) { return; }
+    db.user.updateOne({_id: u._id}, {$pull: {processRoles: {_id: {$in: bad}}}});
+    dangling += bad.length;
+    users += 1;
+});
+print("ORPHANS " + (ids.length + dangling) + " users " + users + " deleted " + deleted);
 """
 
 
