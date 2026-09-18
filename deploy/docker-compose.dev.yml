@@ -148,9 +148,14 @@ services:
       MAIL_PORT: 1025
       MAIL_TLS_ENABLED: "false"
       MAIL_AUTH_ENABLED: "false"
-      MAIL_FROM: etask@kaskady.local
-      MAIL_DOMAIN_APP: localhost
-      MAIL_DOMAIN_APP_PORT: 4200
+      MAIL_FROM: ${MAIL_FROM:-etask@kaskady.local}
+      # Adresa, na ktorú mieria odkazy V MAILOCH (obnova hesla, pozvánka).
+      # Natvrdo `localhost` je správne len na vlastnom stroji - na serveri by
+      # to poslalo človeka na jeho vlastný počítač a vyzeralo by to ako
+      # rozbitý odkaz. Preto sa to dá prebiť cez deploy/.env, s rovnakým
+      # defaultom ako doteraz.
+      MAIL_DOMAIN_APP: ${MAIL_DOMAIN_APP:-localhost}
+      MAIL_DOMAIN_APP_PORT: ${MAIL_DOMAIN_APP_PORT:-4200}
       ETASK_NOTIFICATIONS: "true"
 
       # --- OCR ----------------------------------------------------------
