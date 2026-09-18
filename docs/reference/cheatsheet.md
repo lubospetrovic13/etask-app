@@ -38,6 +38,18 @@ takže chyby poradia (uzol, ktorý prvý beh nevyrobí; runner, ktorý beží pr
 sa na nej neprejavia vôbec. Dvakrát to prežilo celý zelený reťazec vyššie —
 podrobne `pfdoc analyza 7`.
 
+To isté platí opačným smerom: sieť naimportovaná ručne v engine žije ďalej aj
+keď v manifeste nie je, a na čistej databáze potom **appka jednoducho
+neexistuje**. `pfsync` to odteraz hlási sám, obe strany rozdielu:
+
+```
+pfsync: v ENGINE a NIE v manifeste - na cistej databaze zanikne:
+pfsync: v MANIFESTE a NIE v engine - up.sh to naimportuje:
+```
+
+Takto sa stratila celá appka Pracovné cesty — štyri siete a 13 prípadov,
+ktoré inštancia bežne používala (`pfdoc analyza 8`, kapitola 8.3).
+
 Pridanie appky Javu nevyžaduje (rozšírenie platformy o schopnosť, ktorú engine
 nemá, je iná vec a je v poriadku — vtedy pribudne primitívum v delegáte,
 prípadne servis a závislosť v `pom.xml`). Pri zmene **manifestu** treba prestaviť jar
