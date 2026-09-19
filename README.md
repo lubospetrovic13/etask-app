@@ -1,5 +1,9 @@
 # eTask
 
+[![Open in GitHub Codespaces](https://img.shields.io/badge/Open_in-GitHub_Codespaces-2497f2?logo=github&logoColor=white)](https://codespaces.new/lubospetrovic13/etask-app)
+[![Open in Dev Container](https://img.shields.io/badge/Open_in-Dev_Container-3abead?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect?url=vscode%3A%2F%2Fms-vscode-remote.remote-containers%2FcloneInVolume%3Furl%3Dhttps%3A%2F%2Fgithub.com%2Flubospetrovic13%2Fetask-app)
+[![Open in Claude Code](https://img.shields.io/badge/Open_in-Claude_Code-6038b2?logo=claude&logoColor=white)](#one-click-if-you-already-have-claude-code)
+
 A Petriflow-first application stack on top of the Netgrif Application Engine 6.3.1.
 
 The database, the REST layer, the frontend, login, IAM, roles and permissions are already
@@ -148,6 +152,39 @@ validate and import nets itself instead of guessing whether a net is correct.
 On Windows, install [Git for Windows](https://git-scm.com/downloads/win) as well, otherwise
 Claude Code runs shell commands through PowerShell and the `tools/*.sh` scripts in this
 repository will not run.
+
+#### One click, if you already have Claude Code
+
+Claude Code registers a `claude-cli://` URL handler, so a link can open a session for you.
+Paste this into your browser's address bar:
+
+```text
+claude-cli://open?repo=lubospetrovic13/etask-app&q=This%20is%20the%20eTask%20Petriflow%20starter.%20If%20you%20do%20not%20have%20it%20yet%2C%20clone%20https%3A%2F%2Fgithub.com%2Flubospetrovic13%2Fetask-app%20and%20cd%20into%20it.%0AThen%20read%20README.md%2C%20start%20the%20stack%20with%20etask-configuration%2Ftools%2Fup.sh%20--docker%2C%20and%20tell%20me%20when%20the%20portal%20is%20up%20on%20http%3A%2F%2Flocalhost%3A4200.
+```
+
+It opens a terminal session in your clone of this repository with the prompt already written.
+If you have not cloned it yet, the prompt tells Claude Code to do that first. **Nothing is
+sent until you read it and press Enter**, and the session shows a `Prompt from an external
+link` warning until you do.
+
+The same link is a working button on
+[the page that hosts the demo video](https://claude.ai/artifact/Nfms7SUMAAuejGeVf7aLnb#run).
+It cannot be a button here: GitHub strips every non-`http` scheme from README links, so
+`[label](claude-cli://...)` would render as dead text. That is also why the badge at the top
+of this file points at this section rather than at the link itself.
+
+Two conditions, both easy to miss:
+
+- The handler is registered **the first time you send a prompt in an interactive session**,
+  not when Claude Code is installed. If clicking does nothing, run `claude` once, send
+  anything, and try again.
+- `repo=` resolves to a clone Claude Code has **already seen**. Run `claude` inside the
+  checkout once so it records the path, otherwise the session opens in your home directory
+  and follows the prompt's clone instruction instead.
+
+Needs Claude Code 2.1.91 or newer. The VS Code extension has its own handler,
+`vscode://anthropic.claude-code/open?prompt=...`, which opens a Claude Code tab in the
+focused window rather than a terminal.
 
 ### Cursor, Codex CLI, Gemini CLI, Copilot, Windsurf
 
