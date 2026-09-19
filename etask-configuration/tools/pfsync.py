@@ -285,7 +285,17 @@ def main(argv):
 
     if not changed:
         print("\npfsync: vsetky siete sedia s tym, co drzi engine")
-        return 0
+        if not do_sync:
+            return 0
+        # Na CISTEJ databaze sa nerozide NIC: `NetRunner` naimportuje vsetky
+        # siete uz pri prvom starte, takze sa sem dojde aj vtedy, ked este
+        # nikto nema ziadnu rolu. Kym sa `pfseed` spustal len po zmene siete,
+        # prvy beh po `git clone` skoncil bez pridelenych rol - a appka vtedy
+        # vyzera ako nenaimportovana ("siet nie je naimportovana") alebo vracia
+        # pri zakladani casu 403. Preto sa role dorovnavaju vzdy: `pfseed` je
+        # idempotentny a ked niet co menit, povie to jednym riadkom.
+        print("\n== pfseed (rola ma stringId per verziu siete)")
+        return subprocess.call([sys.executable, str(ROOT / "tools" / "pfseed.py")])
 
     print(f"\npfsync: rozislo sa {len(changed)} sieti")
     if do_pull:

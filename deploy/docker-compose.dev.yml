@@ -116,7 +116,11 @@ services:
       # deploy/vendor-deps.sh a etask-configuration/processes.
       context: ..
       dockerfile: etask-backend-starter/Dockerfile
-    image: etask-backend:dev
+    # Tag musi ist s projektom. Meno projektu izoluje volumes, ale NIE obrazy:
+    # dva checkouty s roznymi menami projektu si inak navzajom prepisuju ten
+    # isty `etask-backend:dev`, takze druhy `up` zdvihne obraz postaveny z cudzej
+    # vetvy - a vyzera to ako keby sa zmeny neprejavili.
+    image: etask-backend:${IMAGE_TAG:-dev}
     restart: unless-stopped
     depends_on:
       mongo:
@@ -209,7 +213,7 @@ services:
     build:
       context: ../etask-frontend-starter
       dockerfile: Dockerfile
-    image: etask-frontend:dev
+    image: etask-frontend:${IMAGE_TAG:-dev}
     restart: unless-stopped
     depends_on:
       backend:

@@ -175,13 +175,14 @@ if [ "$DO_DOCKER" = 1 ]; then
   # merala appka na backende o 35 hodin starsom nez checkout, a chyba, ktora
   # bola v zdrojoch davno opravena, vyzerala ako zivá.
   if [ "$DO_BUILD" = 0 ]; then
-    img_iso=$(docker image inspect etask-backend:dev --format "{{.Created}}" 2>/dev/null | cut -c1-19)
+    img_tag="etask-backend:${IMAGE_TAG:-dev}"
+    img_iso=$(docker image inspect "$img_tag" --format "{{.Created}}" 2>/dev/null | cut -c1-19)
     if [ -n "$img_iso" ]; then
       newer=$(find etask-backend-starter/src etask-backend-starter/pom.xml \
                    etask-configuration/processes etask-configuration/processes.json \
                    -newermt "${img_iso}Z" 2>/dev/null | head -1)
       if [ -n "$newer" ]; then
-        echo "zdroje su novsie nez obraz etask-backend:dev ($newer)"
+        echo "zdroje su novsie nez obraz $img_tag ($newer)"
         echo "prestavujem - inak by stack bezal na starom kode"
         DO_BUILD=1
       fi
@@ -208,6 +209,32 @@ if [ "$DO_DOCKER" = 1 ]; then
     die "backend v kontejneri nenabehol"
   fi
   echo "ok"
+
+  # Healthcheck aj tato slucka vyssie prejdu hned, ako nabehne WEB vrstva -
+  # lenze `EtaskRunner` vtedy este len zaklada ucty a importuje siete. Na
+  # prazdnej databaze to trva desiatky sekund a presne v tom okne sa pustal
+  # `pfsync`: prihlasenie zlyhalo, role sa nepridelili a appka vyzerala
+  # rozbita ("siet nie je naimportovana", 403 pri zakladani casu), hoci stack
+  # hlasil Hotovo. Preto sa caka na to, co nas naozaj zaujima: ze sa admin
+  # vie prihlasit.
+  step "Cakam na admin ucet"
+  ok=0
+  for _ in $(seq 1 60); do
+    code=$(curl -s -o /dev/null -w '%{http_code}' -m 5 \
+             -u "super@netgrif.com:${ADMIN_PASSWORD:-password}" \
+             http://localhost:8080/api/auth/login || true)
+    [ "$code" = "200" ] && { ok=1; break; }
+    printf .
+    sleep 3
+  done
+  echo
+  if [ "$ok" = 1 ]; then
+    echo "ok"
+  else
+    echo "POZOR: super@netgrif.com sa este neda prihlasit."
+    echo "       Siete a role sa nemusia dorovnat; po chvili spusti znova:"
+    echo "         cd etask-configuration && python3 tools/pfsync.py --sync"
+  fi
 
   # Siete: `NetRunner` importuje siet len ked v databaze CHYBA, takze po zmene
   # existujuceho XML sa pri starte NESTANE NIC (viz krok 6b nizsie). V Dockeri

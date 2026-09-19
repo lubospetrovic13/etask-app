@@ -24,8 +24,9 @@ Two ways. Pick the first unless you already have Java 11 on the machine.
 
 You need **Docker Desktop** and **Git**. On Windows run the command from **Git Bash**, not
 from PowerShell or cmd. No Java, no Maven and no Node on your machine: all three live in the
-images. **Python 3** is the one extra, and only once you start working on nets, because the
-checking tools in `etask-configuration/tools/` are Python. Running the app does not need it.
+images. **Python 3** is the one extra: starting the app does not need it, but every checking
+tool in `etask-configuration/tools/` is Python, including the one below that proves the
+agenda actually runs.
 
 ```bash
 git clone https://github.com/lubospetrovic13/etask-app.git
@@ -82,12 +83,13 @@ MONGO_PORT=27018 ELASTIC_PORT=19200 MAILPIT_PORT=18025 SMTP_PORT=11025 \
   etask-configuration/tools/up.sh --docker
 ```
 
-**If you keep more than one checkout of this repository**, give each one its own stack.
-The project name decides which database the stack attaches to, so two checkouts otherwise
-share one, and `--fresh` in either deletes the data of both.
+**If you keep more than one checkout of this repository**, give each one its own stack. The
+project name decides which database the stack attaches to and the image tag decides which
+build it runs, so without both, two checkouts share one database and overwrite each other's
+images, and `--fresh` in either deletes the data of both.
 
 ```bash
-COMPOSE_PROJECT_NAME=etask-mybranch etask-configuration/tools/up.sh --docker
+COMPOSE_PROJECT_NAME=etask-mybranch IMAGE_TAG=mybranch   etask-configuration/tools/up.sh --docker
 ```
 
 ### On your machine
