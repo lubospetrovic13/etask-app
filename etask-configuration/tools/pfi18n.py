@@ -46,8 +46,18 @@ from pathlib import Path
 # Jazyky, v ktorych ma appka byt. Portal ponuka presne tieto dva
 # (EtaskLanguageSelectorComponent), takze tretim jazykom v sieti by sa nedalo
 # prepnut a naopak.
-LOCALES = ("en",)          # `sk` je default value v samotnom elemente
+#
+# KTORY z nich je `defaultValue` v elemente a ktory je blok `<i18n>`, si volí
+# siet - a obe volby su spravne. Starsie siete maju slovensky default a `en`
+# preklad, novsie anglicky default a `sk` preklad (to je obvyklejsie: bez
+# prekladu appka existuje v anglictine). Nastroj preto NEVYZADUJE konkretny
+# jazyk bloku, len to, aby blok bol prave jeden z tychto dvoch a aby v nom bol
+# KAZDY kluc. Kym tu bolo natvrdo `en`, hlasil anglicku siet so slovenskym
+# prekladom ako jednojazycnu - a to je presne ten druh hlasenia, po ktorom sa
+# nastroj prestane citat.
+LOCALES = ("en", "sk")
 DEFAULT_LOCALE_NAME = "sk"
+INIT_LOCALE = "en"         # `--init` zaklada blok pre tento jazyk
 
 TODO = "TODO "
 
@@ -256,14 +266,17 @@ def check(path):
     # ---- 3. kazdy kluc ma mat preklad v kazdom jazyku -------------------
     used = {el.get("name"): (el.text or "").strip()
             for el, _, _ in strings if el.get("name")}
-    for loc in LOCALES:
+    # Preklada sa do toho jazyka, ktory siet ponuka - druhy je `defaultValue`
+    # priamo v elemente. Bez jedineho bloku je siet jednojazycna.
+    pritomne = [loc for loc in LOCALES if blocks.get(loc)]
+    if not pritomne and used:
+        out.append(Finding(
+            "error", "i18n-locale-missing", rel, 1,
+            'siet nema blok <i18n locale="en"> ani <i18n locale="sk"> - je jednojazycna',
+            "spusti `pfi18n.py --init` a prelozi doplnene TODO riadky"))
+        pritomne = []
+    for loc in pritomne:
         have = blocks.get(loc, {})
-        if not have and used:
-            out.append(Finding(
-                "error", "i18n-locale-missing", rel, 1,
-                f'siet nema blok <i18n locale="{loc}"> - je jednojazycna',
-                "spusti `pfi18n.py --init` a prelozi doplnene TODO riadky"))
-            continue
         for name in sorted(used):
             if name not in have:
                 out.append(Finding(
@@ -343,7 +356,11 @@ def init(path):
     blocks = declared_i18n(root)
 
     added_rows = 0
-    for loc in LOCALES:
+    # Doplna sa do bloku, ktory siet UZ MA (nech je to `en` alebo `sk`);
+    # ked nema ziadny, zaklada sa `en` - teda anglicky preklad k slovenskemu
+    # defaultu. Bez toho by `--init` na anglickej sieti so `sk` prekladom
+    # zalozil este druhy, prazdny `en` blok.
+    for loc in ([l for l in LOCALES if l in blocks] or [INIT_LOCALE]):
         have = blocks.get(loc, {})
         missing = [(n, v) for n, v in used if n not in have]
         if not missing:

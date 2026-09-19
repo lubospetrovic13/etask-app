@@ -1181,6 +1181,26 @@ class EtaskActionDelegate extends ActionDelegate {
                 }
                 return
             }
+            // `UserFieldValue` - to, co je v hodnote zive nacitaneho userList
+            // pola. Bez tejto vetvy spadne az na retazcovy fallback nizsie,
+            // kde `toString()` (`Meno Priezvisko (mail)`) nie je ani id, ani
+            // adresa - takze sa ucet nenajde a polozka TICHO vypadne. Prejavi
+            // sa to prazdnym menom tam, kde siet pyta `menaUzivatelov(pole.value)`
+            // po vybere cloveka vo formulari.
+            if (item.hasProperty("id") && item.id) {
+                IUser u = userService.findById(item.id as String, false)
+                if (u != null) {
+                    out << u
+                    return
+                }
+            }
+            if (item.hasProperty("email") && item.email) {
+                IUser u = userService.findByEmail(item.email as String, false)
+                if (u != null) {
+                    out << u
+                    return
+                }
+            }
             String str = (item as String).trim()
             if (!str) return
             IUser u = str.contains("@") ? userService.findByEmail(str, false)

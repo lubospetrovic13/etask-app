@@ -782,6 +782,36 @@ ako chyba v dátach, nie v obale.
 **Obídenie.** Posielať vždy celú cieľovú množinu vrátane `default`, alebo
 role prideľovať cez `setProcessRole` v akcii, kde sa dopĺňa po jednej.
 
+## E27. Titulky tlačidiel úlohy nesie len `/api/task/search`, nie `/api/task/case/{id}`
+
+**Príznak.** Sieť má na prechode `<event type="finish"><title name="empty_button"></title></event>`,
+teda prázdny titulok, ktorým sa tlačidlo skrýva (RUNBOOK 11). V appke to
+funguje — tlačidlo tam nie je. Test, ktorý si úlohu vypýta cez
+`/api/task/case/{caseId}`, dostane `finishTitle: null` a ohlási chybu, ktorá
+neexistuje.
+
+**Meranie.** Tá istá úloha, dva endpointy, ten istý účet aj jazyk:
+
+```
+GET  /api/task/case/{caseId}    → {"title": "Dokončený nástup", "finishTitle": null,
+                                   "cancelTitle": null, "assignTitle": null}
+POST /api/task/search           → {"title": "Dokončený nástup", "finishTitle": "",
+                                   "cancelTitle": "", "assignTitle": ""}
+```
+
+Rozdiel nie je v jazyku (rovnaké pre `sk`, `en` aj neexistujúci `zz`) ani
+v priradení úlohy.
+
+**Prečo to prekvapí.** Oba endpointy vracajú „úlohu" a vyzerajú zameniteľne,
+takže sa `/api/task/case/{id}` berie ako lacnejšia cesta k tomu istému. Nie je:
+`null` a `""` znamenajú pri titulkoch **opak** (`canFinish()` je
+`oprávnenie && title !== ''`), takže na tom endpointe sa skryté tlačidlo javí
+ako zobrazené a zobrazené ako skryté.
+
+**Dôsledok pre testy.** Čokoľvek o tlačidlách úlohy sa meria na
+`/api/task/search` — je to aj ten endpoint, ktorý používa zoznam úloh vo
+frontende, takže sa meria to, čo vidí človek.
+
 ## Čo s tým
 
 Najviac stojí **E1** — znemožňuje celú jednu operáciu — a **E2**, ktoré robí
