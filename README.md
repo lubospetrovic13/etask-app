@@ -70,7 +70,7 @@ long after startup. `up.sh` handles all five.
 
 ---
 
-## Open it in an editor or an AI assistant
+## Open it in an editor
 
 A fresh clone is meant to be workable straight away.
 
@@ -101,36 +101,84 @@ in actions* and *Sync nets into the engine*. The first four are shell scripts; o
 open one of them once and point the interpreter at the `bash.exe` inside your Git
 installation if IDEA does not find `bash` on its own.
 
+## Open it in an AI coding assistant
+
+Everything an agent needs is committed, so there is no per machine setup: clone, start the
+assistant inside the checkout, and it already knows the rules of this repository.
+
+| file | what it does | who reads it |
+|---|---|---|
+| `CLAUDE.md` | the rules. In context in every session, so it is short on purpose | Claude Code |
+| `AGENTS.md` | the same rules in English, in the cross tool format | most of the rest |
+| `.claude/skills/petriflow/SKILL.md` | how to write a Petriflow net, its traps, how to verify it | Claude Code, and readable by anything else |
+| `.mcp.json` | an MCP server that lets the agent lint, validate and import nets itself | Claude Code and other MCP clients |
+| `.github/copilot-instructions.md` | a pointer to `AGENTS.md` plus the rules that matter most | GitHub Copilot |
+| `.gemini/settings.json` | tells Gemini CLI its context file is `AGENTS.md` | Gemini CLI |
+| `etask-configuration/tools/pfdoc.py` | the documentation index, so the agent reads one chapter instead of 86 000 tokens | all of them |
+
 ### Claude Code
+
+Install it once. It needs a Claude Pro, Max, Team, Enterprise or Console account; the free
+plan does not include Claude Code.
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+```
+
+On Windows PowerShell:
+
+```powershell
+irm https://claude.ai/install.ps1 | iex
+```
+
+`winget install Anthropic.ClaudeCode`, `brew install --cask claude-code` and
+`npm install -g @anthropic-ai/claude-code` also work. Check it with `claude --version`.
+
+Then start it inside the checkout:
 
 ```bash
 cd etask-app
 claude
 ```
 
-Everything the agent needs is committed:
+Nothing else to configure. It loads `CLAUDE.md`, finds the `petriflow` skill, and asks you
+once to approve the MCP server from `.mcp.json`. Say yes: that server is what lets it lint,
+validate and import nets itself instead of guessing whether a net is correct.
 
-| file | what it does |
-|---|---|
-| `CLAUDE.md` | the rules. In context in every session, so it is short on purpose |
-| `.claude/skills/petriflow/SKILL.md` | how to write a Petriflow net, its traps, how to verify it |
-| `.mcp.json` | an MCP server that lets the agent lint, validate and import nets itself |
-| `etask-configuration/tools/pfdoc.py` | the documentation index, so the agent reads one chapter instead of 86 000 tokens |
+On Windows, install [Git for Windows](https://git-scm.com/downloads/win) as well, otherwise
+Claude Code runs shell commands through PowerShell and the `tools/*.sh` scripts in this
+repository will not run.
 
-A good first prompt is a real request rather than a technical instruction. The demo used a
-Word document handed over unedited, typo included:
+### Cursor, Codex CLI, Gemini CLI, Copilot, Windsurf
+
+`AGENTS.md` carries the same rules in the format the rest of them read. It points at
+`CLAUDE.md` as the single source of truth so the two cannot drift apart.
+
+| assistant | what to do | what it reads |
+|---|---|---|
+| Cursor | open the folder | `AGENTS.md` |
+| Codex CLI | `codex` inside the checkout | `AGENTS.md` |
+| Gemini CLI | `gemini` inside the checkout | `AGENTS.md`, via `.gemini/settings.json` |
+| GitHub Copilot | open the folder in VS Code | `.github/copilot-instructions.md` |
+| Windsurf, Zed, Aider, Junie, Amp | open the folder | `AGENTS.md` |
+
+Only Claude Code gets the Petriflow skill and the net tooling over MCP. The rest get the
+rules and the documentation, which is most of it. Any of them can still call the tools
+directly from the terminal: `pflint`, `pfgroovy`, `pfi18n`, `pfview` and `pfsync` are plain
+Python scripts.
+
+### A good first prompt
+
+Give it a real request rather than a technical instruction. The demo used a Word document
+handed over unedited, typo included:
 
 > Read `docs/examples/app-request-onboarding.md` and build the agenda it describes as
 > Petriflow nets. Follow `CLAUDE.md` and use the `petriflow` skill. Verify with `pflint`
 > and `pfcheck` against the running engine before you tell me it works.
 
 That file is the demo input, kept in the repository so the run can be replayed. What came
-out of it the first time is described in `docs/ONBOARDING.md`, so you can compare.
-
-### Cursor, Codex, Copilot, Gemini CLI, Windsurf
-
-`AGENTS.md` at the repository root carries the same rules in the format those tools read. It
-points at `CLAUDE.md` so there is one source of truth instead of two that drift.
+out of it the first time is described in `docs/ONBOARDING.md`, so you can compare. Start the
+stack first: without a running engine the agent can write a net but cannot prove it imports.
 
 **The documentation is largely in Slovak.** `CLAUDE.md`, the runbook and the Petriflow skill
 are Slovak; the code, the net IDs and the tooling are not. Assistants read it without

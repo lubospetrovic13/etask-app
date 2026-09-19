@@ -7,6 +7,11 @@ Gemini CLI, Windsurf, Claude Code.
 This file is the same content in English so that the rules are not restated in two places
 and allowed to drift. Where the two disagree, `CLAUDE.md` wins.
 
+Two assistants look elsewhere by default, so they are pointed back here rather than given a
+third copy: `.github/copilot-instructions.md` for GitHub Copilot and `.gemini/settings.json`
+for Gemini CLI. If you change a rule, change `CLAUDE.md` and this file. Those two are
+pointers and should stay that way.
+
 ---
 
 ## What this repository is
