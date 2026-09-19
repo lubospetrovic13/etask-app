@@ -22,8 +22,18 @@
 #   http://localhost:8025   Mailpit - všetky notifikačné maily appky
 #   localhost:27017         Mongo (mongosh z hostiteľa, používa to pfseed --repair)
 #   http://localhost:9200   Elasticsearch (na nazeranie do indexu)
+#
+# Porty sa daju posunut, ked uz nieco na hostitelovi bezi (vlastne Mongo na
+# 27017 je najcastejsie):
+#   MONGO_PORT=27018 ELASTIC_PORT=19200 MAILPIT_PORT=18025 SMTP_PORT=11025 \
+#     tools/up.sh --docker
 
-name: etask
+# Meno projektu urcuje, ktore volumes stack pouzije. Bolo natvrdo `etask`, cize
+# DRUHY checkout toho isteho repozitara sa prilepil na databazu toho prveho:
+# clovek, ktory si repozitar naklonoval druhy raz, nedostal cistu instanciu, ale
+# cudzie siete a cudzie data - a `--fresh` mu zmazal to, co malo zostat.
+# Premenna to vracia do ruk cloveku: COMPOSE_PROJECT_NAME=etask-mojevetva.
+name: ${COMPOSE_PROJECT_NAME:-etask}
 
 services:
 
@@ -36,7 +46,7 @@ services:
     ports:
       # Publikované zámerne: `pfseed --repair` a `pucheck --wipe` mažú účty
       # priamo v Mongu, lebo engine na to REST endpoint nemá.
-      - "27017:27017"
+      - "${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:
@@ -57,8 +67,8 @@ services:
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx1g
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "${ELASTIC_PORT:-9200}:9200"
+      - "${ELASTIC_TRANSPORT_PORT:-9300}:9300"
     volumes:
       - elastic-data:/usr/share/elasticsearch/data
     healthcheck:
@@ -91,9 +101,9 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
     ports:
-      - "8025:8025"
+      - "${MAILPIT_PORT:-8025}:8025"
       # SMTP je vidno aj z hostiteľa - na ručnú skúšku (swaks, telnet).
-      - "1025:1025"
+      - "${SMTP_PORT:-1025}:1025"
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
       interval: 10s

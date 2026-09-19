@@ -33,7 +33,13 @@ cd etask-app
 etask-configuration/tools/up.sh --docker
 ```
 
-The first run builds the images and takes a few minutes. After that it is fast.
+The first run builds the backend and frontend images, which is Maven plus an Angular
+build: budget ten minutes or so, and most of it is that one build. Every run after that is
+under two minutes, because `up -d` reuses the images.
+
+**Give Docker at least 6 GB.** Mongo reserves 1.5 GB of cache, Elasticsearch takes up to
+1 GB of heap and the backend up to 2 GB. Below that the backend is killed mid startup and
+the failure looks like a hang rather than a memory problem.
 
 | what | where |
 |---|---|
@@ -45,10 +51,43 @@ The first run builds the images and takes a few minutes. After that it is fast.
 
 Sign in as `super@netgrif.com` / `password`.
 
+Then prove it rather than assume it. This walks the whole onboarding path against the
+running engine, raising a request, having it sent back, completed, approved, and the three
+accounts ticked off, and it checks the rules that cannot be seen in the XML: that only the
+one chosen manager can approve, that nothing is created before approval, and that a
+returned request continues as the same case.
+
+```bash
+cd etask-configuration && python3 tools/oncheck.py
+```
+
+It prints one line per check and a count at the end. If that passes, the platform and the
+agenda both work on your machine.
+
 ```bash
 etask-configuration/tools/up.sh --docker --stop     # stop, keep the data
-etask-configuration/tools/up.sh --docker --build    # rebuild the images
+etask-configuration/tools/up.sh --docker --build    # force a rebuild of the images
 etask-configuration/tools/up.sh --docker --fresh    # start over, DELETES the data
+```
+
+You do not normally need `--build`: `up.sh` compares your sources against the image it
+would run and rebuilds by itself when they are newer.
+
+**If something of yours already holds one of these ports**, a local Mongo on 27017 being
+the usual one, move them instead of stopping your own services. `up.sh` checks the ports
+before it builds anything and tells you which one is taken.
+
+```bash
+MONGO_PORT=27018 ELASTIC_PORT=19200 MAILPIT_PORT=18025 SMTP_PORT=11025 \
+  etask-configuration/tools/up.sh --docker
+```
+
+**If you keep more than one checkout of this repository**, give each one its own stack.
+The project name decides which database the stack attaches to, so two checkouts otherwise
+share one, and `--fresh` in either deletes the data of both.
+
+```bash
+COMPOSE_PROJECT_NAME=etask-mybranch etask-configuration/tools/up.sh --docker
 ```
 
 ### On your machine

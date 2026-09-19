@@ -38,9 +38,12 @@
     "27017": { "label": "Mongo" }
   },
 
-  // Generates the JWT signing key. It is gitignored, so it is missing after a
-  // clone, and without it public forms return a bare 401.
-  "postCreateCommand": "etask-configuration/tools/bootstrap.sh",
+  // Generates the JWT signing key for the local run path. It is gitignored, so
+  // it is missing after a clone, and without it public forms return a bare 401.
+  // Deliberately non fatal: in Docker mode the backend entrypoint generates its
+  // own key into a volume, so this key is not used there and a failure here
+  // must not stop the container from being created.
+  "postCreateCommand": "etask-configuration/tools/bootstrap.sh || true",
 
   "customizations": {
     "vscode": {

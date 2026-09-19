@@ -157,14 +157,40 @@ if [ "$DO_DOCKER" = 1 ]; then
   fi
 
   legacy_down
+  # Vsetky publikovane porty, nie len dva. Compose ohlasi "port is already
+  # allocated" az PO builde, takze clovek s vlastnym Mongom na 27017 cakal
+  # niekolko minut na chybu, ktoru sa dalo povedat hned. Porty sa daju posunut
+  # premennymi (MONGO_PORT, ELASTIC_PORT, MAILPIT_PORT), viz docker-compose.dev.yml.
   port_free_or_ours 8080 backend  || exit 1
   port_free_or_ours "${FRONTEND_PORT:-4200}" frontend || exit 1
+  port_free_or_ours "${ELASTIC_PORT:-9200}" elastic || exit 1
+  port_free_or_ours "${MAILPIT_PORT:-8025}" mailpit || exit 1
 
   step "Obrazy a sluzby"
+
+  # `up -d` postavi len obrazy, ktore CHYBAJU. Ked obraz uz existuje, nova
+  # verzia zdrojov sa don nedostane a stack TICHO bezi na starom kode. Je to
+  # ta ista past ako stale target/ pri lokalnom behu, len horsia: tam sa to
+  # aspon da vidiet na jare, tu o tom nie je ani riadok vypisu. Takto sa raz
+  # merala appka na backende o 35 hodin starsom nez checkout, a chyba, ktora
+  # bola v zdrojoch davno opravena, vyzerala ako zivá.
+  if [ "$DO_BUILD" = 0 ]; then
+    img_iso=$(docker image inspect etask-backend:dev --format "{{.Created}}" 2>/dev/null | cut -c1-19)
+    if [ -n "$img_iso" ]; then
+      newer=$(find etask-backend-starter/src etask-backend-starter/pom.xml \
+                   etask-configuration/processes etask-configuration/processes.json \
+                   -newermt "${img_iso}Z" 2>/dev/null | head -1)
+      if [ -n "$newer" ]; then
+        echo "zdroje su novsie nez obraz etask-backend:dev ($newer)"
+        echo "prestavujem - inak by stack bezal na starom kode"
+        DO_BUILD=1
+      fi
+    fi
+  fi
+
   if [ "$DO_BUILD" = 1 ]; then
     dc build || die "docker compose build zlyhal"
   fi
-  # `up -d` postavi obrazy, ktore este neexistuju; --build ich vynuti.
   dc up -d || die "docker compose up zlyhal"
 
   step "Cakam na backend"
@@ -190,7 +216,12 @@ if [ "$DO_DOCKER" = 1 ]; then
   if [ "${ETASK_NO_SYNC:-0}" = "1" ]; then
     echo "preskocene (ETASK_NO_SYNC=1)"
   elif SYNC_PY=$(find_python); then
-    (cd etask-configuration && PYTHONIOENCODING=utf-8 $SYNC_PY tools/pfsync.py --sync) \
+    # Bez zdroja logu vie pfcheck povedat len "500 bez dovodu", takze prva vec,
+    # ktoru clovek na cerstvom Dockeri videl, bolo POZOR o tom, ze pricinu
+    # nemozno zistit. Log je v kontejneri, tak mu ho sem posleme.
+    PF_CONTAINER=$(dc ps -q backend 2>/dev/null | head -1)
+    (cd etask-configuration && PYTHONIOENCODING=utf-8 PF_CONTAINER="$PF_CONTAINER" \
+       $SYNC_PY tools/pfsync.py --sync) \
       || echo "POZOR: zosuladenie sieti zlyhalo, engine moze drzat stary model"
   else
     echo "python sa nenasiel - preskocene."

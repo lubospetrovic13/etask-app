@@ -305,8 +305,15 @@ def main(argv):
         print("pfsync: bash sa nenasiel - nastav PFSYNC_BASH na cestu k bashu")
         return 2
     cmd = [bash, str(ROOT / "tools" / "pfcheck.sh")]
+    # Bez zdroja logu pfcheck povie len "500 bez dovodu". Pri lokalnom behu je
+    # log v .run/backend.log, pri `up.sh --docker` v kontejneri - vtedy ho sem
+    # posle up.sh cez PF_CONTAINER. Kym to tu nebolo, prvá vec, ktorú človek na
+    # čerstvom Dockeri uvidel, bolo POZOR o tom, že príčinu nemožno zistiť.
+    container = os.environ.get("PF_CONTAINER", "")
     if log.exists():
         cmd += ["--log", str(log)]
+    elif container:
+        cmd += ["--container", container]
     rc = subprocess.call(cmd + files)
     if rc != 0:
         print("pfsync: import zlyhal, role sa neprideluju")
