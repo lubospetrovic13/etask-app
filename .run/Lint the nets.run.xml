@@ -1,22 +1,19 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Lint the nets" type="PythonConfigurationType" factoryName="Python">
-    <option name="ENV_FILES" value="" />
+  <configuration default="false" name="Lint the nets" type="ShConfigurationType">
+    <option name="SCRIPT_TEXT" value="for c in python3 python; do &quot;$c&quot; -c &quot;&quot; 2&gt;/dev/null &amp;&amp; exec &quot;$c&quot; tools/pflint.py processes/; done; exec py -3 tools/pflint.py processes/" />
+    <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
+    <option name="SCRIPT_PATH" value="" />
+    <option name="SCRIPT_OPTIONS" value="" />
+    <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
+    <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$/etask-configuration" />
+    <option name="INDEPENDENT_INTERPRETER_PATH" value="true" />
+    <option name="INTERPRETER_PATH" value="bash" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="EXECUTE_IN_TERMINAL" value="true" />
+    <option name="EXECUTE_SCRIPT_FILE" value="false" />
     <envs>
-      <env name="PYTHONUNBUFFERED" value="1" />
       <env name="PYTHONIOENCODING" value="utf-8" />
     </envs>
-    <option name="SDK_HOME" value="" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etask-configuration" />
-    <option name="IS_MODULE_SDK" value="true" />
-    <option name="ADD_CONTENT_ROOTS" value="true" />
-    <option name="ADD_SOURCE_ROOTS" value="true" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etask-configuration/tools/pflint.py" />
-    <option name="PARAMETERS" value="processes/" />
-    <option name="SHOW_COMMAND_LINE" value="false" />
-    <option name="EMULATE_TERMINAL" value="false" />
-    <option name="MODULE_MODE" value="false" />
-    <option name="REDIRECT_INPUT" value="false" />
-    <option name="INPUT_FILE" value="" />
     <method v="2" />
   </configuration>
 </component>

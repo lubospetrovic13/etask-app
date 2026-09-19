@@ -4,6 +4,10 @@
   // Everything here is a bash script. On Windows that means Git Bash, so the
   // shell is named explicitly rather than inherited from the terminal profile.
   // If Git is installed somewhere else, change the path below.
+  //
+  // The Python tasks carry a "windows" override because `python3` in Git Bash
+  // is the WindowsApps alias, not an interpreter: it prints "Python was not
+  // found" and fails, so without the override the task never runs the tool.
   "windows": {
     "options": {
       "shell": {
@@ -62,6 +66,7 @@
       "detail": "Structure and the silent traps. Under a second.",
       "type": "shell",
       "command": "python3 tools/pflint.py processes/",
+      "windows": { "command": "py -3 tools/pflint.py processes/" },
       "options": { "cwd": "${workspaceFolder}/etask-configuration" },
       "problemMatcher": [],
       "group": { "kind": "test", "isDefault": true }
@@ -70,6 +75,7 @@
       "label": "Check the Groovy in actions",
       "type": "shell",
       "command": "python3 tools/pfgroovy.py processes/",
+      "windows": { "command": "py -3 tools/pfgroovy.py processes/" },
       "options": { "cwd": "${workspaceFolder}/etask-configuration" },
       "problemMatcher": []
     },
@@ -78,6 +84,7 @@
       "detail": "Runs the whole chain, applies the unambiguous fixes, writes the rest to .run/pfloop-zadanie.md.",
       "type": "shell",
       "command": "python3 tools/pfloop.py --fix",
+      "windows": { "command": "py -3 tools/pfloop.py --fix" },
       "options": { "cwd": "${workspaceFolder}/etask-configuration" },
       "problemMatcher": [],
       "presentation": { "reveal": "always", "panel": "dedicated" }
@@ -87,6 +94,7 @@
       "detail": "The engine imports a net only when it is missing. After editing an existing net, this is what makes the change real.",
       "type": "shell",
       "command": "python3 tools/pfsync.py --sync",
+      "windows": { "command": "py -3 tools/pfsync.py --sync" },
       "options": { "cwd": "${workspaceFolder}/etask-configuration" },
       "problemMatcher": [],
       "presentation": { "reveal": "always", "panel": "dedicated" }

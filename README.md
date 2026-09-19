@@ -23,7 +23,9 @@ Two ways. Pick the first unless you already have Java 11 on the machine.
 ### Everything in Docker (recommended)
 
 You need **Docker Desktop** and **Git**. On Windows run the command from **Git Bash**, not
-from PowerShell or cmd.
+from PowerShell or cmd. No Java, no Maven and no Node on your machine: all three live in the
+images. **Python 3** is the one extra, and only once you start working on nets, because the
+checking tools in `etask-configuration/tools/` are Python. Running the app does not need it.
 
 ```bash
 git clone https://github.com/lubospetrovic13/etask-app.git
@@ -248,11 +250,21 @@ primitive is missing one layer up**.
 
 ```bash
 cd etask-configuration
-python3 tools/pflint.py processes/                    # structure, silent traps
-python3 tools/pfgroovy.py processes/                  # Groovy syntax in actions
-tools/pfcheck.sh --log ../.run/backend.log processes/ # ground truth: import into the engine
-tools/pftest.sh                                       # regression tests for the tooling
+python3 tools/pflint.py processes/       # structure, silent traps
+python3 tools/pfgroovy.py processes/     # Groovy syntax in actions
+tools/pftest.sh                          # regression tests for the tooling
 ```
+
+Then the one that matters, an actual import into the engine. Where the server log comes from
+depends on how you started it:
+
+```bash
+tools/pfcheck.sh --container etask-backend-1 processes/   # started with --docker
+tools/pfcheck.sh --log ../.run/backend.log processes/     # started on your machine
+```
+
+Without `--container` or `--log`, `pfcheck` still runs but cannot tell you why an import
+failed, and it says so.
 
 Ground truth is the running engine. On a bad net the import endpoint returns a bare
 `{"status":500}` with no reason and the cause is only in the server log, which is why
