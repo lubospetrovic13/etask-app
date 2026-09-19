@@ -5,5 +5,7 @@ __pycache__/
 .idea/
 *.iml
 
-# tools/up.sh - logy bezuceho stacku
-.run/
+# tools/up.sh - logy bezuceho stacku.
+# Vynimka: .run/*.run.xml su zdielane IntelliJ run konfiguracie, tie sa commituju.
+.run/*
+!.run/*.run.xml

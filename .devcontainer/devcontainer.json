@@ -1,0 +1,66 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "eTask",
+
+  // Java 11 and nothing newer: Groovy 3 fails on JDK 17+ with
+  // "Unsupported class file major version".
+  "image": "mcr.microsoft.com/devcontainers/java:1-11-bullseye",
+
+  "features": {
+    // The stack itself runs in containers, so the dev container needs a daemon.
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/node:1": { "version": "18" },
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.11" },
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installMaven": true
+    }
+  },
+
+  "containerEnv": {
+    // Without this, importing a net with diacritics in its name throws
+    // InvalidPathException, and the Python tools die on the first Slovak
+    // character they print.
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "PYTHONIOENCODING": "utf-8"
+  },
+
+  "forwardPorts": [4200, 8080, 8025, 9200, 27017],
+  "portsAttributes": {
+    "4200": { "label": "portal", "onAutoForward": "openBrowserOnce" },
+    "8080": { "label": "backend API" },
+    "8025": { "label": "Mailpit (all app mail)" },
+    "9200": { "label": "Elasticsearch" },
+    "27017": { "label": "Mongo" }
+  },
+
+  // Generates the JWT signing key. It is gitignored, so it is missing after a
+  // clone, and without it public forms return a bare 401.
+  "postCreateCommand": "etask-configuration/tools/bootstrap.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vmware.vscode-boot-dev-pack",
+        "marlon407.code-groovy",
+        "redhat.vscode-xml",
+        "angular.ng-template",
+        "ms-python.python",
+        "ms-azuretools.vscode-docker",
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "interactive",
+        "files.eol": "\n",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+
+  "remoteUser": "vscode"
+}

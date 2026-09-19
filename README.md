@@ -1,81 +1,231 @@
 # eTask
 
-Petriflow-first aplikačný stack nad Netgrif Application Engine 6.3.1.
-**Aplikačná logika je v Petriflow sieťach, nie v Jave a nie v Angulari** — framework
-je ~5 500 riadkov, siete ~7 500 a ten pomer je zámer.
+A Petriflow-first application stack on top of the Netgrif Application Engine 6.3.1.
+
+The database, the REST layer, the frontend, login, IAM, roles and permissions are already
+here and already work. What you add is the **business logic**: Petriflow nets. The
+framework is around 5 500 lines, the nets around 9 700, and that ratio is the point.
+
+This is the repository behind the recorded demo where one Word document from the business
+("onboarding a new employee") became a running agenda in the portal. The nets that came out
+of it are `etask-configuration/processes/on_request.xml` and `on_menu.xml`.
+
+---
+
+## Run it
+
+Two ways. Pick the first unless you already have Java 11 on the machine.
+
+### Everything in Docker (recommended)
+
+You need **Docker Desktop** and **Git**. On Windows run the command from **Git Bash**, not
+from PowerShell or cmd.
 
 ```bash
-etask-configuration/tools/up.sh
+git clone https://github.com/lubospetrovic13/etask-app.git
+cd etask-app
+etask-configuration/tools/up.sh --docker
 ```
 
-Jeden príkaz: JWT kľúč, Java 11, Docker, Mongo + Elasticsearch + Redis, build,
-backend. Idempotentný — čo beží, nechá bežať. Potom
-http://localhost:8080, prihlásenie `super@netgrif.com` / `password`.
+The first run builds the images and takes a few minutes. After that it is fast.
 
-Po zmene siete ho spusti znova: prestaví jar a backend reštartuje sám.
-`--stop` ho zastaví, `--restart` vynúti reštart.
-
-## Kam ísť ďalej
-
-| chcem… | kde |
+| what | where |
 |---|---|
-| rozbehať, pridať appku, menu, používateľov, anonymný prístup, tému, komponent | **[`docs/RUNBOOK.md`](docs/RUNBOOK.md)** |
-| písať Petriflow siete | [`.claude/skills/petriflow/SKILL.md`](.claude/skills/petriflow/SKILL.md) |
-| zoznam volateľných metód v akciách | [`docs/reference/action-api.md`](docs/reference/action-api.md) |
-| prečo je repozitár takto postavený | [`docs/AI_STARTER_ANALYSIS.md`](docs/AI_STARTER_ANALYSIS.md) |
-| pravidlá pre AI agenta | [`CLAUDE.md`](CLAUDE.md) |
+| portal | http://localhost:4200 |
+| backend API | http://localhost:8080 |
+| all mail the app sends | http://localhost:8025 |
+| Mongo | localhost:27017 |
+| Elasticsearch | http://localhost:9200 |
 
-## Nová aplikácia
+Sign in as `super@netgrif.com` / `password`.
+
+```bash
+etask-configuration/tools/up.sh --docker --stop     # stop, keep the data
+etask-configuration/tools/up.sh --docker --build    # rebuild the images
+etask-configuration/tools/up.sh --docker --fresh    # start over, DELETES the data
+```
+
+### On your machine
+
+A faster edit-to-see loop for net work, but you supply the toolchain: **Java 11** (Groovy 3
+crashes on JDK 17+), **Maven**, **Docker**, **Python 3**, and **Node 18** if you want the
+Angular dev server.
+
+```bash
+etask-configuration/tools/up.sh              # backend on :8080
+etask-configuration/tools/up.sh --frontend   # and ng serve on :4200
+```
+
+The script is idempotent: it leaves running things running. It generates the JWT signing
+key, picks Java 11, starts Mongo, Elasticsearch and Redis, builds, and reconciles the nets
+in the repository against the ones the engine actually holds. Run it again after every net
+change. `--stop`, `--restart` and `--fresh` do what they say.
+
+**Why a script and not a paragraph.** Every step here has a trap that does not surface as an
+error: a missing JWT key makes public forms return a bare 401, JDK 17 fails with
+`Unsupported class file major version`, a missing `LANG=C.UTF-8` throws
+`InvalidPathException` on a net with diacritics in its name, a stale `target/` silently
+ships a jar without your nets, and a missing Redis brings Spring down at the session store
+long after startup. `up.sh` handles all five.
+
+---
+
+## Open it in an editor or an AI assistant
+
+A fresh clone is meant to be workable straight away.
+
+### VS Code
+
+```bash
+code etask-app
+```
+
+`.vscode/extensions.json` recommends the Java, Groovy, XML, Angular and Docker extensions.
+`Ctrl+Shift+P` then **Tasks: Run Task** gives you *Run the stack in Docker*, *Stop the
+stack*, *Lint the nets* and the rest, so no script paths to remember.
+
+### GitHub Codespaces or a dev container
+
+`.devcontainer/devcontainer.json` pins Java 11, Node 18, Python 3 and Docker-in-Docker, and
+forwards ports 4200, 8080 and 8025. In VS Code: **Reopen in Container**. On GitHub: **Code
+> Codespaces > Create codespace**. Nothing has to be installed on the host.
+
+### IntelliJ IDEA
+
+Open the repository root and let IDEA import `etask-backend-starter/pom.xml` as a Maven
+project. Set the project SDK to **Java 11**.
+
+Shared run configurations are committed in `.run/`, so the run menu already has *eTask
+(Docker)*, *eTask (local)*, *Stop eTask*, *Rebuild images*, *Lint the nets*, *Check Groovy
+in actions* and *Sync nets into the engine*. The first four are shell scripts; on Windows,
+open one of them once and point the interpreter at the `bash.exe` inside your Git
+installation if IDEA does not find `bash` on its own.
+
+### Claude Code
+
+```bash
+cd etask-app
+claude
+```
+
+Everything the agent needs is committed:
+
+| file | what it does |
+|---|---|
+| `CLAUDE.md` | the rules. In context in every session, so it is short on purpose |
+| `.claude/skills/petriflow/SKILL.md` | how to write a Petriflow net, its traps, how to verify it |
+| `.mcp.json` | an MCP server that lets the agent lint, validate and import nets itself |
+| `etask-configuration/tools/pfdoc.py` | the documentation index, so the agent reads one chapter instead of 86 000 tokens |
+
+A good first prompt is a real request rather than a technical instruction. The demo used a
+Word document handed over unedited, typo included:
+
+> Read `docs/examples/app-request-onboarding.md` and build the agenda it describes as
+> Petriflow nets. Follow `CLAUDE.md` and use the `petriflow` skill. Verify with `pflint`
+> and `pfcheck` against the running engine before you tell me it works.
+
+That file is the demo input, kept in the repository so the run can be replayed. What came
+out of it the first time is described in `docs/ONBOARDING.md`, so you can compare.
+
+### Cursor, Codex, Copilot, Gemini CLI, Windsurf
+
+`AGENTS.md` at the repository root carries the same rules in the format those tools read. It
+points at `CLAUDE.md` so there is one source of truth instead of two that drift.
+
+**The documentation is largely in Slovak.** `CLAUDE.md`, the runbook and the Petriflow skill
+are Slovak; the code, the net IDs and the tooling are not. Assistants read it without
+trouble. This README and `AGENTS.md` are the English entry point.
+
+---
+
+## Add your own agenda
 
 ```bash
 cd etask-configuration
-cp examples/skeleton.xml processes/mojaapp.xml   # prepíš <id>, <initials>, <title>
-# dopíš "mojaapp.xml" do processes.json → "import"
-python3 tools/pflint.py processes/mojaapp.xml
+cp examples/skeleton.xml processes/myapp.xml   # change <id>, <initials>, <title>
+# add "myapp.xml" to the "import" list in processes.json
+python3 tools/pflint.py processes/myapp.xml
+cd .. && etask-configuration/tools/up.sh --docker
 ```
 
-**Pridanie appky Javu nevyžaduje.** Keď sa pri pridávaní appky chystáš editovať
-framework, robíš pravdepodobne niečo iné, než si myslíš.
+**Adding an application does not require Java.** If you find yourself editing the framework
+while adding an agenda, you are probably doing something other than what you think.
 
-Rozšíriť platformu je však legitímne a bežné: appka pre klienta často potrebuje
-schopnosť, ktorú engine nemá (čítanie príloh, maily, cudzie API, nová
-závislosť). Vtedy pribudne primitívum v `EtaskActionDelegate`, prípadne servis
-a závislosť v `pom.xml` — s vetou, **ktoré primitívum na vyššej vrstve chýba**.
+Extending the platform is legitimate and common, though. A customer application often needs
+a capability the engine does not have: reading attachments, sending mail, calling a foreign
+API, a new dependency. That is when a primitive is added to `EtaskActionDelegate`, possibly
+with a service and a dependency in `pom.xml`, together with a sentence saying **which
+primitive is missing one layer up**.
 
-## Štruktúra
+---
+
+## Verify
+
+```bash
+cd etask-configuration
+python3 tools/pflint.py processes/                    # structure, silent traps
+python3 tools/pfgroovy.py processes/                  # Groovy syntax in actions
+tools/pfcheck.sh --log ../.run/backend.log processes/ # ground truth: import into the engine
+tools/pftest.sh                                       # regression tests for the tooling
+```
+
+Ground truth is the running engine. On a bad net the import endpoint returns a bare
+`{"status":500}` with no reason and the cause is only in the server log, which is why
+`pfcheck` reads that log. `pfcheck` and `pfseed` write into the instance, so **never point
+them at production**.
+
+---
+
+## Layout
 
 ```
-etask-configuration/    siete, dokumentácia, nástroje
-  processes/            aplikačná logika (.xml)
-  processes.json        čo sa importuje, menu karty, bootstrap casy
-  examples/skeleton.xml najmenšia funkčná sieť
+etask-configuration/    nets, documentation, tooling
+  processes/            the business logic (.xml)
+  processes.json        what gets imported, menu cards, bootstrap cases
+  examples/skeleton.xml the smallest net that works
   tools/                up.sh, pflint, pfgroovy, pfcheck, pfseed, pfapi, pftest
-etask-backend-starter/  Java/Groovy — engine, EtaskActionDelegate, runnery
-etask-frontend-starter/ Angular 13 — téma a vlastné field komponenty
-deploy/                 docker-compose a pipeline na VPS
+etask-backend-starter/  Java and Groovy: the engine, EtaskActionDelegate, runners
+etask-frontend-starter/ Angular 13: theme and custom field components
+deploy/                 docker compose and the VPS pipeline
+docs/                   the long form documentation (Slovak)
 ```
 
-**Service Desk (`processes/sd_*.xml`) je príkladová aplikácia, nie časť
-frameworku** — runtime ju nepozná po mene. Odstráni sa zmazaním tých sietí a ich
-riadkov v `processes.json`.
+**Service Desk (`processes/sd_*.xml`) is an example application, not part of the
+framework.** The runtime does not know it by name. Delete those nets and their lines in
+`processes.json` and it is gone.
 
-## Overovanie
+---
 
-```bash
-cd etask-configuration
-python3 tools/pflint.py processes/                    # štruktúra, tiché pasce
-python3 tools/pfgroovy.py processes/                  # syntax Groovy
-tools/pfcheck.sh --log ../.run/backend.log processes/ # ground truth: import do enginu
-tools/pftest.sh                                       # regresia nástrojov
-```
+## Where to go next
 
-Ground truth je bežiaci engine — import endpoint pri chybe vracia holé
-`{"status":500}` bez dôvodu a príčina je len v logu servera. `pfcheck` a `pfseed`
-zapisujú do inštancie, takže **nie proti produkcii**.
+| I want to | read |
+|---|---|
+| run it, add an app, menus, users, anonymous access, theming, components | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) (SK) |
+| write Petriflow nets | [`.claude/skills/petriflow/SKILL.md`](.claude/skills/petriflow/SKILL.md) (SK) |
+| the methods callable from actions | [`docs/reference/action-api.md`](docs/reference/action-api.md) |
+| why the repository is built this way | [`docs/AI_STARTER_ANALYSIS.md`](docs/AI_STARTER_ANALYSIS.md) (SK) |
+| the rules an AI agent follows here | [`CLAUDE.md`](CLAUDE.md) (SK), [`AGENTS.md`](AGENTS.md) (EN) |
 
-## Prostredie
+---
 
-Java **11** (Groovy 3 na JDK 17+ padá), `LANG=C.UTF-8` (inak import siete
-s diakritikou zhodí `InvalidPathException`), `certificates/private.der` je
-gitignored a bez neho verejné formuláre vracajú 401. `up.sh` sa o všetky tri
-postará.
+## When it does not start
+
+| symptom | cause |
+|---|---|
+| `Unsupported class file major version` | JDK 17 or 21. Groovy 3 needs **Java 11** |
+| public forms return 401 with no message | the JWT key is missing. Run `etask-configuration/tools/bootstrap.sh` |
+| `port is already allocated` | an older stack is up. `up.sh --docker --stop`, or stop a local backend with `up.sh --stop` |
+| a net change has no effect | the engine imports a net only when it is missing from the database. `up.sh` reconciles at the end, so do not skip that with `ETASK_NO_SYNC=1` |
+| `UnicodeEncodeError: 'charmap' codec` on Windows | the Python tools print Slovak into a cp1252 console. Set `PYTHONIOENCODING=utf-8` |
+| `python3: command not found` on Windows | the WindowsApps alias. Use `py -3`, which `up.sh` already falls back to |
+
+The runbook covers each of these at length.
+
+---
+
+## Licensing
+
+`etask-backend-starter` and `etask-frontend-starter` are covered by the **NETGRIF Community
+License v1.0** (`etask-backend-starter/LICENSE.txt`). Read it before using this
+commercially. The configuration, the nets and the tooling in this repository carry no
+licence of their own yet.

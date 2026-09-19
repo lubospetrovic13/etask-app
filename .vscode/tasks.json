@@ -1,0 +1,103 @@
+{
+  "version": "2.0.0",
+
+  // Everything here is a bash script. On Windows that means Git Bash, so the
+  // shell is named explicitly rather than inherited from the terminal profile.
+  // If Git is installed somewhere else, change the path below.
+  "windows": {
+    "options": {
+      "shell": {
+        "executable": "C:\\Program Files\\Git\\bin\\bash.exe",
+        "args": ["-c"]
+      }
+    }
+  },
+  "options": {
+    "cwd": "${workspaceFolder}",
+    "env": { "PYTHONIOENCODING": "utf-8" }
+  },
+
+  "tasks": [
+    {
+      "label": "Run the stack in Docker",
+      "detail": "Portal on :4200, backend on :8080, mail on :8025. First run builds the images.",
+      "type": "shell",
+      "command": "etask-configuration/tools/up.sh --docker",
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Run the stack locally",
+      "detail": "Needs Java 11, Maven, Docker and Python 3 on this machine.",
+      "type": "shell",
+      "command": "etask-configuration/tools/up.sh",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Stop the stack",
+      "detail": "Stops the containers. The data in the volumes stays.",
+      "type": "shell",
+      "command": "etask-configuration/tools/up.sh --docker --stop",
+      "problemMatcher": []
+    },
+    {
+      "label": "Rebuild the images",
+      "type": "shell",
+      "command": "etask-configuration/tools/up.sh --docker --build",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Start over (DELETES the data)",
+      "detail": "Throws away the database and the volumes, then rebuilds from nothing.",
+      "type": "shell",
+      "command": "etask-configuration/tools/up.sh --docker --fresh --build",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Lint the nets",
+      "detail": "Structure and the silent traps. Under a second.",
+      "type": "shell",
+      "command": "python3 tools/pflint.py processes/",
+      "options": { "cwd": "${workspaceFolder}/etask-configuration" },
+      "problemMatcher": [],
+      "group": { "kind": "test", "isDefault": true }
+    },
+    {
+      "label": "Check the Groovy in actions",
+      "type": "shell",
+      "command": "python3 tools/pfgroovy.py processes/",
+      "options": { "cwd": "${workspaceFolder}/etask-configuration" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Check, fix and report (pfloop)",
+      "detail": "Runs the whole chain, applies the unambiguous fixes, writes the rest to .run/pfloop-zadanie.md.",
+      "type": "shell",
+      "command": "python3 tools/pfloop.py --fix",
+      "options": { "cwd": "${workspaceFolder}/etask-configuration" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Sync the nets into the running engine",
+      "detail": "The engine imports a net only when it is missing. After editing an existing net, this is what makes the change real.",
+      "type": "shell",
+      "command": "python3 tools/pfsync.py --sync",
+      "options": { "cwd": "${workspaceFolder}/etask-configuration" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Backend log",
+      "type": "shell",
+      "command": "docker compose -f deploy/docker-compose.dev.yml logs -f backend",
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    }
+  ]
+}

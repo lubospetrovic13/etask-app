@@ -1,0 +1,33 @@
+{
+  // Groovy 3 fails on JDK 17+, so the language server has to be told to use 11.
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "java.import.maven.enabled": true,
+
+  "files.eol": "\n",
+  "files.encoding": "utf8",
+  "files.associations": {
+    "*.xml": "xml"
+  },
+
+  // The nets are the point of this repository. Keep them readable and diffable.
+  "[xml]": {
+    "editor.defaultFormatter": "redhat.vscode-xml",
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
+  "xml.format.splitAttributes": false,
+  "xml.format.preserveEmptyContent": true,
+
+  "search.exclude": {
+    "**/target": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    ".run": true,
+    "**/__pycache__": true
+  },
+  "files.watcherExclude": {
+    "**/target/**": true,
+    "**/node_modules/**": true,
+    "**/.run/**": true
+  }
+}
