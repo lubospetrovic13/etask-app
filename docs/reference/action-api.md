@@ -69,6 +69,9 @@ Varianta podla ID uctu - a je to tá, ktorú treba volať.
 ### `changeUserPassword(String userId, String newPassword)`
 Zmena hesla podla ID uctu.
 
+### `pozvi(String email)`
+Pozvanka e-mailom: ucet vznikne v stave INVITED a clovek si z odkazu
+
 ### `processRoleOptions()`
 Roly vsetkych aplikacnych sieti v instancii, ako mapa
 

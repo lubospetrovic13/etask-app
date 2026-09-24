@@ -47,8 +47,8 @@ nezobrazí vlastné polia a build o tom mlčí.
 ## Šablóna, nie nasadenie
 
 Repozitár drží framework, infraštruktúru, správu používateľov a **jednu**
-príkladovú appku (Service Desk) — jej kartu vidí len admin, aby sa príklad
-nedal zameniť za skutočnú appku. Klientske appky žijú vo vlastných repách
+príkladovú appku (Service Desk) — jej kartu vidia len roly `podpora`
+a `zakaznik` (`pfdoc sd`). Klientske appky žijú vo vlastných repách
 a do checkoutu sa dostanú `pfapp install`:
 
 | appka | repozitár |

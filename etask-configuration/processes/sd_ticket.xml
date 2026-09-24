@@ -12,238 +12,205 @@
 	-->
 	<i18n locale="en">
 		<i18nString name="net_title">Support request</i18nString>
-		<i18nString name="agent_title">Support operator</i18nString>
-		<i18nString name="specialist_title">Specialist</i18nString>
-		<i18nString name="manager_title">Support manager</i18nString>
-		<i18nString name="src_type_title">Type as stated by the customer</i18nString>
-		<i18nString name="src_type_opt_incident">Report an incident</i18nString>
-		<i18nString name="src_type_opt_service">Service task</i18nString>
-		<i18nString name="src_type_opt_change">Change request</i18nString>
-		<i18nString name="src_type_opt_access">System access</i18nString>
-		<i18nString name="src_type_opt_question">Question</i18nString>
-		<i18nString name="src_service_title">Service</i18nString>
-		<i18nString name="src_service_opt_portal">Customer portal</i18nString>
-		<i18nString name="src_service_opt_core">Main application</i18nString>
-		<i18nString name="src_service_opt_integration">Integration with another system</i18nString>
-		<i18nString name="src_service_opt_reports">Reports and exports</i18nString>
-		<i18nString name="src_service_opt_account">Account and login</i18nString>
-		<i18nString name="src_service_opt_unknown">Not sure</i18nString>
-		<i18nString name="src_title_title">Name as given by the customer</i18nString>
-		<i18nString name="src_description_title">Description from the customer</i18nString>
-		<i18nString name="src_severity_title">Urgency as stated by the customer</i18nString>
-		<i18nString name="src_severity_opt_A">A - it blocks everyone</i18nString>
-		<i18nString name="src_severity_opt_B">B - limiting, but work can continue</i18nString>
-		<i18nString name="src_severity_opt_C">C - can wait</i18nString>
-		<i18nString name="src_steps_title">How to reproduce it</i18nString>
-		<i18nString name="src_workaround_title">Customer's workaround</i18nString>
-		<i18nString name="src_name_title">Reporter</i18nString>
-		<i18nString name="src_email_title">E-mail</i18nString>
-		<i18nString name="src_phone_title">Phone</i18nString>
-		<i18nString name="src_org_title">Organisation</i18nString>
-		<i18nString name="tk_agents_title">Customer's operators</i18nString>
-		<i18nString name="tk_agents_desc">Copied from the customer register. Only these people (and the manager) can see this ticket.</i18nString>
-		<i18nString name="tk_specialists_title">Customer's specialists</i18nString>
-		<i18nString name="tk_specialists_desc">Copied from the customer register.</i18nString>
-		<i18nString name="tk_org_match_title">Customer assignment</i18nString>
-		<i18nString name="tk_customer_id_title">Customer ID</i18nString>
-		<i18nString name="tk_org_name_title">Customer</i18nString>
-		<i18nString name="tk_org_name_desc">The official name from the register. The customer types anything into the form; this is what it was matched to.</i18nString>
-		<i18nString name="tk_org_override_title">Correct the organisation</i18nString>
-		<i18nString name="tk_org_override_desc">For when the customer writes the name differently than the register has it. The ticket is re-matched after saving.</i18nString>
-		<i18nString name="src_affects_more_title">Affects more than one person</i18nString>
-		<i18nString name="src_started_title">Since when</i18nString>
-		<i18nString name="src_request_id_title">Submission ID</i18nString>
-		<i18nString name="src_request_id_desc">The public form case the request came from.</i18nString>
-		<i18nString name="tk_type_title">Classification</i18nString>
-		<i18nString name="tk_type_desc">The type the request is actually handled under. It may differ from what the customer chose.</i18nString>
-		<i18nString name="tk_type_opt_incident">Incident</i18nString>
-		<i18nString name="tk_type_opt_service">Service task</i18nString>
-		<i18nString name="tk_type_opt_change">Change request</i18nString>
-		<i18nString name="tk_type_opt_access">Access</i18nString>
-		<i18nString name="tk_type_opt_question">Question</i18nString>
-		<i18nString name="tk_priority_title">Priority</i18nString>
-		<i18nString name="tk_priority_desc">Sets the response deadline: A within 2, B within 4 and C within 8 business hours.</i18nString>
-		<i18nString name="tk_priority_opt_A">A - critical</i18nString>
-		<i18nString name="tk_priority_opt_B">B - not critical</i18nString>
-		<i18nString name="tk_priority_opt_C">C - low</i18nString>
-		<i18nString name="tk_priority_changed_title">Priority changed from the submission</i18nString>
-		<i18nString name="tk_priority_reason_title">Why you changed the priority</i18nString>
-		<i18nString name="tk_priority_reason_desc">Sent to the reporter. The change cannot be saved without it.</i18nString>
-		<i18nString name="tk_state_title">Status</i18nString>
-		<i18nString name="tk_state_opt_new">New</i18nString>
-		<i18nString name="tk_state_opt_accepted">Picked up</i18nString>
-		<i18nString name="tk_state_opt_pending">Waiting for the customer</i18nString>
-		<i18nString name="tk_state_opt_working">In progress</i18nString>
-		<i18nString name="tk_state_opt_resolved">Resolved</i18nString>
-		<i18nString name="tk_note_title">Internal note</i18nString>
-		<i18nString name="tk_note_desc">The customer cannot see it.</i18nString>
-		<i18nString name="tk_worklog_title">Progress log</i18nString>
-		<i18nString name="tk_worklog_desc">Appended, never overwritten. It is the history of the work.</i18nString>
-		<i18nString name="tk_pending_reason_title">What you need from the customer</i18nString>
-		<i18nString name="tk_pending_reason_desc">Sent to them by e-mail. Deadlines do not run until they reply.</i18nString>
-		<i18nString name="tk_resolution_title">How it was resolved</i18nString>
-		<i18nString name="tk_resolution_desc">The text the customer receives. Write it so it makes sense without context.</i18nString>
-		<i18nString name="sla_created_at_title">Submitted</i18nString>
-		<i18nString name="sla_accepted_at_title">Picked up</i18nString>
-		<i18nString name="sla_response_due_title">Response due by</i18nString>
-		<i18nString name="sla_response_due_desc">Counted in business hours, Mon-Fri 08:00-16:00.</i18nString>
-		<i18nString name="sla_ok_title">Response deadline</i18nString>
-		<i18nString name="sla_pause_from_title">Paused since</i18nString>
-		<i18nString name="sla_pause_minutes_title">Paused working minutes</i18nString>
-		<i18nString name="sla_pause_minutes_desc">Total time spent waiting for the customer.</i18nString>
-		<i18nString name="show_submitted_title">Customer submission</i18nString>
-		<i18nString name="show_submitted_desc">Collapses or expands what came in from the form.</i18nString>
-		<i18nString name="new_wi_title_title">What needs doing</i18nString>
-		<i18nString name="new_wi_title_desc">This is what the specialist sees in their work item list.</i18nString>
-		<i18nString name="new_wi_type_title">Kind of work</i18nString>
-		<i18nString name="new_wi_type_opt_analysis">Analysis</i18nString>
-		<i18nString name="new_wi_type_opt_fix">Fix</i18nString>
-		<i18nString name="new_wi_type_opt_test">Test</i18nString>
-		<i18nString name="new_wi_type_opt_deploy">Deployment</i18nString>
-		<i18nString name="new_wi_type_opt_other">Other</i18nString>
-		<i18nString name="new_wi_assignee_title">To</i18nString>
-		<i18nString name="new_wi_assignee_desc">Only this person will see the work item and work on it.</i18nString>
-		<i18nString name="new_wi_estimate_title">Estimate in hours</i18nString>
-		<i18nString name="btn_add_wi_placeholder">Assign a work item</i18nString>
-		<i18nString name="wi_list_title">Assigned work items</i18nString>
-		<i18nString name="wi_report_title">Reports from specialists</i18nString>
-		<i18nString name="wi_report_desc">The work item writes this itself when the specialist finishes or cancels it. No need to edit it by hand.</i18nString>
-		<i18nString name="wi_open_title">Open work items</i18nString>
-		<i18nString name="wi_refs_title">Work item detail</i18nString>
-		<i18nString name="wi_refs_desc">Forms of the assigned work items, editable right here.</i18nString>
+		<i18nString name="podpora_title">Support staff</i18nString>
+		<i18nString name="zakaznik_title">Customer</i18nString>
+		<i18nString name="div_poziadavka_init">Request</i18nString>
+		<i18nString name="div_priebeh_init">Progress</i18nString>
+		<i18nString name="div_sla_init">Deadline</i18nString>
+		<i18nString name="div_interne_init">Internal - the customer cannot see this</i18nString>
+		<i18nString name="tk_predmet_title">Subject</i18nString>
+		<i18nString name="tk_predmet_desc">In one sentence - what you need.</i18nString>
+		<i18nString name="tk_typ_title">Kind of request</i18nString>
+		<i18nString name="tk_typ_opt_incident">Something does not work</i18nString>
+		<i18nString name="tk_typ_opt_sluzba">Something needs setting up</i18nString>
+		<i18nString name="tk_typ_opt_zmena">I want something new or different</i18nString>
+		<i18nString name="tk_typ_opt_pristup">I need access</i18nString>
+		<i18nString name="tk_typ_opt_otazka">Just a question</i18nString>
+		<i18nString name="tk_urgentnost_title">How urgent is it</i18nString>
+		<i18nString name="tk_urgentnost_opt_A">We cannot work</i18nString>
+		<i18nString name="tk_urgentnost_opt_B">It slows us down</i18nString>
+		<i18nString name="tk_urgentnost_opt_C">It can wait</i18nString>
+		<i18nString name="tk_popis_title">Description</i18nString>
+		<i18nString name="tk_popis_desc">What happens, since when, what you have tried. The more we know, the sooner we can help.</i18nString>
+		<i18nString name="tk_priloha_title">Attachment</i18nString>
+		<i18nString name="tk_stav_title">Status</i18nString>
+		<i18nString name="tk_stav_opt_rozpisana">Draft</i18nString>
+		<i18nString name="tk_stav_opt_nova">Submitted</i18nString>
+		<i18nString name="tk_stav_opt_v_rieseni">In progress</i18nString>
+		<i18nString name="tk_stav_opt_caka">Waiting for your reply</i18nString>
+		<i18nString name="tk_stav_opt_vyriesena">Resolved</i18nString>
+		<i18nString name="tk_priorita_title">Priority</i18nString>
+		<i18nString name="tk_priorita_desc">Sets the response deadline. Pre-filled from how urgent the customer said it is.</i18nString>
+		<i18nString name="tk_priorita_opt_A">A - critical</i18nString>
+		<i18nString name="tk_priorita_opt_B">B - normal</i18nString>
+		<i18nString name="tk_priorita_opt_C">C - low</i18nString>
+		<i18nString name="tk_zadavatel_title">Submitted by (account)</i18nString>
+		<i18nString name="tk_podal_title">Submitted by</i18nString>
+		<i18nString name="tk_podane_o_title">Submitted</i18nString>
+		<i18nString name="tk_firma_id_title">Company id</i18nString>
+		<i18nString name="tk_firma_nazov_title">Company</i18nString>
+		<i18nString name="tk_firma_ludia_title">People of the company</i18nString>
+		<i18nString name="tk_riesitel_title">Handled by</i18nString>
+		<i18nString name="tk_riesitel_id_title">Handler id</i18nString>
+		<i18nString name="tk_komunikacia_title">Communication</i18nString>
+		<i18nString name="tk_komunikacia_desc">The whole history of the request. The customer sees it too.</i18nString>
+		<i18nString name="tk_otazka_title">What we need from you</i18nString>
+		<i18nString name="tk_otazka_desc">The customer gets it by e-mail and answers in their request.</i18nString>
+		<i18nString name="tk_doplnenie_title">Your reply</i18nString>
+		<i18nString name="tk_riesenie_title">Resolution</i18nString>
+		<i18nString name="tk_riesenie_desc">The customer reads this. Write it so it makes sense without context.</i18nString>
+		<i18nString name="tk_dovod_title">Why you are reopening it</i18nString>
+		<i18nString name="tk_interna_title">Internal note</i18nString>
+		<i18nString name="sla_prevzate_title">Picked up</i18nString>
+		<i18nString name="sla_termin_title">Response due by</i18nString>
+		<i18nString name="sla_termin_desc">Business hours Mon-Fri 08:00-16:00. Hours come from the company contract, otherwise A 2 h, B 4 h, C 8 h.</i18nString>
+		<i18nString name="sla_dodrzane_title">Response deadline met</i18nString>
+		<i18nString name="t_podanie_label">New request</i18nString>
+		<i18nString name="t_moja_label">My request</i18nString>
 		<i18nString name="t_detail_label">Request overview</i18nString>
-		<i18nString name="t_triage_label">Triage and pick-up</i18nString>
-		<i18nString name="t_work_label">Record progress</i18nString>
-		<i18nString name="t_pending_label">Ask for more information</i18nString>
-		<i18nString name="t_resolve_label">Resolve</i18nString>
-		<i18nString name="t_plan_label">Assigning work</i18nString>
-	
-		<i18nString name="div_submitted_init">Customer submission</i18nString>
-		<i18nString name="div_sla_init">Deadlines</i18nString>
-		<i18nString name="div_triage_init">Triage - classification and pick-up</i18nString>
-		<i18nString name="div_work_init">Progress of the work</i18nString>
-		<i18nString name="div_plan_init">Work items</i18nString>
+		<i18nString name="t_prevzat_label">Pick up</i18nString>
+		<i18nString name="t_vyziadat_label">Ask the customer</i18nString>
+		<i18nString name="t_doplnit_label">Reply to support</i18nString>
+		<i18nString name="t_pokracovat_label">Continue without a reply</i18nString>
+		<i18nString name="t_vyriesit_label">Resolve</i18nString>
+		<i18nString name="t_znovu_label">Reopen</i18nString>
 	</i18n>
 	<icon>confirmation_number</icon>
-	<defaultRole>true</defaultRole>
+	<defaultRole>false</defaultRole>
 	<anonymousRole>false</anonymousRole>
 	<transitionRole>false</transitionRole>
+	<!--
+		Poziadavka, ktoru podava PRIHLASENY zakaznik a spracuva zamestnanec
+		podpory.
+
+		  p_novy -> t_podanie -> p_podane -> t_prevzat -> p_riesi
+		                     \-> p_zivy (sink)          p_riesi <-> p_caka
+		                                                  t_vyziadat / t_doplnit, t_pokracovat
+		                                               p_riesi -> t_vyriesit -> p_vyriesene
+		                                               p_vyriesene -> t_znovu -> p_riesi
+		  p_zivy ..read..> t_moja (zakaznik), t_detail (podpora)
+
+		KTO CO VIDI. Rola `zakaznik` smie len zakladat. Vidiet dava `userRef`:
+		  tk_zadavatel    ten, kto poziadavku zalozil - vidi aj svoj koncept,
+		  tk_firma_ludia  vsetci ludia jeho firmy, od podania. Tak kazdy vo firme
+		                  vidi svoje aj firemne poziadavky.
+		`podpora` vidi vsetko cez roleRef. Opravnenie cez userRef re-import
+		siete prezije, cez roleRef nie (B16) - preto zakaznikova viditelnost
+		na roli nestoji.
+
+		Firma sa neurcuje textom z formulara, ale podla toho, v ktorej firme
+		clovek JE (`f_clenovia` v sd_firma). Clovek patri najviac do jednej.
+
+		`t_moja` a `t_detail` visia na read arcu zo SINKU `p_zivy` - nikto ho
+		nekonzumuje, takze pohlad nezmizne po odmietnutom DOKONCIT (B8b, B25).
+
+		assignPolicy je `manual` vsade okrem podania: `auto` priradi ulohu tomu,
+		koho akcia ju vyrobila (B21). Uloha podpory vyrobena zakaznikovym
+		podanim by inak patrila zakaznikovi.
+
+		Stav je `enumeration_map` (preklada sa, dopyty v menu idu na kluc)
+		a v nazve pripadu nie je - `Case.title` je String (RUNBOOK 9).
+	-->
 	<caseEvents>
 		<event type="create">
 			<id>sdt_create</id>
 			<actions phase="post">
 				<action id="1"><![CDATA[
-tk_state: f.tk_state, sla_created_at: f.sla_created_at, sla_note: f.sla_note,
-sla_ok: f.sla_ok;
+tk_stav: f.tk_stav, tk_zadavatel: f.tk_zadavatel, tk_podal: f.tk_podal,
+tk_firma_id: f.tk_firma_id, tk_firma_nazov: f.tk_firma_nazov, tk_predmet: f.tk_predmet;
 
-change tk_state value { "new" }
-change sla_created_at value { java.time.LocalDateTime.now() }
-change sla_ok value { true }
-change sla_note value { "Awaiting pick-up. The deadline is set after triage." }
-changeCaseProperty("title").about { "New request" }
+change tk_stav value { "rozpisana" }
+// Vlastnik je AUTOR pripadu, nie loggedUser() - pripad moze zalozit aj niekto
+// v mene zakaznika (B28).
+def autor = ((useCase.author?.id ?: "") as String)
+if (!autor) {
+    def u = loggedUser()
+    autor = ((u?.stringId ?: "") as String)
+}
+if (autor) {
+    change tk_zadavatel value { [autor] }
+    change tk_podal value { meno_cloveka(autor) }
+    def firma = firma_cloveka(autor)
+    if (firma != null) {
+        change tk_firma_id value { firma.stringId }
+        change tk_firma_nazov value { ((firma.dataSet["f_nazov"]?.value ?: firma.title) as String) }
+    }
+}
+changeCaseProperty("title").about { nazov(tk_predmet) }
+changeCaseProperty("color").about { "grey" }
 				]]></action>
 			</actions>
 		</event>
 	</caseEvents>
-	<function scope="process" name="net_prefix"><![CDATA[
-{ def caseObj ->
-    // Bez tohto by createCase pre sesterskou siet nenasiel - identifikator
-    // nesie URI cestu (service_desk/...), takze prefix treba odvodit.
-    def pid = caseObj.processIdentifier
-    return pid.contains("/") ? pid.substring(0, pid.lastIndexOf("/") + 1) : ""
+	<function scope="process" name="siet"><![CDATA[
+{ def meno ->
+    // Sesterska siet - identifikator nesie URI cestu (it/service_desk/...).
+    def pid = useCase.processIdentifier as String
+    def prefix = pid.contains("/") ? pid.substring(0, pid.lastIndexOf("/") + 1) : ""
+    return prefix + meno
 }
 	]]></function>
-	<function scope="process" name="org_keys"><![CDATA[
-{ def customerCase ->
-    // Nazov aj vsetky aliasy, normalizovane, aby "Netgrif s.r.o." a "netgrif
-    // s.r.o." boli ten isty zakaznik.
-    def keys = []
-    def name = ((customerCase.dataSet["c_name"]?.value ?: "") as String)
-    if (name) keys << name
-    def alias = ((customerCase.dataSet["c_alias"]?.value ?: "") as String)
-    alias.split("\n").each { line -> if (line?.trim()) keys << line }
-    return keys.collect { (it as String).trim().toLowerCase() }.findAll { it }
-}
-	]]></function>
-	<function scope="process" name="match_customer"><![CDATA[
-{ def caseObj, def orgName ->
-    def needle = ((orgName ?: "") as String).trim().toLowerCase()
-    if (!needle) return null
-    def customers = findCases { it.processIdentifier.eq(net_prefix(caseObj) + "sd_customer") }
-    if (!customers) return null
-    // Neaktivna zmluva sa neparuje - tiket od byvaleho zakaznika ma skoncit u
-    // veduceho, nie u tymu, ktory ho uz neobsluhuje.
-    def active = customers.findAll { ((it.dataSet["c_active"]?.value ?: false) as Boolean) }
-    return active.find { org_keys(it).contains(needle) }
-}
-	]]></function>
-	<function scope="process" name="apply_customer"><![CDATA[
-{ def caseObj, def orgName, def tk_agents, def tk_specialists, def tk_org_match,
-  def tk_customer_id, def tk_org_name, def tk_worklog ->
-    // Toto je miesto, kde sa z textu z eformu stane opravnenie. Kym tu nic
-    // nepribehne, tiket vidi iba veduci - to je zamer, nie chyba: tiket od
-    // neznamej organizacie nema komu patrit.
-    def org = ((orgName ?: "") as String).trim()
-    def customer = match_customer(caseObj, org)
-
-    if (!customer) {
-        change tk_agents value { [] }
-        change tk_specialists value { [] }
-        change tk_customer_id value { "" }
-        change tk_org_name value { org }
-        change tk_org_match value {
-            org ? ("The organisation \"" + org + "\" is not in the customer register - only the manager sees the ticket.")
-                : "The organisation is not filled in - only the manager sees the ticket."
-        }
-        def log0 = (tk_worklog.value ?: "") as String
-        def e0 = java.time.LocalDateTime.now().toString() + "  bez priradenia: " + (org ?: "empty organisation")
-        change tk_worklog value { log0 ? log0 + "\n" + e0 : e0 }
-        return false
+	<function scope="process" name="firma_cloveka"><![CDATA[
+{ def userId ->
+    // Firma, v ktorej clovek je. `findCases { it.dataSet... }` nefunguje,
+    // filtruje sa v Groovy.
+    def id = (userId ?: "") as String
+    if (!id) return null
+    return findCases { it.processIdentifier.eq(siet("sd_firma")) }.find { c ->
+        userIdsOf(c.dataSet["f_clenovia"]?.value).contains(id)
     }
-
-    // Prienik, nie kopia. `roleRef` a `userRef` sa v Petriflow zjednocuju, takze
-    // "rola agent a zaroven v tyme tohto zakaznika" sa deklarativne napisat neda.
-    // usersWithRole() z EtaskActionDelegate to vyrata: rola zostava autoritativna,
-    // takze koho veduci prida do tymu omylom a rolu nema, pristup nedostane.
-    def agents = usersWithRole(customer.dataSet["c_agents"]?.value, "agent")
-    def specialists = usersWithRole(customer.dataSet["c_specialists"]?.value, "specialist")
-    def name = ((customer.dataSet["c_name"]?.value ?: "") as String)
-
-    change tk_agents value { agents }
-    change tk_specialists value { specialists }
-    change tk_customer_id value { customer.stringId }
-    change tk_org_name value { name }
-    change tk_org_match value {
-        (agents || specialists)
-                ? (name + " – " + (agents.size() + specialists.size()) + " people")
-                : (name + " - has nobody assigned in the register, only the manager sees the ticket.")
+}
+	]]></function>
+	<function scope="process" name="meno_cloveka"><![CDATA[
+{ def userId ->
+    def mena = menaUzivatelov([userId as String])
+    def m = mena ? (mena[0] as String) : ""
+    return (m && m != "unknown unknown") ? m : (emailyOf([userId as String])[0] ?: (userId as String))
+}
+	]]></function>
+	<function scope="process" name="ja"><![CDATA[
+{ ->
+    def u = loggedUser()
+    return u == null ? "?" : meno_cloveka(u.stringId)
+}
+	]]></function>
+	<function scope="process" name="nazov"><![CDATA[
+{ def tk_predmet ->
+    // Cislo a predmet, BEZ stavu - Case.title sa neprekladá (RUNBOOK 9).
+    def cislo = ((useCase.visualId ?: "") as String)
+    def p = ((tk_predmet?.value ?: "") as String).trim()
+    return p ? (cislo + " · " + p) : cislo
+}
+	]]></function>
+	<function scope="process" name="zapis"><![CDATA[
+{ def pole, def text ->
+    // Komunikacia sa len pripisuje, nikdy neprepisuje - je to historia poziadavky.
+    def ked = java.time.LocalDateTime.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+    def stare = ((pole.value ?: "") as String)
+    def riadok = ked + " · " + ja() + ": " + (text as String)
+    return stare ? (stare + "\n\n" + riadok) : riadok
+}
+	]]></function>
+	<function scope="process" name="povinne"><![CDATA[
+{ def pole, def sprava ->
+    // Validacia v `pre`, ktoru `required` neoveri. Odmietnutie vrati HTTP 200
+    // a dovod v tele ako `error`.
+    if (!((pole.value ?: "") as String).trim()) {
+        throw new java.lang.IllegalStateException(sprava as String)
     }
-    def log = (tk_worklog.value ?: "") as String
-    def e = java.time.LocalDateTime.now().toString() + "  assigned to the customer: " + name
-    change tk_worklog value { log ? log + "\n" + e : e }
-    return true
 }
 	]]></function>
-	<function scope="process" name="sla_hours"><![CDATA[
-{ def priority ->
-    // Standard, ked zakaznik nema dohodnute vlastne hodiny.
-    def m = ["A": 2, "B": 4, "C": 8]
-    return (m[priority as String] ?: 8) as int
-}
-	]]></function>
-	<function scope="process" name="contract_sla_hours"><![CDATA[
-{ def customerId, def priority ->
-    // Hodiny odozvy zo zmluvy zakaznika. SLA appka bez tohto nema zmysel -
-    // kazdy zakaznik ma dohodnute ine lehoty, nie jednu maticu pre vsetkych.
-    def id = ((customerId ?: "") as String).trim()
-    def p = ((priority ?: "") as String).trim().toUpperCase()
-    if (!id || !(p in ["A", "B", "C"])) return sla_hours(priority)
-    def customer = findCase { it._id.eq(new org.bson.types.ObjectId(id)) }
-    if (!customer) return sla_hours(priority)
-    def agreed = customer.dataSet["c_sla_" + p.toLowerCase()]?.value
-    if (agreed == null) return sla_hours(priority)
-    int hours = (agreed as Number).intValue()
-    return hours > 0 ? hours : sla_hours(priority)
+	<function scope="process" name="hodiny"><![CDATA[
+{ def firma, def priorita ->
+    // Hodiny odozvy zo zmluvy firmy, inak standard.
+    def p = ((priorita ?: "") as String).trim().toUpperCase()
+    def standard = (["A": 2, "B": 4, "C": 8][p] ?: 8) as int
+    if (firma == null || !(p in ["A", "B", "C"])) return standard
+    def dohodnute = firma.dataSet["f_sla_" + p.toLowerCase()]?.value
+    if (dohodnute == null) return standard
+    int h = (dohodnute as Number).intValue()
+    return h > 0 ? h : standard
 }
 	]]></function>
 	<function scope="process" name="business_deadline"><![CDATA[
@@ -277,1927 +244,1129 @@ changeCaseProperty("title").about { "New request" }
     return cur
 }
 	]]></function>
-	<function scope="process" name="priority_color"><![CDATA[
-{ def priority ->
-    def m = ["A": "red", "B": "orange", "C": "green"]
-    return m[priority as String] ?: "default"
+	<function scope="process" name="farba"><![CDATA[
+{ def priorita ->
+    return (["A": "red", "B": "orange", "C": "blue"][priorita as String] ?: "blue") as String
 }
 	]]></function>
-	<function scope="process" name="type_label"><![CDATA[
-{ def code ->
-    def m = ["incident": "Porucha", "service": "Service call",
-             "change": "Change request", "access": "Access", "question": "Question"]
-    return m[code as String] ?: "Request"
-}
-	]]></function>
-	<function scope="process" name="wi_type_label"><![CDATA[
-{ def code ->
-    def m = ["analysis": "Analysis", "fix": "Oprava", "test": "Test",
-             "deploy": "Nasadenie", "other": "Other"]
-    return m[code as String] ?: "Work"
+	<function scope="process" name="oznam"><![CDATA[
+{ def komu, def predmet, def telo ->
+    // Notifikacia nesmie zhodit prechod - `notifikuj` nikdy nehadze a bez
+    // SMTP vrati 0.
+    notifikuj(komu, ((useCase.visualId ?: "") as String) + " - " + (predmet as String),
+            (telo as String) + "\n\n" + ((useCase.title ?: "") as String))
 }
 	]]></function>
 	<roleRef>
-		<id>anonymous</id>
+		<id>zakaznik</id>
 		<caseLogic>
 			<create>true</create>
 		</caseLogic>
 	</roleRef>
-	<!--
-		Rola uz sama nedava pravo vidiet tiket. Rola hovori, co clovek smie
-		robit; ci to smie robit na TOMTO tikete, hovori tk_agents /
-		tk_specialists - zoznamy, ktore tiket dostal z registra zakaznika.
-		Priesecnik roly a organizacie sa v Petriflow inak vyjadrit neda:
-		roleRef a userRef sa scitavaju, nie prienikaju, takze rola je zapecena
-		do toho, v ktorom zo dvoch zoznamov clovek u zakaznika je.
-
-		Veduci vidi vsetko - inak by tiket od neznamej organizacie nemal komu
-		patrit a nikto by ho uz nenasiel.
-	-->
 	<roleRef>
-		<id>agent</id>
+		<id>podpora</id>
 		<caseLogic>
-			<create>true</create>
+			<view>true</view>
 		</caseLogic>
 	</roleRef>
 	<userRef>
-		<id>tk_agents</id>
+		<id>tk_zadavatel</id>
 		<caseLogic>
 			<view>true</view>
 		</caseLogic>
 	</userRef>
 	<userRef>
-		<id>tk_specialists</id>
+		<id>tk_firma_ludia</id>
 		<caseLogic>
 			<view>true</view>
 		</caseLogic>
 	</userRef>
-	<roleRef>
-		<id>manager</id>
-		<caseLogic>
-			<create>true</create>
-			<view>true</view>
-			<delete>true</delete>
-		</caseLogic>
-	</roleRef>
 	<role>
-		<id>agent</id>
-		<title name="agent_title">Operátor podpory</title>
+		<id>podpora</id>
+		<title name="podpora_title">Zamestnanec podpory</title>
 	</role>
 	<role>
-		<id>specialist</id>
-		<title name="specialist_title">Špecialista</title>
-	</role>
-	<role>
-		<id>manager</id>
-		<title name="manager_title">Vedúci podpory</title>
+		<id>zakaznik</id>
+		<title name="zakaznik_title">Zákazník</title>
 	</role>
 	<data type="i18n">
-		<id>div_submitted</id>
+		<id>div_poziadavka</id>
 		<title/>
-		<init name="div_submitted_init">Podanie zákazníka</init>
-		<component>
-			<name>divider</name>
-			<properties>
-				<property key="fontSize">20</property>
-			</properties>
-		</component>
+		<init name="div_poziadavka_init">Požiadavka</init>
+	</data>
+	<data type="i18n">
+		<id>div_priebeh</id>
+		<title/>
+		<init name="div_priebeh_init">Priebeh</init>
 	</data>
 	<data type="i18n">
 		<id>div_sla</id>
 		<title/>
-		<init name="div_sla_init">Lehoty</init>
-		<component>
-			<name>divider</name>
-			<properties>
-				<property key="fontSize">20</property>
-			</properties>
-		</component>
+		<init name="div_sla_init">Lehota</init>
 	</data>
 	<data type="i18n">
-		<id>div_triage</id>
+		<id>div_interne</id>
 		<title/>
-		<init name="div_triage_init">Triáž — zaradenie a prevzatie</init>
-		<component>
-			<name>divider</name>
-			<properties>
-				<property key="fontSize">20</property>
-			</properties>
-		</component>
-	</data>
-	<data type="i18n">
-		<id>div_work</id>
-		<title/>
-		<init name="div_work_init">Postup riešenia</init>
-		<component>
-			<name>divider</name>
-			<properties>
-				<property key="fontSize">20</property>
-			</properties>
-		</component>
-	</data>
-	<data type="enumeration_map">
-		<id>src_type</id>
-		<title name="src_type_title">Typ podľa zákazníka</title>
-		<options>
-			<option key="incident" name="src_type_opt_incident">Nahlásiť poruchu</option>
-			<option key="service" name="src_type_opt_service">Servisný zásah</option>
-			<option key="change" name="src_type_opt_change">Žiadosť o zmenu</option>
-			<option key="access" name="src_type_opt_access">Prístup do systému</option>
-			<option key="question" name="src_type_opt_question">Otázka</option>
-		</options>
-	</data>
-	<data type="enumeration_map">
-		<id>src_service</id>
-		<title name="src_service_title">Služba</title>
-		<options>
-			<option key="portal" name="src_service_opt_portal">Zákaznícky portál</option>
-			<option key="core" name="src_service_opt_core">Hlavná aplikácia</option>
-			<option key="integration" name="src_service_opt_integration">Integrácia s iným systémom</option>
-			<option key="reports" name="src_service_opt_reports">Reporty a exporty</option>
-			<option key="account" name="src_service_opt_account">Účet a prihlásenie</option>
-			<option key="unknown" name="src_service_opt_unknown">Neviem určiť</option>
-		</options>
-	</data>
-	<data type="text">
-		<id>src_title</id>
-		<title name="src_title_title">Názov od zákazníka</title>
-		<event type="set">
-			<id>src_title_set</id>
-			<actions phase="post">
-				<action id="42"><![CDATA[
-src_title: f.src_title;
-
-// Bez tohto sa kazdy tiket v zoznamoch vola "New request" az do triaze.
-def t = ((src_title.value ?: "") as String).trim()
-if (t) {
-    changeCaseProperty("title").about { t }
-}
-				]]></action>
-			</actions>
-		</event>
-	</data>
-	<data type="text">
-		<id>src_description</id>
-		<title name="src_description_title">Popis od zákazníka</title>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="enumeration_map">
-		<id>src_severity</id>
-		<title name="src_severity_title">Súrnosť podľa zákazníka</title>
-		<options>
-			<option key="A" name="src_severity_opt_A">A — blokuje to všetkých</option>
-			<option key="B" name="src_severity_opt_B">B — obmedzuje, ale dá sa pokračovať</option>
-			<option key="C" name="src_severity_opt_C">C — počká</option>
-		</options>
-	</data>
-	<data type="text">
-		<id>src_steps</id>
-		<title name="src_steps_title">Ako sa to dá zopakovať</title>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="text">
-		<id>src_workaround</id>
-		<title name="src_workaround_title">Dočasné riešenie zákazníka</title>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="text">
-		<id>src_name</id>
-		<title name="src_name_title">Nahlasovateľ</title>
-	</data>
-	<data type="text">
-		<id>src_email</id>
-		<title name="src_email_title">E-mail</title>
-	</data>
-	<data type="text">
-		<id>src_phone</id>
-		<title name="src_phone_title">Telefón</title>
-	</data>
-	<data type="text">
-		<id>src_org</id>
-		<title name="src_org_title">Organizácia</title>
-		<event type="set">
-			<id>src_org_set</id>
-			<actions phase="post">
-				<action id="41"><![CDATA[
-src_org: f.src_org, tk_org_override: f.tk_org_override, tk_agents: f.tk_agents,
-tk_specialists: f.tk_specialists, tk_org_match: f.tk_org_match,
-tk_customer_id: f.tk_customer_id, tk_org_name: f.tk_org_name, tk_worklog: f.tk_worklog;
-
-// Prichadza z eformu cez setData, takze prave tu tiket prvykrat vie, komu
-// patri - a az tu dostane niekto ine ako veduci pravo ho vidiet.
-apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
-        tk_specialists, tk_org_match, tk_customer_id, tk_org_name, tk_worklog)
-				]]></action>
-			</actions>
-		</event>
-	</data>
-	<data type="userList">
-		<id>tk_agents</id>
-		<title name="tk_agents_title">Operátori zákazníka</title>
-		<desc name="tk_agents_desc">Skopírované z registra zákazníkov. Iba títo ľudia (a vedúci) tento tiket vidia.</desc>
-	</data>
-	<data type="userList">
-		<id>tk_specialists</id>
-		<title name="tk_specialists_title">Riešitelia zákazníka</title>
-		<desc name="tk_specialists_desc">Skopírované z registra zákazníkov.</desc>
-	</data>
-	<data type="text">
-		<id>tk_org_match</id>
-		<title name="tk_org_match_title">Priradenie k zákazníkovi</title>
-	</data>
-	<data type="text">
-		<id>tk_customer_id</id>
-		<title name="tk_customer_id_title">ID zákazníka</title>
-	</data>
-	<data type="text">
-		<id>tk_org_name</id>
-		<title name="tk_org_name_title">Zákazník</title>
-		<desc name="tk_org_name_desc">Oficiálny názov z registra. Zákazník do formulára píše čokoľvek, tu je to, na čo sa to spárovalo.</desc>
-	</data>
-	<data type="text">
-		<id>tk_org_override</id>
-		<title name="tk_org_override_title">Opraviť organizáciu</title>
-		<desc name="tk_org_override_desc">Keď zákazník napíše názov inak, než je v registri. Po zápise sa tiket priradí znova.</desc>
-		<event type="set">
-			<id>tk_org_override_set</id>
-			<actions phase="post">
-				<action id="40"><![CDATA[
-tk_org_override: f.tk_org_override, src_org: f.src_org, tk_agents: f.tk_agents,
-tk_specialists: f.tk_specialists, tk_org_match: f.tk_org_match,
-tk_customer_id: f.tk_customer_id, tk_org_name: f.tk_org_name, tk_worklog: f.tk_worklog;
-
-apply_customer(useCase, (tk_org_override.value ?: src_org.value), tk_agents,
-        tk_specialists, tk_org_match, tk_customer_id, tk_org_name, tk_worklog)
-				]]></action>
-			</actions>
-		</event>
-	</data>
-	<data type="boolean">
-		<id>src_affects_more</id>
-		<title name="src_affects_more_title">Týka sa viacerých ľudí</title>
-		<component>
-			<name>toggle</name>
-			<properties>
-				<property key="variant">chip</property>
-				<property key="chipTrue">danger</property>
-				<property key="chipFalse">muted</property>
-			</properties>
-		</component>
-		<init>false</init>
-	</data>
-	<data type="dateTime">
-		<id>src_started</id>
-		<title name="src_started_title">Odkedy to trvá</title>
-	</data>
-	<data type="text">
-		<id>src_request_id</id>
-		<title name="src_request_id_title">ID podania</title>
-		<desc name="src_request_id_desc">Case verejného formulára, z ktorého požiadavka prišla.</desc>
-	</data>
-	<data type="enumeration_map" immediate="true">
-		<id>tk_type</id>
-		<title name="tk_type_title">Zaradenie</title>
-		<desc name="tk_type_desc">Typ, pod ktorým sa požiadavka rieši. Môže sa líšiť od toho, čo zvolil zákazník.</desc>
-		<init>incident</init>
-		<options>
-			<option key="incident" name="tk_type_opt_incident">Porucha</option>
-			<option key="service" name="tk_type_opt_service">Servisný zásah</option>
-			<option key="change" name="tk_type_opt_change">Žiadosť o zmenu</option>
-			<option key="access" name="tk_type_opt_access">Prístup</option>
-			<option key="question" name="tk_type_opt_question">Otázka</option>
-		</options>
-	</data>
-	<data type="enumeration_map" immediate="true">
-		<id>tk_priority</id>
-		<title name="tk_priority_title">Priorita</title>
-		<desc name="tk_priority_desc">Určuje lehotu odozvy: A do 2, B do 4 a C do 8 pracovných hodín.</desc>
-		<init>B</init>
-		<options>
-			<option key="A" name="tk_priority_opt_A">A — kritická</option>
-			<option key="B" name="tk_priority_opt_B">B — nekritická</option>
-			<option key="C" name="tk_priority_opt_C">C — nízka</option>
-		</options>
-		<event type="set">
-			<id>tk_priority_set</id>
-			<actions phase="post">
-				<action id="2"><![CDATA[
-tk_priority: f.tk_priority, src_severity: f.src_severity,
-tk_priority_changed: f.tk_priority_changed, tk_priority_reason: f.tk_priority_reason;
-
-// Zmena priority oproti navrhu zakaznika je auditovana udalost a zmluvne
-// zavazuje informovat nahlasovatela. Preto sa zapne pole na doduvodnenie
-// a stane sa povinnym.
-boolean changed = (tk_priority.value as String) != (src_severity.value as String)
-change tk_priority_changed value { changed }
-make tk_priority_reason, editable on transitions when { return changed }
-make tk_priority_reason, required on transitions when { return changed }
-make tk_priority_reason, hidden on transitions when { return !changed }
-				]]></action>
-			</actions>
-		</event>
-	</data>
-	<data type="boolean">
-		<id>tk_priority_changed</id>
-		<title name="tk_priority_changed_title">Priorita zmenená oproti podaniu</title>
-		<component>
-			<name>toggle</name>
-			<properties>
-				<property key="variant">chip</property>
-				<property key="chipTrue">warning</property>
-				<property key="chipFalse">muted</property>
-			</properties>
-		</component>
-		<init>false</init>
-	</data>
-	<data type="text">
-		<id>tk_priority_reason</id>
-		<title name="tk_priority_reason_title">Prečo ste prioritu zmenili</title>
-		<desc name="tk_priority_reason_desc">Pošle sa nahlasovateľovi. Bez toho sa zmena nedá uložiť.</desc>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="enumeration_map">
-		<id>tk_state</id>
-		<title name="tk_state_title">Stav</title>
-		<init>new</init>
-		<options>
-			<option key="new" name="tk_state_opt_new">Nová</option>
-			<option key="accepted" name="tk_state_opt_accepted">Prevzatá</option>
-			<option key="pending" name="tk_state_opt_pending">Čaká na zákazníka</option>
-			<option key="working" name="tk_state_opt_working">V riešení</option>
-			<option key="resolved" name="tk_state_opt_resolved">Vyriešená</option>
-		</options>
-	</data>
-	<data type="text">
-		<id>tk_note</id>
-		<title name="tk_note_title">Interná poznámka</title>
-		<desc name="tk_note_desc">Zákazník ju nevidí.</desc>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="text">
-		<id>tk_worklog</id>
-		<title name="tk_worklog_title">Záznam postupu</title>
-		<desc name="tk_worklog_desc">Pripisuje sa, nemaže. Slúži ako história riešenia.</desc>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="text">
-		<id>tk_pending_reason</id>
-		<title name="tk_pending_reason_title">Čo od zákazníka potrebujete</title>
-		<desc name="tk_pending_reason_desc">Pošle sa mu e-mailom. Kým nedoplní, lehoty sa nepočítajú.</desc>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="text">
-		<id>tk_resolution</id>
-		<title name="tk_resolution_title">Ako sa to vyriešilo</title>
-		<desc name="tk_resolution_desc">Text, ktorý dostane zákazník. Píšte tak, aby to pochopil aj bez kontextu.</desc>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="dateTime">
-		<id>sla_created_at</id>
-		<title name="sla_created_at_title">Podané</title>
-	</data>
-	<data type="dateTime">
-		<id>sla_accepted_at</id>
-		<title name="sla_accepted_at_title">Prevzaté</title>
-	</data>
-	<data type="dateTime">
-		<id>sla_response_due</id>
-		<title name="sla_response_due_title">Odozva najneskôr do</title>
-		<desc name="sla_response_due_desc">Počítané v pracovnom čase Po-Pi 08:00-16:00.</desc>
-	</data>
-	<data type="boolean">
-		<id>sla_ok</id>
-		<title name="sla_ok_title">Lehota odozvy</title>
-		<component>
-			<name>toggle</name>
-			<properties>
-				<property key="variant">chip</property>
-				<property key="chipTrue">success</property>
-				<property key="chipFalse">danger</property>
-			</properties>
-		</component>
-		<init>true</init>
-	</data>
-	<data type="text">
-		<id>sla_note</id>
-		<title/>
-	</data>
-	<data type="dateTime">
-		<id>sla_pause_from</id>
-		<title name="sla_pause_from_title">Pauza od</title>
-	</data>
-	<data type="number">
-		<id>sla_pause_minutes</id>
-		<title name="sla_pause_minutes_title">Napauzované pracovné minúty</title>
-		<desc name="sla_pause_minutes_desc">Súčet času, počas ktorého sa čakalo na zákazníka.</desc>
-		<init>0</init>
-	</data>
-	<data type="boolean" immediate="true">
-		<id>show_submitted</id>
-		<title name="show_submitted_title">Podanie zákazníka</title>
-		<desc name="show_submitted_desc">Zbalí alebo rozbalí to, čo prišlo z formulára.</desc>
-		<component>
-			<name>toggle</name>
-			<properties>
-				<property key="variant">section</property>
-			</properties>
-		</component>
-		<init>true</init>
-		<event type="set">
-			<id>show_submitted_set</id>
-			<actions phase="post">
-				<action id="3"><![CDATA[
-show_submitted: f.show_submitted;
-
-boolean showIt = show_submitted.value == true
-make src_title, visible on transitions when { return showIt }
-make src_description, visible on transitions when { return showIt }
-make src_service, visible on transitions when { return showIt }
-make src_severity, visible on transitions when { return showIt }
-make src_affects_more, visible on transitions when { return showIt }
-make src_steps, visible on transitions when { return showIt }
-make src_workaround, visible on transitions when { return showIt }
-make src_name, visible on transitions when { return showIt }
-make src_email, visible on transitions when { return showIt }
-make src_org, visible on transitions when { return showIt }
-make src_title, hidden on transitions when { return !showIt }
-make src_description, hidden on transitions when { return !showIt }
-make src_service, hidden on transitions when { return !showIt }
-make src_severity, hidden on transitions when { return !showIt }
-make src_affects_more, hidden on transitions when { return !showIt }
-make src_steps, hidden on transitions when { return !showIt }
-make src_workaround, hidden on transitions when { return !showIt }
-make src_name, hidden on transitions when { return !showIt }
-make src_email, hidden on transitions when { return !showIt }
-make src_org, hidden on transitions when { return !showIt }
-				]]></action>
-			</actions>
-		</event>
-	</data>
-	<data type="i18n">
-		<id>div_plan</id>
-		<title/>
-		<init name="div_plan_init">Pracovné úlohy</init>
-		<component>
-			<name>divider</name>
-			<properties>
-				<property key="fontSize">20</property>
-			</properties>
-		</component>
+		<init name="div_interne_init">Interné – zákazník toto nevidí</init>
 	</data>
 	<data type="text" immediate="true">
-		<id>new_wi_title</id>
-		<title name="new_wi_title_title">Čo treba urobiť</title>
-		<desc name="new_wi_title_desc">Toto uvidí riešiteľ v zozname svojich úloh.</desc>
+		<id>tk_predmet</id>
+		<title name="tk_predmet_title">Predmet</title>
+		<desc name="tk_predmet_desc">Jednou vetou – čo potrebujete.</desc>
+		<event type="set">
+			<id>tk_predmet_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+tk_predmet: f.tk_predmet;
+
+changeCaseProperty("title").about { nazov(tk_predmet) }
+				]]></action>
+			</actions>
+		</event>
 	</data>
 	<data type="enumeration_map" immediate="true">
-		<id>new_wi_type</id>
-		<title name="new_wi_type_title">Druh práce</title>
-		<init>analysis</init>
+		<id>tk_typ</id>
+		<title name="tk_typ_title">Druh požiadavky</title>
 		<options>
-			<option key="analysis" name="new_wi_type_opt_analysis">Analýza</option>
-			<option key="fix" name="new_wi_type_opt_fix">Oprava</option>
-			<option key="test" name="new_wi_type_opt_test">Test</option>
-			<option key="deploy" name="new_wi_type_opt_deploy">Nasadenie</option>
-			<option key="other" name="new_wi_type_opt_other">Iné</option>
+			<option key="incident" name="tk_typ_opt_incident">Niečo nefunguje</option>
+			<option key="sluzba" name="tk_typ_opt_sluzba">Treba niečo nastaviť</option>
+			<option key="zmena" name="tk_typ_opt_zmena">Chcem niečo nové alebo inak</option>
+			<option key="pristup" name="tk_typ_opt_pristup">Potrebujem prístup</option>
+			<option key="otazka" name="tk_typ_opt_otazka">Len otázka</option>
+		</options>
+	</data>
+	<data type="enumeration_map">
+		<id>tk_urgentnost</id>
+		<title name="tk_urgentnost_title">Ako je to súrne</title>
+		<options>
+			<option key="A" name="tk_urgentnost_opt_A">Nemôžeme pracovať</option>
+			<option key="B" name="tk_urgentnost_opt_B">Obmedzuje nás to</option>
+			<option key="C" name="tk_urgentnost_opt_C">Počká to</option>
+		</options>
+		<init>B</init>
+	</data>
+	<data type="text">
+		<id>tk_popis</id>
+		<title name="tk_popis_title">Popis</title>
+		<desc name="tk_popis_desc">Čo sa deje, odkedy, čo ste skúsili. Čím viac vieme, tým skôr pomôžeme.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="file">
+		<id>tk_priloha</id>
+		<title name="tk_priloha_title">Príloha</title>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>tk_stav</id>
+		<title name="tk_stav_title">Stav</title>
+		<options>
+			<option key="rozpisana" name="tk_stav_opt_rozpisana">Rozpísaná</option>
+			<option key="nova" name="tk_stav_opt_nova">Podaná</option>
+			<option key="v_rieseni" name="tk_stav_opt_v_rieseni">V riešení</option>
+			<option key="caka" name="tk_stav_opt_caka">Čaká na vašu odpoveď</option>
+			<option key="vyriesena" name="tk_stav_opt_vyriesena">Vyriešená</option>
+		</options>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>tk_priorita</id>
+		<title name="tk_priorita_title">Priorita</title>
+		<desc name="tk_priorita_desc">Určuje lehotu odozvy. Predvyplnená podľa toho, ako súrne to zákazník označil.</desc>
+		<options>
+			<option key="A" name="tk_priorita_opt_A">A – kritická</option>
+			<option key="B" name="tk_priorita_opt_B">B – bežná</option>
+			<option key="C" name="tk_priorita_opt_C">C – nízka</option>
 		</options>
 	</data>
 	<data type="userList">
-		<id>new_wi_assignee</id>
-		<title name="new_wi_assignee_title">Komu</title>
-		<desc name="new_wi_assignee_desc">Úlohu uvidí a bude na nej pracovať iba táto osoba.</desc>
+		<id>tk_zadavatel</id>
+		<title name="tk_zadavatel_title">Podal (účet)</title>
 	</data>
-	<data type="number" immediate="true">
-		<id>new_wi_estimate</id>
-		<title name="new_wi_estimate_title">Odhad v hodinách</title>
+	<data type="text" immediate="true">
+		<id>tk_podal</id>
+		<title name="tk_podal_title">Podal</title>
 	</data>
-	<data type="button">
-		<id>btn_add_wi</id>
-		<title/>
-		<placeholder name="btn_add_wi_placeholder">Zadať úlohu</placeholder>
+	<data type="dateTime" immediate="true">
+		<id>tk_podane_o</id>
+		<title name="tk_podane_o_title">Podané</title>
+	</data>
+	<data type="text">
+		<id>tk_firma_id</id>
+		<title name="tk_firma_id_title">Id firmy</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>tk_firma_nazov</id>
+		<title name="tk_firma_nazov_title">Firma</title>
+	</data>
+	<data type="userList">
+		<id>tk_firma_ludia</id>
+		<title name="tk_firma_ludia_title">Ľudia firmy</title>
+	</data>
+	<data type="text" immediate="true">
+		<id>tk_riesitel</id>
+		<title name="tk_riesitel_title">Rieši</title>
+	</data>
+	<data type="text">
+		<id>tk_riesitel_id</id>
+		<title name="tk_riesitel_id_title">Id riešiteľa</title>
+	</data>
+	<data type="text">
+		<id>tk_komunikacia</id>
+		<title name="tk_komunikacia_title">Komunikácia</title>
+		<desc name="tk_komunikacia_desc">Celá história požiadavky. Vidí ju aj zákazník.</desc>
 		<component>
-			<name>raised</name>
+			<name>textarea</name>
 		</component>
-		<init>1</init>
-		<event type="set">
-			<id>btn_add_wi_set</id>
-			<actions phase="post">
-				<action id="8"><![CDATA[
-new_wi_title: f.new_wi_title, new_wi_type: f.new_wi_type,
-new_wi_assignee: f.new_wi_assignee, new_wi_estimate: f.new_wi_estimate,
-wi_message: f.wi_message, wi_list: f.wi_list, wi_open: f.wi_open, wi_refs: f.wi_refs,
-src_org: f.src_org, src_title: f.src_title, tk_org_name: f.tk_org_name,
-tk_worklog: f.tk_worklog;
+	</data>
+	<data type="text">
+		<id>tk_otazka</id>
+		<title name="tk_otazka_title">Čo od vás potrebujeme</title>
+		<desc name="tk_otazka_desc">Zákazník to dostane e-mailom a odpovie vo svojej požiadavke.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>tk_doplnenie</id>
+		<title name="tk_doplnenie_title">Vaša odpoveď</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>tk_riesenie</id>
+		<title name="tk_riesenie_title">Riešenie</title>
+		<desc name="tk_riesenie_desc">Toto zákazník číta. Napíšte to tak, aby to dávalo zmysel aj bez kontextu.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>tk_dovod</id>
+		<title name="tk_dovod_title">Prečo ju znovu otvárate</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>tk_interna</id>
+		<title name="tk_interna_title">Interná poznámka</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="dateTime">
+		<id>sla_prevzate</id>
+		<title name="sla_prevzate_title">Prevzaté</title>
+	</data>
+	<data type="dateTime" immediate="true">
+		<id>sla_termin</id>
+		<title name="sla_termin_title">Odozva najneskôr do</title>
+		<desc name="sla_termin_desc">Pracovný čas Po–Pi 08:00–16:00. Hodiny zo zmluvy firmy, inak A 2 h, B 4 h, C 8 h.</desc>
+	</data>
+	<data type="boolean">
+		<id>sla_dodrzane</id>
+		<title name="sla_dodrzane_title">Lehota odozvy dodržaná</title>
+	</data>
 
-def title = ((new_wi_title.value ?: "") as String).trim()
+	<!-- ============================ ZAKAZNIK ============================ -->
 
-// Hodnota userList polia je UserListFieldValue s userValues, nie zoznam id.
-// setData aj `change ... value` ale chcu zoznam id - Pattern 20 pouziva
-// [loggedUser().id] - takze si ich vytiahneme.
-def raw = new_wi_assignee.value
-def assigneeIds = []
-if (raw != null) {
-    def users = raw.hasProperty("userValues") ? raw.userValues : (raw instanceof List ? raw : null)
-    if (users) {
-        // Pozor: `u?._id` na UserFieldValue vyhodi MissingPropertyException -
-        // `?.` chrani pred null, nie pred chybajucou property.
-        assigneeIds = users.collect { u ->
-            if (u == null) return null
-            if (u instanceof String) return u
-            if (u instanceof Map) return (u["_id"] ?: u["id"])
-            return u.hasProperty("id") ? u.id : null
-        }.findAll { it != null }.collect { it as String }
-    }
+	<transition>
+		<id>t_podanie</id>
+		<x>140</x>
+		<y>80</y>
+		<label name="t_podanie_label">Nová požiadavka</label>
+		<icon>add_comment</icon>
+		<!-- `auto`: osobna uloha autora, vznikla jeho vlastnym "+". -->
+		<assignPolicy>auto</assignPolicy>
+		<userRef>
+			<id>tk_zadavatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_podanie</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_firma_nazov</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_podal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_predmet</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_typ</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_urgentnost</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_popis</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_priloha</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_firma_id</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_podanie_finish</id>
+			<!--
+				Vsetko v `pre`: `tk_firma_ludia` musi byt zapisane skor, nez
+				vzniknu ulohy `t_moja` - ich userRef sa vyhodnocuje pri vzniku.
+				A odmietnute podanie (bez firmy) nesmie pohnut tokenom.
+			-->
+			<actions phase="pre">
+				<action id="3"><![CDATA[
+tk_predmet: f.tk_predmet, tk_typ: f.tk_typ, tk_urgentnost: f.tk_urgentnost, tk_popis: f.tk_popis,
+tk_zadavatel: f.tk_zadavatel, tk_firma_id: f.tk_firma_id, tk_firma_nazov: f.tk_firma_nazov,
+tk_firma_ludia: f.tk_firma_ludia, tk_stav: f.tk_stav, tk_priorita: f.tk_priorita,
+tk_podal: f.tk_podal, tk_podane_o: f.tk_podane_o, sla_termin: f.sla_termin,
+tk_komunikacia: f.tk_komunikacia;
+
+povinne(tk_predmet, "Fill in the subject.")
+povinne(tk_typ, "Pick the kind of request.")
+povinne(tk_urgentnost, "Pick how urgent it is.")
+povinne(tk_popis, "Describe what you need.")
+
+def autor = userIdsOf(tk_zadavatel.value)[0]
+if (!autor) autor = loggedUser()?.stringId
+// Firma sa overuje ZNOVA, nie z `tk_firma_id` z konceptu: medzi zalozenim
+// a podanim mohol byt clovek z firmy odobraty alebo zmluva ukoncena.
+def firma = firma_cloveka(autor)
+if (firma == null) {
+    throw new java.lang.IllegalStateException(
+            "Your account is not assigned to any company, so the request has nowhere to go. Ask support to add you.")
 }
-
-if (!title) {
-    change wi_message value { "Write what needs to be done." }
-} else if (!assigneeIds) {
-    change wi_message value { "Pick who the work item is assigned to." }
-} else {
-    def child = createCase(net_prefix(useCase) + "sd_work_item")
-    def childTask = findTask { it.transitionId.eq("t_define").and(it.caseId.eq(child.stringId)) }
-
-    // Poradie nie je kozmetika: setData spusta set eventy postupne, takze
-    // kontext tiketu musi byt zapisany skor, nez wi_title prepise nazov casu,
-    // a wi_assignee_id (ktore naplni userList) az uplne nakoniec.
-    setData("t_define", child, [
-            "wi_ticket_id"   : ["value": useCase.stringId, "type": "text"],
-            "wi_ticket_no"   : ["value": (useCase.visualId ?: useCase.stringId), "type": "text"],
-            "wi_ticket_title": ["value": (src_title.value ?: ""), "type": "text"],
-            "wi_org"         : ["value": (tk_org_name.value ?: src_org.value ?: ""), "type": "text"],
-            "wi_type"        : ["value": new_wi_type.value, "type": "enumeration_map"],
-            "wi_estimate"    : ["value": new_wi_estimate.value, "type": "number"],
-            "wi_title"       : ["value": title, "type": "text"],
-            "wi_assignee_id" : ["value": assigneeIds[0], "type": "text"]
-    ])
-
-
-    def refs = (wi_refs.value ?: []) as List
-    if (childTask) {
-        refs = refs + [childTask.stringId]
-        change wi_refs value { refs }
-    }
-
-    int open = ((wi_open.value ?: 0) as Number).intValue() + 1
-    change wi_open value { open }
-
-    def list = (wi_list.value ?: "") as String
-    def line = "• " + title + "  (" + wi_type_label(new_wi_type.value) + ")"
-    change wi_list value { list ? list + "\n" + line : line }
-
-    def log = (tk_worklog.value ?: "") as String
-    def entry = java.time.LocalDateTime.now().toString() + "  work item created: " + title
-    change tk_worklog value { log ? log + "\n" + entry : entry }
-
-    change new_wi_title value { "" }
-    change new_wi_estimate value { null }
-    change wi_message value { "Work item created: " + title }
+if (firma.dataSet["f_aktivna"]?.value == false) {
+    throw new java.lang.IllegalStateException(
+            "The contract of your company is not active - new requests cannot be submitted.")
 }
+def ted = java.time.LocalDateTime.now()
+def p = tk_urgentnost.value as String
+change tk_firma_id value { firma.stringId }
+change tk_firma_nazov value { ((firma.dataSet["f_nazov"]?.value ?: firma.title) as String) }
+change tk_firma_ludia value { userIdsOf(firma.dataSet["f_clenovia"]?.value) }
+change tk_priorita value { p }
+change tk_stav value { "nova" }
+change tk_podane_o value { ted }
+change sla_termin value { business_deadline(ted, hodiny(firma, p)) }
+change tk_komunikacia value { zapis(tk_komunikacia, "request submitted") }
+changeCaseProperty("title").about { nazov(tk_predmet) }
+changeCaseProperty("color").about { farba(p) }
+oznam(usersWithRoleAll("podpora", useCase.processIdentifier as String),
+        "new request from " + ((tk_firma_nazov.value ?: "") as String),
+        ((tk_popis.value ?: "") as String))
 				]]></action>
 			</actions>
 		</event>
-	</data>
-	<data type="text">
-		<id>wi_message</id>
-		<title/>
-	</data>
-	<data type="text">
-		<id>wi_list</id>
-		<title name="wi_list_title">Zadané úlohy</title>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="text">
-		<id>wi_report</id>
-		<title name="wi_report_title">Hlásenia od riešiteľov</title>
-		<desc name="wi_report_desc">Píše to sem samotná úloha, keď ju riešiteľ dokončí alebo zruší. Ručne to netreba upravovať.</desc>
-		<component>
-			<name>textarea</name>
-		</component>
-	</data>
-	<data type="number">
-		<id>wi_open</id>
-		<title name="wi_open_title">Otvorených úloh</title>
-		<init>0</init>
-	</data>
-	<data type="taskRef">
-		<id>wi_refs</id>
-		<title name="wi_refs_title">Detail úloh</title>
-		<desc name="wi_refs_desc">Formuláre zadaných úloh, editovateľné priamo tu.</desc>
-	</data>
+	</transition>
+	<transition>
+		<id>t_moja</id>
+		<x>340</x>
+		<y>0</y>
+		<label name="t_moja_label">Moja požiadavka</label>
+		<icon>visibility</icon>
+		<assignPolicy>manual</assignPolicy>
+		<userRef>
+			<id>tk_zadavatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<userRef>
+			<id>tk_firma_ludia</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_moja</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_stav</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_podane_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_riesitel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_firma_nazov</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_podal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_poziadavka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>tk_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_typ</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_urgentnost</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_popis</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_priloha</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_priebeh</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>tk_riesenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_komunikacia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<transition>
+		<id>t_doplnit</id>
+		<x>540</x>
+		<y>240</y>
+		<label name="t_doplnit_label">Odpovedať podpore</label>
+		<icon>reply</icon>
+		<assignPolicy>manual</assignPolicy>
+		<userRef>
+			<id>tk_zadavatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<userRef>
+			<id>tk_firma_ludia</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_doplnit</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_otazka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_doplnenie</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_priloha</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_komunikacia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_doplnit_finish</id>
+			<actions phase="pre">
+				<action id="4"><![CDATA[
+tk_doplnenie: f.tk_doplnenie, tk_komunikacia: f.tk_komunikacia, tk_stav: f.tk_stav,
+tk_riesitel_id: f.tk_riesitel_id;
+
+povinne(tk_doplnenie, "Write your reply.")
+def text = ((tk_doplnenie.value ?: "") as String).trim()
+change tk_komunikacia value { zapis(tk_komunikacia, text) }
+change tk_doplnenie value { "" }
+change tk_stav value { "v_rieseni" }
+def riesitel = ((tk_riesitel_id.value ?: "") as String)
+if (riesitel) oznam([riesitel], "the customer replied", text)
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_znovu</id>
+		<x>940</x>
+		<y>240</y>
+		<label name="t_znovu_label">Znovu otvoriť</label>
+		<icon>replay</icon>
+		<assignPolicy>manual</assignPolicy>
+		<userRef>
+			<id>tk_zadavatel</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<userRef>
+			<id>tk_firma_ludia</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_znovu</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_riesenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_dovod</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_znovu_finish</id>
+			<actions phase="pre">
+				<action id="5"><![CDATA[
+tk_dovod: f.tk_dovod, tk_komunikacia: f.tk_komunikacia, tk_stav: f.tk_stav,
+tk_riesitel_id: f.tk_riesitel_id, tk_priorita: f.tk_priorita;
+
+povinne(tk_dovod, "Write why the request is not resolved.")
+def text = ((tk_dovod.value ?: "") as String).trim()
+change tk_komunikacia value { zapis(tk_komunikacia, "reopened: " + text) }
+change tk_dovod value { "" }
+change tk_stav value { "v_rieseni" }
+changeCaseProperty("color").about { farba(tk_priorita.value) }
+def riesitel = ((tk_riesitel_id.value ?: "") as String)
+if (riesitel) oznam([riesitel], "the customer reopened the request", text)
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+
+	<!-- ============================ PODPORA ============================= -->
+
 	<transition>
 		<id>t_detail</id>
-		<x>112</x>
-		<y>240</y>
+		<x>340</x>
+		<y>400</y>
 		<label name="t_detail_label">Prehľad požiadavky</label>
 		<icon>fact_check</icon>
-		<assignPolicy>auto</assignPolicy>
+		<assignPolicy>manual</assignPolicy>
 		<roleRef>
-			<id>manager</id>
+			<id>podpora</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
 		</roleRef>
-		<userRef>
-			<id>tk_agents</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
-		<userRef>
-			<id>tk_specialists</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
 		<dataGroup>
-			<id>g_detail_sla</id>
+			<id>g_detail</id>
 			<cols>6</cols>
 			<layout>grid</layout>
+			<dataRef>
+				<id>tk_stav</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_priorita</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_riesitel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_firma_nazov</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_podal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_podane_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
 			<dataRef>
 				<id>div_sla</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>0</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-				<component>
-					<name>divider</name>
-				</component>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
-				<id>sla_ok</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>1</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>sla_termin</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>tk_state</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>2</x>
-					<y>1</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>sla_prevzate</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>tk_priority</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>4</x>
-					<y>1</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>sla_dodrzane</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>sla_created_at</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>2</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>div_poziadavka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
-				<id>sla_response_due</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>2</x>
-					<y>2</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>sla_accepted_at</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>4</x>
-					<y>2</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_typ</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>sla_note</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>3</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_urgentnost</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>tk_priority_changed</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>4</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_popis</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>sla_pause_minutes</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>2</x>
-					<y>4</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_priloha</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>src_request_id</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>4</x>
-					<y>4</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-		</dataGroup>
-		<dataGroup>
-			<id>g_detail_src</id>
-			<cols>6</cols>
-			<layout>grid</layout>
-			<dataRef>
-				<id>show_submitted</id>
-				<logic>
-					<behavior>editable</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>0</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>div_priebeh</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
-				<id>src_title</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>1</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_riesenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>src_description</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>2</y>
-					<rows>3</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_komunikacia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>src_service</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>5</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>div_interne</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>18</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
-				<id>src_severity</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>2</x>
-					<y>5</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_interna</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>19</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<!--
+				Skryte, ale v dataGroup: `sd_firma` sem cez setData("t_detail", ...)
+				kaskaduje ludi firmy, a GET /api/task/{id}/data vracia len polia
+				z dataGroup.
+			-->
+			<dataRef>
+				<id>tk_firma_ludia</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>22</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>src_affects_more</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>4</x>
-					<y>5</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_firma_id</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>2</x><y>22</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>src_steps</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>6</y>
-					<rows>2</rows>
-					<cols>3</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_riesitel_id</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>4</x><y>22</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>src_workaround</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>3</x>
-					<y>6</y>
-					<rows>2</rows>
-					<cols>3</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>src_name</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>8</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>src_email</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>2</x>
-					<y>8</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>src_org</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>4</x>
-					<y>8</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_worklog</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>9</y>
-					<rows>3</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_zadavatel</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>23</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 		</dataGroup>
 	</transition>
 	<transition>
-		<id>t_triage</id>
-		<x>112</x>
-		<y>80</y>
-		<label name="t_triage_label">Triáž a prevzatie</label>
-		<icon>rule</icon>
-		<assignPolicy>auto</assignPolicy>
-		<roleRef>
-			<id>manager</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<userRef>
-			<id>tk_agents</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
-		<dataGroup>
-			<id>g_triage</id>
-			<cols>6</cols>
-			<layout>grid</layout>
-			<dataRef>
-				<id>div_triage</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>0</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-				<component>
-					<name>divider</name>
-				</component>
-			</dataRef>
-			<dataRef>
-				<id>tk_type</id>
-				<logic>
-					<behavior>editable</behavior>
-					<behavior>required</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>1</y>
-					<rows>1</rows>
-					<cols>3</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_priority</id>
-				<logic>
-					<behavior>editable</behavior>
-					<behavior>required</behavior>
-				</logic>
-				<layout>
-					<x>3</x>
-					<y>1</y>
-					<rows>1</rows>
-					<cols>3</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_priority_reason</id>
-				<logic>
-					<behavior>editable</behavior>
-					<behavior>hidden</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>2</y>
-					<rows>2</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_note</id>
-				<logic>
-					<behavior>editable</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>4</y>
-					<rows>2</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>div_submitted</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>6</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-				<component>
-					<name>divider</name>
-				</component>
-			</dataRef>
-			<dataRef>
-				<id>src_title</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>7</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>src_description</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>8</y>
-					<rows>3</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>src_severity</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>11</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>src_affects_more</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>2</x>
-					<y>11</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>src_org</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>4</x>
-					<y>11</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_org_match</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>12</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_org_override</id>
-				<logic>
-					<behavior>editable</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>13</y>
-					<rows>1</rows>
-					<cols>3</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_agents</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>14</y>
-					<rows>1</rows>
-					<cols>3</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_specialists</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>3</x>
-					<y>14</y>
-					<rows>1</rows>
-					<cols>3</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_org_name</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>15</y>
-					<rows>1</rows>
-					<cols>3</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-		</dataGroup>
-		<event type="finish">
-			<id>t_triage_finish</id>
-			<actions phase="post">
-				<action id="4"><![CDATA[
-tk_type: f.tk_type, tk_priority: f.tk_priority, tk_priority_reason: f.tk_priority_reason,
-tk_priority_changed: f.tk_priority_changed, tk_state: f.tk_state,
-src_title: f.src_title, src_email: f.src_email, src_name: f.src_name,
-sla_created_at: f.sla_created_at, sla_accepted_at: f.sla_accepted_at,
-sla_response_due: f.sla_response_due, sla_ok: f.sla_ok, sla_note: f.sla_note,
-tk_customer_id: f.tk_customer_id, tk_worklog: f.tk_worklog;
-
-def now = java.time.LocalDateTime.now()
-def created = sla_created_at.value ?: now
-def due = business_deadline(created, contract_sla_hours(tk_customer_id.value, tk_priority.value))
-
-change sla_accepted_at value { now }
-change sla_response_due value { due }
-change tk_state value { "accepted" }
-
-boolean inTime = due == null || !now.isAfter(due)
-change sla_ok value { inTime }
-change sla_note value {
-    inTime ? "Picked up within the response deadline." : "The response deadline was missed at pick-up."
-}
-
-changeCaseProperty("title").about {
-    type_label(tk_type.value) + " — " + ((src_title.value ?: "untitled") as String)
-}
-changeCaseProperty("color").about { priority_color(tk_priority.value) }
-
-def log = (tk_worklog.value ?: "") as String
-def entry = now.toString() + "  triage: classified as " + type_label(tk_type.value) +
-            ", priorita " + (tk_priority.value as String)
-if (tk_priority_changed.value == true) {
-    entry = entry + " (changed, reason: " + ((tk_priority_reason.value ?: "") as String) + ")"
-}
-change tk_worklog value { log ? log + "\n" + entry : entry }
-
-// Informovanie nahlasovatela. Ak mail nie je nakonfigurovany, nesmie to
-// zhodit triaz - ticket uz je prevzaty a to je dolezitejsie.
-def mail = ((src_email.value ?: "") as String).trim()
-if (mail) {
-    try {
-        def body = "Hello,\n\nwe have picked up your request.\n" +
-                   "Zaradenie: " + type_label(tk_type.value) + "\n" +
-                   "Priorita: " + (tk_priority.value as String) + "\n"
-        if (tk_priority_changed.value == true) {
-            body = body + "We adjusted the priority. Reason: " +
-                   ((tk_priority_reason.value ?: "") as String) + "\n"
-        }
-        body = body + "\nWe will get back to you with the next steps."
-        sendEmail([mail], "Request picked up", body)
-    } catch (Exception e) {
-        // Log v akcii nie je zarucene dostupny, takze zlyhanie zapiseme tam,
-        // kde ho operator uvidi.
-        change tk_worklog value {
-            ((tk_worklog.value ?: "") as String) +
-            "\nCAREFUL: the pick-up notification could not be sent (" + e.message + ")"
-        }
-    }
-}
-				]]></action>
-			</actions>
-		</event>
-	</transition>
-	<transition>
-		<id>t_work</id>
-		<x>304</x>
-		<y>80</y>
-		<label name="t_work_label">Zaznamenať postup</label>
-		<icon>build</icon>
-		<assignPolicy>auto</assignPolicy>
-		<userRef>
-			<id>tk_agents</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
-		<userRef>
-			<id>tk_specialists</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
-		<roleRef>
-			<id>manager</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<dataGroup>
-			<id>g_work</id>
-			<cols>6</cols>
-			<layout>grid</layout>
-			<dataRef>
-				<id>div_work</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>0</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-				<component>
-					<name>divider</name>
-				</component>
-			</dataRef>
-			<dataRef>
-				<id>tk_note</id>
-				<logic>
-					<behavior>editable</behavior>
-					<behavior>required</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>1</y>
-					<rows>3</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_worklog</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>4</y>
-					<rows>3</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-		</dataGroup>
-		<event type="finish">
-			<id>t_work_finish</id>
-			<actions phase="post">
-				<action id="5"><![CDATA[
-tk_note: f.tk_note, tk_worklog: f.tk_worklog, tk_state: f.tk_state,
-sla_pause_from: f.sla_pause_from, sla_pause_minutes: f.sla_pause_minutes;
-
-def now = java.time.LocalDateTime.now()
-
-// Ak sa ticket vracia z cakania na zakaznika, uzavrieme pauzu.
-if (sla_pause_from.value != null) {
-    long mins = java.time.temporal.ChronoUnit.MINUTES.between(sla_pause_from.value, now)
-    change sla_pause_minutes value { ((sla_pause_minutes.value ?: 0) as long) + mins }
-    change sla_pause_from value { null }
-}
-
-change tk_state value { "working" }
-
-def log = (tk_worklog.value ?: "") as String
-def entry = now.toString() + "  postup: " + ((tk_note.value ?: "") as String)
-change tk_worklog value { log ? log + "\n" + entry : entry }
-change tk_note value { "" }
-				]]></action>
-			</actions>
-		</event>
-	</transition>
-	<transition>
-		<id>t_pending</id>
-		<x>304</x>
+		<id>t_prevzat</id>
+		<x>340</x>
 		<y>240</y>
-		<label name="t_pending_label">Vyžiadať doplnenie</label>
-		<icon>hourglass_empty</icon>
-		<assignPolicy>auto</assignPolicy>
-		<userRef>
-			<id>tk_agents</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
-		<userRef>
-			<id>tk_specialists</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
-		<roleRef>
-			<id>manager</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<dataGroup>
-			<id>g_pending</id>
-			<cols>6</cols>
-			<layout>grid</layout>
-			<dataRef>
-				<id>tk_pending_reason</id>
-				<logic>
-					<behavior>editable</behavior>
-					<behavior>required</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>0</y>
-					<rows>3</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>sla_pause_minutes</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>3</y>
-					<rows>1</rows>
-					<cols>3</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>src_email</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>3</x>
-					<y>3</y>
-					<rows>1</rows>
-					<cols>3</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-		</dataGroup>
-		<event type="finish">
-			<id>t_pending_finish</id>
-			<actions phase="post">
-				<action id="6"><![CDATA[
-tk_pending_reason: f.tk_pending_reason, tk_state: f.tk_state,
-tk_worklog: f.tk_worklog, sla_pause_from: f.sla_pause_from,
-sla_note: f.sla_note, src_email: f.src_email;
-
-def now = java.time.LocalDateTime.now()
-
-change tk_state value { "pending" }
-change sla_pause_from value { now }
-change sla_note value { "Waiting for the customer to add information. Deadlines are paused." }
-
-def log = (tk_worklog.value ?: "") as String
-def entry = now.toString() + "  waiting for the customer: " + ((tk_pending_reason.value ?: "") as String)
-change tk_worklog value { log ? log + "\n" + entry : entry }
-
-def mail = ((src_email.value ?: "") as String).trim()
-if (mail) {
-    try {
-        sendEmail([mail], "We need more information from you",
-            "Hello,\n\nfor your request we need the following:\n\n" +
-            ((tk_pending_reason.value ?: "") as String) +
-            "\n\nUntil you reply, work on the request is paused.")
-    } catch (Exception e) {
-        change tk_worklog value {
-            ((tk_worklog.value ?: "") as String) +
-            "\nCAREFUL: the request for information could not be sent (" + e.message + ")"
-        }
-    }
-}
-				]]></action>
-			</actions>
-		</event>
-	</transition>
-	<transition>
-		<id>t_resolve</id>
-		<x>496</x>
-		<y>80</y>
-		<label name="t_resolve_label">Vyriešiť</label>
-		<icon>task_alt</icon>
-		<assignPolicy>auto</assignPolicy>
-		<userRef>
-			<id>tk_agents</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
-		<userRef>
-			<id>tk_specialists</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
-		<roleRef>
-			<id>manager</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<dataGroup>
-			<id>g_resolve</id>
-			<cols>6</cols>
-			<layout>grid</layout>
-			<dataRef>
-				<id>tk_resolution</id>
-				<logic>
-					<behavior>editable</behavior>
-					<behavior>required</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>0</y>
-					<rows>3</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>wi_report</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>3</y>
-					<rows>3</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_worklog</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>6</y>
-					<rows>3</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-		</dataGroup>
-		<event type="finish">
-			<id>t_resolve_finish</id>
-			<actions phase="post">
-				<action id="7"><![CDATA[
-tk_resolution: f.tk_resolution, tk_state: f.tk_state, tk_worklog: f.tk_worklog,
-sla_note: f.sla_note, src_email: f.src_email, src_title: f.src_title,
-wi_open: f.wi_open;
-
-def now = java.time.LocalDateTime.now()
-
-// Ticket sa da vyriesit aj s otvorenymi ulohami - token uz sa pohol a
-// finish sa odtialto nezastavi - ale nech to nezostane neviditelne.
-int stillOpen = ((wi_open.value ?: 0) as Number).intValue()
-if (stillOpen > 0) {
-    def warn = now.toString() + "  CAREFUL: resolved although " + stillOpen + " work items are still open."
-    def wlog = (tk_worklog.value ?: "") as String
-    change tk_worklog value { wlog ? wlog + "\n" + warn : warn }
-}
-
-change tk_state value { "resolved" }
-change sla_note value { "Resolved " + now.toString() + "." }
-
-def log = (tk_worklog.value ?: "") as String
-def entry = now.toString() + "  resolved: " + ((tk_resolution.value ?: "") as String)
-change tk_worklog value { log ? log + "\n" + entry : entry }
-
-changeCaseProperty("color").about { "green" }
-
-def mail = ((src_email.value ?: "") as String).trim()
-if (mail) {
-    try {
-        sendEmail([mail], "Request resolved: " + ((src_title.value ?: "") as String),
-            "Hello,\n\nwe have resolved your request.\n\n" +
-            ((tk_resolution.value ?: "") as String) +
-            "\n\nIf the problem persists, reply to this e-mail.")
-    } catch (Exception e) {
-        change tk_worklog value {
-            ((tk_worklog.value ?: "") as String) +
-            "\nCAREFUL: the resolution notification could not be sent (" + e.message + ")"
-        }
-    }
-}
-				]]></action>
-			</actions>
-		</event>
-	</transition>
-	<transition>
-		<id>t_plan</id>
-		<x>496</x>
-		<y>208</y>
-		<label name="t_plan_label">Zadanie úloh</label>
+		<label name="t_prevzat_label">Prevziať</label>
 		<icon>assignment_ind</icon>
-		<assignPolicy>auto</assignPolicy>
+		<assignPolicy>manual</assignPolicy>
 		<roleRef>
-			<id>manager</id>
+			<id>podpora</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
 		</roleRef>
-		<userRef>
-			<id>tk_agents</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
 		<dataGroup>
-			<id>g_plan</id>
+			<id>g_prevzat</id>
 			<cols>6</cols>
 			<layout>grid</layout>
 			<dataRef>
-				<id>div_plan</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>0</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-				<component>
-					<name>divider</name>
-				</component>
+				<id>tk_firma_nazov</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>new_wi_title</id>
-				<logic>
-					<behavior>editable</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>1</y>
-					<rows>1</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_podal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>new_wi_assignee</id>
-				<logic>
-					<behavior>editable</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>2</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>sla_termin</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>new_wi_type</id>
-				<logic>
-					<behavior>editable</behavior>
-				</logic>
-				<layout>
-					<x>2</x>
-					<y>2</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>new_wi_estimate</id>
-				<logic>
-					<behavior>editable</behavior>
-				</logic>
-				<layout>
-					<x>4</x>
-					<y>2</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_urgentnost</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>btn_add_wi</id>
-				<logic>
-					<behavior>editable</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>3</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_typ</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>wi_message</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>2</x>
-					<y>3</y>
-					<rows>1</rows>
-					<cols>4</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_priorita</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>wi_open</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>4</y>
-					<rows>1</rows>
-					<cols>2</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_popis</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>wi_list</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>2</x>
-					<y>4</y>
-					<rows>2</rows>
-					<cols>4</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_priloha</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>wi_report</id>
-				<logic>
-					<behavior>visible</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>6</y>
-					<rows>3</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
-			</dataRef>
-			<dataRef>
-				<id>wi_refs</id>
-				<logic>
-					<behavior>editable</behavior>
-				</logic>
-				<layout>
-					<x>0</x>
-					<y>9</y>
-					<rows>4</rows>
-					<cols>6</cols>
-					<template>material</template>
-					<appearance>outline</appearance>
-				</layout>
+				<id>tk_interna</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 		</dataGroup>
+		<event type="finish">
+			<id>t_prevzat_finish</id>
+			<actions phase="pre">
+				<action id="6"><![CDATA[
+tk_priorita: f.tk_priorita, tk_typ: f.tk_typ, tk_stav: f.tk_stav, tk_riesitel: f.tk_riesitel,
+tk_riesitel_id: f.tk_riesitel_id, sla_prevzate: f.sla_prevzate, sla_termin: f.sla_termin,
+sla_dodrzane: f.sla_dodrzane, tk_komunikacia: f.tk_komunikacia, tk_zadavatel: f.tk_zadavatel;
+
+povinne(tk_priorita, "Pick the priority.")
+povinne(tk_typ, "Pick the kind of request.")
+def ted = java.time.LocalDateTime.now()
+def termin = sla_termin.value
+def ja_id = loggedUser()?.stringId as String
+change tk_stav value { "v_rieseni" }
+change tk_riesitel value { ja() }
+change tk_riesitel_id value { ja_id }
+change sla_prevzate value { ted }
+change sla_dodrzane value { termin == null || !ted.isAfter(termin) }
+change tk_komunikacia value { zapis(tk_komunikacia, "picked up the request") }
+changeCaseProperty("color").about { farba(tk_priorita.value) }
+oznam(tk_zadavatel, "your request is being handled", "Handled by: " + ja())
+				]]></action>
+			</actions>
+		</event>
 	</transition>
-	<place>
-		<id>p_alive</id>
-		<x>32</x>
+	<transition>
+		<id>t_vyziadat</id>
+		<x>540</x>
+		<y>400</y>
+		<label name="t_vyziadat_label">Vyžiadať od zákazníka</label>
+		<icon>contact_support</icon>
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>podpora</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_vyziadat</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_otazka</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_komunikacia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_vyziadat_finish</id>
+			<actions phase="pre">
+				<action id="7"><![CDATA[
+tk_otazka: f.tk_otazka, tk_komunikacia: f.tk_komunikacia, tk_stav: f.tk_stav,
+tk_zadavatel: f.tk_zadavatel;
+
+povinne(tk_otazka, "Write what you need from the customer.")
+def text = ((tk_otazka.value ?: "") as String).trim()
+change tk_komunikacia value { zapis(tk_komunikacia, text) }
+change tk_stav value { "caka" }
+changeCaseProperty("color").about { "purple" }
+oznam(tk_zadavatel, "support needs your reply", text)
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_pokracovat</id>
+		<x>540</x>
+		<y>80</y>
+		<label name="t_pokracovat_label">Pokračovať bez odpovede</label>
+		<icon>play_arrow</icon>
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>podpora</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_pokracovat</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_otazka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_interna</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_pokracovat_finish</id>
+			<actions phase="pre">
+				<action id="8"><![CDATA[
+tk_komunikacia: f.tk_komunikacia, tk_stav: f.tk_stav, tk_priorita: f.tk_priorita;
+
+change tk_komunikacia value { zapis(tk_komunikacia, "continuing without a written reply") }
+change tk_stav value { "v_rieseni" }
+changeCaseProperty("color").about { farba(tk_priorita.value) }
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_vyriesit</id>
+		<x>740</x>
 		<y>240</y>
-		<label>Trvale otvorené</label>
+		<label name="t_vyriesit_label">Vyriešiť</label>
+		<icon>task_alt</icon>
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>podpora</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_vyriesit</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_riesenie</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_komunikacia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_interna</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_vyriesit_finish</id>
+			<actions phase="pre">
+				<action id="9"><![CDATA[
+tk_riesenie: f.tk_riesenie, tk_komunikacia: f.tk_komunikacia, tk_stav: f.tk_stav,
+tk_zadavatel: f.tk_zadavatel;
+
+povinne(tk_riesenie, "Write how the request was resolved.")
+def text = ((tk_riesenie.value ?: "") as String).trim()
+change tk_komunikacia value { zapis(tk_komunikacia, "resolved: " + text) }
+change tk_stav value { "vyriesena" }
+changeCaseProperty("color").about { "green" }
+oznam(tk_zadavatel, "your request is resolved", text)
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+
+	<!-- ============================== MIESTA ============================= -->
+
+	<place>
+		<id>p_novy</id>
+		<x>40</x>
+		<y>240</y>
+		<label>Rozpísaná</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 	<place>
-		<id>p_new</id>
-		<x>32</x>
-		<y>80</y>
-		<label>Nová</label>
-		<tokens>1</tokens>
-		<static>false</static>
-	</place>
-	<place>
-		<id>p_open</id>
-		<x>208</x>
-		<y>80</y>
-		<label>Otvorená</label>
+		<id>p_zivy</id>
+		<x>240</x>
+		<y>400</y>
+		<label>Živá (nikto nekonzumuje)</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
-		<id>p_closed</id>
-		<x>592</x>
-		<y>80</y>
-		<label>Uzavretá</label>
+		<id>p_podane</id>
+		<x>240</x>
+		<y>240</y>
+		<label>Podaná</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_riesi</id>
+		<x>440</x>
+		<y>240</y>
+		<label>V riešení</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_caka</id>
+		<x>640</x>
+		<y>160</y>
+		<label>Čaká na zákazníka</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_vyriesene</id>
+		<x>840</x>
+		<y>240</y>
+		<label>Vyriešená</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<arc>
-		<id>a_alive_detail</id>
+		<id>a_podanie_in</id>
+		<type>regular</type>
+		<sourceId>p_novy</sourceId>
+		<destinationId>t_podanie</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_podanie_out</id>
+		<type>regular</type>
+		<sourceId>t_podanie</sourceId>
+		<destinationId>p_podane</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_podanie_zivy</id>
+		<type>regular</type>
+		<sourceId>t_podanie</sourceId>
+		<destinationId>p_zivy</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_moja</id>
 		<type>read</type>
-		<sourceId>p_alive</sourceId>
+		<sourceId>p_zivy</sourceId>
+		<destinationId>t_moja</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_detail</id>
+		<type>read</type>
+		<sourceId>p_zivy</sourceId>
 		<destinationId>t_detail</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a_new_triage</id>
+		<id>a_prevzat_in</id>
 		<type>regular</type>
-		<sourceId>p_new</sourceId>
-		<destinationId>t_triage</destinationId>
+		<sourceId>p_podane</sourceId>
+		<destinationId>t_prevzat</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a_triage_open</id>
+		<id>a_prevzat_out</id>
 		<type>regular</type>
-		<sourceId>t_triage</sourceId>
-		<destinationId>p_open</destinationId>
+		<sourceId>t_prevzat</sourceId>
+		<destinationId>p_riesi</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a_open_work</id>
+		<id>a_vyziadat_in</id>
 		<type>regular</type>
-		<sourceId>p_open</sourceId>
-		<destinationId>t_work</destinationId>
+		<sourceId>p_riesi</sourceId>
+		<destinationId>t_vyziadat</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a_work_open</id>
+		<id>a_vyziadat_out</id>
 		<type>regular</type>
-		<sourceId>t_work</sourceId>
-		<destinationId>p_open</destinationId>
+		<sourceId>t_vyziadat</sourceId>
+		<destinationId>p_caka</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a_open_pending</id>
+		<id>a_doplnit_in</id>
 		<type>regular</type>
-		<sourceId>p_open</sourceId>
-		<destinationId>t_pending</destinationId>
+		<sourceId>p_caka</sourceId>
+		<destinationId>t_doplnit</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a_pending_open</id>
+		<id>a_doplnit_out</id>
 		<type>regular</type>
-		<sourceId>t_pending</sourceId>
-		<destinationId>p_open</destinationId>
+		<sourceId>t_doplnit</sourceId>
+		<destinationId>p_riesi</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a_open_resolve</id>
+		<id>a_pokracovat_in</id>
 		<type>regular</type>
-		<sourceId>p_open</sourceId>
-		<destinationId>t_resolve</destinationId>
+		<sourceId>p_caka</sourceId>
+		<destinationId>t_pokracovat</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a_resolve_closed</id>
+		<id>a_pokracovat_out</id>
 		<type>regular</type>
-		<sourceId>t_resolve</sourceId>
-		<destinationId>p_closed</destinationId>
+		<sourceId>t_pokracovat</sourceId>
+		<destinationId>p_riesi</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a_plan</id>
-		<type>read</type>
-		<sourceId>p_alive</sourceId>
-		<destinationId>t_plan</destinationId>
+		<id>a_vyriesit_in</id>
+		<type>regular</type>
+		<sourceId>p_riesi</sourceId>
+		<destinationId>t_vyriesit</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_vyriesit_out</id>
+		<type>regular</type>
+		<sourceId>t_vyriesit</sourceId>
+		<destinationId>p_vyriesene</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_znovu_in</id>
+		<type>regular</type>
+		<sourceId>p_vyriesene</sourceId>
+		<destinationId>t_znovu</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_znovu_out</id>
+		<type>regular</type>
+		<sourceId>t_znovu</sourceId>
+		<destinationId>p_riesi</destinationId>
 		<multiplicity>1</multiplicity>
 	</arc>
 </document>

@@ -1,0 +1,612 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>it/service_desk/sd_firma</id>
+	<version>1.0.0</version>
+	<initials>SDF</initials>
+	<title name="net_title">Firma</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="en">
+		<i18nString name="net_title">Company</i18nString>
+		<i18nString name="podpora_title">Support staff</i18nString>
+		<i18nString name="div_firma_init">Company</i18nString>
+		<i18nString name="div_ludia_init">People at the company</i18nString>
+		<i18nString name="div_sla_init">Agreed response hours</i18nString>
+		<i18nString name="f_nazov_title">Company name</i18nString>
+		<i18nString name="f_kod_title">Code</i18nString>
+		<i18nString name="f_kod_desc">Short code for reports, for example NGF.</i18nString>
+		<i18nString name="f_kontakt_title">Contact person</i18nString>
+		<i18nString name="f_aktivna_title">Active contract</i18nString>
+		<i18nString name="f_aktivna_desc">People of an inactive company cannot submit new requests. They still see the old ones.</i18nString>
+		<i18nString name="f_poznamka_title">Contract note</i18nString>
+		<i18nString name="f_sla_a_title">Priority A - hours</i18nString>
+		<i18nString name="f_sla_a_desc">Leave empty if the default applies (A 2 h, B 4 h, C 8 h).</i18nString>
+		<i18nString name="f_sla_b_title">Priority B - hours</i18nString>
+		<i18nString name="f_sla_c_title">Priority C - hours</i18nString>
+		<i18nString name="f_clenovia_title">People with access</i18nString>
+		<i18nString name="f_clenovia_desc">They see every request of this company. Add and remove people with the fields below, not here.</i18nString>
+		<i18nString name="f_ludia_title">Accounts</i18nString>
+		<i18nString name="f_ludia_desc">"invited" = the person has not set a password from the e-mail yet.</i18nString>
+		<i18nString name="f_pocet_title">People</i18nString>
+		<i18nString name="f_novy_email_title">E-mail of a new person</i18nString>
+		<i18nString name="f_novy_email_desc">They get an invitation e-mail and set their own name and password. An existing account just gets access.</i18nString>
+		<i18nString name="btn_pridat_placeholder">Add and invite</i18nString>
+		<i18nString name="f_odobrat_title">Remove a person</i18nString>
+		<i18nString name="f_odobrat_desc">The person loses access to the requests of this company. The account itself stays.</i18nString>
+		<i18nString name="btn_odobrat_placeholder">Remove</i18nString>
+		<i18nString name="btn_obnovit_placeholder">Refresh account states and access</i18nString>
+		<i18nString name="f_vysledok_title">What happened</i18nString>
+		<i18nString name="f_historia_title">History (newest first)</i18nString>
+		<i18nString name="t_firma_label">Company</i18nString>
+	</i18n>
+	<icon>domain</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Firma zakaznika a ludia v nej. Pridanie cloveka do firmy JE pridelenie
+		pristupu - nikde inde sa zakaznik nezaklada:
+
+		  1. `pozvi(email)` zalozi ucet v stave INVITED a posle mail s odkazom,
+		     kde si clovek nastavi meno a heslo sam. Existujuci aktivny ucet
+		     pozvanku nedostane, len pristup.
+		  2. `setProcessRole(..., "zakaznik", sd_ticket, "", true)` - rola da
+		     kartu Service Desku, polozky "Podanie poziadavky" a "Moje
+		     poziadavky" a pravo zakladat tiket.
+		  3. id uctu pribudne do `f_clenovia`. Tiket si pri podani ten zoznam
+		     skopiruje do `tk_firma_ludia` a PRAVE TO mu dava viditelnost -
+		     kazdy clovek firmy vidi vsetky jej poziadavky.
+
+		Clovek patri najviac do JEDNEJ firmy. Tiket sa k firme priraduje podla
+		toho, kto ho podava, a pri dvoch firmach by nebolo jasne, ktorej patri.
+
+		Zmena ludi sa KASKADUJE do existujucich tiketov firmy
+		(`prepocitaj_tikety`). Bez toho by odobraty clovek videl stare tikety
+		firmy navzdy a novy by nevidel ziadny.
+
+		Rola ma `stringId` razene per verziu siete: po re-importe `sd_ticket`
+		zakaznik rolu na novej verzii nema. Zosuladenie robi tlacidlo "Obnovit"
+		tu a `sd_menu` pri kazdej svojej novej verzii (pre vsetky firmy naraz).
+		Viditelnost tiketov na tom nezavisi - je cez `userRef`, a ten re-import
+		prezije.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>firma_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+f_aktivna: f.f_aktivna, f_pocet: f.f_pocet, f_ludia: f.f_ludia, f_historia: f.f_historia;
+
+change f_aktivna value { true }
+change f_pocet value { 0 }
+change f_ludia value { "(nobody yet)" }
+change f_historia value { "" }
+changeCaseProperty("title").about { ((useCase.visualId ?: "New company") as String) }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="siet_tiketu"><![CDATA[
+{ ->
+    // Identifikator nesie URI cestu, takze sesterska siet sa odvodzuje
+    // z vlastneho identifikatora - premenovanie uzla sa prejavi na jednom mieste.
+    def pid = useCase.processIdentifier as String
+    def prefix = pid.contains("/") ? pid.substring(0, pid.lastIndexOf("/") + 1) : ""
+    return prefix + "sd_ticket"
+}
+	]]></function>
+	<function scope="process" name="je_email"><![CDATA[
+{ def hodnota ->
+    def mail = ((hodnota ?: "") as String).trim()
+    return mail ==~ /^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/
+}
+	]]></function>
+	<function scope="process" name="firma_cloveka"><![CDATA[
+{ def userId ->
+    // Firma, v ktorej clovek uz je - okrem tejto. `findCases { it.dataSet... }`
+    // nefunguje, takze sa filtruje v Groovy.
+    def id = (userId ?: "") as String
+    if (!id) return null
+    return findCases { it.processIdentifier.eq(useCase.processIdentifier) }.find { c ->
+        c.stringId != useCase.stringId && userIdsOf(c.dataSet["f_clenovia"]?.value).contains(id)
+    }
+}
+	]]></function>
+	<function scope="process" name="popis_cloveka"><![CDATA[
+{ def userId ->
+    def s = userSnapshot(userId as String)
+    if (!s) return "(deleted account " + userId + ")"
+    def meno = (((s.meno ?: "") + " " + (s.priezvisko ?: "")) as String).trim()
+    // Pozvany ucet ma meno "unknown", kym si ho clovek nevyplni.
+    if (!meno || meno == "unknown unknown") meno = ""
+    def stav = (s.stav as String) == "ACTIVE" ? "active" : ((s.stav as String) == "INVITED" ? "invited" : ((s.stav ?: "?") as String).toLowerCase())
+    return (meno ? meno + " <" + s.email + ">" : (s.email as String)) + " - " + stav
+}
+	]]></function>
+	<function scope="process" name="obnov_zoznam"><![CDATA[
+{ def ids, def f_ludia, def f_pocet, def f_odobrat ->
+    // Citatelny zoznam a moznosti pola na odobratie. Moznosti sa nastavuju
+    // TU, kde sa zapisuje hodnota - v `create` udalosti by sa neuchovali (B20).
+    def opts = [:]
+    def riadky = []
+    (ids ?: []).each { id ->
+        def p = popis_cloveka(id)
+        riadky << ("• " + p)
+        opts[id as String] = p
+    }
+    change f_ludia value { riadky ? riadky.join("\n") : "(nobody yet)" }
+    change f_pocet value { (ids ?: []).size() }
+    change f_odobrat options { opts }
+    change f_odobrat value { null }
+}
+	]]></function>
+	<function scope="process" name="prepocitaj_tikety"><![CDATA[
+{ def ids, def nazov ->
+    // Ludia firmy a jej nazov do tiketov, ktore uz existuju. Rozpisane tikety
+    // sa preskakuju: vidi ich len autor a `t_detail`, cez ktory sa zapisuje,
+    // vznikne az podanim.
+    def firmaId = useCase.stringId
+    int ok = 0
+    int chyby = 0
+    findCases { it.processIdentifier.eq(siet_tiketu()) }.each { t ->
+        if (((t.getFieldValue("tk_firma_id") ?: "") as String) != firmaId) return
+        if (((t.getFieldValue("tk_stav") ?: "") as String) == "rozpisana") return
+        try {
+            setData("t_detail", t, [
+                    "tk_firma_nazov": ["value": (nazov ?: "") as String, "type": "text"],
+                    "tk_firma_ludia": ["value": (ids ?: []).collect { it as String }, "type": "userList"],
+            ])
+            ok++
+        } catch (Exception e) {
+            chyby++
+        }
+    }
+    return [ok: ok, chyby: chyby]
+}
+	]]></function>
+	<function scope="process" name="kto"><![CDATA[
+{ ->
+    def u = loggedUser()
+    if (u == null) return "(unknown)"
+    return (u.hasProperty("email") && u.email) ? (u.email as String) : (u.stringId as String)
+}
+	]]></function>
+	<function scope="process" name="do_historie"><![CDATA[
+{ def f_historia, def riadok ->
+    // Novsie navrch, so stropom - pole je v dataSet a cita sa pri kazdom
+    // otvoreni formulara.
+    def ked = java.time.LocalDateTime.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+    def stare = ((f_historia.value ?: "") as String).split("\n").findAll { it.trim() }
+    return ([ked + " · " + riadok + " · " + kto()] + (stare as List)).take(200).join("\n")
+}
+	]]></function>
+	<roleRef>
+		<id>podpora</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>podpora</id>
+		<title name="podpora_title">Zamestnanec podpory</title>
+	</role>
+	<data type="i18n">
+		<id>div_firma</id>
+		<title/>
+		<init name="div_firma_init">Firma</init>
+	</data>
+	<data type="i18n">
+		<id>div_ludia</id>
+		<title/>
+		<init name="div_ludia_init">Ľudia vo firme</init>
+	</data>
+	<data type="i18n">
+		<id>div_sla</id>
+		<title/>
+		<init name="div_sla_init">Dohodnuté hodiny odozvy</init>
+	</data>
+	<data type="text" immediate="true">
+		<id>f_nazov</id>
+		<title name="f_nazov_title">Názov firmy</title>
+		<event type="set">
+			<id>f_nazov_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+f_nazov: f.f_nazov;
+
+def n = ((f_nazov.value ?: "") as String).trim()
+if (n) {
+    changeCaseProperty("title").about { n }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text" immediate="true">
+		<id>f_kod</id>
+		<title name="f_kod_title">Kód</title>
+		<desc name="f_kod_desc">Krátky kód pre výkazy, napríklad NGF.</desc>
+	</data>
+	<data type="text">
+		<id>f_kontakt</id>
+		<title name="f_kontakt_title">Kontaktná osoba</title>
+	</data>
+	<data type="boolean" immediate="true">
+		<id>f_aktivna</id>
+		<title name="f_aktivna_title">Aktívna zmluva</title>
+		<desc name="f_aktivna_desc">Ľudia neaktívnej firmy nemôžu podávať nové požiadavky. Staré ďalej vidia.</desc>
+		<init>true</init>
+	</data>
+	<data type="text">
+		<id>f_poznamka</id>
+		<title name="f_poznamka_title">Poznámka k zmluve</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="number">
+		<id>f_sla_a</id>
+		<title name="f_sla_a_title">Priorita A – hodiny</title>
+		<desc name="f_sla_a_desc">Nechajte prázdne, ak platí štandard (A 2 h, B 4 h, C 8 h).</desc>
+	</data>
+	<data type="number">
+		<id>f_sla_b</id>
+		<title name="f_sla_b_title">Priorita B – hodiny</title>
+	</data>
+	<data type="number">
+		<id>f_sla_c</id>
+		<title name="f_sla_c_title">Priorita C – hodiny</title>
+	</data>
+	<data type="userList">
+		<id>f_clenovia</id>
+		<title name="f_clenovia_title">Ľudia s prístupom</title>
+		<desc name="f_clenovia_desc">Vidia všetky požiadavky tejto firmy. Ľudí pridávajte a odoberajte poľami nižšie, nie tu.</desc>
+	</data>
+	<data type="text">
+		<id>f_ludia</id>
+		<title name="f_ludia_title">Účty</title>
+		<desc name="f_ludia_desc">„invited" = človek si ešte z e-mailu nenastavil heslo.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="number" immediate="true">
+		<id>f_pocet</id>
+		<title name="f_pocet_title">Ľudí</title>
+		<init>0</init>
+	</data>
+	<data type="text" immediate="true">
+		<id>f_novy_email</id>
+		<title name="f_novy_email_title">E-mail nového človeka</title>
+		<desc name="f_novy_email_desc">Dostane pozvánku e-mailom a meno aj heslo si nastaví sám. Existujúci účet dostane len prístup.</desc>
+	</data>
+	<data type="button">
+		<id>btn_pridat</id>
+		<title/>
+		<placeholder name="btn_pridat_placeholder">Pridať a pozvať</placeholder>
+		<init>1</init>
+	</data>
+	<data type="enumeration_map">
+		<id>f_odobrat</id>
+		<title name="f_odobrat_title">Odobrať človeka</title>
+		<desc name="f_odobrat_desc">Stratí prístup k požiadavkám firmy. Účet samotný zostane.</desc>
+	</data>
+	<data type="button">
+		<id>btn_odobrat</id>
+		<title/>
+		<placeholder name="btn_odobrat_placeholder">Odobrať</placeholder>
+		<init>1</init>
+	</data>
+	<data type="button">
+		<id>btn_obnovit</id>
+		<title/>
+		<placeholder name="btn_obnovit_placeholder">Obnoviť stav účtov a prístupy</placeholder>
+		<init>1</init>
+	</data>
+	<data type="text">
+		<id>f_vysledok</id>
+		<title name="f_vysledok_title">Čo sa stalo</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>f_historia</id>
+		<title name="f_historia_title">História (najnovšie navrchu)</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<transition>
+		<id>t_firma</id>
+		<x>140</x>
+		<y>80</y>
+		<label name="t_firma_label">Firma</label>
+		<icon>domain</icon>
+		<!--
+			`manual`: firmu spravuje ktorykolvek zamestnanec podpory. `auto` by
+			ulohu natrvalo priradilo tomu, kto firmu zalozil, a ostatni by ju
+			nemohli upravit, kym ju neuvolni (PETRIFLOW_LEARNINGS B21).
+		-->
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>podpora</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_firma</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_firma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>f_nazov</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>f_kod</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>f_kontakt</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>f_aktivna</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_ludia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>f_ludia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>3</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>f_pocet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_obnovit</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_obnovit_set</id>
+					<actions phase="pre">
+						<action id="3"><![CDATA[
+f_clenovia: f.f_clenovia, f_ludia: f.f_ludia, f_pocet: f.f_pocet, f_odobrat: f.f_odobrat,
+f_vysledok: f.f_vysledok, f_nazov: f.f_nazov;
+
+// Stav uctov sa meni mimo tejto siete (clovek si z mailu nastavi heslo),
+// a rola na novej verzii sd_ticket po re-importe chyba. Oboje sa tu dorovna.
+def ids = userIdsOf(f_clenovia.value)
+def roly = 0
+ids.each { id ->
+    if (setProcessRole(id as String, "zakaznik", siet_tiketu(), "", true)) roly++
+}
+obnov_zoznam(ids, f_ludia, f_pocet, f_odobrat)
+def r = prepocitaj_tikety(ids, (f_nazov.value ?: "") as String)
+change f_vysledok value {
+    "Refreshed: " + ids.size() + " people, customer role confirmed for " + roly +
+    ", requests updated: " + r.ok + (r.chyby ? (", FAILED: " + r.chyby) : "")
+}
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>f_clenovia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>f_novy_email</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_pridat</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>8</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_pridat_set</id>
+					<actions phase="pre">
+						<action id="4"><![CDATA[
+f_novy_email: f.f_novy_email, f_clenovia: f.f_clenovia, f_ludia: f.f_ludia,
+f_pocet: f.f_pocet, f_odobrat: f.f_odobrat, f_vysledok: f.f_vysledok,
+f_historia: f.f_historia, f_nazov: f.f_nazov;
+
+// Odmietnutie sa NEHADZE: z datoveho tlacidla by skoncilo ako chyba
+// requestu, nie ako veta vo formulari, a clovek by nevedel, co opravit.
+def mail = ((f_novy_email.value ?: "") as String).trim()
+if (!je_email(mail)) {
+    change f_vysledok value { "\"" + mail + "\" is not a valid e-mail address." }
+    return
+}
+if (!((f_nazov.value ?: "") as String).trim()) {
+    change f_vysledok value { "Fill in the company name first." }
+    return
+}
+def ids = userIdsOf(f_clenovia.value)
+def ucet = findUserByEmail(mail)
+if (ucet != null) {
+    def uid = ucet.stringId as String
+    if (ids.contains(uid)) {
+        change f_vysledok value { mail + " is already at this company." }
+        return
+    }
+    def ina = firma_cloveka(uid)
+    if (ina != null) {
+        change f_vysledok value {
+            mail + " is already at the company \"" + ((ina.dataSet["f_nazov"]?.value ?: ina.title) as String) +
+            "\". A person can belong to one company only - remove them there first."
+        }
+        return
+    }
+    if (hasProcessRole(ucet, "podpora", siet_tiketu())) {
+        change f_vysledok value { mail + " is support staff and cannot be a customer." }
+        return
+    }
+}
+
+// Aktivny ucet pozvanku nedostane - uz sa vie prihlasit, staci mu pristup.
+def riadky = []
+def uid
+if (ucet != null && (ucet.state as String) == "ACTIVE") {
+    uid = ucet.stringId as String
+    riadky << (mail + " already has an account - access granted, no invitation sent")
+} else {
+    def v = pozvi(mail)
+    if (!v.ok) {
+        change f_vysledok value { "NOT ADDED: " + (v.sprava as String) }
+        change f_historia value { do_historie(f_historia, mail + " - NOT ADDED: " + (v.sprava as String)) }
+        return
+    }
+    uid = v.userId as String
+    riadky << (v.sprava as String)
+}
+
+if (!setProcessRole(uid, "zakaznik", siet_tiketu(), "", true)) {
+    riadky << "WARNING: the customer role could not be assigned - is sd_ticket imported?"
+}
+ids = ids + [uid]
+change f_clenovia value { ids }
+obnov_zoznam(ids, f_ludia, f_pocet, f_odobrat)
+def r = prepocitaj_tikety(ids, (f_nazov.value ?: "") as String)
+if (r.ok || r.chyby) {
+    riadky << ("requests of the company updated: " + r.ok + (r.chyby ? (", FAILED: " + r.chyby) : ""))
+}
+change f_novy_email value { "" }
+change f_vysledok value { riadky.join("\n") }
+change f_historia value { do_historie(f_historia, mail + " added") }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>f_odobrat</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_odobrat</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_odobrat_set</id>
+					<actions phase="pre">
+						<action id="5"><![CDATA[
+f_odobrat: f.f_odobrat, f_clenovia: f.f_clenovia, f_ludia: f.f_ludia,
+f_pocet: f.f_pocet, f_vysledok: f.f_vysledok, f_historia: f.f_historia, f_nazov: f.f_nazov;
+
+def uid = ((f_odobrat.value ?: "") as String).trim()
+def ids = userIdsOf(f_clenovia.value)
+if (!uid || !ids.contains(uid)) {
+    change f_vysledok value { "Pick the person to remove first." }
+    return
+}
+def popis = popis_cloveka(uid)
+ids = ids.findAll { it != uid }
+change f_clenovia value { ids }
+// Clovek patri do jednej firmy, takze bez nej rolu zakaznika nepotrebuje.
+// Enginove `removeRole` sa nepouziva - v 6.3.1 mlcky nic neodoberie.
+setProcessRole(uid, "zakaznik", siet_tiketu(), "", false)
+obnov_zoznam(ids, f_ludia, f_pocet, f_odobrat)
+def r = prepocitaj_tikety(ids, (f_nazov.value ?: "") as String)
+change f_vysledok value {
+    "Removed: " + popis + "\nrequests of the company updated: " + r.ok +
+    (r.chyby ? (", FAILED: " + r.chyby) : "")
+}
+change f_historia value { do_historie(f_historia, popis + " removed") }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>f_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_sla</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>f_sla_a</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>f_sla_b</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>f_sla_c</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>f_poznamka</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>f_historia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>16</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_firma_finish</id>
+			<actions phase="pre">
+				<action id="6"><![CDATA[
+f_nazov: f.f_nazov;
+
+if (!((f_nazov.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException("Fill in the company name.")
+}
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<place>
+		<id>p_zivy</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Živá</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_firma</id>
+		<type>read</type>
+		<sourceId>p_zivy</sourceId>
+		<destinationId>t_firma</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

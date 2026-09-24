@@ -17,11 +17,10 @@
     {
       "email": "super@netgrif.com",
       "roles": [
-        "agent",
         "approver",
         "hr",
         "it_admin",
-        "manager",
+        "podpora",
         "riaditel",
         "schv_hotel",
         "schv_marketing",
@@ -40,10 +39,10 @@
     {
       "email": "admin@test.local",
       "roles": [
-        "agent",
         "approver",
         "hr",
         "it_admin",
+        "podpora",
         "riaditel",
         "schv_restauracia",
         "schv_wellness",
@@ -59,9 +58,9 @@
       "roles": [
         "approver",
         "hr",
+        "podpora",
         "schv_wellness",
         "schvalovatel",
-        "specialist",
         "uctovnik",
         "veduci",
         "zadavatel",
@@ -73,7 +72,6 @@
       "roles": [
         "approver",
         "it_admin",
-        "specialist",
         "veduci",
         "zadavatel",
         "zamestnanec"

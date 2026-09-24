@@ -32,19 +32,18 @@
     "cez API. Jej kartu vidí rola spravca.",
     "",
     "Service Desk (sd_*) je príkladová aplikácia, nie časť frameworku.",
-    "Odstránenie: zmaž processes/sd_*.xml, ich riadky v \"import\", položku",
-    "\"it/service_desk\" nižšie a netScope v seed.json.",
+    "Odstránenie: zmaž processes/sd_*.xml, ich riadky v \"import\", položky",
+    "\"it\" a \"it/service_desk\" nižšie a netScope v seed.json.",
     "",
-    "Jeho kartu vidí LEN admin (requiredAuthorities ROLE_ADMIN). Je to príklad,",
-    "nie appka, ktorú niekto v tejto instancii používa - a karta príkladu v menu",
-    "bežného používateľa je šum, ktorý sa nedá odlíšiť od skutočnej aplikácie.",
-    "Kto ho chce dať do prevádzky, vymení to za requiredProcessRoles",
-    "[\"agent\", \"specialist\", \"manager\"].",
+    "Kartu vidia zamestnanci podpory (rola podpora) a zákazníci (rola",
+    "zakaznik). Zákazníka nikto nezakladá ručne: zamestnanec ho pridá do firmy",
+    "(sd_firma), tým mu príde pozvánka e-mailom a dostane rolu zakaznik.",
+    "requiredProcessRoles sa porovnávajú podľa importId na ktorejkoľvek verzii,",
+    "takže karta re-import siete prežije.",
     "",
     "Pozor: uzol URI riadi len VIDITEĽNOSŤ KARTY. Zobrazenia pod ňou stavia",
-    "sd_menu s visibility \"public\", takže kto pozná URL, otvorí ich aj tak;",
-    "čo v nich uvidí, riadia oprávnenia v sietiach. Skrytie karty nie je",
-    "prístupové opatrenie.",
+    "sd_menu; čo v nich kto uvidí, riadia oprávnenia v sieťach. Skrytie karty",
+    "nie je prístupové opatrenie.",
     "",
     "Čo je v processes/ a NIE je v tomto zozname:",
     "  single_settings.xml   systémová sieť enginu. Na classpath sa dostane cez",
@@ -58,10 +57,8 @@
   ],
   "import": [
     "configuration_tiles.xml",
-    "sd_customer.xml",
-    "sd_work_item.xml",
+    "sd_firma.xml",
     "sd_ticket.xml",
-    "sd_intake.xml",
     "sd_menu.xml",
     "pu_pouzivatel.xml",
     "pu_zalozenie.xml",
@@ -99,12 +96,18 @@
     "it": {
       "icon": "dns",
       "requiredAuthorities": [],
-      "requiredProcessRoles": []
+      "requiredProcessRoles": [
+        "podpora",
+        "zakaznik"
+      ]
     },
     "it/service_desk": {
       "icon": "support_agent",
       "requiredAuthorities": [],
-      "requiredProcessRoles": []
+      "requiredProcessRoles": [
+        "podpora",
+        "zakaznik"
+      ]
     },
     "admin": {
       "icon": "shield",

@@ -97,9 +97,8 @@ fi
 
 # a naopak: na sietach repozitara musi byt ticho. Toto je test na FALSE
 # POSITIVES - linter, ktory oznacuje funkcny kod, naucí agenta ignorovat vystup.
-if $PY tools/pfi18n.py processes/sd_customer.xml processes/sd_intake.xml \
-        processes/sd_menu.xml processes/sd_ticket.xml processes/sd_work_item.xml \
-        >/dev/null 2>&1; then
+if $PY tools/pfi18n.py processes/sd_firma.xml processes/sd_menu.xml \
+        processes/sd_ticket.xml >/dev/null 2>&1; then
   ok "pfi18n neoznacil prelozene siete"
 else
   bad "pfi18n oznacil prelozene siete Service Desku"
