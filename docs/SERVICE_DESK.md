@@ -4,7 +4,7 @@
 priradený k jeho organizácii, organizácie a SLA plány spravuje **správca**.
 Zákazníka ani agenta nikto nezakladá ručne: správca ho pridá do organizácie
 a tým mu príde pozvánka. Overené za behu na Netgrif AE 6.3.1 —
-`tools/sdcheck.py`, 104 kontrol na čistej databáze.
+`tools/sdcheck.py`, 110 kontrol na čistej databáze.
 
 Appka je v angličtine, slovenčina je druhý jazyk (`<i18n locale="sk">`
 v každej sieti, prepínač v portáli).
@@ -116,6 +116,14 @@ opustil bez odoslania, nemá kde žiť.
 | `waiting` | zákazník — jeho správa vráti tiket do `in_progress` |
 | `resolved` | zákazník — *Reopen* alebo *Confirm resolved* |
 | `closed`, `rejected` | nikto |
+
+**Agent má v tikete vždy práve jednu úlohu**, podľa stavu: *Triage*
+(`t_triage` — celý tiket a rozhodnutie Accept / Reject priamo v ňom,
+tlačidlo *Confirm decision*), *Work on ticket* (`t_work`, dokončiť =
+*Resolve*), *Follow-up* (`t_follow`, vyriešený) a *Archive* (`t_archive`,
+zatvorený, len na čítanie). Kam tiket po posúdení ide, určujú variabilné
+hrany `to_open` / `to_closed`. Kaskádu z organizácie zapisuje skrytá
+systémová úloha `t_sync`.
 
 **Konverzácia nie sú prechody**, ale tlačidlá v trvalých pohľadoch `t_my`
 a `t_detail` (read arc zo sinku, B8b). Odpovedať sa dá v každom otvorenom

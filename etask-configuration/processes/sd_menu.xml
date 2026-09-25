@@ -1,6 +1,6 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
 	<id>it/service_desk/sd_menu</id>
-	<version>4.0.0</version>
+	<version>6.0.0</version>
 	<initials>SDM</initials>
 	<title name="net_title">Service Desk menu</title>
 
@@ -104,9 +104,9 @@ def views = [
          headers: "meta-title," + c("tk_status") + "," + c("tk_reporter_name") + "," + c("tk_submitted_at") + "," + c("tk_responder")],
 
         // AGENT a ADMIN
-        // Ulohu t_accept vidia len agenti organizacie tiketu (userRef) a admin.
+        // Ulohu t_triage vidia len agenti organizacie tiketu (userRef) a admin.
         [id: "sd_triage", name: i18n("Triage", ["sk": "Nové na prevzatie"]),
-         type: "Task", icon: "move_to_inbox", query: task("t_accept"),
+         type: "Task", icon: "move_to_inbox", query: task("t_triage"),
          nets: [ticket], roles: staff, headers: null],
         [id: "sd_sla_risk", name: i18n("SLA at risk", ["sk": "SLA v ohrození"]),
          type: "Case", icon: "running_with_errors",

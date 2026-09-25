@@ -227,15 +227,19 @@ def main():
         pf.set_data(cust, task_of(cust, cid, "t_submit"), {"tk_type": vals.pop("tk_type")})
         run_task(cust, cid, "t_submit", vals)
 
+        # Agent ma v tikete vzdy jednu ulohu: t_triage (Accept / Reject v tikete),
+        # po prijati t_work (dokoncit = vyriesit).
         if fate == "rejected":
-            run_task(agent, cid, "t_reject", {"tk_reject_reason": {
-                "type": "text", "value": "This is the same issue as the Save button ticket from last week - "
-                                         "we fixed it there and it will be on testing tomorrow."}})
+            run_task(agent, cid, "t_triage", {
+                "tk_decision": {"type": "enumeration_map", "value": "reject"},
+                "tk_reject_reason": {"type": "text",
+                                     "value": "This is the same issue as the Save button ticket from last week - "
+                                              "we fixed it there and it will be on testing tomorrow."}})
         elif fate != "new":
-            td = task_of(agent, cid, "t_detail")
-            press(agent, td, "btn_agent_send", {"tk_agent_msg": {
+            press(agent, task_of(agent, cid, "t_triage"), "btn_agent_send", {"tk_agent_msg": {
                 "type": "text", "value": "Thank you, we are looking into it."}})
-            run_task(agent, cid, "t_accept")
+            run_task(agent, cid, "t_triage", {"tk_decision": {"type": "enumeration_map", "value": "accept"}})
+            td = task_of(agent, cid, "t_work")
             press(agent, td, "btn_note", {"tk_note_new": {
                 "type": "text", "value": "Checked the logs, looks related to the last deployment."}})
             if fate == "waiting":
@@ -248,7 +252,7 @@ def main():
                 press(cust, tm, "btn_customer_send", {"tk_customer_msg": {
                     "type": "text", "value": "For everyone in our office, in Chrome and Firefox."}})
             if fate in ("resolved", "closed"):
-                run_task(agent, cid, "t_resolve", {"tk_resolution": {
+                run_task(agent, cid, "t_work", {"tk_resolution": {
                     "type": "text", "value": "Fixed and deployed. Please let us know if you still see it."}})
             if fate == "closed":
                 run_task(cust, cid, "t_close")

@@ -221,7 +221,7 @@ changeCaseProperty("title").about { ((useCase.visualId ?: "New organization") as
 	<function scope="process" name="recompute_tickets"><![CDATA[
 { def members, def agents, def name ->
     // Ludia, agenti a nazov do tiketov, ktore uz existuju. Koncepty sa
-    // preskakuju: vidi ich len autor a `t_detail`, cez ktory sa zapisuje,
+    // preskakuju: vidi ich len autor a `t_sync`, cez ktory sa zapisuje,
     // vznikne az podanim. Agent musi rolu `sd_agent` naozaj mat (B14).
     def orgId = useCase.stringId
     def ticketNet = sister("sd_ticket")
@@ -234,7 +234,7 @@ changeCaseProperty("title").about { ((useCase.visualId ?: "New organization") as
         // Autor tiketu v `tk_org_members` nie je - pise cez svoj pohlad, nie sleduje.
         def reporter = userIdsOf(t.dataSet["tk_reporter"]?.value)
         try {
-            setData("t_detail", t, [
+            setData("t_sync", t, [
                     "tk_org_name"   : ["value": (name ?: "") as String, "type": "text"],
                     "tk_org_members": ["value": (members ?: []).collect { it as String }.findAll { !(it in reporter) }, "type": "userList"],
                     "tk_agents"     : ["value": realAgents.collect { it as String }, "type": "userList"],

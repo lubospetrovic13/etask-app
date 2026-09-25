@@ -259,7 +259,7 @@ def main():
 
     t = pf.tasks_of(zak, case_id)
     pf.check("zakaznik po podani vidi 'My ticket'", "t_my" in t, list(t))
-    pf.check("zakaznik nevidi ulohy Service Desku", not ({"t_detail", "t_accept"} & set(t)), list(t))
+    pf.check("zakaznik nevidi ulohy Service Desku", not ({"t_triage", "t_work", "t_sync"} & set(t)), list(t))
     st, c = zak.get(f"/api/workflow/case/{case_id}")
     pf.check("nazov nesie cislo a predmet", subject in (c.get("title") or ""), c.get("title"))
 
@@ -273,17 +273,28 @@ def main():
     pf.check("agent organizacie ho vidi", case_id in search_ids(agent, q_open))
 
     print("\n=== 6. spracovanie ===")
-    tg = pf.tasks_of(agent, case_id)
-    pf.check("agent ma detail, prijatie a zamietnutie", {"t_detail", "t_accept", "t_reject"} <= set(tg), list(tg))
-    td = tg.get("t_detail")
+    AGENT_TASKS = {"t_triage", "t_work", "t_follow", "t_archive"}
+
+    def agent_tasks(cl, cid):
+        return {k: v for k, v in pf.tasks_of(cl, cid).items() if k in AGENT_TASKS}
+
+    def sync_values(cid):
+        return pf.values(boss, pf.tasks_raw(boss, cid).get("t_sync"))
+
+    tg = agent_tasks(agent, case_id)
+    pf.check("agent ma v novom tikete jedinu ulohu t_triage", list(tg) == ["t_triage"],
+             list(pf.tasks_of(agent, case_id)))
+    td = tg.get("t_triage")
     if not td:
         return pf.report("sdcheck")
     v = pf.values(agent, td)
     pf.check("termin prvej reakcie je vypocitany", bool(v.get("sla_response_due")), v.get("sla_response_due"))
     pf.check("termin vyriesenia je vypocitany", bool(v.get("sla_resolution_due")), v.get("sla_resolution_due"))
-    pf.check("hodiny vyriesenia su z planu (high = 16)", v.get("sla_res_hours") == 16, v.get("sla_res_hours"))
+    pf.check("hodiny vyriesenia su z planu (high = 16)", sync_values(case_id).get("sla_res_hours") == 16,
+             sync_values(case_id).get("sla_res_hours"))
     pf.check("podrobnosti nesu druh chyby", "Problem with login" in (v.get("tk_details") or ""),
              v.get("tk_details"))
+    pf.check("rozhodnutie Accept / Reject je priamo v tikete", "tk_decision" in v)
 
     v = press(agent, td, "btn_agent_send", {"tk_agent_msg": {"type": "text", "value": "Looking into it."}})
     pf.check("sprava agenta je v konverzacii", "Looking into it." in (v.get("tk_conversation") or ""),
@@ -292,12 +303,19 @@ def main():
     v = press(agent, td, "btn_agent_ask", {"tk_agent_msg": {"type": "text", "value": "Which browser?"}})
     pf.check("pred prijatim sa na zakaznika cakat neda", "Accept the ticket first" in (v.get("tk_notice") or ""),
              v.get("tk_notice"))
-    pf.assign(agent, tg["t_accept"])
-    st, r = pf.finish(agent, tg["t_accept"])
-    pf.check("prijatie preslo", pf.ok_body(r), str(r)[:160])
-    v = press(agent, td, "btn_agent_ask", {"tk_agent_msg": {"type": "text", "value": "Which browser?"}})
+    pf.set_data(agent, td, {"tk_decision": {"type": "enumeration_map", "value": "reject"}})
+    st, r = pf.finish(agent, td)
+    pf.check("zamietnutie bez dovodu je odmietnute", pf.err_body(r), str(r)[:120])
+    pf.set_data(agent, td, {"tk_decision": {"type": "enumeration_map", "value": "accept"}})
+    st, r = pf.finish(agent, td)
+    pf.check("prijatie (rozhodnutie v tikete) preslo", pf.ok_body(r), str(r)[:160])
+    tg = agent_tasks(agent, case_id)
+    pf.check("po prijati ma agent jedinu ulohu t_work", list(tg) == ["t_work"], list(tg))
+    tw = tg.get("t_work")
+    v = press(agent, tw, "btn_agent_ask", {"tk_agent_msg": {"type": "text", "value": "Which browser?"}})
     pf.check("tiket caka na zakaznika", v.get("tk_status") == "waiting", v.get("tk_notice"))
-    pf.check("lehota vyriesenia stoji", bool(v.get("sla_paused_since")), v.get("sla_paused_since"))
+    pf.check("lehota vyriesenia stoji", bool(sync_values(case_id).get("sla_paused_since")))
+    pf.check("aj pocas cakania ma agent jedinu ulohu", list(agent_tasks(agent, case_id)) == ["t_work"])
 
     tm = pf.tasks_of(zak, case_id).get("t_my")
     v = press(zak, tm, "btn_customer_send", {"tk_customer_msg": {"type": "text", "value": "Firefox 128"}})
@@ -306,15 +324,16 @@ def main():
     vk = pf.values(kolega, pf.tasks_of(kolega, case_id).get("t_watch"))
     pf.check("kolega vidi konverzaciu", "Firefox 128" in (vk.get("tk_conversation") or ""))
     pf.check("kolega nema kam pisat", "tk_customer_msg" not in vk)
-    va = pf.values(agent, td)
-    pf.check("pauza skoncila", not va.get("sla_paused_since"), va.get("sla_paused_since"))
+    pf.check("pauza skoncila", not sync_values(case_id).get("sla_paused_since"))
 
-    tr = pf.tasks_of(agent, case_id).get("t_resolve")
-    pf.check("agent moze vyriesit", bool(tr))
-    if tr:
-        pf.set_data(agent, tr, {"tk_resolution": {"type": "text", "value": "Cache cleared."}})
-        st, r = pf.finish(agent, tr)
-        pf.check("vyriesenie preslo", pf.ok_body(r), str(r)[:160])
+    tw = agent_tasks(agent, case_id).get("t_work")
+    st, r = pf.finish(agent, tw)
+    pf.check("vyriesenie bez textu je odmietnute", pf.err_body(r), str(r)[:120])
+    pf.set_data(agent, tw, {"tk_resolution": {"type": "text", "value": "Cache cleared."}})
+    st, r = pf.finish(agent, tw)
+    pf.check("vyriesenie (dokoncenie t_work) preslo", pf.ok_body(r), str(r)[:160])
+    pf.check("vyrieseny tiket: agent ma jedinu ulohu t_follow", list(agent_tasks(agent, case_id)) == ["t_follow"],
+             list(agent_tasks(agent, case_id)))
     tz = pf.tasks_of(zak, case_id)
     v = pf.values(zak, tz["t_my"])
     pf.check("zakaznik vidi stav 'resolved'", v.get("tk_status") == "resolved", v.get("tk_status"))
@@ -325,6 +344,8 @@ def main():
         st, r = pf.finish(zak, tz["t_close"])
         pf.check("potvrdenie vyriesenia preslo", pf.ok_body(r), str(r)[:160])
         pf.check("tiket je zatvoreny", pf.values(zak, tz["t_my"]).get("tk_status") == "closed")
+        pf.check("zatvoreny tiket: agent ma jedinu ulohu t_archive",
+                 list(agent_tasks(agent, case_id)) == ["t_archive"], list(agent_tasks(agent, case_id)))
 
     print("\n=== 7. odobratie z organizacie ===")
     kid = next((k for k, lbl in pf.options(boss, to, "org_remove").items() if novy in str(lbl)), None)
@@ -384,29 +405,30 @@ def main():
 
     pf.check("po podani bezia hodiny (uloha t_tick)", bool(clock()))
     pf.check("tick prebehol", tick())
-    td2 = pf.tasks_raw(boss, c2).get("t_detail")
-    v = pf.values(boss, td2)
+    v = dict(pf.values(boss, pf.tasks_raw(boss, c2).get("t_triage")))
     pf.check("tick oznacil SLA ako porusene", v.get("tk_sla_state") == "breached", v.get("tk_sla_state"))
-    pf.check("porusena je prva reakcia", v.get("sla_response_breached") is True, v.get("sla_response_breached"))
+    pf.check("porusena je prva reakcia (ziadna reakcia v lehote 0 h)", not v.get("sla_first_response_at"),
+             v.get("sla_first_response_at"))
     pf.check("po ticku hodiny bezia dalej (t_tock)", "t_tock" in pf.tasks_raw(boss, c2), list(pf.tasks_raw(boss, c2)))
     risk = (f'processIdentifier:"{TICKET}" AND dataSet.tk_status.keyValue:("new" OR "in_progress" OR "waiting")'
             ' AND dataSet.tk_sla_state.keyValue:("at_risk" OR "breached")')
     time.sleep(1)
     pf.check("tiket je v zobrazeni 'SLA at risk'", c2 in search_ids(boss, risk))
 
-    pf.assign(boss, pf.tasks_raw(boss, c2)["t_accept"])
-    pf.finish(boss, pf.tasks_raw(boss, c2)["t_accept"])
-    tr2 = pf.tasks_raw(boss, c2).get("t_resolve")
+    tt2 = pf.tasks_raw(boss, c2)["t_triage"]
+    pf.set_data(boss, tt2, {"tk_decision": {"type": "enumeration_map", "value": "accept"}})
+    pf.finish(boss, tt2)
+    tr2 = pf.tasks_raw(boss, c2).get("t_work")
     pf.set_data(boss, tr2, {"tk_resolution": {"type": "text", "value": "Done."}})
     pf.finish(boss, tr2)
     pf.check("tick po vyrieseni prebehol", tick())
     closed = False
     for _ in range(10):
-        if pf.values(boss, td2).get("tk_status") == "closed":
+        if "t_archive" in pf.tasks_raw(boss, c2):
             closed = True
             break
         time.sleep(1)
-    pf.check("vyrieseny tiket sa zatvoril sam (t_auto_close)", closed, pf.values(boss, td2).get("tk_status"))
+    pf.check("vyrieseny tiket sa zatvoril sam (t_auto_close)", closed, list(pf.tasks_raw(boss, c2)))
     pf.check("zakaznik uz nemoze znovu otvorit", "t_reopen" not in pf.tasks_raw(boss, c2))
     tick()
     pf.check("po zatvoreni sa hodiny zastavia", not clock(),

@@ -1,6 +1,6 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
 	<id>it/service_desk/sd_ticket</id>
-	<version>2.2.0</version>
+	<version>3.0.0</version>
 	<initials>SDT</initials>
 	<title name="net_title">Ticket</title>
 
@@ -106,10 +106,21 @@
 		<i18nString name="t_submit_label">Nový tiket</i18nString>
 		<i18nString name="t_my_label">Môj tiket</i18nString>
 		<i18nString name="t_watch_label">Tiket organizácie</i18nString>
-		<i18nString name="t_detail_label">Tiket</i18nString>
-		<i18nString name="t_accept_label">Prijať</i18nString>
-		<i18nString name="t_reject_label">Zamietnuť</i18nString>
-		<i18nString name="t_resolve_label">Vyriešiť</i18nString>
+		<i18nString name="t_triage_label">Posúdenie</i18nString>
+		<i18nString name="t_triage_finish_t">Potvrdiť rozhodnutie</i18nString>
+		<i18nString name="t_work_label">Riešenie tiketu</i18nString>
+		<i18nString name="t_work_finish_t">Vyriešiť</i18nString>
+		<i18nString name="t_follow_label">Po vyriešení</i18nString>
+		<i18nString name="t_archive_label">Archív</i18nString>
+		<i18nString name="t_sync_label">Synchronizácia organizácie</i18nString>
+		<i18nString name="empty_button"></i18nString>
+		<i18nString name="div_decision_init">Rozhodnutie</i18nString>
+		<i18nString name="div_resolve_init">Riešenie</i18nString>
+		<i18nString name="tk_decision_title">Prijať alebo zamietnuť</i18nString>
+		<i18nString name="tk_decision_opt_accept">Prijať - budeme na tom pracovať</i18nString>
+		<i18nString name="tk_decision_opt_reject">Zamietnuť - dôvod napíšte nižšie</i18nString>
+		<i18nString name="to_open_title">Smer: otvorený</i18nString>
+		<i18nString name="to_closed_title">Smer: zatvorený</i18nString>
 		<i18nString name="t_reopen_label">Znovu otvoriť</i18nString>
 		<i18nString name="t_close_label">Potvrdiť vyriešenie</i18nString>
 		<i18nString name="system_title">Systém</i18nString>
@@ -137,17 +148,23 @@
 		Tiket, ktory podava PRIHLASENY zakaznik a riesi agent priradeny k jeho
 		organizacii.
 
-		  p_draft -> t_submit -> p_triage -> t_accept -> p_open -> t_resolve -> p_resolved
-		                     \-> p_alive           \-> t_reject -> p_closed
+		  p_draft -> t_submit -> p_triage -> t_triage -> p_open -> t_work -> p_resolved
+		                     \-> p_alive              \-> p_closed (zamietnuty)
 		                                             p_resolved -> t_reopen -> p_open
 		                                             p_resolved -> t_close  -> p_closed
-		  p_alive (sink) ..read..> t_my (autor), t_watch (ludia organizacie),
-		                           t_detail (agenti organizacie, admin)
+		  p_alive (sink)  ..read..> t_my (autor), t_watch (ludia organizacie), t_sync (system)
+		  p_resolved      ..read..> t_follow (agenti)
+		  p_closed (sink) ..read..> t_archive (agenti)
 
-		KONVERZACIA nie su prechody, ale tlacidla v trvalych pohladoch t_my
-		a t_detail. Pohlad visi na read arcu zo SINKU, takze nezmizne
-		(B8b, B25), a odpovedat sa da v kazdom stave. "Caka na zakaznika" je
-		preto len hodnota `tk_status`, nie miesto: agent ju nastavi
+		AGENT MA V TIKETE VZDY PRAVE JEDNU ULOHU, podla stavu: t_triage (cely
+		tiket + rozhodnutie Accept / Reject), t_work (cely tiket, dokoncit =
+		vyriesit), t_follow (vyrieseny), t_archive (zatvoreny). Accept a Reject
+		su rozhodnutie v tikete (`tk_decision`), nie dve samostatne ulohy;
+		smer urcuju variabilne hrany `to_open` / `to_closed`.
+
+		KONVERZACIA nie su prechody, ale tlacidla v ulohach t_my, t_triage,
+		t_work a t_follow. Odpovedat sa da v kazdom otvorenom stave a "caka na
+		zakaznika" je len hodnota `tk_status`, nie miesto: agent ju nastavi
 		tlacidlom, zakaznikova odpoved ju zrusi.
 
 		KTO CO VIDI - vsetko cez userRef, lebo ten re-import siete prezije (B16):
@@ -908,6 +925,34 @@ changeCaseProperty("title").about { title_of(tk_subject) }
 		<id>sla_work_to</id>
 		<title name="sla_work_to_title">Working time to</title>
 	</data>
+	<data type="i18n">
+		<id>div_decision</id>
+		<title/>
+		<init name="div_decision_init">Decision</init>
+	</data>
+	<data type="i18n">
+		<id>div_resolve</id>
+		<title/>
+		<init name="div_resolve_init">Resolution</init>
+	</data>
+	<data type="enumeration_map">
+		<id>tk_decision</id>
+		<title name="tk_decision_title">Accept or reject</title>
+		<options>
+			<option key="accept" name="tk_decision_opt_accept">Accept - we will work on it</option>
+			<option key="reject" name="tk_decision_opt_reject">Reject - write the reason below</option>
+		</options>
+	</data>
+	<data type="number">
+		<id>to_open</id>
+		<title name="to_open_title">Route: open</title>
+		<init>0</init>
+	</data>
+	<data type="number">
+		<id>to_closed</id>
+		<title name="to_closed_title">Route: closed</title>
+		<init>0</init>
+	</data>
 	<data type="enumeration_map" immediate="true">
 		<id>tk_sla_state</id>
 		<title name="tk_sla_state_title">SLA</title>
@@ -1060,7 +1105,7 @@ changeCaseProperty("title").about { title_of(tk_subject) }
 			<id>t_submit_finish</id>
 			<!--
 				Vsetko v `pre`: `tk_org_members` a `tk_agents` musia byt zapisane
-				skor, nez vzniknu ulohy t_watch a t_detail - ich userRef sa
+				skor, nez vzniknu ulohy t_watch, t_triage a t_sync - ich userRef sa
 				vyhodnocuje pri vzniku. A odmietnute podanie nesmie pohnut tokenom.
 			-->
 			<actions phase="pre">
@@ -1324,6 +1369,14 @@ notify(h ? [h] : staff(tk_agents), "the customer replied", text)
 				<layout><x>4</x><y>19</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 		</dataGroup>
+		<event type="finish">
+			<id>t_my_finish</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_my_delegate</id>
+			<title name="empty_button"></title>
+		</event>
 	</transition>
 	<transition>
 		<id>t_watch</id>
@@ -1389,6 +1442,22 @@ notify(h ? [h] : staff(tk_agents), "the customer replied", text)
 				<layout><x>0</x><y>10</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 		</dataGroup>
+		<event type="assign">
+			<id>t_watch_assign</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="cancel">
+			<id>t_watch_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_watch_finish</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_watch_delegate</id>
+			<title name="empty_button"></title>
+		</event>
 	</transition>
 	<transition>
 		<id>t_reopen</id>
@@ -1499,12 +1568,17 @@ changeCaseProperty("color").about { "grey" }
 
 	<!-- ============================ SERVICE DESK ============================ -->
 
+
 	<transition>
-		<id>t_detail</id>
+		<id>t_triage</id>
 		<x>340</x>
-		<y>520</y>
-		<label name="t_detail_label">Ticket</label>
-		<icon>fact_check</icon>
+		<y>320</y>
+		<label name="t_triage_label">Triage</label>
+		<icon>move_to_inbox</icon>
+		<!--
+			JEDINA uloha agenta v novom tikete: cely tiket, konverzacia a rozhodnutie
+			Accept / Reject. Agent tak nema v tikete dve ulohy naraz.
+		-->
 		<assignPolicy>manual</assignPolicy>
 		<roleRef>
 			<id>sd_admin</id>
@@ -1519,7 +1593,7 @@ changeCaseProperty("color").about { "grey" }
 			</logic>
 		</userRef>
 		<dataGroup>
-			<id>g_detail</id>
+			<id>g_t_triage</id>
 			<cols>6</cols>
 			<layout>grid</layout>
 			<dataRef>
@@ -1650,9 +1724,9 @@ changeCaseProperty("color").about { "grey" }
 				<logic><behavior>editable</behavior></logic>
 				<layout><x>4</x><y>21</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<event type="set">
-					<id>btn_agent_send_set</id>
+					<id>btn_agent_send_triage</id>
 					<actions phase="pre">
-						<action id="8"><![CDATA[
+						<action id="101"><![CDATA[
 tk_agent_msg: f.tk_agent_msg, tk_conversation: f.tk_conversation, tk_status: f.tk_status,
 tk_notice: f.tk_notice, tk_reporter: f.tk_reporter, sla_first_response_at: f.sla_first_response_at,
 sla_response_met: f.sla_response_met, sla_response_due: f.sla_response_due;
@@ -1680,9 +1754,9 @@ notify(tk_reporter.value, "reply from the Service Desk", text)
 				<logic><behavior>editable</behavior></logic>
 				<layout><x>4</x><y>22</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<event type="set">
-					<id>btn_agent_ask_set</id>
+					<id>btn_agent_ask_triage</id>
 					<actions phase="pre">
-						<action id="9"><![CDATA[
+						<action id="102"><![CDATA[
 tk_agent_msg: f.tk_agent_msg, tk_conversation: f.tk_conversation, tk_status: f.tk_status,
 tk_notice: f.tk_notice, tk_reporter: f.tk_reporter, sla_first_response_at: f.sla_first_response_at,
 sla_response_met: f.sla_response_met, sla_response_due: f.sla_response_due,
@@ -1715,29 +1789,46 @@ notify(tk_reporter.value, "we need something from you", text)
 				<layout><x>0</x><y>23</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>div_internal</id>
+				<id>div_decision</id>
 				<logic><behavior>visible</behavior></logic>
 				<layout><x>0</x><y>24</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
+				<id>tk_decision</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>25</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>list</name></component>
+			</dataRef>
+			<dataRef>
+				<id>tk_reject_reason</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>26</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_internal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>28</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
 				<id>tk_internal</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>25</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>29</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>tk_note_new</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>28</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>32</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>btn_note</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>4</x><y>28</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>4</x><y>32</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<event type="set">
-					<id>btn_note_set</id>
+					<id>btn_note_triage</id>
 					<actions phase="pre">
-						<action id="10"><![CDATA[
+						<action id="103"><![CDATA[
 tk_note_new: f.tk_note_new, tk_internal: f.tk_internal, tk_notice: f.tk_notice;
 
 def text = ((tk_note_new.value ?: "") as String).trim()
@@ -1752,74 +1843,55 @@ change tk_notice value { "Note added." }
 					</actions>
 				</event>
 			</dataRef>
-			<!--
-				Skryte, ale v dataGroup: sd_organization sem cez
-				setData("t_detail", ...) kaskaduje ludi a agentov, a
-				GET /api/task/{id}/data vracia len polia z dataGroup.
-			-->
-			<dataRef>
-				<id>tk_org_members</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>0</x><y>29</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_agents</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>2</x><y>29</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_org_id</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>4</x><y>29</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_reporter</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>0</x><y>30</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_responder_id</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>2</x><y>30</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>sla_paused_minutes</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>0</x><y>31</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>sla_paused_since</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>2</x><y>31</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>sla_res_hours</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>4</x><y>31</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>sla_response_breached</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>0</x><y>32</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>sla_resolution_breached</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>2</x><y>32</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>sla_autoclose_days</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>4</x><y>32</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
 		</dataGroup>
+		<event type="finish">
+			<id>t_triage_finish</id>
+			<title name="t_triage_finish_t">Confirm decision</title>
+			<!-- `pre`: `to_open` / `to_closed` su smerovacie priznaky variabilnych hran (C4). -->
+			<actions phase="pre">
+				<action id="104"><![CDATA[
+tk_decision: f.tk_decision, tk_reject_reason: f.tk_reject_reason, to_open: f.to_open, to_closed: f.to_closed,
+tk_status: f.tk_status, tk_responder: f.tk_responder, tk_responder_id: f.tk_responder_id,
+tk_conversation: f.tk_conversation, tk_reporter: f.tk_reporter,
+sla_first_response_at: f.sla_first_response_at, sla_response_met: f.sla_response_met,
+sla_response_due: f.sla_response_due;
+
+must(tk_decision, "Accept or reject the ticket.")
+def reject = (tk_decision.value as String) == "reject"
+if (reject) {
+    must(tk_reject_reason, "Write why the ticket is rejected - the customer reads it.")
+}
+change to_open value { reject ? 0 : 1 }
+change to_closed value { reject ? 1 : 0 }
+change tk_responder value { me() }
+change tk_responder_id value { (loggedUser()?.stringId ?: "") as String }
+first_response(sla_first_response_at, sla_response_met, sla_response_due)
+if (reject) {
+    def text = ((tk_reject_reason.value ?: "") as String).trim()
+    change tk_status value { "rejected" }
+    change tk_conversation value { append(tk_conversation, me() + " (Service Desk)", "Rejected: " + text) }
+    changeCaseProperty("color").about { "grey" }
+    notify(tk_reporter.value, "your ticket was rejected", text)
+} else {
+    change tk_status value { "in_progress" }
+    change tk_conversation value { append(tk_conversation, me() + " (Service Desk)", "Accepted the ticket.") }
+    notify(tk_reporter.value, "your ticket is being handled", "Handled by: " + me())
+}
+				]]></action>
+			</actions>
+		</event>
+		<event type="delegate">
+			<id>t_triage_delegate</id>
+			<title name="empty_button"></title>
+		</event>
 	</transition>
 	<transition>
-		<id>t_accept</id>
-		<x>340</x>
+		<id>t_work</id>
+		<x>540</x>
 		<y>320</y>
-		<label name="t_accept_label">Accept</label>
-		<icon>assignment_ind</icon>
+		<label name="t_work_label">Work on ticket</label>
+		<icon>engineering</icon>
+		<!-- Jedina uloha agenta v otvorenom tikete (aj ked caka na zakaznika). Dokoncit = vyriesit. -->
 		<assignPolicy>manual</assignPolicy>
 		<roleRef>
 			<id>sd_admin</id>
@@ -1834,11 +1906,11 @@ change tk_notice value { "Note added." }
 			</logic>
 		</userRef>
 		<dataGroup>
-			<id>g_accept</id>
+			<id>g_t_work</id>
 			<cols>6</cols>
 			<layout>grid</layout>
 			<dataRef>
-				<id>tk_org_name</id>
+				<id>tk_status</id>
 				<logic><behavior>visible</behavior></logic>
 				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
@@ -1848,154 +1920,237 @@ change tk_notice value { "Note added." }
 				<layout><x>2</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>sla_response_due</id>
+				<id>tk_responder</id>
 				<logic><behavior>visible</behavior></logic>
 				<layout><x>4</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
+				<id>tk_org_name</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_reporter_name</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_submitted_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_sla</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sla_response_due</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_first_response_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_response_met</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_resolution_due</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_resolved_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_resolution_met</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_sla_state</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>5</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_request</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
 				<id>tk_type</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>tk_subject</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>tk_description</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>8</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>tk_details</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>11</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
-		</dataGroup>
-		<event type="finish">
-			<id>t_accept_finish</id>
-			<actions phase="pre">
-				<action id="11"><![CDATA[
-tk_status: f.tk_status, tk_responder: f.tk_responder, tk_responder_id: f.tk_responder_id,
-tk_conversation: f.tk_conversation, tk_reporter: f.tk_reporter,
-sla_first_response_at: f.sla_first_response_at, sla_response_met: f.sla_response_met,
-sla_response_due: f.sla_response_due;
-
-change tk_status value { "in_progress" }
-change tk_responder value { me() }
-change tk_responder_id value { (loggedUser()?.stringId ?: "") as String }
-first_response(sla_first_response_at, sla_response_met, sla_response_due)
-change tk_conversation value { append(tk_conversation, me() + " (Service Desk)", "Accepted the ticket.") }
-notify(tk_reporter.value, "your ticket is being handled", "Handled by: " + me())
-				]]></action>
-			</actions>
-		</event>
-	</transition>
-	<transition>
-		<id>t_reject</id>
-		<x>540</x>
-		<y>440</y>
-		<label name="t_reject_label">Reject</label>
-		<icon>block</icon>
-		<assignPolicy>manual</assignPolicy>
-		<roleRef>
-			<id>sd_admin</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<userRef>
-			<id>tk_agents</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
-		<dataGroup>
-			<id>g_reject</id>
-			<cols>6</cols>
-			<layout>grid</layout>
 			<dataRef>
-				<id>tk_subject</id>
+				<id>tk_attachment</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>tk_description</id>
+				<id>div_conversation</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>tk_reject_reason</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-		</dataGroup>
-		<event type="finish">
-			<id>t_reject_finish</id>
-			<actions phase="pre">
-				<action id="12"><![CDATA[
-tk_reject_reason: f.tk_reject_reason, tk_status: f.tk_status, tk_conversation: f.tk_conversation,
-tk_reporter: f.tk_reporter, tk_responder: f.tk_responder, tk_responder_id: f.tk_responder_id,
-sla_first_response_at: f.sla_first_response_at, sla_response_met: f.sla_response_met,
-sla_response_due: f.sla_response_due;
-
-must(tk_reject_reason, "Write why the ticket is rejected - the customer reads it.")
-def text = ((tk_reject_reason.value ?: "") as String).trim()
-change tk_status value { "rejected" }
-change tk_responder value { me() }
-change tk_responder_id value { (loggedUser()?.stringId ?: "") as String }
-first_response(sla_first_response_at, sla_response_met, sla_response_due)
-change tk_conversation value { append(tk_conversation, me() + " (Service Desk)", "Rejected: " + text) }
-changeCaseProperty("color").about { "grey" }
-notify(tk_reporter.value, "your ticket was rejected", text)
-				]]></action>
-			</actions>
-		</event>
-	</transition>
-	<transition>
-		<id>t_resolve</id>
-		<x>740</x>
-		<y>320</y>
-		<label name="t_resolve_label">Resolve</label>
-		<icon>task_alt</icon>
-		<assignPolicy>manual</assignPolicy>
-		<roleRef>
-			<id>sd_admin</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</roleRef>
-		<userRef>
-			<id>tk_agents</id>
-			<logic>
-				<perform>true</perform>
-			</logic>
-		</userRef>
-		<dataGroup>
-			<id>g_resolve</id>
-			<cols>6</cols>
-			<layout>grid</layout>
-			<dataRef>
-				<id>tk_subject</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>tk_conversation</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>17</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_agent_msg</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>21</y><rows>2</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_agent_send</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>21</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_agent_send_work</id>
+					<actions phase="pre">
+						<action id="105"><![CDATA[
+tk_agent_msg: f.tk_agent_msg, tk_conversation: f.tk_conversation, tk_status: f.tk_status,
+tk_notice: f.tk_notice, tk_reporter: f.tk_reporter, sla_first_response_at: f.sla_first_response_at,
+sla_response_met: f.sla_response_met, sla_response_due: f.sla_response_due;
+
+def text = ((tk_agent_msg.value ?: "") as String).trim()
+if (!text) {
+    change tk_notice value { "Write the message first." }
+    return
+}
+if ((tk_status.value as String) in ["draft", "closed", "rejected"]) {
+    change tk_notice value { "The ticket is not open - the message was not sent." }
+    return
+}
+change tk_conversation value { append(tk_conversation, me() + " (Service Desk)", text) }
+change tk_agent_msg value { "" }
+first_response(sla_first_response_at, sla_response_met, sla_response_due)
+change tk_notice value { "Message sent to the customer." }
+notify(tk_reporter.value, "reply from the Service Desk", text)
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>btn_agent_ask</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>22</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_agent_ask_work</id>
+					<actions phase="pre">
+						<action id="106"><![CDATA[
+tk_agent_msg: f.tk_agent_msg, tk_conversation: f.tk_conversation, tk_status: f.tk_status,
+tk_notice: f.tk_notice, tk_reporter: f.tk_reporter, sla_first_response_at: f.sla_first_response_at,
+sla_response_met: f.sla_response_met, sla_response_due: f.sla_response_due,
+sla_paused_since: f.sla_paused_since;
+
+def text = ((tk_agent_msg.value ?: "") as String).trim()
+if (!text) {
+    change tk_notice value { "Write what you need from the customer first." }
+    return
+}
+if ((tk_status.value as String) != "in_progress") {
+    change tk_notice value { "Accept the ticket first - only a ticket in progress can wait for the customer." }
+    return
+}
+change tk_conversation value { append(tk_conversation, me() + " (Service Desk)", text) }
+change tk_agent_msg value { "" }
+first_response(sla_first_response_at, sla_response_met, sla_response_due)
+// Kym zakaznik neodpovie, lehota vyriesenia stoji.
+pause(sla_paused_since)
+change tk_status value { "waiting" }
+change tk_notice value { "Sent. The ticket waits for the customer." }
+notify(tk_reporter.value, "we need something from you", text)
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>tk_notice</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>23</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_resolve</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>24</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>tk_resolution</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>25</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_internal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>28</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>tk_internal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>29</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_note_new</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>32</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_note</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>32</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_note_work</id>
+					<actions phase="pre">
+						<action id="107"><![CDATA[
+tk_note_new: f.tk_note_new, tk_internal: f.tk_internal, tk_notice: f.tk_notice;
+
+def text = ((tk_note_new.value ?: "") as String).trim()
+if (!text) {
+    change tk_notice value { "Write the note first." }
+    return
+}
+change tk_internal value { append(tk_internal, me(), text) }
+change tk_note_new value { "" }
+change tk_notice value { "Note added." }
+						]]></action>
+					</actions>
+				</event>
 			</dataRef>
 		</dataGroup>
 		<event type="finish">
-			<id>t_resolve_finish</id>
+			<id>t_work_finish</id>
+			<title name="t_work_finish_t">Resolve</title>
 			<actions phase="pre">
-				<action id="13"><![CDATA[
+				<action id="108"><![CDATA[
 tk_resolution: f.tk_resolution, tk_status: f.tk_status, tk_conversation: f.tk_conversation,
 tk_reporter: f.tk_reporter, tk_responder: f.tk_responder, tk_responder_id: f.tk_responder_id,
 sla_resolved_at: f.sla_resolved_at, sla_resolution_met: f.sla_resolution_met,
@@ -2029,6 +2184,473 @@ notify(tk_reporter.value, "your ticket is resolved",
 				]]></action>
 			</actions>
 		</event>
+		<event type="delegate">
+			<id>t_work_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+	</transition>
+	<transition>
+		<id>t_follow</id>
+		<x>840</x>
+		<y>440</y>
+		<label name="t_follow_label">Follow-up</label>
+		<icon>visibility</icon>
+		<!--
+			Vyrieseny tiket: agent vidi vsetko a moze zakaznikovi este napisat.
+			Read arc z p_resolved - konzumuju ho t_reopen, t_close a t_auto_close;
+			po odmietnutom dokonceni t_reopen by pohlad zmizol (B8b), preto sa
+			dovod znovuotvorenia overuje uz vo formulari (required).
+		-->
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>sd_admin</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<userRef>
+			<id>tk_agents</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_t_follow</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_status</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_priority</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_responder</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_org_name</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_reporter_name</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_submitted_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_sla</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sla_response_due</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_first_response_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_response_met</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_resolution_due</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_resolved_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_resolution_met</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_sla_state</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>5</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_request</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>tk_type</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_subject</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_description</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_details</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_attachment</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_conversation</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>tk_resolution</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_conversation</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>17</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_agent_msg</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>21</y><rows>2</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_agent_send</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>21</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_agent_send_follow</id>
+					<actions phase="pre">
+						<action id="109"><![CDATA[
+tk_agent_msg: f.tk_agent_msg, tk_conversation: f.tk_conversation, tk_status: f.tk_status,
+tk_notice: f.tk_notice, tk_reporter: f.tk_reporter, sla_first_response_at: f.sla_first_response_at,
+sla_response_met: f.sla_response_met, sla_response_due: f.sla_response_due;
+
+def text = ((tk_agent_msg.value ?: "") as String).trim()
+if (!text) {
+    change tk_notice value { "Write the message first." }
+    return
+}
+if ((tk_status.value as String) in ["draft", "closed", "rejected"]) {
+    change tk_notice value { "The ticket is not open - the message was not sent." }
+    return
+}
+change tk_conversation value { append(tk_conversation, me() + " (Service Desk)", text) }
+change tk_agent_msg value { "" }
+first_response(sla_first_response_at, sla_response_met, sla_response_due)
+change tk_notice value { "Message sent to the customer." }
+notify(tk_reporter.value, "reply from the Service Desk", text)
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>tk_notice</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>23</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_internal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>24</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>tk_internal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>25</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_note_new</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>28</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_note</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>28</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_note_follow</id>
+					<actions phase="pre">
+						<action id="110"><![CDATA[
+tk_note_new: f.tk_note_new, tk_internal: f.tk_internal, tk_notice: f.tk_notice;
+
+def text = ((tk_note_new.value ?: "") as String).trim()
+if (!text) {
+    change tk_notice value { "Write the note first." }
+    return
+}
+change tk_internal value { append(tk_internal, me(), text) }
+change tk_note_new value { "" }
+change tk_notice value { "Note added." }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_follow_finish</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_follow_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+	</transition>
+	<transition>
+		<id>t_archive</id>
+		<x>1140</x>
+		<y>440</y>
+		<label name="t_archive_label">Archive</label>
+		<icon>inventory_2</icon>
+		<!-- Zatvoreny alebo zamietnuty tiket, len na citanie. Read arc zo sinku p_closed. -->
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>sd_admin</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<userRef>
+			<id>tk_agents</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_t_archive</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_status</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_priority</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_responder</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_org_name</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_reporter_name</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_submitted_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_sla</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sla_response_due</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_first_response_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_response_met</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_resolution_due</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_resolved_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_resolution_met</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_sla_state</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>5</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_request</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>tk_type</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_subject</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_description</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_details</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_attachment</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_conversation</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>tk_resolution</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_conversation</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>17</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_internal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>21</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_archive_assign</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="cancel">
+			<id>t_archive_cancel</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="finish">
+			<id>t_archive_finish</id>
+			<title name="empty_button"></title>
+		</event>
+		<event type="delegate">
+			<id>t_archive_delegate</id>
+			<title name="empty_button"></title>
+		</event>
+	</transition>
+	<transition>
+		<id>t_sync</id>
+		<x>340</x>
+		<y>640</y>
+		<label name="t_sync_label">Organization sync</label>
+		<icon>sync</icon>
+		<!--
+			Ciel kaskady zo sd_organization: setData("t_sync", tiket, ...) zapise ludi,
+			agentov a nazov organizacie. Systemova, cloveku sa neukazuje - agent
+			ma v tikete len svoju jednu pracovnu ulohu.
+		-->
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_sync</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>tk_org_name</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_org_members</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_agents</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_org_id</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_reporter</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+					<dataRef>
+				<id>sla_res_hours</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_paused_since</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_paused_minutes</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
 	</transition>
 
 	<!-- ============================ CLOCK ============================ -->
@@ -2269,55 +2891,6 @@ notify(tk_reporter.value, "your ticket was closed",
 		<multiplicity>1</multiplicity>
 	</arc>
 	<arc>
-		<id>a6</id>
-		<type>read</type>
-		<sourceId>p_alive</sourceId>
-		<destinationId>t_detail</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a7</id>
-		<type>regular</type>
-		<sourceId>p_triage</sourceId>
-		<destinationId>t_accept</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a8</id>
-		<type>regular</type>
-		<sourceId>t_accept</sourceId>
-		<destinationId>p_open</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a9</id>
-		<type>regular</type>
-		<sourceId>p_triage</sourceId>
-		<destinationId>t_reject</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a10</id>
-		<type>regular</type>
-		<sourceId>t_reject</sourceId>
-		<destinationId>p_closed</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a11</id>
-		<type>regular</type>
-		<sourceId>p_open</sourceId>
-		<destinationId>t_resolve</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
-		<id>a12</id>
-		<type>regular</type>
-		<sourceId>t_resolve</sourceId>
-		<destinationId>p_resolved</destinationId>
-		<multiplicity>1</multiplicity>
-	</arc>
-	<arc>
 		<id>a13</id>
 		<type>regular</type>
 		<sourceId>p_resolved</sourceId>
@@ -2418,5 +2991,63 @@ notify(tk_reporter.value, "your ticket was closed",
 		<destinationId>p_close_due</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>tk_close_due</reference>
+	</arc>
+	<arc>
+		<id>a30</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_sync</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a31</id>
+		<type>regular</type>
+		<sourceId>p_triage</sourceId>
+		<destinationId>t_triage</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a32</id>
+		<type>regular</type>
+		<sourceId>t_triage</sourceId>
+		<destinationId>p_open</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>to_open</reference>
+	</arc>
+	<arc>
+		<id>a33</id>
+		<type>regular</type>
+		<sourceId>t_triage</sourceId>
+		<destinationId>p_closed</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>to_closed</reference>
+	</arc>
+	<arc>
+		<id>a34</id>
+		<type>regular</type>
+		<sourceId>p_open</sourceId>
+		<destinationId>t_work</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a35</id>
+		<type>regular</type>
+		<sourceId>t_work</sourceId>
+		<destinationId>p_resolved</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a36</id>
+		<type>read</type>
+		<sourceId>p_resolved</sourceId>
+		<destinationId>t_follow</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a37</id>
+		<type>read</type>
+		<sourceId>p_closed</sourceId>
+		<destinationId>t_archive</destinationId>
+		<multiplicity>1</multiplicity>
 	</arc>
 </document>
