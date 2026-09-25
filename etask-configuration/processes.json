@@ -35,11 +35,11 @@
     "Odstránenie: zmaž processes/sd_*.xml, ich riadky v \"import\", položky",
     "\"it\" a \"it/service_desk\" nižšie a netScope v seed.json.",
     "",
-    "Kartu vidia správcovia (sd_admin), agenti (sd_agent) a zákazníci",
-    "(sd_customer). Zákazníka ani agenta nikto nezakladá ručne: správca ich pridá",
-    "do organizácie (sd_organization), tým im príde pozvánka e-mailom a dostanú rolu.",
-    "requiredProcessRoles sa porovnávajú podľa importId na ktorejkoľvek verzii,",
-    "takže karta re-import siete prežije.",
+    "Položky menu Service Desku visia priamo v koreni (sd_menu, uri \"root\"),",
+    "takže zákazník aj agent majú po prihlásení rovno svoje zobrazenia. Priečinky",
+    "it a it/service_desk vznikajú z identifikátorov sietí a vidí ich len admin.",
+    "Zákazníka ani agenta nikto nezakladá ručne: správca ich pridá do organizácie",
+    "(sd_organization), tým im príde pozvánka e-mailom a dostanú rolu.",
     "",
     "Pozor: uzol URI riadi len VIDITEĽNOSŤ KARTY. Zobrazenia pod ňou stavia",
     "sd_menu; čo v nich kto uvidí, riadia oprávnenia v sieťach. Skrytie karty",
@@ -90,21 +90,17 @@
     },
     "it": {
       "icon": "dns",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "sd_admin",
-        "sd_agent",
-        "sd_customer"
-      ]
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
     },
     "it/service_desk": {
       "icon": "support_agent",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "sd_admin",
-        "sd_agent",
-        "sd_customer"
-      ]
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
     },
     "admin": {
       "icon": "shield",

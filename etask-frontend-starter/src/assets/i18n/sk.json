@@ -9,7 +9,10 @@
   },
   "tasks": {
     "allTasks": "Všetky úlohy",
-    "myTasks": "Moje úlohy"
+    "myTasks": "Moje úlohy",
+    "footer": {
+      "defaultText": "NETGRIF, s.r.o. © 2026"
+    }
   },
   "dashboard": {
     "tasks": "úloh",
@@ -20,7 +23,8 @@
     "folders": "Priečinky",
     "root-folders": "Kategórie",
     "settings": "Nastavenia",
-    "views": "Zobrazenia"
+    "views": "Zobrazenia",
+    "root-views": "Zobrazenia"
   },
   "workflow": {
     "publicUrl": "Verejná URL",

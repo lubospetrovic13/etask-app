@@ -4,6 +4,7 @@
     "sd_my_tickets",
     "sd_company_tickets",
     "sd_triage",
+    "sd_sla_risk",
     "sd_in_progress",
     "sd_all_tickets",
     "sd_my_organizations",
@@ -11,9 +12,7 @@
     "sd_sla_plans",
     "general"
   ],
-  "dashboardNodes": [
-    "it/service_desk"
-  ],
+  "dashboardNodes": [],
   "forms": {
     "sd_new_ticket": {
       "process": "it/service_desk/sd_ticket",

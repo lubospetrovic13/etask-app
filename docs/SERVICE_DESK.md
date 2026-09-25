@@ -4,7 +4,7 @@
 priradený k jeho organizácii, organizácie a SLA plány spravuje **správca**.
 Zákazníka ani agenta nikto nezakladá ručne: správca ho pridá do organizácie
 a tým mu príde pozvánka. Overené za behu na Netgrif AE 6.3.1 —
-`tools/sdcheck.py`, 100 kontrol na čistej databáze.
+`tools/sdcheck.py`, 104 kontrol na čistej databáze.
 
 Appka je v angličtine, slovenčina je druhý jazyk (`<i18n locale="sk">`
 v každej sieti, prepínač v portáli).
@@ -71,9 +71,15 @@ na prihláseného človeka sa napísať nedá, filter nemá `<<me>>`.
 
 ## Dashboard a formulár z karty
 
+Položky menu Service Desku visia priamo v **koreni** (`sd_menu`, uri
+`"root"` — tak sa koreňový uzol volá). Zákazník má po prihlásení v bočnom
+menu rovno Create New Ticket, My Tickets a Company Tickets. Priečinky `it`
+a `it/service_desk` vznikajú z identifikátorov sietí a manifest ich ukazuje
+len `ROLE_ADMIN`.
+
 Karty dashboardu sú položky menu, nie priečinky: `assets/custom_views.json`
-určuje, ktoré (`dashboard`, v tomto poradí) a v ktorých uzloch ich hľadať
-(`dashboardNodes`). Kto aspoň jednu kartu má, priečinky na dashboarde nevidí —
+určuje, ktoré (`dashboard`, v tomto poradí) a v ktorých ďalších uzloch ich
+hľadať okrem koreňa (`dashboardNodes`). Kto aspoň jednu kartu má, priečinky na dashboarde nevidí —
 zostávajú v bočnom menu. Počítadlo počíta prípady pri Case zobrazení a úlohy
 pri Task zobrazení.
 

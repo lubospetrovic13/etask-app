@@ -1,6 +1,6 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
 	<id>it/service_desk/sd_menu</id>
-	<version>1.0.0</version>
+	<version>4.0.0</version>
 	<initials>SDM</initials>
 	<title name="net_title">Service Desk menu</title>
 
@@ -65,7 +65,10 @@ def created = []
 def unchanged = []
 def failed = []
 
-def uri = "it/service_desk"
+// Polozky visia priamo v KORENI menu (uriPath korena je "root"): zakaznik
+// ma po prihlaseni rovno svoje tri polozky, bez priecinkov It a Service Desk.
+// Tie vznikaju z identifikatorov sieti a manifest ich ukazuje len adminovi.
+def uri = "root"
 def ticket = "it/service_desk/sd_ticket"
 def org = "it/service_desk/sd_organization"
 def plan = "it/service_desk/sd_sla_plan"

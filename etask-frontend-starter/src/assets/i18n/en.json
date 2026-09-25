@@ -9,7 +9,10 @@
   },
   "tasks": {
     "allTasks": "All Tasks",
-    "myTasks": "My Tasks"
+    "myTasks": "My Tasks",
+    "footer": {
+      "defaultText": "NETGRIF, s.r.o. © 2026"
+    }
   },
   "dashboard": {
     "tasks": "task",
@@ -20,7 +23,8 @@
     "folders": "Folders",
     "root-folders": "Categories",
     "settings": "Settings",
-    "views": "Views"
+    "views": "Views",
+    "root-views": "Views"
   },
   "workflow": {
     "publicUrl": "Public URL",

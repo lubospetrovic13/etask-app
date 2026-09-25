@@ -106,9 +106,20 @@ def main():
 
     agent = pf.Client(AGENT, pf.TEST_PASS)
     outsider = pf.Client(OUTSIDER, pf.TEST_PASS)
-    pf.check("admin vidi kartu Service Desku", CARD in pf.uri_paths(boss, deep=True))
-    pf.check("agent vidi kartu Service Desku", CARD in pf.uri_paths(agent, deep=True))
-    pf.check("clovek mimo organizacii kartu nevidi", CARD not in pf.uri_paths(outsider, deep=True))
+    # Polozky visia priamo v koreni menu; priecinky z identifikatorov sieti
+    # (it, it/service_desk) vidi len admin.
+    st, root = boss.get("/api/v2/uri/root")
+    root_id = (root or {}).get("id")
+    for vid in ["sd_new_ticket", "sd_my_tickets", "sd_company_tickets", "sd_triage"]:
+        st, r = boss.post("/api/workflow/case/search?size=5", {
+            "process": [{"identifier": "preference_filter_item"}],
+            "query": f'dataSet.menu_item_identifier.textValue:"{vid}"'})
+        cs = (r.get("_embedded") or {}).get("cases", []) if isinstance(r, dict) else []
+        pf.check(f"polozka {vid} visi v koreni menu", any(c.get("uriNodeId") == root_id for c in cs),
+                 [c.get("uriNodeId") for c in cs])
+    pf.check("admin vidi priecinok Service Desku", CARD in pf.uri_paths(boss, deep=True))
+    pf.check("agent priecinok nevidi (ma polozky v koreni)", "it" not in pf.uri_paths(agent, deep=True))
+    pf.check("clovek mimo organizacii priecinok nevidi", "it" not in pf.uri_paths(outsider, deep=True))
 
     print("\n=== 2. SLA plan a organizacia ===")
     pnet = pf.newest_net(boss, PLAN)
@@ -199,7 +210,7 @@ def main():
 
     print("\n=== 5. podanie tiketu ===")
     zak = pf.Client(CUSTOMER, pf.TEST_PASS)       # nove prihlasenie = nove roly
-    pf.check("zakaznik vidi kartu Service Desku", CARD in pf.uri_paths(zak, deep=True))
+    pf.check("zakaznik priecinky nevidi (ma polozky v koreni)", "it" not in pf.uri_paths(zak, deep=True))
     tnet = pf.newest_net(zak, TICKET)
     case_id, case = pf.new_case(zak, tnet["stringId"])
     t = pf.tasks_of(zak, case_id)
@@ -323,7 +334,7 @@ def main():
         pf.check("odobratie preslo", "Removed" in (v.get("org_result") or ""), v.get("org_result"))
         kolega2 = pf.Client(novy, "heslo1234")
         pf.check("odobraty kolega tiket uz nevidi", case_id not in search_ids(kolega2, q_open))
-        pf.check("odobraty kolega nevidi kartu", CARD not in pf.uri_paths(kolega2, deep=True))
+        pf.check("odobraty kolega nevidi priecinok", "it" not in pf.uri_paths(kolega2, deep=True))
         pf.check("autor ho vidi dalej", case_id in search_ids(zak, q_open))
     aid = next((k for k, lbl in pf.options(boss, to, "org_agent_remove").items() if AGENT in str(lbl)), None)
     pf.check("agent je v ponuke na odobratie", bool(aid))

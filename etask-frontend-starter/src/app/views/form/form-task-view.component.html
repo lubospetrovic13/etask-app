@@ -1,5 +1,5 @@
-<div class="form-view full-height">
-  <div fxLayout="column" fxLayoutAlign="start stretch" class="form-view-content full-height">
+<div class="form-view">
+  <div fxLayout="column" fxLayoutAlign="start stretch" class="form-view-content">
     <nc-header [hidden]="true" #header type="task"></nc-header>
     <nc-single-task [task$]="task$" [loading$]="loading$" [selectedHeaders$]="selectedHeaders$"
                     (taskEvent)="onTaskEvent($event)"
