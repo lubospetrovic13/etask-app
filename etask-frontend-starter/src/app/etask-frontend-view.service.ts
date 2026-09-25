@@ -11,6 +11,8 @@ import {PublicWorkflowViewComponent} from './views/public/public-workflow-view/p
 import {SideNavCasesCaseViewComponent} from './views/side-nav/cases/side-nav-cases-case-view.component';
 import {EmptyViewComponent} from './views/side-nav/emptyView/empty-view.component';
 import {FolderViewComponent} from './views/side-nav/folder/folder-view.component';
+import {FormLaunchComponent} from './views/form/form-launch.component';
+import {FormTaskViewComponent} from './views/form/form-task-view.component';
 import {RecoverComponent} from './views/auth/recover/recover.component';
 import {ResetPasswordComponent} from './views/auth/reset-password/reset-password.component';
 import {SidenavComponent} from './views/side-nav/sidenav.component';
@@ -29,6 +31,8 @@ export class EtaskFrontendViewService extends ViewService {
       {id: 'WorkflowViewComponent', class: WorkflowViewComponent},
       {id: 'EmptyViewComponent', class: EmptyViewComponent},
       {id: 'FolderViewComponent', class: FolderViewComponent},
+      {id: 'FormLaunchComponent', class: FormLaunchComponent},
+      {id: 'FormTaskViewComponent', class: FormTaskViewComponent},
       {id: 'ResetPasswordComponent', class: ResetPasswordComponent},
       {id: 'RecoverComponent', class: RecoverComponent},
       {id: 'SideNavTasksTaskViewComponent', class: SideNavTasksTaskViewComponent},

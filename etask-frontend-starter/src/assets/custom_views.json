@@ -1,5 +1,24 @@
-[
-  "general"
-]
-
-
+{
+  "dashboard": [
+    "sd_new_ticket",
+    "sd_my_tickets",
+    "sd_company_tickets",
+    "sd_triage",
+    "sd_in_progress",
+    "sd_all_tickets",
+    "sd_my_organizations",
+    "sd_organizations",
+    "sd_sla_plans",
+    "general"
+  ],
+  "dashboardNodes": [
+    "it/service_desk"
+  ],
+  "forms": {
+    "sd_new_ticket": {
+      "process": "it/service_desk/sd_ticket",
+      "transition": "t_submit",
+      "then": "sd_my_tickets"
+    }
+  }
+}

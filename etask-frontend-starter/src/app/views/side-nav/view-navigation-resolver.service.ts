@@ -8,6 +8,7 @@ import {
   RoleAccess,
   ViewNavigationItem,
 } from '@netgrif/components-core';
+import {formRoute, formView, menuItemIdentifier} from '../form/form-views';
 import {localisedViewTitle} from './view-title';
 
 /**
@@ -82,7 +83,11 @@ export class ViewNavigationResolverService {
       ? (view.navigation.icon ?? 'list') : 'list');
   }
 
-  private routingPath(filterCase: Case): string {
+  public routingPath(filterCase: Case): string {
+    const id = menuItemIdentifier(filterCase);
+    if (formView(id)) {
+      return formRoute(id);
+    }
     const viewTaskId = filterCase.tasks
       .find(taskPair => taskPair.transition === FILTER_VIEW_TASK_TRANSITION_ID).task;
     const url = this._dynamicRoutingService.route;

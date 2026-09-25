@@ -1,0 +1,27 @@
+// `nc-single-task` is a virtual scroll viewport: without a parent of real
+// height it renders at 0 px - the task is there, the page looks empty.
+:host {
+  display: block;
+  height: 100%;
+}
+
+.form-view {
+  height: 100%;
+}
+
+.form-view-content {
+  height: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.form-button {
+  margin-left: 8px;
+}
+
+.form-empty {
+  padding: 48px 16px;
+  gap: 16px;
+}

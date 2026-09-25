@@ -229,8 +229,8 @@ changeCaseProperty("title").about { ((useCase.visualId ?: "New organization") as
     int ok = 0
     int errors = 0
     findCases { it.processIdentifier.eq(ticketNet) }.each { t ->
-        if (((t.getFieldValue("tk_org_id") ?: "") as String) != orgId) return
-        if (((t.getFieldValue("tk_status") ?: "") as String) == "draft") return
+        if (((t.dataSet["tk_org_id"]?.value ?: "") as String) != orgId) return
+        if (((t.dataSet["tk_status"]?.value ?: "") as String) == "draft") return
         // Autor tiketu v `tk_org_members` nie je - pise cez svoj pohlad, nie sleduje.
         def reporter = userIdsOf(t.dataSet["tk_reporter"]?.value)
         try {

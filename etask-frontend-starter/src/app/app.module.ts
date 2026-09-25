@@ -72,6 +72,8 @@ import {SideNavCasesCaseViewComponent} from './views/side-nav/cases/side-nav-cas
 import {EmptyViewComponent} from './views/side-nav/emptyView/empty-view.component';
 import {ETaskBreadcrumbsComponent} from './views/side-nav/e-task-breadcrumbs/e-task-breadcrumbs.component';
 import {FolderViewComponent} from './views/side-nav/folder/folder-view.component';
+import {FormLaunchComponent} from './views/form/form-launch.component';
+import {FormTaskViewComponent} from './views/form/form-task-view.component';
 import {RecoverComponent} from './views/auth/recover/recover.component';
 import {ResetPasswordComponent} from './views/auth/reset-password/reset-password.component';
 import {ETaskDoubleDrawerComponent} from './views/side-nav/etask-double-drawer/e-task-double-drawer.component';
@@ -108,6 +110,8 @@ import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-vie
     ETaskDoubleDrawerComponent,
     ETaskBreadcrumbsComponent,
     FolderViewComponent,
+    FormLaunchComponent,
+    FormTaskViewComponent,
     RecoverComponent,
     ResetPasswordComponent,
     EtaskLanguageSelectorComponent,

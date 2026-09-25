@@ -23,6 +23,7 @@ import {map} from 'rxjs/operators';
 import icons from '../../../../assets/uriNodeIcons.json';
 import {ETaskUriNodeResource} from '../../dashboard/service/etask-uri-resource.service';
 import {ThemeService} from '../../../theme.service';
+import {formRoute, formView, menuItemIdentifier} from '../../form/form-views';
 import {localisedViewTitle} from '../view-title';
 import {ETASK_LANGUAGES} from '../etask-language-selector/etask-language-selector.component';
 
@@ -175,6 +176,12 @@ export class ETaskDoubleDrawerComponent extends NavigationDoubleDrawerComponent 
         allViewsFilters.forEach(vf => {
           const convertedViewItem = this.resolveFilterCaseToViewNavigationItem(vf);
           if (!convertedViewItem) return;
+          // Polozka s formularom (custom_views.json `forms`) neotvara zoznam,
+          // ale novy pripad a jeho ulohu - rovnako ako karta na dashboarde.
+          const formId = menuItemIdentifier(vf);
+          if (formView(formId)) {
+            convertedViewItem.routing = {...convertedViewItem.routing, path: formRoute(formId)};
+          }
           const sectionImmediate = vf.immediateData.find(f => f.stringId === 'custom_drawer_section')?.value;
           if (sectionImmediate === ETaskDoubleDrawerComponent.SETTINGS_SECTION) {
             this.settingsViews.push(convertedViewItem);

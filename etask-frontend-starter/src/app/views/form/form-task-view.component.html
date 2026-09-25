@@ -1,0 +1,29 @@
+<div class="form-view full-height">
+  <div fxLayout="column" fxLayoutAlign="start stretch" class="form-view-content full-height">
+    <nc-header [hidden]="true" #header type="task"></nc-header>
+    <nc-single-task [task$]="task$" [loading$]="loading$" [selectedHeaders$]="selectedHeaders$"
+                    (taskEvent)="onTaskEvent($event)"
+                    [actionButtonTemplates]="[discardButton, finishButton]"
+                    [actionRowJustifyContent]="'flex-end'"
+                    [noTaskSection]="noTaskSection" fxFlex></nc-single-task>
+  </div>
+</div>
+
+<ng-template #discardButton>
+  <button mat-button class="form-button" (click)="discard()">
+    <span>{{ 'form.discard' | translate }}</span>
+  </button>
+</ng-template>
+
+<ng-template #finishButton let-finish="finish">
+  <button mat-raised-button color="primary" class="form-button" (click)="finish()">
+    <span>{{ 'form.submit' | translate }}</span>
+  </button>
+</ng-template>
+
+<ng-template #noTaskSection>
+  <div fxLayout="column" fxLayoutAlign="center center" class="form-empty">
+    <span>{{ 'form.gone' | translate }}</span>
+    <button mat-button color="primary" routerLink="/dashboard">{{ 'form.back' | translate }}</button>
+  </div>
+</ng-template>

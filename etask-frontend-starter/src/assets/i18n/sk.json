@@ -80,5 +80,12 @@
       "sentInfo": "Ak účet s tou adresou existuje, odkaz je na ceste. Skontroluj si schránku.",
       "title": "Zabudnuté heslo"
     }
+  },
+  "form": {
+    "submit": "Odoslať",
+    "discard": "Zahodiť",
+    "submitted": "{{title}} odoslaný",
+    "gone": "Tento formulár už nie je otvorený - bol odoslaný alebo zahodený.",
+    "back": "Späť na prehľad"
   }
 }

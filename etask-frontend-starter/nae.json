@@ -266,6 +266,28 @@
           "routing": {
             "path": "console"
           }
+        },
+        "form": {
+          "component": {
+            "class": "FormLaunchComponent",
+            "from": "./views/form/form-launch.component"
+          },
+          "access": "private",
+          "navigation": false,
+          "routing": {
+            "path": "form/:view"
+          }
+        },
+        "form-task": {
+          "component": {
+            "class": "FormTaskViewComponent",
+            "from": "./views/form/form-task-view.component"
+          },
+          "access": "private",
+          "navigation": false,
+          "routing": {
+            "path": "form/:view/:caseId/:transitionId"
+          }
         }
       }
     }

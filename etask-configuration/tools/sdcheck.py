@@ -16,7 +16,10 @@ Overuje cely obeh, ktory sa z XML ani z importu zistit neda:
      organizacie ho vidi,
   6. agent odpovie (prva reakcia), prijme, vyziada doplnenie (pauza SLA),
      zakaznik odpovie (pauza konci), agent vyriesi, zakaznik potvrdi,
-  7. odobraty kolega aj odobraty agent prestanu tiket vidiet (kaskada).
+  7. odobraty kolega aj odobraty agent prestanu tiket vidiet (kaskada),
+  8. hodiny SLA: plan s nulovymi lehotami, tick (spusteny adminom, na 5
+     minut casovaca sa necaka) oznaci porusenie, vyrieseny tiket sa sam
+     zatvori a hodiny sa zastavia.
 
 Predpoklad: bezi stack s SMTP na mailpit a s testovacimi uctami:
 
@@ -93,9 +96,9 @@ def main():
 
     print("=== 1. menu a karty ===")
     mt = [c["title"] for c in pf.cases_of(boss, MENU, size=20)]
-    pf.check("bootstrap case menu hlasi 9/9", any("9/9" in t for t in mt), mt)
+    pf.check("bootstrap case menu hlasi 10/10", any("10/10" in t for t in mt), mt)
     items = pf.menu_items(boss, prefix="sd_")
-    for want in ["Create New Ticket", "My Tickets", "Company Tickets", "Triage", "Tickets in progress",
+    for want in ["Create New Ticket", "My Tickets", "Company Tickets", "Triage", "SLA at risk", "Tickets in progress",
                  "All Tickets", "My Organizations", "Organizations", "SLA Plans"]:
         pf.check(f"zobrazenie '{want}' existuje", want in items, sorted(items))
     for old in ["Podanie požiadavky", "Moje požiadavky", "Firmy zákazníkov"]:
@@ -333,6 +336,70 @@ def main():
         pf.check("odobraty agent tiket uz nevidi", case_id not in search_ids(agent2, q_open))
         pf.check("odobraty agent organizaciu nevidi",
                  org_id not in search_ids(agent2, f'processIdentifier:"{ORG}"'))
+
+    print("\n=== 8. hodiny SLA (t_tick) ===")
+    # Plan s nulovymi lehotami: reakcia aj vyriesenie su po termine hned,
+    # a vyrieseny tiket sa zatvori pri najblizsom ticku. Na 5 minut casovaca
+    # sa necaka - admin tick spusti sam (ROLE_ADMIN smie aj systemovu ulohu).
+    p2, _ = pf.new_case(boss, pnet["stringId"])
+    zero = {"sp_name": {"type": "text", "value": f"Instant {ts}"},
+            "sp_autoclose_days": {"type": "number", "value": 0}}
+    for prio in ["critical", "high", "medium", "low"]:
+        zero[f"sp_resp_{prio}"] = {"type": "number", "value": 0}
+        zero[f"sp_res_{prio}"] = {"type": "number", "value": 0}
+    pf.set_data(boss, pf.tasks_of(boss, p2)["t_plan"], zero)
+    pf.set_data(boss, to, {"org_plan": {"type": "enumeration_map", "value": p2}})
+
+    c2, _ = pf.new_case(zak, tnet["stringId"])
+    t2s = pf.tasks_of(zak, c2)["t_submit"]
+    pf.set_data(zak, t2s, {"tk_type": {"type": "enumeration_map", "value": "other"}})
+    pf.set_data(zak, t2s, {"tk_priority": {"type": "enumeration_map", "value": "low"},
+                           "tk_subject": {"type": "text", "value": f"Clock test {ts}"},
+                           "tk_description": {"type": "text", "value": "Checks the SLA clock."}})
+    st, r = pf.finish(zak, t2s)
+    pf.check("tiket s nulovym SLA je podany", pf.ok_body(r), str(r)[:120])
+
+    def clock():
+        raw = pf.tasks_raw(boss, c2)
+        return raw.get("t_tick") or raw.get("t_tock")
+
+    def tick():
+        tid = clock()
+        if not tid:
+            return False
+        pf.assign(boss, tid)
+        st, r = pf.finish(boss, tid)
+        return pf.ok_body(r)
+
+    pf.check("po podani bezia hodiny (uloha t_tick)", bool(clock()))
+    pf.check("tick prebehol", tick())
+    td2 = pf.tasks_raw(boss, c2).get("t_detail")
+    v = pf.values(boss, td2)
+    pf.check("tick oznacil SLA ako porusene", v.get("tk_sla_state") == "breached", v.get("tk_sla_state"))
+    pf.check("porusena je prva reakcia", v.get("sla_response_breached") is True, v.get("sla_response_breached"))
+    pf.check("po ticku hodiny bezia dalej (t_tock)", "t_tock" in pf.tasks_raw(boss, c2), list(pf.tasks_raw(boss, c2)))
+    risk = (f'processIdentifier:"{TICKET}" AND dataSet.tk_status.keyValue:("new" OR "in_progress" OR "waiting")'
+            ' AND dataSet.tk_sla_state.keyValue:("at_risk" OR "breached")')
+    time.sleep(1)
+    pf.check("tiket je v zobrazeni 'SLA at risk'", c2 in search_ids(boss, risk))
+
+    pf.assign(boss, pf.tasks_raw(boss, c2)["t_accept"])
+    pf.finish(boss, pf.tasks_raw(boss, c2)["t_accept"])
+    tr2 = pf.tasks_raw(boss, c2).get("t_resolve")
+    pf.set_data(boss, tr2, {"tk_resolution": {"type": "text", "value": "Done."}})
+    pf.finish(boss, tr2)
+    pf.check("tick po vyrieseni prebehol", tick())
+    closed = False
+    for _ in range(10):
+        if pf.values(boss, td2).get("tk_status") == "closed":
+            closed = True
+            break
+        time.sleep(1)
+    pf.check("vyrieseny tiket sa zatvoril sam (t_auto_close)", closed, pf.values(boss, td2).get("tk_status"))
+    pf.check("zakaznik uz nemoze znovu otvorit", "t_reopen" not in pf.tasks_raw(boss, c2))
+    tick()
+    pf.check("po zatvoreni sa hodiny zastavia", not clock(),
+             list(pf.tasks_raw(boss, c2)))
 
     return pf.report("sdcheck")
 

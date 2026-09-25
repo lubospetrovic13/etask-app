@@ -80,5 +80,12 @@
       "sentInfo": "If an account with that address exists, the link is on its way. Check your inbox.",
       "title": "Forgotten password"
     }
+  },
+  "form": {
+    "submit": "Submit",
+    "discard": "Discard",
+    "submitted": "{{title}} submitted",
+    "gone": "This form is no longer open - it was submitted or discarded.",
+    "back": "Back to the dashboard"
   }
 }

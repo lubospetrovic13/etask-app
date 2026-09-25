@@ -1,6 +1,6 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
 	<id>it/service_desk/sd_ticket</id>
-	<version>2.0.0</version>
+	<version>2.2.0</version>
 	<initials>SDT</initials>
 	<title name="net_title">Ticket</title>
 
@@ -112,6 +112,22 @@
 		<i18nString name="t_resolve_label">Vyriešiť</i18nString>
 		<i18nString name="t_reopen_label">Znovu otvoriť</i18nString>
 		<i18nString name="t_close_label">Potvrdiť vyriešenie</i18nString>
+		<i18nString name="system_title">Systém</i18nString>
+		<i18nString name="t_tick_label">Kontrola SLA</i18nString>
+		<i18nString name="t_tock_label">Kontrola SLA</i18nString>
+		<i18nString name="t_auto_close_label">Automatické zatvorenie</i18nString>
+		<i18nString name="tk_sla_state_title">SLA</i18nString>
+		<i18nString name="tk_sla_state_opt_ok">V poriadku</i18nString>
+		<i18nString name="tk_sla_state_opt_at_risk">Blíži sa termín</i18nString>
+		<i18nString name="tk_sla_state_opt_breached">Porušené</i18nString>
+		<i18nString name="tk_sla_state_opt_met">Dodržané</i18nString>
+		<i18nString name="sla_response_warned_title">Upozornenie na reakciu odoslané</i18nString>
+		<i18nString name="sla_resolution_warned_title">Upozornenie na vyriešenie odoslané</i18nString>
+		<i18nString name="sla_response_breached_title">Reakcia po termíne</i18nString>
+		<i18nString name="sla_resolution_breached_title">Vyriešenie po termíne</i18nString>
+		<i18nString name="sla_autoclose_days_title">Zatvoriť po (pracovné dni)</i18nString>
+		<i18nString name="tk_keep_ticking_title">Hodiny bežia</i18nString>
+		<i18nString name="tk_close_due_title">Na zatvorenie</i18nString>
 	</i18n>
 	<icon>confirmation_number</icon>
 	<defaultRole>false</defaultRole>
@@ -146,6 +162,15 @@
 		zamietnutie) a vyriesenie. Kym tiket caka na zakaznika alebo je
 		vyrieseny, lehota vyriesenia stoji: pracovne minuty v pauze sa
 		pripocitaju (`sla_paused_minutes`) a termin sa prepocita.
+
+		CAS. `t_tick` je systemovy prechod s casovacom (trigger time, PT5M) na
+		vlastnom mieste `p_clock`: kazdych 5 minut sa vykona a token vrati
+		(variabilna hrana `tk_keep_ticking`), kym tiket nie je zatvoreny.
+		Engine v 6.3.1 casovany prechod ma (Quartz), takze plynuci cas nepotrebuje
+		Javu. Tick nastavuje `tk_sla_state`, pri 75 % lehoty upozorni, pri
+		poruseni eskaluje agentom aj spravcom (kazde raz), a vyrieseny tiket po
+		`sla_autoclose_days` pracovnych dnoch zatvori: posle token do
+		`p_close_due` a `t_auto_close` (trigger auto) vystreli sam.
 
 		assignPolicy je `manual` vsade okrem podania - `auto` priradi ulohu
 		tomu, koho akcia ju vyrobila (B21).
@@ -263,8 +288,8 @@ changeCaseProperty("color").about { "grey" }
 { def start, def minutes, def from, def to ->
     // Pracovny cas Po-Pi from:00-to:00. Sviatky tato verzia neriesi.
     if (start == null) return null
-    int f = ((from ?: 8) as Number).intValue()
-    int e = ((to ?: 16) as Number).intValue()
+    int f = (from == null ? 8 : (from as Number).intValue())
+    int e = (to == null ? 16 : (to as Number).intValue())
     def cur = start
     long remaining = ((minutes ?: 0) as Number).longValue()
     int guard = 0
@@ -291,8 +316,8 @@ changeCaseProperty("color").about { "grey" }
 { def a, def b, def from, def to ->
     // Pracovne minuty medzi dvoma okamihmi - na pauzu SLA.
     if (a == null || b == null || !b.isAfter(a)) return 0L
-    int f = ((from ?: 8) as Number).intValue()
-    int e = ((to ?: 16) as Number).intValue()
+    int f = (from == null ? 8 : (from as Number).intValue())
+    int e = (to == null ? 16 : (to as Number).intValue())
     long total = 0
     def day = a.toLocalDate()
     int guard = 0
@@ -366,6 +391,112 @@ changeCaseProperty("color").about { "grey" }
     }
 }
 	]]></function>
+	<function scope="process" name="sla_tick"><![CDATA[
+{ def x ->
+    // Telo hodin SLA - vola ho t_tick aj t_tock (dve polovice jedneho
+    // cyklu, pozri t_tick). `x` su polia z hlavicky akcie.
+    def tk_status = x.tk_status
+    def tk_sla_state = x.tk_sla_state
+    def tk_keep_ticking = x.tk_keep_ticking
+    def tk_close_due = x.tk_close_due
+    def tk_agents = x.tk_agents
+    def tk_responder_id = x.tk_responder_id
+    def tk_org_name = x.tk_org_name
+    def tk_submitted_at = x.tk_submitted_at
+    def sla_response_due = x.sla_response_due
+    def sla_resolution_due = x.sla_resolution_due
+    def sla_first_response_at = x.sla_first_response_at
+    def sla_resolved_at = x.sla_resolved_at
+    def sla_paused_since = x.sla_paused_since
+    def sla_paused_minutes = x.sla_paused_minutes
+    def sla_resp_hours = x.sla_resp_hours
+    def sla_res_hours = x.sla_res_hours
+    def sla_work_from = x.sla_work_from
+    def sla_work_to = x.sla_work_to
+    def sla_autoclose_days = x.sla_autoclose_days
+    def sla_response_warned = x.sla_response_warned
+    def sla_resolution_warned = x.sla_resolution_warned
+    def sla_response_breached = x.sla_response_breached
+    def sla_resolution_breached = x.sla_resolution_breached
+    def st = tk_status.value as String
+    change tk_close_due value { 0 }
+    if (st in ["closed", "rejected", "draft"]) {
+        // Hodiny sa zastavia: token sa do p_clock nevrati.
+        change tk_keep_ticking value { 0 }
+        return
+    }
+    change tk_keep_ticking value { 1 }
+    def now = java.time.LocalDateTime.now()
+    def from = sla_work_from.value
+    def to = sla_work_to.value
+    def when = { d -> d == null ? "-" : d.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) }
+    def agents = staff(tk_agents)
+    def escalate = (agents + usersWithRoleAll("sd_admin", useCase.processIdentifier as String)).unique()
+    def org = ((tk_org_name.value ?: "") as String)
+
+    // Prva reakcia - kym neprisla.
+    if (sla_first_response_at.value == null && sla_response_due.value != null) {
+        def due = sla_response_due.value
+        long total = ((sla_resp_hours.value ?: 0) as Number).longValue() * 60
+        long used = business_minutes(tk_submitted_at.value, now, from, to)
+        if (!now.isBefore(due)) {
+            if (sla_response_breached.value != true) {
+                change sla_response_breached value { true }
+                notify(escalate, "SLA BREACHED - first response overdue (" + org + ")",
+                        "The first response was due at " + when(due) + ". Nobody has answered the customer yet.")
+            }
+        } else if (used * 4 >= total * 3 && sla_response_warned.value != true) {
+            change sla_response_warned value { true }
+            notify(agents, "SLA - first response due at " + when(due) + " (" + org + ")",
+                    "75 % of the response time is gone. Answer, accept or reject the ticket.")
+        }
+    }
+
+    // Vyriesenie - len kym bezi (nie v pauze a nie vyriesene).
+    if (sla_resolved_at.value == null && sla_paused_since.value == null && sla_resolution_due.value != null) {
+        def due = sla_resolution_due.value
+        long total = ((sla_res_hours.value ?: 0) as Number).longValue() * 60
+        long used = business_minutes(tk_submitted_at.value, now, from, to) -
+                ((sla_paused_minutes.value ?: 0) as Number).longValue()
+        def h = ((tk_responder_id.value ?: "") as String)
+        if (!now.isBefore(due)) {
+            if (sla_resolution_breached.value != true) {
+                change sla_resolution_breached value { true }
+                notify(escalate, "SLA BREACHED - resolution overdue (" + org + ")",
+                        "The ticket should have been resolved by " + when(due) + ".")
+            }
+        } else if (used * 4 >= total * 3 && sla_resolution_warned.value != true) {
+            change sla_resolution_warned value { true }
+            notify(h ? [h] : agents, "SLA - resolution due at " + when(due) + " (" + org + ")",
+                    "75 % of the resolution time is gone.")
+        }
+    }
+
+    // Stav pre zoznamy a zobrazenie "SLA at risk". Vyrieseny tiket si drzi
+    // stav z vyriesenia (met / breached).
+    if (st != "resolved") {
+        def state = "ok"
+        if (sla_response_breached.value == true || sla_resolution_breached.value == true) {
+            state = "breached"
+        } else if ((sla_response_warned.value == true && sla_first_response_at.value == null) ||
+                (sla_resolution_warned.value == true && sla_resolved_at.value == null)) {
+            state = "at_risk"
+        }
+        change tk_sla_state value { state }
+    }
+
+    // Vyrieseny tiket, na ktory zakaznik neodpoveda, sa zatvori sam.
+    if (st == "resolved" && sla_resolved_at.value != null) {
+        int days = (sla_autoclose_days.value == null ? 5 : (sla_autoclose_days.value as Number).intValue())
+        int f = (from == null ? 8 : (from as Number).intValue())
+        int e = (to == null ? 16 : (to as Number).intValue())
+        long worked = business_minutes(sla_resolved_at.value, now, from, to)
+        if (worked >= (long) days * (e - f) * 60) {
+            change tk_close_due value { 1 }
+        }
+    }
+}
+	]]></function>
 	<roleRef>
 		<id>sd_customer</id>
 		<caseLogic>
@@ -408,6 +539,10 @@ changeCaseProperty("color").about { "grey" }
 	<role>
 		<id>sd_admin</id>
 		<title name="sd_admin_title">Service Desk admin</title>
+	</role>
+	<role>
+		<id>system</id>
+		<title name="system_title">System</title>
 	</role>
 	<data type="i18n">
 		<id>div_request</id>
@@ -773,6 +908,46 @@ changeCaseProperty("title").about { title_of(tk_subject) }
 		<id>sla_work_to</id>
 		<title name="sla_work_to_title">Working time to</title>
 	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>tk_sla_state</id>
+		<title name="tk_sla_state_title">SLA</title>
+		<options>
+			<option key="ok" name="tk_sla_state_opt_ok">On track</option>
+			<option key="at_risk" name="tk_sla_state_opt_at_risk">Deadline close</option>
+			<option key="breached" name="tk_sla_state_opt_breached">Breached</option>
+			<option key="met" name="tk_sla_state_opt_met">Met</option>
+		</options>
+	</data>
+	<data type="boolean">
+		<id>sla_response_warned</id>
+		<title name="sla_response_warned_title">Response warning sent</title>
+	</data>
+	<data type="boolean">
+		<id>sla_resolution_warned</id>
+		<title name="sla_resolution_warned_title">Resolution warning sent</title>
+	</data>
+	<data type="boolean">
+		<id>sla_response_breached</id>
+		<title name="sla_response_breached_title">Response overdue</title>
+	</data>
+	<data type="boolean">
+		<id>sla_resolution_breached</id>
+		<title name="sla_resolution_breached_title">Resolution overdue</title>
+	</data>
+	<data type="number">
+		<id>sla_autoclose_days</id>
+		<title name="sla_autoclose_days_title">Close after (working days)</title>
+	</data>
+	<data type="number">
+		<id>tk_keep_ticking</id>
+		<title name="tk_keep_ticking_title">Clock running</title>
+		<init>1</init>
+	</data>
+	<data type="number">
+		<id>tk_close_due</id>
+		<title name="tk_close_due_title">Due to close</title>
+		<init>0</init>
+	</data>
 
 	<!-- ============================ CUSTOMER ============================ -->
 
@@ -899,7 +1074,8 @@ tk_org_members: f.tk_org_members, tk_agents: f.tk_agents, tk_status: f.tk_status
 tk_submitted_at: f.tk_submitted_at, tk_conversation: f.tk_conversation,
 sla_response_due: f.sla_response_due, sla_resolution_due: f.sla_resolution_due,
 sla_resp_hours: f.sla_resp_hours, sla_res_hours: f.sla_res_hours,
-sla_work_from: f.sla_work_from, sla_work_to: f.sla_work_to, sla_paused_minutes: f.sla_paused_minutes;
+sla_work_from: f.sla_work_from, sla_work_to: f.sla_work_to, sla_paused_minutes: f.sla_paused_minutes,
+sla_autoclose_days: f.sla_autoclose_days, tk_sla_state: f.tk_sla_state, tk_keep_ticking: f.tk_keep_ticking;
 
 must(tk_type, "Pick what you need help with.")
 must(tk_priority, "Pick the priority.")
@@ -940,15 +1116,17 @@ if (org.dataSet["org_active"]?.value == false) {
 }
 def plan = plan_of(org)
 def p = tk_priority.value as String
+// null = plan to pole nema (alebo organizacia plan nema) -> standard.
+// 0 je platna hodnota: "okamzite" (reakcia) a "hned" (zatvorenie).
 def num = { String k, int dflt ->
     def v = plan?.dataSet?.get(k)?.value
-    int n = v == null ? 0 : (v as Number).intValue()
-    return n > 0 ? n : dflt
+    return v == null ? dflt : Math.max(0, (v as Number).intValue())
 }
 int resp = num("sp_resp_" + p, ["critical": 1, "high": 2, "medium": 4, "low": 8][p] ?: 4)
 int res = num("sp_res_" + p, ["critical": 8, "high": 16, "medium": 40, "low": 80][p] ?: 40)
 int from = num("sp_work_from", 8)
 int to = num("sp_work_to", 16)
+int autoclose = num("sp_autoclose_days", 5)
 def now = java.time.LocalDateTime.now()
 def members = userIdsOf(org.dataSet["org_members"]?.value).findAll { it != author }
 def agents = usersWithRole(org.dataSet["org_agents"]?.value, "sd_agent", useCase.processIdentifier as String)
@@ -965,6 +1143,9 @@ change sla_res_hours value { res }
 change sla_work_from value { from }
 change sla_work_to value { to }
 change sla_paused_minutes value { 0 }
+change sla_autoclose_days value { autoclose }
+change tk_sla_state value { "ok" }
+change tk_keep_ticking value { 1 }
 change sla_response_due value { business_deadline(now, resp * 60, from, to) }
 change sla_resolution_due value { business_deadline(now, res * 60, from, to) }
 change tk_conversation value { append(tk_conversation, me(), "Ticket submitted.") }
@@ -1251,7 +1432,8 @@ tk_responder_id: f.tk_responder_id, tk_priority: f.tk_priority, tk_agents: f.tk_
 sla_resolved_at: f.sla_resolved_at, sla_resolution_met: f.sla_resolution_met,
 sla_paused_since: f.sla_paused_since, sla_paused_minutes: f.sla_paused_minutes,
 sla_resolution_due: f.sla_resolution_due, tk_submitted_at: f.tk_submitted_at,
-sla_res_hours: f.sla_res_hours, sla_work_from: f.sla_work_from, sla_work_to: f.sla_work_to;
+sla_res_hours: f.sla_res_hours, sla_work_from: f.sla_work_from, sla_work_to: f.sla_work_to,
+tk_sla_state: f.tk_sla_state;
 
 must(tk_reopen_reason, "Write why the ticket is not resolved.")
 def text = ((tk_reopen_reason.value ?: "") as String).trim()
@@ -1260,6 +1442,9 @@ resume(sla_paused_since, sla_paused_minutes, sla_resolution_due, tk_submitted_at
         sla_res_hours, sla_work_from, sla_work_to)
 change sla_resolved_at value { null }
 change sla_resolution_met value { null }
+if ((tk_sla_state.value as String) == "met") {
+    change tk_sla_state value { "ok" }
+}
 change tk_conversation value { append(tk_conversation, me(), "Reopened: " + text) }
 change tk_reopen_reason value { "" }
 change tk_status value { "in_progress" }
@@ -1401,7 +1586,12 @@ changeCaseProperty("color").about { "grey" }
 			<dataRef>
 				<id>sla_resolution_met</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>4</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>tk_sla_state</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>5</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_request</id>
@@ -1607,6 +1797,21 @@ change tk_notice value { "Note added." }
 				<logic><behavior>hidden</behavior></logic>
 				<layout><x>4</x><y>31</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
+			<dataRef>
+				<id>sla_response_breached</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>32</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_resolution_breached</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>2</x><y>32</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sla_autoclose_days</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>4</x><y>32</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
 		</dataGroup>
 	</transition>
 	<transition>
@@ -1796,7 +2001,8 @@ tk_reporter: f.tk_reporter, tk_responder: f.tk_responder, tk_responder_id: f.tk_
 sla_resolved_at: f.sla_resolved_at, sla_resolution_met: f.sla_resolution_met,
 sla_resolution_due: f.sla_resolution_due, sla_paused_since: f.sla_paused_since,
 sla_paused_minutes: f.sla_paused_minutes, tk_submitted_at: f.tk_submitted_at,
-sla_res_hours: f.sla_res_hours, sla_work_from: f.sla_work_from, sla_work_to: f.sla_work_to;
+sla_res_hours: f.sla_res_hours, sla_work_from: f.sla_work_from, sla_work_to: f.sla_work_to,
+tk_sla_state: f.tk_sla_state;
 
 must(tk_resolution, "Write the resolution - the customer reads it.")
 // Vyriesenie pocas cakania na zakaznika: pauza konci teraz.
@@ -1806,6 +2012,9 @@ def now = java.time.LocalDateTime.now()
 def due = sla_resolution_due.value
 change sla_resolved_at value { now }
 change sla_resolution_met value { due == null || !now.isAfter(due) }
+if ((tk_sla_state.value as String) != "breached") {
+    change tk_sla_state value { (due == null || !now.isAfter(due)) ? "met" : "breached" }
+}
 // Kym zakaznik vyriesenie nepotvrdi alebo neotvori znova, lehota stoji.
 pause(sla_paused_since)
 if (!((tk_responder_id.value ?: "") as String)) {
@@ -1817,6 +2026,131 @@ change tk_conversation value { append(tk_conversation, me() + " (Service Desk)",
 changeCaseProperty("color").about { "green" }
 notify(tk_reporter.value, "your ticket is resolved",
         ((tk_resolution.value ?: "") as String) + "\n\nIf it is not, reopen the ticket in the Service Desk.")
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+
+	<!-- ============================ CLOCK ============================ -->
+
+	<transition>
+		<id>t_tick</id>
+		<x>540</x>
+		<y>640</y>
+		<label name="t_tick_label">SLA check</label>
+		<icon>timer</icon>
+		<!--
+			Systemovy prechod s casovacom: engine ho vykona sam 5 minut po tom,
+			co vznikne jeho uloha. Ziadny dataGroup: cloveku sa neukazuje.
+
+			Hodiny su DVA prechody, t_tick (p_clock -> p_clock_b) a t_tock
+			(p_clock_b -> p_clock). Slucka jedneho prechodu do vlastneho miesta
+			vystreli len raz: engine ulohu recykluje (to iste id) a casovac jej
+			znova nenaplanuje - overene na 6.3.1, uloha po vystreleni ma
+			`triggers: []` (ENGINE_ISSUES E28). Pri striedani prechod po vystreleni
+			zanikne a jeho uloha vznikne nanovo, aj s casovacom.
+		-->
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<trigger type="time">
+			<delay>PT5M</delay>
+		</trigger>
+		<event type="finish">
+			<id>t_tick_finish</id>
+			<!-- `pre`: `tk_keep_ticking` je smerovaci priznak variabilnej hrany (C4). -->
+			<actions phase="pre">
+				<action id="15"><![CDATA[
+tk_status: f.tk_status, tk_sla_state: f.tk_sla_state, tk_keep_ticking: f.tk_keep_ticking,
+tk_close_due: f.tk_close_due, tk_agents: f.tk_agents, tk_responder_id: f.tk_responder_id,
+tk_org_name: f.tk_org_name, tk_submitted_at: f.tk_submitted_at,
+sla_response_due: f.sla_response_due, sla_resolution_due: f.sla_resolution_due,
+sla_first_response_at: f.sla_first_response_at, sla_resolved_at: f.sla_resolved_at,
+sla_paused_since: f.sla_paused_since, sla_paused_minutes: f.sla_paused_minutes,
+sla_resp_hours: f.sla_resp_hours, sla_res_hours: f.sla_res_hours,
+sla_work_from: f.sla_work_from, sla_work_to: f.sla_work_to, sla_autoclose_days: f.sla_autoclose_days,
+sla_response_warned: f.sla_response_warned, sla_resolution_warned: f.sla_resolution_warned,
+sla_response_breached: f.sla_response_breached, sla_resolution_breached: f.sla_resolution_breached;
+
+sla_tick([tk_status: tk_status, tk_sla_state: tk_sla_state, tk_keep_ticking: tk_keep_ticking, tk_close_due: tk_close_due, tk_agents: tk_agents, tk_responder_id: tk_responder_id, tk_org_name: tk_org_name, tk_submitted_at: tk_submitted_at, sla_response_due: sla_response_due, sla_resolution_due: sla_resolution_due, sla_first_response_at: sla_first_response_at, sla_resolved_at: sla_resolved_at, sla_paused_since: sla_paused_since, sla_paused_minutes: sla_paused_minutes, sla_resp_hours: sla_resp_hours, sla_res_hours: sla_res_hours, sla_work_from: sla_work_from, sla_work_to: sla_work_to, sla_autoclose_days: sla_autoclose_days, sla_response_warned: sla_response_warned, sla_resolution_warned: sla_resolution_warned, sla_response_breached: sla_response_breached, sla_resolution_breached: sla_resolution_breached])
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_tock</id>
+		<x>540</x>
+		<y>760</y>
+		<label name="t_tock_label">SLA check</label>
+		<icon>timer</icon>
+		<!-- Druha polovica cyklu hodin - pozri t_tick. -->
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<trigger type="time">
+			<delay>PT5M</delay>
+		</trigger>
+		<event type="finish">
+			<id>t_tock_finish</id>
+			<!-- `pre`: `tk_keep_ticking` je smerovaci priznak variabilnej hrany (C4). -->
+			<actions phase="pre">
+				<action id="18"><![CDATA[
+tk_status: f.tk_status, tk_sla_state: f.tk_sla_state, tk_keep_ticking: f.tk_keep_ticking,
+tk_close_due: f.tk_close_due, tk_agents: f.tk_agents, tk_responder_id: f.tk_responder_id,
+tk_org_name: f.tk_org_name, tk_submitted_at: f.tk_submitted_at,
+sla_response_due: f.sla_response_due, sla_resolution_due: f.sla_resolution_due,
+sla_first_response_at: f.sla_first_response_at, sla_resolved_at: f.sla_resolved_at,
+sla_paused_since: f.sla_paused_since, sla_paused_minutes: f.sla_paused_minutes,
+sla_resp_hours: f.sla_resp_hours, sla_res_hours: f.sla_res_hours,
+sla_work_from: f.sla_work_from, sla_work_to: f.sla_work_to, sla_autoclose_days: f.sla_autoclose_days,
+sla_response_warned: f.sla_response_warned, sla_resolution_warned: f.sla_resolution_warned,
+sla_response_breached: f.sla_response_breached, sla_resolution_breached: f.sla_resolution_breached;
+
+sla_tick([tk_status: tk_status, tk_sla_state: tk_sla_state, tk_keep_ticking: tk_keep_ticking, tk_close_due: tk_close_due, tk_agents: tk_agents, tk_responder_id: tk_responder_id, tk_org_name: tk_org_name, tk_submitted_at: tk_submitted_at, sla_response_due: sla_response_due, sla_resolution_due: sla_resolution_due, sla_first_response_at: sla_first_response_at, sla_resolved_at: sla_resolved_at, sla_paused_since: sla_paused_since, sla_paused_minutes: sla_paused_minutes, sla_resp_hours: sla_resp_hours, sla_res_hours: sla_res_hours, sla_work_from: sla_work_from, sla_work_to: sla_work_to, sla_autoclose_days: sla_autoclose_days, sla_response_warned: sla_response_warned, sla_resolution_warned: sla_resolution_warned, sla_response_breached: sla_response_breached, sla_resolution_breached: sla_resolution_breached])
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_auto_close</id>
+		<x>940</x>
+		<y>560</y>
+		<label name="t_auto_close_label">Close automatically</label>
+		<icon>schedule</icon>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<!--
+			Vystreli sam, len co ma oba tokeny: vyrieseny tiket (p_resolved)
+			a pokyn od ticku (p_close_due, variabilna hrana `tk_close_due`).
+			Nie cez async.run { assignTask; finishTask }: async chybu spolkne
+			a nezatvoreny tiket by nemal ziadnu stopu.
+		-->
+		<trigger type="auto"/>
+		<event type="finish">
+			<id>t_auto_close_finish</id>
+			<actions phase="pre">
+				<action id="17"><![CDATA[
+tk_conversation: f.tk_conversation, tk_status: f.tk_status, tk_reporter: f.tk_reporter,
+sla_autoclose_days: f.sla_autoclose_days;
+
+def days = (sla_autoclose_days.value == null ? 5 : (sla_autoclose_days.value as Number).intValue())
+change tk_conversation value {
+    append(tk_conversation, "Service Desk", "Closed automatically - no reply within " + days + " working days after the resolution.")
+}
+change tk_status value { "closed" }
+changeCaseProperty("color").about { "grey" }
+notify(tk_reporter.value, "your ticket was closed",
+        "We did not hear back after the resolution, so the ticket is closed. If the problem returns, create a new ticket.")
 				]]></action>
 			</actions>
 		</event>
@@ -1861,6 +2195,30 @@ notify(tk_reporter.value, "your ticket is resolved",
 		<x>840</x>
 		<y>320</y>
 		<label>Resolved</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_clock</id>
+		<x>440</x>
+		<y>640</y>
+		<label>Clock</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_clock_b</id>
+		<x>440</x>
+		<y>760</y>
+		<label>Clock (second half)</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<place>
+		<id>p_close_due</id>
+		<x>840</x>
+		<y>640</y>
+		<label>Due to close</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
@@ -1986,5 +2344,79 @@ notify(tk_reporter.value, "your ticket is resolved",
 		<sourceId>t_close</sourceId>
 		<destinationId>p_closed</destinationId>
 		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a17</id>
+		<type>regular</type>
+		<sourceId>t_submit</sourceId>
+		<destinationId>p_clock</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a18</id>
+		<type>regular</type>
+		<sourceId>p_clock</sourceId>
+		<destinationId>t_tick</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a19</id>
+		<type>regular</type>
+		<sourceId>t_tick</sourceId>
+		<destinationId>p_clock_b</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>tk_keep_ticking</reference>
+	</arc>
+	<arc>
+		<id>a20</id>
+		<type>regular</type>
+		<sourceId>p_resolved</sourceId>
+		<destinationId>t_auto_close</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a21</id>
+		<type>regular</type>
+		<sourceId>t_auto_close</sourceId>
+		<destinationId>p_closed</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a22</id>
+		<type>regular</type>
+		<sourceId>t_tick</sourceId>
+		<destinationId>p_close_due</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>tk_close_due</reference>
+	</arc>
+	<arc>
+		<id>a23</id>
+		<type>regular</type>
+		<sourceId>p_close_due</sourceId>
+		<destinationId>t_auto_close</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a24</id>
+		<type>regular</type>
+		<sourceId>p_clock_b</sourceId>
+		<destinationId>t_tock</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a25</id>
+		<type>regular</type>
+		<sourceId>t_tock</sourceId>
+		<destinationId>p_clock</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>tk_keep_ticking</reference>
+	</arc>
+	<arc>
+		<id>a26</id>
+		<type>regular</type>
+		<sourceId>t_tock</sourceId>
+		<destinationId>p_close_due</destinationId>
+		<multiplicity>0</multiplicity>
+		<reference>tk_close_due</reference>
 	</arc>
 </document>
