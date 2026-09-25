@@ -53,11 +53,7 @@
     }
   },
   "uriNode": {
-    "faktury": "Faktúry",
     "general": "Všeobecné",
-    "objednavky": "Objednávky",
-    "onboarding": "Nástupy zamestnancov",
-    "schvalovanie": "Objednávky a faktúry",
     "service_desk": "Service Desk"
   },
   "view": {

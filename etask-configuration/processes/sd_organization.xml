@@ -1,0 +1,1000 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>it/service_desk/sd_organization</id>
+	<version>1.0.0</version>
+	<initials>SDO</initials>
+	<title name="net_title">Organization</title>
+
+	<!--
+		Preklady. Zdrojovy text je anglicky (default appky), slovencina je
+		druhy jazyk. Kod jazyka musi byt DVOJPISMENOVY (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="sk">
+		<i18nString name="net_title">Organizácia</i18nString>
+		<i18nString name="sd_admin_title">Správca Service Desku</i18nString>
+		<i18nString name="div_org_init">Organizácia</i18nString>
+		<i18nString name="div_contract_init">Zmluva: SLA plán a limity</i18nString>
+		<i18nString name="div_people_init">Ľudia klienta</i18nString>
+		<i18nString name="div_agents_init">Naši agenti pre túto organizáciu</i18nString>
+		<i18nString name="org_name_title">Názov organizácie</i18nString>
+		<i18nString name="org_code_title">Kód</i18nString>
+		<i18nString name="org_code_desc">Krátky kód pre reporty, napríklad NGF.</i18nString>
+		<i18nString name="org_contact_title">Kontaktná osoba</i18nString>
+		<i18nString name="org_active_title">Aktívna zmluva</i18nString>
+		<i18nString name="org_active_desc">Ľudia neaktívnej organizácie nemôžu podávať nové tikety. Staré ďalej vidia.</i18nString>
+		<i18nString name="org_note_title">Poznámka k zmluve</i18nString>
+		<i18nString name="org_plan_title">SLA plán</i18nString>
+		<i18nString name="org_plan_desc">Časy reakcie a vyriešenia. Tiket si ich pri podaní skopíruje.</i18nString>
+		<i18nString name="org_sla_summary_title">Čo plán dáva</i18nString>
+		<i18nString name="org_max_accounts_title">Limit účtov klienta</i18nString>
+		<i18nString name="org_max_accounts_desc">Prázdne = podľa plánu.</i18nString>
+		<i18nString name="org_max_agents_title">Limit agentov</i18nString>
+		<i18nString name="org_max_agents_desc">Prázdne = podľa plánu.</i18nString>
+		<i18nString name="org_usage_title">Využitie</i18nString>
+		<i18nString name="org_members_title">Ľudia s prístupom</i18nString>
+		<i18nString name="org_members_desc">Vidia všetky tikety tejto organizácie. Pridávajte a odoberajte poľami nižšie.</i18nString>
+		<i18nString name="org_people_title">Účty</i18nString>
+		<i18nString name="org_people_desc">„invited" = človek si ešte z e-mailu nenastavil heslo.</i18nString>
+		<i18nString name="org_new_email_title">E-mail nového človeka</i18nString>
+		<i18nString name="org_new_email_desc">Dostane pozvánku e-mailom a meno aj heslo si nastaví sám. Existujúci účet dostane len prístup.</i18nString>
+		<i18nString name="btn_add_placeholder">Pridať a pozvať</i18nString>
+		<i18nString name="org_remove_title">Odobrať človeka</i18nString>
+		<i18nString name="org_remove_desc">Stratí prístup k tiketom organizácie. Účet zostane.</i18nString>
+		<i18nString name="btn_remove_placeholder">Odobrať</i18nString>
+		<i18nString name="org_agents_title">Priradení agenti</i18nString>
+		<i18nString name="org_agent_list_title">Agenti</i18nString>
+		<i18nString name="org_agent_email_title">E-mail agenta</i18nString>
+		<i18nString name="org_agent_email_desc">Zamestnanec Service Desku. Nový účet dostane pozvánku a rolu agenta.</i18nString>
+		<i18nString name="btn_add_agent_placeholder">Priradiť agenta</i18nString>
+		<i18nString name="org_agent_remove_title">Odobrať agenta</i18nString>
+		<i18nString name="btn_remove_agent_placeholder">Odobrať agenta</i18nString>
+		<i18nString name="btn_refresh_placeholder">Obnoviť stav účtov, plány a prístupy</i18nString>
+		<i18nString name="org_result_title">Čo sa stalo</i18nString>
+		<i18nString name="org_history_title">História (najnovšie navrchu)</i18nString>
+		<i18nString name="t_org_label">Organizácia</i18nString>
+		<i18nString name="t_org_view_label">Moja organizácia</i18nString>
+	</i18n>
+	<icon>domain</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Klient Service Desku: zmluva (SLA plan, limity), jeho ludia a nasi
+		agenti, ktori ho maju na starosti. Spravuje ju len `sd_admin`.
+
+		Pridanie cloveka JE pridelenie pristupu, nikde inde sa zakaznik nezaklada:
+		  1. `pozvi(email)` - ucet v stave INVITED a mail s odkazom. Existujuci
+		     aktivny ucet pozvanku nedostane, len pristup. Opakovane pridanie
+		     neaktivneho uctu pozvanku posle znova.
+		  2. rola `sd_customer` na sd_ticket - karty a pravo zalozit tiket,
+		  3. id uctu do `org_members`. Tiket si ho pri podani skopiruje do
+		     `tk_org_members` a PRAVE TO dava viditelnost firemnych tiketov.
+
+		Agent sa pridava rovnako, ale do `org_agents` a s rolou `sd_agent`.
+		Tiket si agentov skopiruje do `tk_agents` (userRef) - agent teda vidi
+		len tikety organizacii, ku ktorym je priradeny.
+
+		Limity (`org_max_*`, inak z planu) sa kontroluju pri pridani. Pozvanka
+		sa pocita ako ucet: klient plati za pocet uctov, nie aktivnych ludi.
+
+		Clovek patri najviac do JEDNEJ organizacie a nemoze byt zaroven agent.
+
+		Zmena ludi alebo agentov sa KASKADUJE do existujucich tiketov
+		(`recompute_tickets`) - inak by odobraty videl stare tikety navzdy.
+
+		Rola ma stringId per verziu siete: po re-importe sd_ticket ju ludia
+		na novej verzii nemaju. Zosuladuje tlacidlo "Refresh" a sd_menu.
+		Viditelnost tiketov je cez userRef, a ten re-import prezije.
+
+		Moznosti `org_plan` sa nastavuju v `assign` a pri obnove, nie v `create`
+		udalosti prípadu - tam by sa neuchovali (B11).
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>org_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+org_active: f.org_active, org_people: f.org_people, org_agent_list: f.org_agent_list,
+org_history: f.org_history, org_usage: f.org_usage;
+
+change org_active value { true }
+change org_people value { "(nobody yet)" }
+change org_agent_list value { "(nobody yet)" }
+change org_usage value { "0 accounts, 0 agents" }
+change org_history value { "" }
+changeCaseProperty("title").about { ((useCase.visualId ?: "New organization") as String) }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="sister"><![CDATA[
+{ def name ->
+    // Identifikator nesie URI cestu (it/service_desk/...), sesterska siet
+    // sa odvodzuje z vlastneho - premenovanie uzla sa prejavi na jednom mieste.
+    def pid = useCase.processIdentifier as String
+    def prefix = pid.contains("/") ? pid.substring(0, pid.lastIndexOf("/") + 1) : ""
+    return prefix + (name as String)
+}
+	]]></function>
+	<function scope="process" name="is_email"><![CDATA[
+{ def value ->
+    def mail = ((value ?: "") as String).trim()
+    return mail ==~ /^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/
+}
+	]]></function>
+	<function scope="process" name="org_of"><![CDATA[
+{ def userId, def field ->
+    // Ina organizacia, v ktorej clovek uz je (v `org_members` alebo
+    // `org_agents`). `findCases { it.dataSet... }` nefunguje, filtruje sa v Groovy.
+    def id = (userId ?: "") as String
+    if (!id) return null
+    return findCases { it.processIdentifier.eq(useCase.processIdentifier) }.find { c ->
+        c.stringId != useCase.stringId && userIdsOf(c.dataSet[field as String]?.value).contains(id)
+    }
+}
+	]]></function>
+	<function scope="process" name="plan_case"><![CDATA[
+{ def planId ->
+    // `findCase { it.stringId.eq(id) }` vracia vzdy null - hlada sa v Groovy.
+    def id = ((planId ?: "") as String).trim()
+    if (!id) return null
+    return findCases { it.processIdentifier.eq(sister("sd_sla_plan")) }.find { it.stringId == id }
+}
+	]]></function>
+	<function scope="process" name="plan_options"><![CDATA[
+{ def org_plan ->
+    // Plany v ponuke plus ten, ktory organizacia prave ma (aj keby uz nebol).
+    def current = ((org_plan.value ?: "") as String)
+    def opts = [:]
+    findCases { it.processIdentifier.eq(sister("sd_sla_plan")) }.each { p ->
+        def active = p.dataSet["sp_active"]?.value != false
+        if (active || p.stringId == current) {
+            def name = ((p.dataSet["sp_name"]?.value ?: p.title) as String)
+            opts[p.stringId as String] = active ? name : (name + " (withdrawn)")
+        }
+    }
+    change org_plan options { opts }
+}
+	]]></function>
+	<function scope="process" name="num"><![CDATA[
+{ def v ->
+    if (v == null) return null
+    def n = (v as Number).intValue()
+    return n > 0 ? n : null
+}
+	]]></function>
+	<function scope="process" name="limit"><![CDATA[
+{ def override, def plan, def planField ->
+    // Prepis na organizacii, inak plan. null = bez limitu (organizacia bez planu).
+    def o = num(override.value)
+    if (o != null) return o
+    return plan == null ? null : num(plan.dataSet[planField as String]?.value)
+}
+	]]></function>
+	<function scope="process" name="sla_summary"><![CDATA[
+{ def plan ->
+    if (plan == null) return "No plan chosen - tickets get the default times (critical 1 h, high 2 h, medium 4 h, low 8 h to first response)."
+    def d = plan.dataSet
+    def h = { String k -> ((d[k]?.value ?: 0) as Number).intValue() + " h" }
+    return "First response: critical " + h("sp_resp_critical") + ", high " + h("sp_resp_high") +
+            ", medium " + h("sp_resp_medium") + ", low " + h("sp_resp_low") + "\n" +
+            "Resolution: critical " + h("sp_res_critical") + ", high " + h("sp_res_high") +
+            ", medium " + h("sp_res_medium") + ", low " + h("sp_res_low") + "\n" +
+            "Working time: Mon-Fri " + ((d["sp_work_from"]?.value ?: 8) as Number).intValue() + ":00-" +
+            ((d["sp_work_to"]?.value ?: 16) as Number).intValue() + ":00"
+}
+	]]></function>
+	<function scope="process" name="describe"><![CDATA[
+{ def userId ->
+    def s = userSnapshot(userId as String)
+    if (!s) return "(deleted account " + userId + ")"
+    def name = (((s.meno ?: "") + " " + (s.priezvisko ?: "")) as String).trim()
+    // Pozvany ucet ma meno "unknown", kym si ho clovek nevyplni.
+    if (!name || name == "unknown unknown") name = ""
+    def state = (s.stav as String) == "ACTIVE" ? "active" : ((s.stav as String) == "INVITED" ? "invited" : ((s.stav ?: "?") as String).toLowerCase())
+    return (name ? name + " <" + s.email + ">" : (s.email as String)) + " - " + state
+}
+	]]></function>
+	<function scope="process" name="list_people"><![CDATA[
+{ def ids, def listField, def removeField ->
+    // Citatelny zoznam a moznosti pola na odobratie. Moznosti sa nastavuju
+    // TU, kde sa zapisuje hodnota - v `create` by sa neuchovali (B11).
+    def opts = [:]
+    def lines = []
+    (ids ?: []).each { id ->
+        def p = describe(id)
+        lines << ("• " + p)
+        opts[id as String] = p
+    }
+    change listField value { lines ? lines.join("\n") : "(nobody yet)" }
+    change removeField options { opts }
+    change removeField value { null }
+}
+	]]></function>
+	<function scope="process" name="usage"><![CDATA[
+{ def org_usage, def members, def agents, def maxAccounts, def maxAgents ->
+    def of = { int n, def max -> n + (max != null ? (" of " + max) : "") }
+    change org_usage value {
+        of((members ?: []).size(), maxAccounts) + " accounts, " + of((agents ?: []).size(), maxAgents) + " agents"
+    }
+}
+	]]></function>
+	<function scope="process" name="recompute_tickets"><![CDATA[
+{ def members, def agents, def name ->
+    // Ludia, agenti a nazov do tiketov, ktore uz existuju. Koncepty sa
+    // preskakuju: vidi ich len autor a `t_detail`, cez ktory sa zapisuje,
+    // vznikne az podanim. Agent musi rolu `sd_agent` naozaj mat (B14).
+    def orgId = useCase.stringId
+    def ticketNet = sister("sd_ticket")
+    def realAgents = usersWithRole(agents ?: [], "sd_agent", ticketNet)
+    int ok = 0
+    int errors = 0
+    findCases { it.processIdentifier.eq(ticketNet) }.each { t ->
+        if (((t.getFieldValue("tk_org_id") ?: "") as String) != orgId) return
+        if (((t.getFieldValue("tk_status") ?: "") as String) == "draft") return
+        // Autor tiketu v `tk_org_members` nie je - pise cez svoj pohlad, nie sleduje.
+        def reporter = userIdsOf(t.dataSet["tk_reporter"]?.value)
+        try {
+            setData("t_detail", t, [
+                    "tk_org_name"   : ["value": (name ?: "") as String, "type": "text"],
+                    "tk_org_members": ["value": (members ?: []).collect { it as String }.findAll { !(it in reporter) }, "type": "userList"],
+                    "tk_agents"     : ["value": realAgents.collect { it as String }, "type": "userList"],
+            ])
+            ok++
+        } catch (Exception e) {
+            errors++
+        }
+    }
+    return [ok: ok, errors: errors]
+}
+	]]></function>
+	<function scope="process" name="who"><![CDATA[
+{ ->
+    def u = loggedUser()
+    if (u == null) return "(unknown)"
+    return (u.hasProperty("email") && u.email) ? (u.email as String) : (u.stringId as String)
+}
+	]]></function>
+	<function scope="process" name="log"><![CDATA[
+{ def org_history, def line ->
+    // Novsie navrch, so stropom - pole sa cita pri kazdom otvoreni formulara.
+    def when = java.time.LocalDateTime.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+    def old = ((org_history.value ?: "") as String).split("\n").findAll { it.trim() }
+    return ([when + " · " + line + " · " + who()] + (old as List)).take(200).join("\n")
+}
+	]]></function>
+	<function scope="process" name="invite_or_grant"><![CDATA[
+{ def mail, def ucet, def role ->
+    // Aktivny ucet pozvanku nedostane - uz sa vie prihlasit, staci mu pristup.
+    // Vrati [uid, veta] alebo [null, dovod].
+    if (ucet != null && (ucet.state as String) == "ACTIVE") {
+        def uid = ucet.stringId as String
+        if (!setProcessRole(uid, role as String, sister("sd_ticket"), "", true)) {
+            return [uid, mail + " already has an account - access granted, but the role could not be assigned (is sd_ticket imported?)"]
+        }
+        return [uid, mail + " already has an account - access granted, no invitation sent"]
+    }
+    def v = pozvi(mail as String)
+    if (!v.ok) return [null, (v.sprava as String)]
+    def uid = v.userId as String
+    if (!setProcessRole(uid, role as String, sister("sd_ticket"), "", true)) {
+        return [uid, (v.sprava as String) + "\nWARNING: the role could not be assigned - is sd_ticket imported?"]
+    }
+    return [uid, (v.sprava as String)]
+}
+	]]></function>
+	<roleRef>
+		<id>sd_admin</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<userRef>
+		<id>org_agents</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</userRef>
+	<role>
+		<id>sd_admin</id>
+		<title name="sd_admin_title">Service Desk admin</title>
+	</role>
+	<data type="i18n">
+		<id>div_org</id>
+		<title/>
+		<init name="div_org_init">Organization</init>
+	</data>
+	<data type="i18n">
+		<id>div_contract</id>
+		<title/>
+		<init name="div_contract_init">Contract: SLA plan and limits</init>
+	</data>
+	<data type="i18n">
+		<id>div_people</id>
+		<title/>
+		<init name="div_people_init">The client's people</init>
+	</data>
+	<data type="i18n">
+		<id>div_agents</id>
+		<title/>
+		<init name="div_agents_init">Our agents for this organization</init>
+	</data>
+	<data type="text" immediate="true">
+		<id>org_name</id>
+		<title name="org_name_title">Organization name</title>
+		<event type="set">
+			<id>org_name_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+org_name: f.org_name;
+
+def n = ((org_name.value ?: "") as String).trim()
+if (n) {
+    changeCaseProperty("title").about { n }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text" immediate="true">
+		<id>org_code</id>
+		<title name="org_code_title">Code</title>
+		<desc name="org_code_desc">Short code for reports, for example NGF.</desc>
+	</data>
+	<data type="text">
+		<id>org_contact</id>
+		<title name="org_contact_title">Contact person</title>
+	</data>
+	<data type="boolean" immediate="true">
+		<id>org_active</id>
+		<title name="org_active_title">Active contract</title>
+		<desc name="org_active_desc">People of an inactive organization cannot submit new tickets. They still see the old ones.</desc>
+		<init>true</init>
+	</data>
+	<data type="text">
+		<id>org_note</id>
+		<title name="org_note_title">Contract note</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>org_plan</id>
+		<title name="org_plan_title">SLA plan</title>
+		<desc name="org_plan_desc">Response and resolution times. A ticket copies them when it is submitted.</desc>
+		<event type="set">
+			<id>org_plan_set</id>
+			<actions phase="post">
+				<action id="3"><![CDATA[
+org_plan: f.org_plan, org_sla_summary: f.org_sla_summary, org_usage: f.org_usage,
+org_members: f.org_members, org_agents: f.org_agents,
+org_max_accounts: f.org_max_accounts, org_max_agents: f.org_max_agents,
+org_history: f.org_history;
+
+def plan = plan_case(org_plan.value)
+change org_sla_summary value { sla_summary(plan) }
+usage(org_usage, userIdsOf(org_members.value), userIdsOf(org_agents.value),
+        limit(org_max_accounts, plan, "sp_max_accounts"), limit(org_max_agents, plan, "sp_max_agents"))
+change org_history value {
+    log(org_history, "SLA plan: " + (plan == null ? "none" : ((plan.dataSet["sp_name"]?.value ?: plan.title) as String)))
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text">
+		<id>org_sla_summary</id>
+		<title name="org_sla_summary_title">What the plan gives</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="number">
+		<id>org_max_accounts</id>
+		<title name="org_max_accounts_title">Client account limit</title>
+		<desc name="org_max_accounts_desc">Empty = as in the plan.</desc>
+	</data>
+	<data type="number">
+		<id>org_max_agents</id>
+		<title name="org_max_agents_title">Agent limit</title>
+		<desc name="org_max_agents_desc">Empty = as in the plan.</desc>
+	</data>
+	<data type="text" immediate="true">
+		<id>org_usage</id>
+		<title name="org_usage_title">Usage</title>
+	</data>
+	<data type="userList">
+		<id>org_members</id>
+		<title name="org_members_title">People with access</title>
+		<desc name="org_members_desc">They see every ticket of this organization. Add and remove people with the fields below.</desc>
+	</data>
+	<data type="text">
+		<id>org_people</id>
+		<title name="org_people_title">Accounts</title>
+		<desc name="org_people_desc">"invited" = the person has not set a password from the e-mail yet.</desc>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text" immediate="true">
+		<id>org_new_email</id>
+		<title name="org_new_email_title">E-mail of a new person</title>
+		<desc name="org_new_email_desc">They get an invitation e-mail and set their own name and password. An existing account just gets access.</desc>
+	</data>
+	<data type="button">
+		<id>btn_add</id>
+		<title/>
+		<placeholder name="btn_add_placeholder">Add and invite</placeholder>
+		<init>1</init>
+	</data>
+	<data type="enumeration_map">
+		<id>org_remove</id>
+		<title name="org_remove_title">Remove a person</title>
+		<desc name="org_remove_desc">They lose access to the tickets of this organization. The account stays.</desc>
+	</data>
+	<data type="button">
+		<id>btn_remove</id>
+		<title/>
+		<placeholder name="btn_remove_placeholder">Remove</placeholder>
+		<init>1</init>
+	</data>
+	<data type="userList">
+		<id>org_agents</id>
+		<title name="org_agents_title">Assigned agents</title>
+	</data>
+	<data type="text">
+		<id>org_agent_list</id>
+		<title name="org_agent_list_title">Agents</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text" immediate="true">
+		<id>org_agent_email</id>
+		<title name="org_agent_email_title">Agent e-mail</title>
+		<desc name="org_agent_email_desc">A Service Desk employee. A new account gets an invitation and the agent role.</desc>
+	</data>
+	<data type="button">
+		<id>btn_add_agent</id>
+		<title/>
+		<placeholder name="btn_add_agent_placeholder">Assign agent</placeholder>
+		<init>1</init>
+	</data>
+	<data type="enumeration_map">
+		<id>org_agent_remove</id>
+		<title name="org_agent_remove_title">Remove an agent</title>
+	</data>
+	<data type="button">
+		<id>btn_remove_agent</id>
+		<title/>
+		<placeholder name="btn_remove_agent_placeholder">Remove agent</placeholder>
+		<init>1</init>
+	</data>
+	<data type="button">
+		<id>btn_refresh</id>
+		<title/>
+		<placeholder name="btn_refresh_placeholder">Refresh accounts, plans and access</placeholder>
+		<init>1</init>
+	</data>
+	<data type="text">
+		<id>org_result</id>
+		<title name="org_result_title">What happened</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="text">
+		<id>org_history</id>
+		<title name="org_history_title">History (newest first)</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<transition>
+		<id>t_org</id>
+		<x>140</x>
+		<y>80</y>
+		<label name="t_org_label">Organization</label>
+		<icon>domain</icon>
+		<!--
+			`manual`: organizaciu spravuje ktorykolvek admin. `auto` by ulohu
+			natrvalo priradilo tomu, kto ju zalozil (B21).
+		-->
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>sd_admin</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_org</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_org</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>org_name</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_code</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_contact</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_active</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_contract</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>org_plan</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_max_accounts</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_max_agents</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_usage</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_sla_summary</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_note</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_people</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>org_people</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_members</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_new_email</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_add</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_add_set</id>
+					<actions phase="pre">
+						<action id="4"><![CDATA[
+org_new_email: f.org_new_email, org_members: f.org_members, org_agents: f.org_agents,
+org_people: f.org_people, org_remove: f.org_remove, org_result: f.org_result,
+org_history: f.org_history, org_name: f.org_name, org_plan: f.org_plan,
+org_max_accounts: f.org_max_accounts, org_max_agents: f.org_max_agents, org_usage: f.org_usage;
+
+// Odmietnutie sa NEHADZE: z datoveho tlacidla by skoncilo ako chyba
+// requestu, nie ako veta vo formulari.
+def mail = ((org_new_email.value ?: "") as String).trim()
+if (!is_email(mail)) {
+    change org_result value { "\"" + mail + "\" is not a valid e-mail address." }
+    return
+}
+if (!((org_name.value ?: "") as String).trim()) {
+    change org_result value { "Fill in the organization name first." }
+    return
+}
+def ids = userIdsOf(org_members.value)
+def plan = plan_case(org_plan.value)
+def max = limit(org_max_accounts, plan, "sp_max_accounts")
+def ucet = findUserByEmail(mail)
+if (ucet != null) {
+    def uid = ucet.stringId as String
+    if (ids.contains(uid)) {
+        // Opakovane pridanie neaktivneho uctu = poslat pozvanku znova.
+        if ((ucet.state as String) != "ACTIVE") {
+            def v = pozvi(mail)
+            change org_result value { v.ok ? ("Invitation sent again: " + (v.sprava as String)) : ("NOT SENT: " + (v.sprava as String)) }
+        } else {
+            change org_result value { mail + " is already in this organization." }
+        }
+        return
+    }
+    def other = org_of(uid, "org_members")
+    if (other != null) {
+        change org_result value {
+            mail + " is already in the organization \"" + ((other.dataSet["org_name"]?.value ?: other.title) as String) +
+            "\". A person can belong to one organization only - remove them there first."
+        }
+        return
+    }
+    if (hasProcessRole(ucet, "sd_agent", sister("sd_ticket")) || hasProcessRole(ucet, "sd_admin", sister("sd_ticket"))) {
+        change org_result value { mail + " is Service Desk staff and cannot be a customer." }
+        return
+    }
+}
+if (max != null && ids.size() >= max) {
+    change org_result value {
+        "NOT ADDED: the organization has " + ids.size() + " of " + max + " accounts. Raise the limit or change the plan."
+    }
+    return
+}
+
+def res = invite_or_grant(mail, ucet, "sd_customer")
+if (res[0] == null) {
+    change org_result value { "NOT ADDED: " + (res[1] as String) }
+    change org_history value { log(org_history, mail + " - NOT ADDED: " + (res[1] as String)) }
+    return
+}
+def lines = [res[1] as String]
+ids = ids + [res[0] as String]
+change org_members value { ids }
+list_people(ids, org_people, org_remove)
+usage(org_usage, ids, userIdsOf(org_agents.value), max, limit(org_max_agents, plan, "sp_max_agents"))
+def r = recompute_tickets(ids, userIdsOf(org_agents.value), (org_name.value ?: "") as String)
+if (r.ok || r.errors) {
+    lines << ("tickets of the organization updated: " + r.ok + (r.errors ? (", FAILED: " + r.errors) : ""))
+}
+change org_new_email value { "" }
+change org_result value { lines.join("\n") }
+change org_history value { log(org_history, mail + " added") }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>org_remove</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_remove</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_remove_set</id>
+					<actions phase="pre">
+						<action id="5"><![CDATA[
+org_remove: f.org_remove, org_members: f.org_members, org_agents: f.org_agents,
+org_people: f.org_people, org_result: f.org_result, org_history: f.org_history,
+org_name: f.org_name, org_plan: f.org_plan, org_max_accounts: f.org_max_accounts,
+org_max_agents: f.org_max_agents, org_usage: f.org_usage;
+
+def uid = ((org_remove.value ?: "") as String).trim()
+def ids = userIdsOf(org_members.value)
+if (!uid || !ids.contains(uid)) {
+    change org_result value { "Pick the person to remove first." }
+    return
+}
+def who = describe(uid)
+ids = ids.findAll { it != uid }
+change org_members value { ids }
+// Clovek patri do jednej organizacie, bez nej rolu zakaznika nepotrebuje.
+// Enginove `removeRole` sa nepouziva - v 6.3.1 mlcky nic neodoberie (B9).
+setProcessRole(uid, "sd_customer", sister("sd_ticket"), "", false)
+list_people(ids, org_people, org_remove)
+def plan = plan_case(org_plan.value)
+usage(org_usage, ids, userIdsOf(org_agents.value),
+        limit(org_max_accounts, plan, "sp_max_accounts"), limit(org_max_agents, plan, "sp_max_agents"))
+def r = recompute_tickets(ids, userIdsOf(org_agents.value), (org_name.value ?: "") as String)
+change org_result value {
+    "Removed: " + who + "\ntickets of the organization updated: " + r.ok + (r.errors ? (", FAILED: " + r.errors) : "")
+}
+change org_history value { log(org_history, who + " removed") }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>div_agents</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>org_agent_list</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>16</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_agents</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>18</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_agent_email</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>19</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_add_agent</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>19</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_add_agent_set</id>
+					<actions phase="pre">
+						<action id="6"><![CDATA[
+org_agent_email: f.org_agent_email, org_members: f.org_members, org_agents: f.org_agents,
+org_agent_list: f.org_agent_list, org_agent_remove: f.org_agent_remove, org_result: f.org_result,
+org_history: f.org_history, org_name: f.org_name, org_plan: f.org_plan,
+org_max_accounts: f.org_max_accounts, org_max_agents: f.org_max_agents, org_usage: f.org_usage;
+
+def mail = ((org_agent_email.value ?: "") as String).trim()
+if (!is_email(mail)) {
+    change org_result value { "\"" + mail + "\" is not a valid e-mail address." }
+    return
+}
+def agents = userIdsOf(org_agents.value)
+def plan = plan_case(org_plan.value)
+def max = limit(org_max_agents, plan, "sp_max_agents")
+def ucet = findUserByEmail(mail)
+if (ucet != null) {
+    def uid = ucet.stringId as String
+    if (agents.contains(uid)) {
+        change org_result value { mail + " is already assigned to this organization." }
+        return
+    }
+    def asCustomer = org_of(uid, "org_members")
+    if (asCustomer != null || userIdsOf(org_members.value).contains(uid)) {
+        change org_result value { mail + " is a customer and cannot be an agent." }
+        return
+    }
+}
+if (max != null && agents.size() >= max) {
+    change org_result value {
+        "NOT ASSIGNED: the organization has " + agents.size() + " of " + max + " agents. Raise the limit or change the plan."
+    }
+    return
+}
+def res = invite_or_grant(mail, ucet, "sd_agent")
+if (res[0] == null) {
+    change org_result value { "NOT ASSIGNED: " + (res[1] as String) }
+    change org_history value { log(org_history, "agent " + mail + " - NOT ASSIGNED: " + (res[1] as String)) }
+    return
+}
+agents = agents + [res[0] as String]
+change org_agents value { agents }
+list_people(agents, org_agent_list, org_agent_remove)
+def members = userIdsOf(org_members.value)
+usage(org_usage, members, agents, limit(org_max_accounts, plan, "sp_max_accounts"), max)
+def r = recompute_tickets(members, agents, (org_name.value ?: "") as String)
+change org_agent_email value { "" }
+change org_result value {
+    (res[1] as String) + (r.ok || r.errors ? ("\ntickets of the organization updated: " + r.ok + (r.errors ? (", FAILED: " + r.errors) : "")) : "")
+}
+change org_history value { log(org_history, "agent " + mail + " assigned") }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>org_agent_remove</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>20</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_remove_agent</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>4</x><y>20</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_remove_agent_set</id>
+					<actions phase="pre">
+						<action id="7"><![CDATA[
+org_agent_remove: f.org_agent_remove, org_members: f.org_members, org_agents: f.org_agents,
+org_agent_list: f.org_agent_list, org_result: f.org_result, org_history: f.org_history,
+org_name: f.org_name, org_plan: f.org_plan, org_max_accounts: f.org_max_accounts,
+org_max_agents: f.org_max_agents, org_usage: f.org_usage;
+
+def uid = ((org_agent_remove.value ?: "") as String).trim()
+def agents = userIdsOf(org_agents.value)
+if (!uid || !agents.contains(uid)) {
+    change org_result value { "Pick the agent to remove first." }
+    return
+}
+def who = describe(uid)
+agents = agents.findAll { it != uid }
+change org_agents value { agents }
+// Rolu `sd_agent` agent NESTRATI: moze byt priradeny k inym organizaciam
+// a je to zamestnanec, nie clen klienta.
+list_people(agents, org_agent_list, org_agent_remove)
+def plan = plan_case(org_plan.value)
+def members = userIdsOf(org_members.value)
+usage(org_usage, members, agents,
+        limit(org_max_accounts, plan, "sp_max_accounts"), limit(org_max_agents, plan, "sp_max_agents"))
+def r = recompute_tickets(members, agents, (org_name.value ?: "") as String)
+change org_result value {
+    "Agent removed: " + who + "\ntickets of the organization updated: " + r.ok + (r.errors ? (", FAILED: " + r.errors) : "")
+}
+change org_history value { log(org_history, "agent " + who + " removed") }
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>btn_refresh</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>21</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_refresh_set</id>
+					<actions phase="pre">
+						<action id="8"><![CDATA[
+org_members: f.org_members, org_agents: f.org_agents, org_people: f.org_people,
+org_remove: f.org_remove, org_agent_list: f.org_agent_list, org_agent_remove: f.org_agent_remove,
+org_result: f.org_result, org_name: f.org_name, org_plan: f.org_plan,
+org_sla_summary: f.org_sla_summary, org_max_accounts: f.org_max_accounts,
+org_max_agents: f.org_max_agents, org_usage: f.org_usage;
+
+// Stav uctov sa meni mimo tejto siete (clovek si z mailu nastavi heslo),
+// plany mohli pribudnut, a rola na novej verzii sd_ticket po re-importe chyba.
+def ticketNet = sister("sd_ticket")
+def members = userIdsOf(org_members.value)
+def agents = userIdsOf(org_agents.value)
+def roles = 0
+members.each { id -> if (setProcessRole(id as String, "sd_customer", ticketNet, "", true)) roles++ }
+agents.each { id -> if (setProcessRole(id as String, "sd_agent", ticketNet, "", true)) roles++ }
+plan_options(org_plan)
+def plan = plan_case(org_plan.value)
+change org_sla_summary value { sla_summary(plan) }
+list_people(members, org_people, org_remove)
+list_people(agents, org_agent_list, org_agent_remove)
+usage(org_usage, members, agents,
+        limit(org_max_accounts, plan, "sp_max_accounts"), limit(org_max_agents, plan, "sp_max_agents"))
+def r = recompute_tickets(members, agents, (org_name.value ?: "") as String)
+change org_result value {
+    "Refreshed: " + members.size() + " people, " + agents.size() + " agents, roles confirmed: " + roles +
+    ", tickets updated: " + r.ok + (r.errors ? (", FAILED: " + r.errors) : "")
+}
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>org_result</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>22</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_history</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>24</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="assign">
+			<id>t_org_assign</id>
+			<actions phase="post">
+				<action id="9"><![CDATA[
+org_plan: f.org_plan, org_sla_summary: f.org_sla_summary;
+
+// Moznosti planu tu, nie v `create` - tam by sa neuchovali (B11).
+plan_options(org_plan)
+change org_sla_summary value { sla_summary(plan_case(org_plan.value)) }
+				]]></action>
+			</actions>
+		</event>
+		<event type="finish">
+			<id>t_org_finish</id>
+			<actions phase="pre">
+				<action id="10"><![CDATA[
+org_name: f.org_name;
+
+if (!((org_name.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException("Fill in the organization name.")
+}
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_org_view</id>
+		<x>140</x>
+		<y>200</y>
+		<label name="t_org_view_label">My organization</label>
+		<icon>visibility</icon>
+		<!-- Pohlad agenta: comu je priradeny, s akym SLA a kto su ludia klienta. -->
+		<assignPolicy>manual</assignPolicy>
+		<userRef>
+			<id>org_agents</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</userRef>
+		<dataGroup>
+			<id>g_org_view</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>org_name</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_code</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_contact</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_active</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_sla_summary</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_people</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_agent_list</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>4</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Alive</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_org</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_org</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_org_view</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_org_view</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

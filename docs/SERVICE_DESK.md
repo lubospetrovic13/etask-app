@@ -1,116 +1,122 @@
 # Service Desk
 
-Tri Petriflow siete. Požiadavku podáva **prihlásený zákazník**, spracúva ju
-**zamestnanec podpory**. Zákazníka nikto nezakladá ručne: zamestnanec ho pridá
-do firmy a tým mu vznikne prístup. Overené za behu na Netgrif AE 6.3.1 —
-`tools/sdcheck.py`, 58 kontrol na čistej databáze.
+Štyri Petriflow siete. Tiket podáva **prihlásený zákazník**, rieši ho **agent**
+priradený k jeho organizácii, organizácie a SLA plány spravuje **správca**.
+Zákazníka ani agenta nikto nezakladá ručne: správca ho pridá do organizácie
+a tým mu príde pozvánka. Overené za behu na Netgrif AE 6.3.1 —
+`tools/sdcheck.py`, 88 kontrol na čistej databáze.
+
+Appka je v angličtine, slovenčina je druhý jazyk (`<i18n locale="sk">`
+v každej sieti, prepínač v portáli).
 
 ```
-sd_firma                         sd_ticket                                 sd_menu
-  t_firma (podpora)                t_podanie   (autor)        ──┐           zobrazenia
-    pridať / odobrať človeka       t_moja      (ľudia firmy)    │ read arc  + zosúladenie
-    obnoviť stav a prístupy        t_detail    (podpora)      ──┘ zo sinku    rolí zákazníkov
-                                   t_prevzat → t_vyziadat ⇄ t_doplnit / t_pokracovat
-                                             → t_vyriesit → t_znovu
+sd_sla_plan        sd_organization                 sd_ticket                                   sd_menu
+  t_plan (admin)     t_org (admin)                   t_submit (autor)            ──┐             zobrazenia
+                       plán, limity                  t_my     (autor, píše)        │ read arc     + zosúladenie
+                       ľudia, agenti                 t_watch  (ľudia org., číta)   │ zo sinku       rolí
+                     t_org_view (agenti org.)        t_detail (agenti org., admin) ┘
+                                                     t_accept / t_reject → t_resolve → t_reopen / t_close
 ```
 
-| rola | kto | čo vidí v karte Service Desk |
+| rola | kto | zobrazenia |
 |---|---|---|
-| `zakaznik` | ľudia vo firmách, pridelí ju `sd_firma` | Podanie požiadavky, Moje požiadavky |
-| `podpora` | zamestnanci, prideľuje admin / `seed.json` | Požiadavky na prevzatie, v riešení, všetky; Firmy zákazníkov |
+| `sd_customer` | ľudia klienta, pridelí ju `sd_organization` | Create New Ticket, My Tickets, Company Tickets |
+| `sd_agent` | naši zamestnanci, pridelí ju `sd_organization` (alebo `seed.json`) | Triage, Tickets in progress, All Tickets, My Organizations |
+| `sd_admin` | správca Service Desku, `seed.json` | Triage, Tickets in progress, All Tickets, Organizations, SLA Plans |
 
 ---
 
-## Firma a prístup
+## SLA plán
 
-Pridanie človeka do firmy (`btn_pridat` v `sd_firma`) urobí tri veci:
+Predajný balíček: hodiny na prvú reakciu a na vyriešenie pre každú prioritu
+(critical, high, medium, low), pracovný čas (Po–Pi, od–do) a limity, za
+ktoré klient platí (počet účtov, počet agentov). Lehoty na automatické
+zatvorenie a zmazanie konceptu sú tu tiež, zatiaľ ich nikto nevykonáva
+(fáza 3, časovač).
 
-1. **Účet.** Nový e-mail dostane pozvánku (`pozvi(email)` v delegáte): účet
-   vznikne v stave `INVITED` a človek si z odkazu v maile nastaví meno
-   a heslo sám. Existujúci aktívny účet pozvánku nedostane, len prístup.
-2. **Rola `zakaznik`** na `sd_ticket`, všetky verzie. Dáva kartu, dve položky
-   menu a právo založiť požiadavku.
-3. **Členstvo** v `f_clenovia`. To je to, podľa čoho sa požiadavka priradí
-   k firme — nie text vo formulári.
+## Organizácia a prístup
 
-Človek patrí **najviac do jednej firmy**, inak by nebolo jasné, ktorej
-požiadavka patrí. Zamestnanec podpory nemôže byť zákazníkom.
+Organizácia má plán (`org_plan`, možnosti sa plnia v `assign` a tlačidlom
+Refresh — v `create` by sa neuchovali, B11) a môže mu prepísať limity.
 
-Odobratie človeka mu zoberie rolu a **kaskáduje** do existujúcich požiadaviek
-firmy (`prepocitaj_tikety` → `setData("t_detail", …)`), takže odobraný
-kolega prestane staré požiadavky firmy vidieť okamžite. Účet samotný zostane.
+Pridanie človeka (`btn_add`):
 
-`pozvi` potrebuje SMTP (`MAIL_HOST`). Bez neho vráti vetu „e-mail is not
-configured“ a človek sa do firmy nepridá — žiadny účet bez spôsobu, ako sa
-prihlásiť.
+1. **Limit.** Členovia + pozvaní sa porovnajú s limitom účtov. Pozvánka sa
+   počíta ako účet — klient platí za účty.
+2. **Účet.** Nový e-mail dostane pozvánku (`pozvi`), účet vznikne ako
+   `INVITED`. Opakované pridanie pozvaného pošle pozvánku znova.
+3. **Rola `sd_customer`** na `sd_ticket` a **členstvo** v `org_members`.
+
+Agent (`btn_add_agent`) rovnako, ale do `org_agents`, s rolou `sd_agent`
+a s limitom agentov. Odobratý agent rolu nestratí — môže mať iné
+organizácie.
+
+Človek patrí **najviac do jednej organizácie** a nemôže byť zároveň agent.
+Každá zmena ľudí alebo agentov sa **kaskáduje** do existujúcich tiketov
+(`recompute_tickets` → `setData("t_detail", …)`).
 
 ## Kto čo vidí
 
-`roleRef` a `userRef` sa zjednocujú (B14), a rola má `stringId` razené per
-verziu siete (B16). Preto zákazníkova viditeľnosť na role **nestojí**:
+Všetko cez `userRef`, lebo ten re-import siete prežije (B16):
 
 | čo | ako |
 |---|---|
-| založiť požiadavku | `roleRef zakaznik` → `create` |
-| vidieť svoj koncept | `userRef tk_zadavatel` (autor prípadu, zapísaný v `create`) |
-| vidieť požiadavky firmy | `userRef tk_firma_ludia` (kópia `f_clenovia` pri podaní) |
-| všetko | `roleRef podpora` → `view` |
+| založiť tiket | `roleRef sd_customer` → `create` |
+| vidieť a písať do svojho tiketu | `userRef tk_reporter` |
+| sledovať tikety organizácie | `userRef tk_org_members` (bez autora), len `t_watch` |
+| riešiť tikety organizácie | `userRef tk_agents` — len tí, čo rolu `sd_agent` naozaj majú (B14) |
+| všetko | `roleRef sd_admin` |
 
-Rola `zakaznik` sa po re-importe `sd_ticket` na novej verzii stratí — položky
-menu zmiznú a „+“ vráti 403. Zosúlaďuje ju `sd_menu` pri každej svojej novej
-verzii (pre všetky firmy naraz) a tlačidlo „Obnoviť stav účtov a prístupy“
-vo firme. Karta (uzol URI) sa porovnáva podľa importId na ktorejkoľvek verzii,
-takže tá re-import prežije sama.
+„My Tickets" je **Task** zobrazenie na `t_my`: úlohu má len autor. Case dopyt
+na prihláseného človeka sa napísať nedá, filter nemá `<<me>>`.
 
-## Požiadavka
+## Tiket
 
-„+“ v zobrazení *Podanie požiadavky* založí prípad a rovno ho otvorí. Firma je
-predvyplnená podľa členstva. Pri podaní (`t_podanie`, finish `pre`) sa firma
-overuje **znova** — medzi založením a podaním mohol byť človek z firmy
-odobratý alebo zmluva ukončená — a v `pre` sa zapíše aj `tk_firma_ludia`, lebo
-userRef úlohy `t_moja` sa vyhodnocuje pri jej vzniku.
+Formulár `t_submit`: typ (Bug report, Change request, Service request, Other)
+ako zoznam, podkategória a polia podľa typu sa ukážu `make` akciou pri zmene
+typu. Povinnosť sa overuje v `pre` podania, nie cez `required` — skryté
+povinné pole by podanie zablokovalo. Priorita je zákazníkova a určuje SLA.
 
-| stav (`tk_stav`) | kto je na ťahu |
+Uvoľnenie `t_submit` (cancel) koncept **zmaže** — formulár, ktorý zákazník
+opustil bez odoslania, nemá kde žiť.
+
+| stav (`tk_status`) | kto je na ťahu |
 |---|---|
-| `rozpisana` | zákazník — koncept vidí len autor |
-| `nova` | podpora — *Prevziať* (priorita, druh) |
-| `v_rieseni` | podpora — *Vyžiadať od zákazníka* alebo *Vyriešiť* |
-| `caka` | zákazník — *Odpovedať podpore*; podpora môže *Pokračovať bez odpovede* |
-| `vyriesena` | zákazník môže *Znovu otvoriť* |
+| `draft` | zákazník — vidí ho len autor |
+| `new` | agent — *Accept* alebo *Reject* (dôvod vidí zákazník) |
+| `in_progress` | agent — odpovedá, *Send and wait for the customer*, *Resolve* |
+| `waiting` | zákazník — jeho správa vráti tiket do `in_progress` |
+| `resolved` | zákazník — *Reopen* alebo *Confirm resolved* |
+| `closed`, `rejected` | nikto |
 
-`tk_komunikacia` je celá história (vidia ju obe strany), `tk_interna` len
-podpora. Mail o zmene stavu ide cez `notifikuj` a nikdy nezhodí prechod.
-
-`assignPolicy` je `manual` všade okrem podania: `auto` priradí úlohu tomu,
-koho akcia ju vyrobila (B21) — úloha podpory vyrobená zákazníkovým podaním by
-inak patrila zákazníkovi.
+**Konverzácia nie sú prechody**, ale tlačidlá v trvalých pohľadoch `t_my`
+a `t_detail` (read arc zo sinku, B8b). Odpovedať sa dá v každom otvorenom
+stave a „čaká na zákazníka" je len hodnota stavu. Interné poznámky vidí len
+Service Desk.
 
 ## SLA
 
-Lehota odozvy (`sla_termin`) sa počíta pri podaní: pracovný čas Po–Pi
-08:00–16:00, hodiny zo zmluvy firmy (`f_sla_a/b/c`), inak A 2 h, B 4 h, C 8 h.
-Pri prevzatí sa zapíše `sla_prevzate` a `sla_dodrzane`. Priorita je
-predvyplnená z toho, ako súrne to zákazník označil.
+Pri podaní si tiket skopíruje čísla z plánu (hodiny, pracovný čas), takže
+zmena plánu neprepíše bežiace termíny. Bez plánu platí 1/2/4/8 h na reakciu
+a 8/16/40/80 h na vyriešenie, Po–Pi 8–16.
 
-Čo tu **nie je**: sviatky, lehota na vyriešenie, odpočítanie čakania na
-zákazníka. To patrí do kalendárovej služby v backende, nie do Groovy akcie.
+* **Prvá reakcia** — prvá verejná odpoveď, prijatie alebo zamietnutie.
+  `sla_response_met`.
+* **Vyriešenie** — `sla_resolution_met`. Kým tiket čaká na zákazníka alebo je
+  vyriešený, lehota stojí: pracovné minúty pauzy sa pripočítajú
+  (`sla_paused_minutes`) a termín sa prepočíta od podania.
+
+Čo tu **nie je**: sviatky, upozornenie pred porušením a eskalácia (potrebujú
+čas, ktorý plynie bez akcie človeka — fáza 3).
 
 ## Rozbeh a test
 
 ```bash
-docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit
-MAIL_HOST=localhost MAIL_PORT=1025 MAIL_TLS_ENABLED=false MAIL_AUTH_ENABLED=false \
-  ETASK_TEST_PASSWORD=test1234 etask-configuration/tools/up.sh
+etask-configuration/tools/up.sh --docker     # mailpit je v stacku
 python3 etask-configuration/tools/sdcheck.py
 ```
 
-Pozvánky sú vidno na http://localhost:8025. `operator@test.local` má rolu
-`podpora`, `druhy@test.local` je bežný účet, ktorý test pridá do firmy.
-
-## Čo zostalo z predošlej verzie
-
-Verejný anonymný formulár (`sd_intake`), pracovné úlohy (`sd_work_item`)
-a register zákazníkov párovaný podľa názvu organizácie (`sd_customer`) sú
-preč. `sd_menu` zmaže ich položky menu v už bežiacej inštancii
-(`zastarane`); prípady tých sietí a siete samotné v engine zostanú, kým ich
-niekto nezmaže.
+Pozvánky sú vidno na http://localhost:8025. `super@netgrif.com` je
+`sd_admin`, `operator@test.local` je `sd_agent`, `druhy@test.local` je bežný
+účet, ktorý test pridá do organizácie. Test po sebe organizácie upratuje
+a dá sa púšťať opakovane.

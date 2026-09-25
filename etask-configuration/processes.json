@@ -35,9 +35,9 @@
     "Odstránenie: zmaž processes/sd_*.xml, ich riadky v \"import\", položky",
     "\"it\" a \"it/service_desk\" nižšie a netScope v seed.json.",
     "",
-    "Kartu vidia zamestnanci podpory (rola podpora) a zákazníci (rola",
-    "zakaznik). Zákazníka nikto nezakladá ručne: zamestnanec ho pridá do firmy",
-    "(sd_firma), tým mu príde pozvánka e-mailom a dostane rolu zakaznik.",
+    "Kartu vidia správcovia (sd_admin), agenti (sd_agent) a zákazníci",
+    "(sd_customer). Zákazníka ani agenta nikto nezakladá ručne: správca ich pridá",
+    "do organizácie (sd_organization), tým im príde pozvánka e-mailom a dostanú rolu.",
     "requiredProcessRoles sa porovnávajú podľa importId na ktorejkoľvek verzii,",
     "takže karta re-import siete prežije.",
     "",
@@ -57,14 +57,13 @@
   ],
   "import": [
     "configuration_tiles.xml",
-    "sd_firma.xml",
+    "sd_sla_plan.xml",
+    "sd_organization.xml",
     "sd_ticket.xml",
     "sd_menu.xml",
     "pu_pouzivatel.xml",
     "pu_zalozenie.xml",
-    "pu_menu.xml",
-    "on_request.xml",
-    "on_menu.xml"
+    "pu_menu.xml"
   ],
   "bootstrapCase": [
     {
@@ -78,10 +77,6 @@
     "admin/pouzivatelia/pu_zalozenie",
     {
       "net": "admin/pouzivatelia/pu_menu",
-      "rebuildOnNewVersion": true
-    },
-    {
-      "net": "onboarding/on_menu",
       "rebuildOnNewVersion": true
     }
   ],
@@ -97,16 +92,18 @@
       "icon": "dns",
       "requiredAuthorities": [],
       "requiredProcessRoles": [
-        "podpora",
-        "zakaznik"
+        "sd_admin",
+        "sd_agent",
+        "sd_customer"
       ]
     },
     "it/service_desk": {
       "icon": "support_agent",
       "requiredAuthorities": [],
       "requiredProcessRoles": [
-        "podpora",
-        "zakaznik"
+        "sd_admin",
+        "sd_agent",
+        "sd_customer"
       ]
     },
     "admin": {
@@ -121,15 +118,6 @@
       "requiredAuthorities": [],
       "requiredProcessRoles": [
         "spravca"
-      ]
-    },
-    "onboarding": {
-      "icon": "how_to_reg",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "hr",
-        "approver",
-        "it_admin"
       ]
     }
   }

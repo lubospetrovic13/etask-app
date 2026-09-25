@@ -4,9 +4,16 @@ import {LanguageService} from '@netgrif/components-core';
 
 /** The two languages this portal is actually translated into. */
 export const ETASK_LANGUAGES = [
-  {key: 'sk-SK', value: 'sk'},
   {key: 'en-US', value: 'en', flag: 'gb'},
+  {key: 'sk-SK', value: 'sk'},
 ];
+
+/**
+ * localStorage key holding the language the visitor picked in this switcher.
+ * `LanguageService` writes its own `Language` key during construction, so that one
+ * cannot tell an explicit choice from a guess; this one only the switcher writes.
+ */
+export const ETASK_LANGUAGE_CHOSEN = 'etask.languageChosen';
 
 /**
  * Language switcher offering Slovak and English, and nothing else.
@@ -37,5 +44,14 @@ export class EtaskLanguageSelectorComponent extends LanguageSelectorComponent {
   constructor(languageService: LanguageService) {
     super(languageService);
     this.langMenuItems = ETASK_LANGUAGES;
+  }
+
+  setLang(lang: string) {
+    super.setLang(lang);
+    try {
+      localStorage.setItem(ETASK_LANGUAGE_CHOSEN, lang);
+    } catch {
+      // Private mode or blocked site data: the choice lasts for this tab only.
+    }
   }
 }

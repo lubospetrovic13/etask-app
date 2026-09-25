@@ -53,11 +53,7 @@
     }
   },
   "uriNode": {
-    "faktury": "Invoices",
     "general": "General",
-    "objednavky": "Orders",
-    "onboarding": "Employee onboarding",
-    "schvalovanie": "Orders and invoices",
     "service_desk": "Service Desk"
   },
   "view": {

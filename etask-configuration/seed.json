@@ -10,72 +10,32 @@
   ],
   "netScope": [
     "it/service_desk/*",
-    "admin/pouzivatelia/*",
-    "onboarding/*"
+    "admin/pouzivatelia/*"
   ],
   "users": [
     {
       "email": "super@netgrif.com",
       "roles": [
-        "approver",
-        "hr",
-        "it_admin",
-        "podpora",
-        "riaditel",
-        "schv_hotel",
-        "schv_marketing",
-        "schv_restauracia",
-        "schv_sprava",
-        "schv_udrzba",
-        "schv_wellness",
-        "schvalovatel",
-        "spravca",
-        "uctovnik",
-        "veduci",
-        "zadavatel",
-        "zamestnanec"
+        "sd_admin",
+        "spravca"
       ]
     },
     {
       "email": "admin@test.local",
       "roles": [
-        "approver",
-        "hr",
-        "it_admin",
-        "podpora",
-        "riaditel",
-        "schv_restauracia",
-        "schv_wellness",
-        "schvalovatel",
-        "spravca",
-        "uctovnik",
-        "veduci",
-        "zamestnanec"
+        "sd_admin",
+        "spravca"
       ]
     },
     {
       "email": "operator@test.local",
       "roles": [
-        "approver",
-        "hr",
-        "podpora",
-        "schv_wellness",
-        "schvalovatel",
-        "uctovnik",
-        "veduci",
-        "zadavatel",
-        "zamestnanec"
+        "sd_agent"
       ]
     },
     {
       "email": "druhy@test.local",
-      "roles": [
-        "approver",
-        "it_admin",
-        "veduci",
-        "zadavatel",
-        "zamestnanec"
-      ]
+      "roles": []
     },
     {
       "email": "viewer@test.local",

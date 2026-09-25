@@ -4,20 +4,23 @@ sdcheck - akceptacny test Service Desku proti BEZIACEMU enginu.
 
 Overuje cely obeh, ktory sa z XML ani z importu zistit neda:
 
-  1. zamestnanec podpory zalozi firmu a prida do nej ludi - existujuci ucet
-     dostane pristup, novy e-mail pozvanku (mail naozaj odide do mailpitu),
-  2. pozvany si z odkazu v maile nastavi heslo a prihlasi sa,
-  3. zakaznik vidi kartu a podá poziadavku; bez firmy by bola odmietnuta,
-  4. kolega z tej istej firmy ju vidi, cudzi clovek nie,
-  5. podpora ju prevezme, vyziada doplnenie, zakaznik odpovie, podpora vyriesi,
-  6. odobraty clovek firmy prestane poziadavky firmy vidiet (kaskada),
-  7. clovek nemoze byt v dvoch firmach.
+  1. menu a karty podla roli (sd_admin, sd_agent, sd_customer),
+  2. admin zalozi SLA plan a organizaciu, da jej plan a limit uctov,
+     prida existujuci ucet (pristup bez pozvanky), novy e-mail (pozvanka
+     naozaj odide do mailpitu) a limit zastavi dalsieho,
+  3. admin priradi agenta; zakaznik agentom byt nemoze, clovek nemoze byt
+     v dvoch organizaciach,
+  4. pozvany si z odkazu nastavi heslo a prihlasi sa,
+  5. zakaznik poda tiket - typ a podkategoria su povinne, terminy SLA sa
+     vypocitaju z planu; kolega ho len sleduje, cudzi ho nevidi, agent
+     organizacie ho vidi,
+  6. agent odpovie (prva reakcia), prijme, vyziada doplnenie (pauza SLA),
+     zakaznik odpovie (pauza konci), agent vyriesi, zakaznik potvrdi,
+  7. odobraty kolega aj odobraty agent prestanu tiket vidiet (kaskada).
 
 Predpoklad: bezi stack s SMTP na mailpit a s testovacimi uctami:
 
-    docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit
-    MAIL_HOST=localhost MAIL_PORT=1025 MAIL_TLS_ENABLED=false \
-      MAIL_AUTH_ENABLED=false ETASK_TEST_PASSWORD=test1234 tools/up.sh
+    tools/up.sh --docker            # mailpit je v nom
 
     python3 tools/sdcheck.py
 
@@ -36,12 +39,13 @@ import urllib.request
 import pftestlib as pf
 
 TICKET = "it/service_desk/sd_ticket"
-FIRMA = "it/service_desk/sd_firma"
+ORG = "it/service_desk/sd_organization"
+PLAN = "it/service_desk/sd_sla_plan"
 MENU = "it/service_desk/sd_menu"
 CARD = "it/service_desk"
-STAFF = "operator@test.local"      # rola `podpora` zo seed.json
-CUSTOMER = "druhy@test.local"      # existujuci ucet bez roly podpory
-OUTSIDER = "viewer@test.local"     # nie je v ziadnej firme
+AGENT = "operator@test.local"      # rola `sd_agent` zo seed.json
+CUSTOMER = "druhy@test.local"      # existujuci ucet bez roli Service Desku
+OUTSIDER = "viewer@test.local"     # nie je v ziadnej organizacii
 MAILPIT = os.environ.get("MAILPIT_URL", "http://127.0.0.1:8025")
 
 
@@ -79,61 +83,101 @@ def press(cl, task_id, button, extra=None):
 
 def main():
     ts = int(time.time())
-    boss = pf.Client("super@netgrif.com", pf.SUPER_PASS)
+    boss = pf.Client("super@netgrif.com", pf.SUPER_PASS)     # sd_admin zo seed.json
 
-    print("=== 1. menu a karta ===")
+    # Organizacie z minulych behov: CUSTOMER by v nich zostal clenom a clovek
+    # smie byt len v jednej - druhy beh by inak zlyhal na vlastnych datach.
+    for o in pf.cases_of(boss, ORG):
+        if (o.get("title") or "").startswith(("Org sdcheck", "Second ")):
+            boss.call("DELETE", f"/api/workflow/case/{o['stringId']}")
+
+    print("=== 1. menu a karty ===")
     mt = [c["title"] for c in pf.cases_of(boss, MENU, size=20)]
-    pf.check("bootstrap case menu hlasi 6/6", any("6/6" in t for t in mt), mt)
+    pf.check("bootstrap case menu hlasi 9/9", any("9/9" in t for t in mt), mt)
     items = pf.menu_items(boss, prefix="sd_")
-    for want in ["Podanie požiadavky", "Moje požiadavky", "Požiadavky na prevzatie",
-                 "Požiadavky v riešení", "Všetky požiadavky podpory", "Firmy zákazníkov"]:
+    for want in ["Create New Ticket", "My Tickets", "Company Tickets", "Triage", "Tickets in progress",
+                 "All Tickets", "My Organizations", "Organizations", "SLA Plans"]:
         pf.check(f"zobrazenie '{want}' existuje", want in items, sorted(items))
-    for stare in ["Tikety", "Moje úlohy", "Zákazníci", "Podania z formulára", "Podať požiadavku"]:
-        pf.check(f"stare zobrazenie '{stare}' nie je", stare not in items)
+    for old in ["Podanie požiadavky", "Moje požiadavky", "Firmy zákazníkov"]:
+        pf.check(f"stare zobrazenie '{old}' nie je", old not in items)
 
-    staff = pf.Client(STAFF, pf.TEST_PASS)
+    agent = pf.Client(AGENT, pf.TEST_PASS)
     outsider = pf.Client(OUTSIDER, pf.TEST_PASS)
-    pf.check("podpora vidi kartu Service Desku", CARD in pf.uri_paths(staff, deep=True))
-    pf.check("clovek mimo firiem kartu nevidi", CARD not in pf.uri_paths(outsider, deep=True))
+    pf.check("admin vidi kartu Service Desku", CARD in pf.uri_paths(boss, deep=True))
+    pf.check("agent vidi kartu Service Desku", CARD in pf.uri_paths(agent, deep=True))
+    pf.check("clovek mimo organizacii kartu nevidi", CARD not in pf.uri_paths(outsider, deep=True))
 
-    print("\n=== 2. firma a ludia ===")
-    fnet = pf.newest_net(staff, FIRMA)
-    firma_id, _ = pf.new_case(staff, fnet["stringId"])
-    t = pf.tasks_of(staff, firma_id)
-    pf.check("firma ma ulohu t_firma", "t_firma" in t, list(t))
-    tf = t.get("t_firma")
-    if not tf:
+    print("\n=== 2. SLA plan a organizacia ===")
+    pnet = pf.newest_net(boss, PLAN)
+    plan_id, _ = pf.new_case(boss, pnet["stringId"])
+    tp = pf.tasks_of(boss, plan_id).get("t_plan")
+    pf.check("plan ma ulohu t_plan", bool(tp))
+    if not tp:
         return pf.report("sdcheck")
-    nazov = f"Firma sdcheck {ts}"
-    pf.set_data(staff, tf, {"f_nazov": {"type": "text", "value": nazov}})
+    plan_name = f"Standard {ts}"
+    pf.set_data(boss, tp, {"sp_name": {"type": "text", "value": plan_name},
+                           "sp_resp_high": {"type": "number", "value": 3},
+                           "sp_max_accounts": {"type": "number", "value": 5}})
+    st, c = boss.get(f"/api/workflow/case/{plan_id}")
+    pf.check("nazov planu je nazov pripadu", c.get("title") == plan_name, c.get("title"))
+    pf.check("agent plany nevidi", plan_id not in search_ids(agent, f'processIdentifier:"{PLAN}"'))
 
-    v = press(staff, tf, "btn_pridat", {"f_novy_email": {"type": "text", "value": CUSTOMER}})
+    onet = pf.newest_net(boss, ORG)
+    org_id, _ = pf.new_case(boss, onet["stringId"])
+    to = pf.tasks_of(boss, org_id).get("t_org")
+    pf.check("organizacia ma ulohu t_org", bool(to))
+    if not to:
+        return pf.report("sdcheck")
+    org_name = f"Org sdcheck {ts}"
+    pf.set_data(boss, to, {"org_name": {"type": "text", "value": org_name}})
+    opts = pf.options(boss, to, "org_plan")
+    pf.check("plan je v ponuke organizacie", plan_id in opts, opts)
+    pf.set_data(boss, to, {"org_plan": {"type": "enumeration_map", "value": plan_id},
+                           "org_max_accounts": {"type": "number", "value": 2}})
+    v = pf.values(boss, to)
+    pf.check("sumar planu nesie cas reakcie 'high 3 h'", "high 3 h" in (v.get("org_sla_summary") or ""),
+             v.get("org_sla_summary"))
+
+    v = press(boss, to, "btn_add", {"org_new_email": {"type": "text", "value": CUSTOMER}})
     pf.check("existujuci ucet dostal pristup bez pozvanky",
-             "access granted" in (v.get("f_vysledok") or ""), v.get("f_vysledok"))
-    pf.check("vo firme je 1 clovek", v.get("f_pocet") == 1, v.get("f_pocet"))
-
+             "access granted" in (v.get("org_result") or ""), v.get("org_result"))
     novy = f"sdcheck{ts}@test.local"
-    v = press(staff, tf, "btn_pridat", {"f_novy_email": {"type": "text", "value": novy}})
-    pf.check("novy e-mail dostal pozvanku",
-             "invitation sent" in (v.get("f_vysledok") or ""), v.get("f_vysledok"))
-    pf.check("vo firme su 2 ludia", v.get("f_pocet") == 2, v.get("f_pocet"))
-    pf.check("pozvany je v zozname ako 'invited'", "invited" in (v.get("f_ludia") or ""),
-             v.get("f_ludia"))
-
-    v = press(staff, tf, "btn_pridat", {"f_novy_email": {"type": "text", "value": "zly-email"}})
+    v = press(boss, to, "btn_add", {"org_new_email": {"type": "text", "value": novy}})
+    pf.check("novy e-mail dostal pozvanku", "invitation" in (v.get("org_result") or "").lower(),
+             v.get("org_result"))
+    pf.check("pozvany je v zozname ako 'invited'", "invited" in (v.get("org_people") or ""),
+             v.get("org_people"))
+    pf.check("vyuzitie hlasi '2 of 2 accounts'", "2 of 2 accounts" in (v.get("org_usage") or ""),
+             v.get("org_usage"))
+    v = press(boss, to, "btn_add", {"org_new_email": {"type": "text", "value": f"third{ts}@test.local"}})
+    pf.check("limit uctov zastavi tretieho", "2 of 2" in (v.get("org_result") or ""), v.get("org_result"))
+    v = press(boss, to, "btn_add", {"org_new_email": {"type": "text", "value": "zly-email"}})
     pf.check("zly e-mail je odmietnuty vo formulari",
-             "not a valid" in (v.get("f_vysledok") or ""), v.get("f_vysledok"))
+             "not a valid" in (v.get("org_result") or ""), v.get("org_result"))
 
-    # Druha firma: ten isty clovek do nej nesmie.
-    f2, _ = pf.new_case(staff, fnet["stringId"])
-    t2 = pf.tasks_of(staff, f2).get("t_firma")
-    pf.set_data(staff, t2, {"f_nazov": {"type": "text", "value": f"Druha {ts}"}})
-    v2 = press(staff, t2, "btn_pridat", {"f_novy_email": {"type": "text", "value": CUSTOMER}})
-    pf.check("clovek nemoze byt v dvoch firmach",
-             "one company only" in (v2.get("f_vysledok") or ""), v2.get("f_vysledok"))
-    boss.call("DELETE", f"/api/workflow/case/{f2}")
+    print("\n=== 3. agent ===")
+    v = press(boss, to, "btn_add_agent", {"org_agent_email": {"type": "text", "value": CUSTOMER}})
+    pf.check("zakaznik nemoze byt agent", "is a customer" in (v.get("org_result") or ""),
+             v.get("org_result"))
+    v = press(boss, to, "btn_add_agent", {"org_agent_email": {"type": "text", "value": AGENT}})
+    pf.check("agent je priradeny", AGENT in (v.get("org_agent_list") or ""), v.get("org_result"))
 
-    print("\n=== 3. registracia z pozvanky ===")
+    o2, _ = pf.new_case(boss, onet["stringId"])
+    t2 = pf.tasks_of(boss, o2).get("t_org")
+    pf.set_data(boss, t2, {"org_name": {"type": "text", "value": f"Second {ts}"}})
+    v2 = press(boss, t2, "btn_add", {"org_new_email": {"type": "text", "value": CUSTOMER}})
+    pf.check("clovek nemoze byt v dvoch organizaciach",
+             "one organization only" in (v2.get("org_result") or ""), v2.get("org_result"))
+    v2 = press(boss, t2, "btn_add", {"org_new_email": {"type": "text", "value": AGENT}})
+    pf.check("agent nemoze byt zakaznik", "staff" in (v2.get("org_result") or ""), v2.get("org_result"))
+    boss.call("DELETE", f"/api/workflow/case/{o2}")
+
+    agent = pf.Client(AGENT, pf.TEST_PASS)
+    pf.check("agent vidi svoju organizaciu", org_id in search_ids(agent, f'processIdentifier:"{ORG}"'))
+    ta = pf.tasks_of(agent, org_id)
+    pf.check("agent ma len pohlad na organizaciu", list(ta) == ["t_org_view"], list(ta))
+
+    print("\n=== 4. registracia z pozvanky ===")
     token = None
     for _ in range(10):
         token = invite_token(novy)
@@ -144,107 +188,151 @@ def main():
     if token:
         anon = pf.Client(OUTSIDER, pf.TEST_PASS)   # signup je verejny, token netreba
         st, r = anon.post("/api/auth/signup", {
-            "token": token, "name": "Nový", "surname": "Zákazník",
+            "token": token, "name": "New", "surname": "Customer",
             "password": base64.b64encode(b"heslo1234").decode()})
         pf.check("registracia z odkazu presla", isinstance(r, dict) and "success" in r, r)
     kolega = pf.Client(novy, "heslo1234", allow_fail=True)
     pf.check("pozvany sa prihlasi vlastnym heslom", bool(kolega.token))
 
-    print("\n=== 4. podanie poziadavky ===")
+    print("\n=== 5. podanie tiketu ===")
     zak = pf.Client(CUSTOMER, pf.TEST_PASS)       # nove prihlasenie = nove roly
     pf.check("zakaznik vidi kartu Service Desku", CARD in pf.uri_paths(zak, deep=True))
     tnet = pf.newest_net(zak, TICKET)
     case_id, case = pf.new_case(zak, tnet["stringId"])
     t = pf.tasks_of(zak, case_id)
-    pf.check("na zaciatku ma zakaznik len podanie", list(t) == ["t_podanie"], list(t))
-    tp = t.get("t_podanie")
-    if not tp:
+    pf.check("na zaciatku ma zakaznik len podanie", list(t) == ["t_submit"], list(t))
+    ts_sub = t.get("t_submit")
+    if not ts_sub:
         return pf.report("sdcheck")
-    v = pf.values(zak, tp)
-    pf.check("firma je predvyplnena podla clenstva", v.get("tk_firma_nazov") == nazov,
-             v.get("tk_firma_nazov"))
+    v = pf.values(zak, ts_sub)
+    pf.check("organizacia je predvyplnena podla clenstva", v.get("tk_org_name") == org_name,
+             v.get("tk_org_name"))
     pf.check("koncept kolega nevidi", case_id not in search_ids(kolega, f'processIdentifier:"{TICKET}"'))
+    pf.check("koncept agent nevidi", case_id not in search_ids(agent, f'processIdentifier:"{TICKET}"'))
 
-    pf.assign(zak, tp)
-    st, r = pf.finish(zak, tp)
+    # Opusteny formular: uvolnenie ulohy podania koncept zmaze (cancel event).
+    draft_id, _ = pf.new_case(zak, tnet["stringId"])
+    td0 = pf.tasks_of(zak, draft_id).get("t_submit")
+    pf.assign(zak, td0)
+    zak.get(f"/api/task/cancel/{td0}")
+    gone = False
+    for _ in range(10):
+        if draft_id not in [c["stringId"] for c in pf.cases_of(boss, TICKET)]:
+            gone = True
+            break
+        time.sleep(1)
+    pf.check("opusteny koncept zanikne", gone)
+
+    pf.assign(zak, ts_sub)
+    st, r = pf.finish(zak, ts_sub)
     pf.check("prazdne podanie je odmietnute", pf.err_body(r), str(r)[:120])
-    predmet = f"Nejde tlac {ts}"
-    pf.set_data(zak, tp, {
-        "tk_predmet": {"type": "text", "value": predmet},
-        "tk_typ": {"type": "enumeration_map", "value": "incident"},
-        "tk_urgentnost": {"type": "enumeration_map", "value": "A"},
-        "tk_popis": {"type": "text", "value": "Tlaciaren na 2. poschodi netlaci."}})
-    st, r = pf.finish(zak, tp)
+    subject = f"Login fails {ts}"
+    pf.set_data(zak, ts_sub, {
+        "tk_type": {"type": "enumeration_map", "value": "bug"},
+        "tk_priority": {"type": "enumeration_map", "value": "high"},
+        "tk_subject": {"type": "text", "value": subject},
+        "tk_description": {"type": "text", "value": "Nobody can log in since 9:00."}})
+    beh = json.dumps(pf.behavior(zak, ts_sub, "tk_cat_bug"))
+    pf.check("pri type bug sa ukaze druh chyby", "editable" in beh, beh)
+    beh = json.dumps(pf.behavior(zak, ts_sub, "tk_cat_change"))
+    pf.check("pole zmeny zostane skryte", "hidden" in beh, beh)
+    st, r = pf.finish(zak, ts_sub)
+    pf.check("bug bez druhu chyby je odmietnuty", pf.err_body(r), str(r)[:120])
+    pf.set_data(zak, ts_sub, {"tk_cat_bug": {"type": "enumeration_map", "value": "login"},
+                              "tk_steps": {"type": "text", "value": "Open the portal, sign in."}})
+    st, r = pf.finish(zak, ts_sub)
     pf.check("podanie preslo", pf.ok_body(r), str(r)[:160])
 
     t = pf.tasks_of(zak, case_id)
-    pf.check("zakaznik po podani vidi 'Moja poziadavka'", "t_moja" in t, list(t))
-    pf.check("zakaznik nevidi ulohy podpory", not ({"t_detail", "t_prevzat"} & set(t)), list(t))
+    pf.check("zakaznik po podani vidi 'My ticket'", "t_my" in t, list(t))
+    pf.check("zakaznik nevidi ulohy Service Desku", not ({"t_detail", "t_accept"} & set(t)), list(t))
     st, c = zak.get(f"/api/workflow/case/{case_id}")
-    pf.check("nazov nesie cislo a predmet", predmet in (c.get("title") or ""), c.get("title"))
+    pf.check("nazov nesie cislo a predmet", subject in (c.get("title") or ""), c.get("title"))
 
-    q_moje = f'processIdentifier:"{TICKET}" AND dataSet.tk_stav.keyValue:("nova" OR "v_rieseni" OR "caka" OR "vyriesena")'
-    pf.check("zakaznik ju vidi v 'Moje poziadavky'", case_id in search_ids(zak, q_moje))
-    pf.check("kolega z firmy ju vidi tiez", case_id in search_ids(kolega, q_moje))
-    pf.check("cudzi clovek ju nevidi", case_id not in search_ids(outsider, q_moje))
-    pf.check("podpora ju vidi 'Na prevzatie'", case_id in search_ids(
-        staff, f'processIdentifier:"{TICKET}" AND dataSet.tk_stav.keyValue:"nova"'))
-
-    print("\n=== 5. spracovanie ===")
-    ts_ = pf.tasks_of(staff, case_id)
-    pf.check("podpora ma prehlad a prevzatie", {"t_detail", "t_prevzat"} <= set(ts_), list(ts_))
-    tv = ts_.get("t_prevzat")
-    v = pf.values(staff, tv)
-    pf.check("priorita je predvyplnena zo surnosti", v.get("tk_priorita") == "A", v.get("tk_priorita"))
-    pf.check("lehota odozvy je vypocitana", bool(v.get("sla_termin")), v.get("sla_termin"))
-    pf.assign(staff, tv)
-    st, r = pf.finish(staff, tv)
-    pf.check("prevzatie preslo", pf.ok_body(r), str(r)[:160])
-
-    tq = pf.tasks_of(staff, case_id).get("t_vyziadat")
-    pf.set_data(staff, tq, {"tk_otazka": {"type": "text", "value": "Aky model tlaciarne?"}})
-    st, r = pf.finish(staff, tq)
-    pf.check("vyziadanie doplnenia preslo", pf.ok_body(r), str(r)[:160])
-
+    q_open = (f'processIdentifier:"{TICKET}" AND dataSet.tk_status.keyValue:'
+              '("new" OR "in_progress" OR "waiting" OR "resolved" OR "closed" OR "rejected")')
+    pf.check("zakaznik ho vidi v 'Company Tickets'", case_id in search_ids(zak, q_open))
+    pf.check("kolega z organizacie ho vidi tiez", case_id in search_ids(kolega, q_open))
     tk = pf.tasks_of(kolega, case_id)
-    pf.check("kolega moze odpovedat podpore", "t_doplnit" in tk, list(tk))
-    if tk.get("t_doplnit"):
-        pf.set_data(kolega, tk["t_doplnit"], {"tk_doplnenie": {"type": "text", "value": "HP LaserJet"}})
-        st, r = pf.finish(kolega, tk["t_doplnit"])
-        pf.check("odpoved zakaznika presla", pf.ok_body(r), str(r)[:160])
+    pf.check("kolega ho len sleduje (t_watch, nie t_my)", list(tk) == ["t_watch"], list(tk))
+    pf.check("cudzi clovek ho nevidi", case_id not in search_ids(outsider, q_open))
+    pf.check("agent organizacie ho vidi", case_id in search_ids(agent, q_open))
 
-    tr = pf.tasks_of(staff, case_id).get("t_vyriesit")
-    pf.check("podpora moze vyriesit", bool(tr))
+    print("\n=== 6. spracovanie ===")
+    tg = pf.tasks_of(agent, case_id)
+    pf.check("agent ma detail, prijatie a zamietnutie", {"t_detail", "t_accept", "t_reject"} <= set(tg), list(tg))
+    td = tg.get("t_detail")
+    if not td:
+        return pf.report("sdcheck")
+    v = pf.values(agent, td)
+    pf.check("termin prvej reakcie je vypocitany", bool(v.get("sla_response_due")), v.get("sla_response_due"))
+    pf.check("termin vyriesenia je vypocitany", bool(v.get("sla_resolution_due")), v.get("sla_resolution_due"))
+    pf.check("hodiny vyriesenia su z planu (high = 16)", v.get("sla_res_hours") == 16, v.get("sla_res_hours"))
+    pf.check("podrobnosti nesu druh chyby", "Problem with login" in (v.get("tk_details") or ""),
+             v.get("tk_details"))
+
+    v = press(agent, td, "btn_agent_send", {"tk_agent_msg": {"type": "text", "value": "Looking into it."}})
+    pf.check("sprava agenta je v konverzacii", "Looking into it." in (v.get("tk_conversation") or ""),
+             v.get("tk_notice"))
+    pf.check("prva reakcia je v lehote", v.get("sla_response_met") is True, v.get("sla_response_met"))
+    v = press(agent, td, "btn_agent_ask", {"tk_agent_msg": {"type": "text", "value": "Which browser?"}})
+    pf.check("pred prijatim sa na zakaznika cakat neda", "Accept the ticket first" in (v.get("tk_notice") or ""),
+             v.get("tk_notice"))
+    pf.assign(agent, tg["t_accept"])
+    st, r = pf.finish(agent, tg["t_accept"])
+    pf.check("prijatie preslo", pf.ok_body(r), str(r)[:160])
+    v = press(agent, td, "btn_agent_ask", {"tk_agent_msg": {"type": "text", "value": "Which browser?"}})
+    pf.check("tiket caka na zakaznika", v.get("tk_status") == "waiting", v.get("tk_notice"))
+    pf.check("lehota vyriesenia stoji", bool(v.get("sla_paused_since")), v.get("sla_paused_since"))
+
+    tm = pf.tasks_of(zak, case_id).get("t_my")
+    v = press(zak, tm, "btn_customer_send", {"tk_customer_msg": {"type": "text", "value": "Firefox 128"}})
+    pf.check("odpoved zakaznika vrati tiket do riesenia", v.get("tk_status") == "in_progress", v.get("tk_notice"))
+    pf.check("zakaznik nevidi interne poznamky", "tk_internal" not in v)
+    vk = pf.values(kolega, pf.tasks_of(kolega, case_id).get("t_watch"))
+    pf.check("kolega vidi konverzaciu", "Firefox 128" in (vk.get("tk_conversation") or ""))
+    pf.check("kolega nema kam pisat", "tk_customer_msg" not in vk)
+    va = pf.values(agent, td)
+    pf.check("pauza skoncila", not va.get("sla_paused_since"), va.get("sla_paused_since"))
+
+    tr = pf.tasks_of(agent, case_id).get("t_resolve")
+    pf.check("agent moze vyriesit", bool(tr))
     if tr:
-        pf.set_data(staff, tr, {"tk_riesenie": {"type": "text", "value": "Vymeneny toner."}})
-        st, r = pf.finish(staff, tr)
+        pf.set_data(agent, tr, {"tk_resolution": {"type": "text", "value": "Cache cleared."}})
+        st, r = pf.finish(agent, tr)
         pf.check("vyriesenie preslo", pf.ok_body(r), str(r)[:160])
+    tz = pf.tasks_of(zak, case_id)
+    v = pf.values(zak, tz["t_my"])
+    pf.check("zakaznik vidi stav 'resolved'", v.get("tk_status") == "resolved", v.get("tk_status"))
+    pf.check("zakaznik vidi riesenie", v.get("tk_resolution") == "Cache cleared.", v.get("tk_resolution"))
+    pf.check("zakaznik moze znovu otvorit aj potvrdit", {"t_reopen", "t_close"} <= set(tz), list(tz))
+    if tz.get("t_close"):
+        pf.assign(zak, tz["t_close"])
+        st, r = pf.finish(zak, tz["t_close"])
+        pf.check("potvrdenie vyriesenia preslo", pf.ok_body(r), str(r)[:160])
+        pf.check("tiket je zatvoreny", pf.values(zak, tz["t_my"]).get("tk_status") == "closed")
 
-    tm = pf.tasks_of(zak, case_id)
-    v = pf.values(zak, tm["t_moja"]) if tm.get("t_moja") else {}
-    pf.check("zakaznik vidi stav 'vyriesena'", v.get("tk_stav") == "vyriesena", v.get("tk_stav"))
-    pf.check("zakaznik vidi riesenie", v.get("tk_riesenie") == "Vymeneny toner.", v.get("tk_riesenie"))
-    kom = v.get("tk_komunikacia") or ""
-    pf.check("komunikacia nesie otazku aj odpoved", "Aky model" in kom and "HP LaserJet" in kom, kom[-200:])
-    pf.check("zakaznik nevidi internu poznamku", "tk_interna" not in v)
-    pf.check("zakaznik moze znovu otvorit", "t_znovu" in tm, list(tm))
-
-    print("\n=== 6. odobratie z firmy ===")
-    kolega_id = None
-    opts = pf.options(staff, tf, "f_odobrat")
-    for k, lbl in opts.items():
-        if novy in str(lbl):
-            kolega_id = k
-    pf.check("kolega je v ponuke na odobratie", bool(kolega_id), opts)
-    if kolega_id:
-        v = press(staff, tf, "btn_odobrat", {"f_odobrat": {"type": "enumeration_map", "value": kolega_id}})
-        pf.check("odobratie preslo", "Removed" in (v.get("f_vysledok") or ""), v.get("f_vysledok"))
-        pf.check("vo firme zostal 1 clovek", v.get("f_pocet") == 1, v.get("f_pocet"))
+    print("\n=== 7. odobratie z organizacie ===")
+    kid = next((k for k, lbl in pf.options(boss, to, "org_remove").items() if novy in str(lbl)), None)
+    pf.check("kolega je v ponuke na odobratie", bool(kid))
+    if kid:
+        v = press(boss, to, "btn_remove", {"org_remove": {"type": "enumeration_map", "value": kid}})
+        pf.check("odobratie preslo", "Removed" in (v.get("org_result") or ""), v.get("org_result"))
         kolega2 = pf.Client(novy, "heslo1234")
-        pf.check("odobraty kolega poziadavku firmy uz nevidi",
-                 case_id not in search_ids(kolega2, q_moje))
+        pf.check("odobraty kolega tiket uz nevidi", case_id not in search_ids(kolega2, q_open))
         pf.check("odobraty kolega nevidi kartu", CARD not in pf.uri_paths(kolega2, deep=True))
-        pf.check("zakaznik, ktory zostal, ju vidi dalej", case_id in search_ids(zak, q_moje))
+        pf.check("autor ho vidi dalej", case_id in search_ids(zak, q_open))
+    aid = next((k for k, lbl in pf.options(boss, to, "org_agent_remove").items() if AGENT in str(lbl)), None)
+    pf.check("agent je v ponuke na odobratie", bool(aid))
+    if aid:
+        v = press(boss, to, "btn_remove_agent", {"org_agent_remove": {"type": "enumeration_map", "value": aid}})
+        pf.check("odobratie agenta preslo", "Agent removed" in (v.get("org_result") or ""), v.get("org_result"))
+        # Nove prihlasenie ako pri kolegovi: index sa po kaskade obnovuje so
+        # sekundovym oneskorenim a hned po zapise by videl este stav pred nim.
+        agent2 = pf.Client(AGENT, pf.TEST_PASS)
+        pf.check("odobraty agent tiket uz nevidi", case_id not in search_ids(agent2, q_open))
+        pf.check("odobraty agent organizaciu nevidi",
+                 org_id not in search_ids(agent2, f'processIdentifier:"{ORG}"'))
 
     return pf.report("sdcheck")
 

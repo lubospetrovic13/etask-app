@@ -49,7 +49,6 @@ DOKUMENTY = {
     "frontend": DOCS / "FRONTEND_LEARNINGS.md",
     "backend": DOCS / "BACKEND.md",
     "sd": DOCS / "SERVICE_DESK.md",
-    "onboarding": DOCS / "ONBOARDING.md",
     "prirucka": DOCS / "PRIRUCKA.md",
     "analyza": DOCS / "AI_STARTER_ANALYSIS.md",
     "tabulky": DOCS / "ANALYZA_TABULKY.md",

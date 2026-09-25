@@ -1,15 +1,15 @@
 import {Component} from '@angular/core';
 import {AuthenticationService, LanguageService, RoutingBuilderService} from '@netgrif/components-core';
 import {TranslateService} from '@ngx-translate/core';
-import {ETASK_LANGUAGES} from './views/side-nav/etask-language-selector/etask-language-selector.component';
+import {
+  ETASK_LANGUAGE_CHOSEN,
+  ETASK_LANGUAGES,
+} from './views/side-nav/etask-language-selector/etask-language-selector.component';
 import en from '../assets/i18n/en.json';
 import sk from '../assets/i18n/sk.json';
 
-/** What a visitor gets when their browser asks for a language we do not offer. */
-const DEFAULT_LANGUAGE = 'sk-SK';
-
-/** `LanguageService._DEFAULT_LANG` - what the library picks when it cannot match. */
-const LIBRARY_FALLBACK = 'en-US';
+/** What a visitor gets until they pick a language in the switcher. */
+const DEFAULT_LANGUAGE = 'en-US';
 
 @Component({
   selector: 'app-root',
@@ -26,40 +26,24 @@ export class AppComponent {
     this._translate.setTranslation('sk-SK', sk, true);
     this._translate.setTranslation('en-US', en, true);
 
-    // Slovak for anyone whose browser asks for a language we do not offer.
+    // English for everyone who has not picked a language in the switcher.
     //
-    // What this is NOT any more: an unconditional `setLanguage('sk-SK')`. That quietly
-    // broke the whole switcher. `LanguageService` restores the remembered language in
-    // its own constructor - from `localStorage['Language']`, falling back to the
-    // browser's, falling back to `en-US` - and this line ran afterwards and overwrote
-    // it. Switching to English worked for exactly as long as the tab stayed open; the
-    // next reload was Slovak again, with no error to connect it to.
+    // `LanguageService` restores a language in its own constructor - from
+    // `localStorage['Language']`, else the browser's - and writes that key while doing
+    // so, so by now `Language` is always set and cannot tell a choice from a guess.
+    // A Slovak browser would therefore always land in Slovak. The switcher writes its
+    // own key (`ETASK_LANGUAGE_CHOSEN`) and only that one counts as a choice.
     //
-    // The first repair was "set the default only when nothing is stored", and that was
-    // dead code: the service writes localStorage during its own construction, so by the
-    // time this runs something is always stored. Measured - browser `en-US`, cleared
-    // storage, and `localStorage['Language']` was already `en-US` here.
-    //
-    // So the rule is about the BROWSER language, which is the only signal available
-    // this early. `sk` or `en` browser gets its own language; anything else would get
-    // the library's `en-US`, and for a Slovak-primary product Slovak is the better
-    // guess. A stored value is respected unless it is exactly that `en-US` fallback.
-    //
-    // Residual case, stated because it is real: someone with, say, a German browser who
-    // deliberately picks English gets Slovak again on the next reload while logged out.
-    // Once logged in, `UserPreferenceService` holds their choice and wins - the
-    // switcher saves it with `setLanguage(lang, true)`.
-    const browser = (this._translate.getBrowserLang() ?? '').toLowerCase();
-    const offered = ETASK_LANGUAGES.some(l => l.value === browser);
-    let stored: string | null = null;
+    // Not an unconditional `setLanguage`: that once overwrote the remembered choice on
+    // every reload. Once logged in, `UserPreferenceService` holds the choice and wins.
+    let chosen: string | null = null;
     try {
-      stored = localStorage.getItem('Language');
+      chosen = localStorage.getItem(ETASK_LANGUAGE_CHOSEN);
     } catch {
       // Private mode or blocked site data.
     }
-    if (!offered && (!stored || stored === LIBRARY_FALLBACK)) {
-      this._languageService.setLanguage(DEFAULT_LANGUAGE);
-    }
+    const valid = ETASK_LANGUAGES.some(l => l.key === chosen);
+    this._languageService.setLanguage(valid ? chosen as string : DEFAULT_LANGUAGE);
   }
 
   isAuthenticated(): boolean {

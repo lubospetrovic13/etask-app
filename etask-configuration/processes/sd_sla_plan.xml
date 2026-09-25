@@ -1,0 +1,381 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>it/service_desk/sd_sla_plan</id>
+	<version>1.0.0</version>
+	<initials>SDP</initials>
+	<title name="net_title">SLA plan</title>
+
+	<!--
+		Preklady. Zdrojovy text je anglicky (default appky), slovencina je
+		druhy jazyk. Kod jazyka musi byt DVOJPISMENOVY (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="sk">
+		<i18nString name="net_title">SLA plán</i18nString>
+		<i18nString name="sd_admin_title">Správca Service Desku</i18nString>
+		<i18nString name="div_plan_init">Plán</i18nString>
+		<i18nString name="div_response_init">Prvá reakcia – pracovné hodiny</i18nString>
+		<i18nString name="div_resolution_init">Vyriešenie – pracovné hodiny</i18nString>
+		<i18nString name="div_hours_init">Pracovný čas a lehoty</i18nString>
+		<i18nString name="div_limits_init">Limity, ktoré klient platí</i18nString>
+		<i18nString name="sp_name_title">Názov plánu</i18nString>
+		<i18nString name="sp_code_title">Kód</i18nString>
+		<i18nString name="sp_active_title">V ponuke</i18nString>
+		<i18nString name="sp_active_desc">Neaktívny plán sa nedá priradiť novej organizácii. Organizácie, ktoré ho majú, ho majú ďalej.</i18nString>
+		<i18nString name="sp_resp_critical_title">Kritická</i18nString>
+		<i18nString name="sp_resp_high_title">Vysoká</i18nString>
+		<i18nString name="sp_resp_medium_title">Stredná</i18nString>
+		<i18nString name="sp_resp_low_title">Nízka</i18nString>
+		<i18nString name="sp_res_critical_title">Kritická</i18nString>
+		<i18nString name="sp_res_high_title">Vysoká</i18nString>
+		<i18nString name="sp_res_medium_title">Stredná</i18nString>
+		<i18nString name="sp_res_low_title">Nízka</i18nString>
+		<i18nString name="sp_work_from_title">Pracovný čas od (hodina)</i18nString>
+		<i18nString name="sp_work_to_title">Pracovný čas do (hodina)</i18nString>
+		<i18nString name="sp_work_desc">Pondelok až piatok. Sviatky zatiaľ nie sú zohľadnené.</i18nString>
+		<i18nString name="sp_autoclose_days_title">Vyriešený tiket sa zatvorí po (pracovné dni)</i18nString>
+		<i18nString name="sp_draft_hours_title">Neodoslaný koncept sa zmaže po (hodiny)</i18nString>
+		<i18nString name="sp_max_accounts_title">Počet účtov klienta</i18nString>
+		<i18nString name="sp_max_agents_title">Počet priradených agentov</i18nString>
+		<i18nString name="sp_note_title">Poznámka</i18nString>
+		<i18nString name="t_plan_label">SLA plán</i18nString>
+	</i18n>
+	<icon>timer</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Predajny balicek Service Desku: casy reakcie a vyriesenia pre kazdu
+		prioritu, pracovny cas a limity (ucty klienta, pocet agentov). To je
+		to, za co klient plati.
+
+		Organizacia si plan vyberie (`org_plan` v sd_organization) a limity
+		mu moze prepisat. Tiket si pri podani cisla SKOPIRUJE - zmena planu
+		teda neprepise terminy uz podanych tiketov.
+
+		Plany spravuje len `sd_admin`. Agent ani zakaznik ich nevidia.
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>plan_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+changeCaseProperty("title").about { ((useCase.visualId ?: "New SLA plan") as String) }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<roleRef>
+		<id>sd_admin</id>
+		<caseLogic>
+			<create>true</create>
+			<view>true</view>
+			<delete>true</delete>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>sd_admin</id>
+		<title name="sd_admin_title">Service Desk admin</title>
+	</role>
+	<data type="i18n">
+		<id>div_plan</id>
+		<title/>
+		<init name="div_plan_init">Plan</init>
+	</data>
+	<data type="i18n">
+		<id>div_response</id>
+		<title/>
+		<init name="div_response_init">First response - working hours</init>
+	</data>
+	<data type="i18n">
+		<id>div_resolution</id>
+		<title/>
+		<init name="div_resolution_init">Resolution - working hours</init>
+	</data>
+	<data type="i18n">
+		<id>div_hours</id>
+		<title/>
+		<init name="div_hours_init">Working time and deadlines</init>
+	</data>
+	<data type="i18n">
+		<id>div_limits</id>
+		<title/>
+		<init name="div_limits_init">Limits the client pays for</init>
+	</data>
+	<data type="text" immediate="true">
+		<id>sp_name</id>
+		<title name="sp_name_title">Plan name</title>
+		<event type="set">
+			<id>sp_name_set</id>
+			<actions phase="post">
+				<action id="2"><![CDATA[
+sp_name: f.sp_name;
+
+def n = ((sp_name.value ?: "") as String).trim()
+if (n) {
+    changeCaseProperty("title").about { n }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+	<data type="text" immediate="true">
+		<id>sp_code</id>
+		<title name="sp_code_title">Code</title>
+	</data>
+	<data type="boolean" immediate="true">
+		<id>sp_active</id>
+		<title name="sp_active_title">On offer</title>
+		<desc name="sp_active_desc">An inactive plan cannot be given to a new organization. Organizations that have it keep it.</desc>
+		<init>true</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sp_resp_critical</id>
+		<title name="sp_resp_critical_title">Critical</title>
+		<init>1</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sp_resp_high</id>
+		<title name="sp_resp_high_title">High</title>
+		<init>2</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sp_resp_medium</id>
+		<title name="sp_resp_medium_title">Medium</title>
+		<init>4</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sp_resp_low</id>
+		<title name="sp_resp_low_title">Low</title>
+		<init>8</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sp_res_critical</id>
+		<title name="sp_res_critical_title">Critical</title>
+		<init>8</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sp_res_high</id>
+		<title name="sp_res_high_title">High</title>
+		<init>16</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sp_res_medium</id>
+		<title name="sp_res_medium_title">Medium</title>
+		<init>40</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sp_res_low</id>
+		<title name="sp_res_low_title">Low</title>
+		<init>80</init>
+	</data>
+	<data type="number">
+		<id>sp_work_from</id>
+		<title name="sp_work_from_title">Working time from (hour)</title>
+		<desc name="sp_work_desc">Monday to Friday. Public holidays are not taken into account yet.</desc>
+		<init>8</init>
+	</data>
+	<data type="number">
+		<id>sp_work_to</id>
+		<title name="sp_work_to_title">Working time to (hour)</title>
+		<desc name="sp_work_desc">Monday to Friday. Public holidays are not taken into account yet.</desc>
+		<init>16</init>
+	</data>
+	<data type="number">
+		<id>sp_autoclose_days</id>
+		<title name="sp_autoclose_days_title">Resolved ticket closes after (working days)</title>
+		<init>5</init>
+	</data>
+	<data type="number">
+		<id>sp_draft_hours</id>
+		<title name="sp_draft_hours_title">Unsent draft is deleted after (hours)</title>
+		<init>24</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sp_max_accounts</id>
+		<title name="sp_max_accounts_title">Client accounts</title>
+		<init>10</init>
+	</data>
+	<data type="number" immediate="true">
+		<id>sp_max_agents</id>
+		<title name="sp_max_agents_title">Assigned agents</title>
+		<init>2</init>
+	</data>
+	<data type="text">
+		<id>sp_note</id>
+		<title name="sp_note_title">Note</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<transition>
+		<id>t_plan</id>
+		<x>140</x>
+		<y>80</y>
+		<label name="t_plan_label">SLA plan</label>
+		<icon>timer</icon>
+		<!-- `manual`: plan spravuje ktorykolvek admin, nie ten, kto ho zalozil (B21). -->
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>sd_admin</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_plan</id>
+			<cols>4</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>div_plan</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sp_name</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_code</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_active</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>1</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_response</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sp_resp_critical</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_resp_high</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>1</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_resp_medium</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_resp_low</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_resolution</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sp_res_critical</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_res_high</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>1</x><y>5</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_res_medium</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>2</x><y>5</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_res_low</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>5</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_hours</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sp_work_from</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_work_to</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>1</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_autoclose_days</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>2</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_draft_hours</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>3</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_limits</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>sp_max_accounts</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_max_agents</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>2</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_note</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>2</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+		<event type="finish">
+			<id>t_plan_finish</id>
+			<actions phase="pre">
+				<action id="3"><![CDATA[
+sp_name: f.sp_name, sp_work_from: f.sp_work_from, sp_work_to: f.sp_work_to;
+
+if (!((sp_name.value ?: "") as String).trim()) {
+    throw new java.lang.IllegalStateException("Fill in the plan name.")
+}
+def od = (sp_work_from.value ?: 0) as Number
+def po = (sp_work_to.value ?: 0) as Number
+if (od < 0 || po > 24 || od >= po) {
+    throw new java.lang.IllegalStateException("Working time must be a range of hours between 0 and 24, for example 8 to 16.")
+}
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<place>
+		<id>p_alive</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Alive</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_plan</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_plan</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

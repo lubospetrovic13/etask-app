@@ -2,7 +2,7 @@
 	<id>it/service_desk/sd_menu</id>
 	<version>1.0.0</version>
 	<initials>SDM</initials>
-	<title name="net_title">Menu Service Desku</title>
+	<title name="net_title">Service Desk menu</title>
 
 	<!--
 		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
@@ -10,10 +10,10 @@
 		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
 		a nikdy sa nepouzije (ENGINE_ISSUES E15).
 	-->
-	<i18n locale="en">
-		<i18nString name="net_title">Service Desk menu</i18nString>
-		<i18nString name="podpora_title">Support staff</i18nString>
-		<i18nString name="t_menu_label">Menu state</i18nString>
+	<i18n locale="sk">
+		<i18nString name="net_title">Menu Service Desku</i18nString>
+		<i18nString name="sd_admin_title">Správca Service Desku</i18nString>
+		<i18nString name="t_menu_label">Stav menu</i18nString>
 	</i18n>
 	<icon>menu</icon>
 	<defaultRole>false</defaultRole>
@@ -24,16 +24,17 @@
 		(`allowed_roles` na polozke - poriadok v menu, nie bezpecnostna hranica;
 		tou su opravnenia v sietiach):
 
-		  zakaznik   Podanie poziadavky, Moje poziadavky
-		  podpora    Poziadavky na prevzatie, v rieseni, vsetky; Firmy zakaznikov
+		  sd_customer  Create New Ticket, My Tickets, Company Tickets
+		  sd_agent     Triage, Tickets in progress, All Tickets, My Organizations
+		  sd_admin     Triage, Tickets in progress, All Tickets, Organizations, SLA Plans
 
 		Akcia je v udalosti `create` a manifest ma pre tuto siet
 		`rebuildOnNewVersion`, takze bezi raz za kazdu novu verziu tejto siete.
-		Okrem menu tu preto zije aj ZOSULADENIE ROLI ZAKAZNIKOV: rola ma
-		stringId razene per verziu siete, a zakaznik, ktoremu ju pridelila
-		sd_firma na starej verzii sd_ticket, ju na novej nema - polozky menu mu
-		zmiznu a "+" vrati 403. Tu sa rola `zakaznik` dorovna vsetkym ludom
-		vsetkych firiem.
+		Okrem menu tu preto zije aj ZOSULADENIE ROLI: rola ma stringId razene
+		per verziu siete, a clovek, ktoremu ju pridelila sd_organization na
+		starej verzii sd_ticket, ju na novej nema - polozky menu mu zmiznu
+		a "+" vrati 403. Tu sa `sd_customer` a `sd_agent` dorovnaju vsetkym
+		ludom a agentom vsetkych organizacii.
 
 		Vzory nizsie su z pfnew skeletu a kazdy je tam kvoli pasci:
 		  * `createOrUpdateMenuItem` s DEVIATIMI argumentmi (pri osmich vyhra
@@ -53,49 +54,73 @@ def unchanged = []
 def failed = []
 
 def uri = "it/service_desk"
-def tiket = "it/service_desk/sd_ticket"
-def firma = "it/service_desk/sd_firma"
-def tikety = "processIdentifier:\"" + tiket + "\""
-def stav = { List kluce -> tikety + " AND dataSet.tk_stav.keyValue:(" + kluce.collect { "\"" + it + "\"" }.join(" OR ") + ")" }
-def pre_zakaznika = ["zakaznik": tiket]
-def pre_podporu = ["podpora": tiket]
-def t = { String pole -> tiket + "-" + pole }
+def ticket = "it/service_desk/sd_ticket"
+def org = "it/service_desk/sd_organization"
+def plan = "it/service_desk/sd_sla_plan"
+def tickets = "processIdentifier:\"" + ticket + "\""
+def status = { List keys -> tickets + " AND dataSet.tk_status.keyValue:(" + keys.collect { "\"" + it + "\"" }.join(" OR ") + ")" }
+// Task zobrazenie: task dokument nema processIdentifier, a processId sa razi
+// per verziu siete - transitionId je v tejto appke jedinecny (RUNBOOK 11).
+def task = { String transition -> "transitionId:\"" + transition + "\"" }
+def customer = ["sd_customer": ticket]
+def agent = ["sd_agent": ticket]
+def admin = ["sd_admin": ticket]
+def staff = ["sd_agent": ticket, "sd_admin": ticket]
+def c = { String field -> ticket + "-" + field }
+def open = ["new", "in_progress", "waiting", "resolved"]
 
 def views = [
-        // "+" v tomto zobrazeni zalozi poziadavku a rovno ju otvori.
-        // V zozname su len rozpisane - podane su v "Moje poziadavky".
-        [id: "sd_podanie", name: i18n("Podanie požiadavky", ["en": "Submit a request"]),
-         type: "Case", icon: "add_comment", query: stav(["rozpisana"]),
-         nets: [tiket], roles: pre_zakaznika,
-         headers: "meta-title," + t("tk_typ") + ",meta-creationDate"],
-        // Svoje AJ firemne: viditelnost dava userRef `tk_firma_ludia`, takze
-        // dopyt netreba zuzovat na cloveka. Stlpec "Podal" ich odlisi.
-        [id: "sd_moje", name: i18n("Moje požiadavky", ["en": "My requests"]),
-         type: "Case", icon: "inbox", query: stav(["nova", "v_rieseni", "caka", "vyriesena"]),
-         nets: [tiket], roles: pre_zakaznika,
-         headers: "meta-title," + t("tk_stav") + "," + t("tk_podal") + "," + t("tk_podane_o") + "," + t("tk_riesitel")],
-        [id: "sd_na_prevzatie", name: i18n("Požiadavky na prevzatie", ["en": "Requests to pick up"]),
-         type: "Case", icon: "move_to_inbox", query: stav(["nova"]),
-         nets: [tiket], roles: pre_podporu,
-         headers: "meta-title," + t("tk_firma_nazov") + "," + t("tk_priorita") + "," + t("sla_termin") + "," + t("tk_podal")],
-        [id: "sd_v_rieseni", name: i18n("Požiadavky v riešení", ["en": "Requests in progress"]),
-         type: "Case", icon: "pending_actions", query: stav(["v_rieseni", "caka"]),
-         nets: [tiket], roles: pre_podporu,
-         headers: "meta-title," + t("tk_stav") + "," + t("tk_firma_nazov") + "," + t("tk_riesitel") + "," + t("tk_priorita")],
-        [id: "sd_vsetky", name: i18n("Všetky požiadavky podpory", ["en": "All support requests"]),
-         type: "Case", icon: "confirmation_number", query: stav(["nova", "v_rieseni", "caka", "vyriesena"]),
-         nets: [tiket], roles: pre_podporu,
-         headers: "meta-title," + t("tk_stav") + "," + t("tk_firma_nazov") + "," + t("tk_podal") + "," + t("tk_podane_o")],
-        [id: "sd_firmy", name: i18n("Firmy zákazníkov", ["en": "Customer companies"]),
-         type: "Case", icon: "domain", query: "processIdentifier:\"" + firma + "\"",
-         nets: [firma], roles: pre_podporu,
-         headers: "meta-title," + firma + "-f_kod," + firma + "-f_aktivna," + firma + "-f_pocet"],
+        // ZAKAZNIK
+        // "+" zalozi tiket a rovno ho otvori. V zozname su len koncepty -
+        // odoslane su v "My Tickets".
+        [id: "sd_new_ticket", name: i18n("Create New Ticket", ["sk": "Nový tiket"]),
+         type: "Case", icon: "add_comment", query: status(["draft"]),
+         nets: [ticket], roles: customer,
+         headers: "meta-title," + c("tk_type") + ",meta-creationDate"],
+        // Len vlastne: ulohu t_my ma iba autor. Case dopyt na prihlaseneho
+        // cloveka sa napisat neda (filter nema <<me>>).
+        [id: "sd_my_tickets", name: i18n("My Tickets", ["sk": "Moje tikety"]),
+         type: "Task", icon: "inbox", query: task("t_my"),
+         nets: [ticket], roles: customer, headers: null],
+        // Svoje AJ firemne: viditelnost dava userRef, stlpec "Reported by" ich odlisi.
+        [id: "sd_company_tickets", name: i18n("Company Tickets", ["sk": "Tikety organizácie"]),
+         type: "Case", icon: "corporate_fare", query: status(open + ["closed", "rejected"]),
+         nets: [ticket], roles: customer,
+         headers: "meta-title," + c("tk_status") + "," + c("tk_reporter_name") + "," + c("tk_submitted_at") + "," + c("tk_responder")],
+
+        // AGENT a ADMIN
+        // Ulohu t_accept vidia len agenti organizacie tiketu (userRef) a admin.
+        [id: "sd_triage", name: i18n("Triage", ["sk": "Nové na prevzatie"]),
+         type: "Task", icon: "move_to_inbox", query: task("t_accept"),
+         nets: [ticket], roles: staff, headers: null],
+        [id: "sd_in_progress", name: i18n("Tickets in progress", ["sk": "Tikety v riešení"]),
+         type: "Case", icon: "pending_actions", query: status(["in_progress", "waiting"]),
+         nets: [ticket], roles: staff,
+         headers: "meta-title," + c("tk_status") + "," + c("tk_org_name") + "," + c("tk_priority") + "," + c("sla_resolution_due") + "," + c("tk_responder")],
+        [id: "sd_all_tickets", name: i18n("All Tickets", ["sk": "Všetky tikety"]),
+         type: "Case", icon: "confirmation_number", query: status(open + ["closed", "rejected"]),
+         nets: [ticket], roles: staff,
+         headers: "meta-title," + c("tk_status") + "," + c("tk_org_name") + "," + c("tk_priority") + "," + c("sla_response_met") + "," + c("sla_resolution_met")],
+        [id: "sd_my_organizations", name: i18n("My Organizations", ["sk": "Moje organizácie"]),
+         type: "Case", icon: "domain", query: "processIdentifier:\"" + org + "\"",
+         nets: [org], roles: agent,
+         headers: "meta-title," + org + "-org_code," + org + "-org_usage"],
+
+        // ADMIN
+        [id: "sd_organizations", name: i18n("Organizations", ["sk": "Organizácie"]),
+         type: "Case", icon: "domain", query: "processIdentifier:\"" + org + "\"",
+         nets: [org], roles: admin,
+         headers: "meta-title," + org + "-org_code," + org + "-org_active," + org + "-org_plan," + org + "-org_usage"],
+        [id: "sd_sla_plans", name: i18n("SLA Plans", ["sk": "SLA plány"]),
+         type: "Case", icon: "timer", query: "processIdentifier:\"" + plan + "\"",
+         nets: [plan], roles: admin,
+         headers: "meta-title," + plan + "-sp_code," + plan + "-sp_active," + plan + "-sp_max_accounts," + plan + "-sp_max_agents"],
 ]
 
-// Polozky predoslej verzie Service Desku (verejny formular, pracovne ulohy,
-// register zakaznikov). Vyhodenie z tejto siete ich NEZMAZE - polozky su
-// pripady `preference_filter_item` a v bezacej instancii by zostali navzdy.
-def zastarane = ["sd_tickets", "sd_my_work", "sd_customers", "sd_submissions", "sd_new_request"]
+// Polozky predoslych verzii Service Desku. Vyhodenie z tejto siete ich
+// NEZMAZE - polozky su pripady `preference_filter_item`.
+def zastarane = ["sd_tickets", "sd_my_work", "sd_customers", "sd_submissions", "sd_new_request",
+                 "sd_podanie", "sd_moje", "sd_na_prevzatie", "sd_v_rieseni", "sd_vsetky", "sd_firmy"]
 def zmazane = []
 zastarane.each { id ->
     try {
@@ -162,24 +187,27 @@ views.each { v ->
     }
 }
 
-// Zosuladenie roly `zakaznik` - viz komentar v hlavicke.
+// Zosuladenie roli ludi a agentov organizacii - viz komentar v hlavicke.
 int roly = 0
 try {
-    findCases { it.processIdentifier.eq(firma) }.each { f ->
-        userIdsOf(f.dataSet["f_clenovia"]?.value).each { uid ->
-            if (setProcessRole(uid as String, "zakaznik", tiket, "", true)) roly++
+    findCases { it.processIdentifier.eq(org) }.each { o ->
+        userIdsOf(o.dataSet["org_members"]?.value).each { uid ->
+            if (setProcessRole(uid as String, "sd_customer", ticket, "", true)) roly++
+        }
+        userIdsOf(o.dataSet["org_agents"]?.value).each { uid ->
+            if (setProcessRole(uid as String, "sd_agent", ticket, "", true)) roly++
         }
     }
 } catch (Exception e) {
-    failed << ("customer roles (" + e.getClass().simpleName + ": " + e.message + ")")
+    failed << ("roles (" + e.getClass().simpleName + ": " + e.message + ")")
 }
 
 // Vysledok do nazvu casu: po createFilterInMenu sa zapis do vlastneho casu
 // neuchova, changeCaseProperty prezije.
-def summary = "Menu Service Desku – " + (created.size() + unchanged.size()) + "/" + views.size() +
-        ", roly zákazníkov: " + roly + (zmazane ? (", zmazané staré: " + zmazane.size()) : "")
+def summary = "Service Desk menu - " + (created.size() + unchanged.size()) + "/" + views.size() +
+        ", roles: " + roly + (zmazane ? (", old removed: " + zmazane.size()) : "")
 if (failed) {
-    summary = "CHYBA menu Service Desku – nepodarilo sa: " + failed.join(", ")
+    summary = "ERROR Service Desk menu - failed: " + failed.join(", ")
 }
 changeCaseProperty("title").about { summary }
 				]]></action>
@@ -217,24 +245,24 @@ changeCaseProperty("title").about { summary }
 }
 	]]></function>
 	<roleRef>
-		<id>podpora</id>
+		<id>sd_admin</id>
 		<caseLogic>
 			<view>true</view>
 		</caseLogic>
 	</roleRef>
 	<role>
-		<id>podpora</id>
-		<title name="podpora_title">Zamestnanec podpory</title>
+		<id>sd_admin</id>
+		<title name="sd_admin_title">Service Desk admin</title>
 	</role>
 	<transition>
 		<id>t_menu</id>
 		<x>112</x>
 		<y>80</y>
-		<label name="t_menu_label">Stav menu</label>
+		<label name="t_menu_label">Menu state</label>
 		<icon>menu</icon>
 		<assignPolicy>manual</assignPolicy>
 		<roleRef>
-			<id>podpora</id>
+			<id>sd_admin</id>
 			<logic>
 				<perform>true</perform>
 			</logic>
@@ -244,7 +272,7 @@ changeCaseProperty("title").about { summary }
 		<id>p_alive</id>
 		<x>32</x>
 		<y>80</y>
-		<label>Živé</label>
+		<label>Alive</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>

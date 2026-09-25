@@ -10,9 +10,11 @@ The database, the REST layer, the frontend, login, IAM, roles and permissions ar
 here and already work. What you add is the **business logic**: Petriflow nets. The
 framework is around 5 500 lines, the nets around 9 700, and that ratio is the point.
 
-This is the repository behind the recorded demo where one Word document from the business
-("onboarding a new employee") became a running agenda in the portal. The nets that came out
-of it are `etask-configuration/processes/on_request.xml` and `on_menu.xml`.
+This branch holds one application only: a **Service Desk**. A service desk admin sets up
+client organisations and their SLA, invites the client's people, and assigns employees to
+each organisation. Customers raise tickets from a single form and follow them; employees
+triage and answer them. The nets live in `etask-configuration/processes/sd_*.xml` and the
+design is in `docs/SERVICE_DESK.md`.
 
 ---
 
@@ -52,18 +54,17 @@ the failure looks like a hang rather than a memory problem.
 
 Sign in as `super@netgrif.com` / `password`.
 
-Then prove it rather than assume it. This walks the whole onboarding path against the
-running engine, raising a request, having it sent back, completed, approved, and the three
-accounts ticked off, and it checks the rules that cannot be seen in the XML: that only the
-one chosen manager can approve, that nothing is created before approval, and that a
-returned request continues as the same case.
+Then prove it rather than assume it. This walks the whole Service Desk path against the
+running engine: an organisation is created, a customer is invited through a real e-mail in
+mailpit, raises a ticket, a colleague sees it and a stranger does not, and support takes it
+to resolution.
 
 ```bash
-cd etask-configuration && python3 tools/oncheck.py
+cd etask-configuration && python3 tools/sdcheck.py
 ```
 
 It prints one line per check and a count at the end. If that passes, the platform and the
-agenda both work on your machine.
+Service Desk both work on your machine.
 
 ```bash
 etask-configuration/tools/up.sh --docker --stop     # stop, keep the data
@@ -249,16 +250,12 @@ Python scripts.
 
 ### A good first prompt
 
-Give it a real request rather than a technical instruction. The demo used a Word document
-handed over unedited, typo included:
+> Read `docs/SERVICE_DESK.md` and `CLAUDE.md`, use the `petriflow` skill, and add the next
+> thing the Service Desk needs. Verify with `pflint` and `sdcheck` against the running
+> engine before you tell me it works.
 
-> Read `docs/examples/app-request-onboarding.md` and build the agenda it describes as
-> Petriflow nets. Follow `CLAUDE.md` and use the `petriflow` skill. Verify with `pflint`
-> and `pfcheck` against the running engine before you tell me it works.
-
-That file is the demo input, kept in the repository so the run can be replayed. What came
-out of it the first time is described in `docs/ONBOARDING.md`, so you can compare. Start the
-stack first: without a running engine the agent can write a net but cannot prove it imports.
+Start the stack first: without a running engine the agent can write a net but cannot prove
+it imports.
 
 **The documentation is largely in Slovak.** `CLAUDE.md`, the runbook and the Petriflow skill
 are Slovak; the code, the net IDs and the tooling are not. Assistants read it without
