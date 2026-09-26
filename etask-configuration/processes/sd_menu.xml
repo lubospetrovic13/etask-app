@@ -1,6 +1,6 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
 	<id>it/service_desk/sd_menu</id>
-	<version>6.0.0</version>
+	<version>7.0.0</version>
 	<initials>SDM</initials>
 	<title name="net_title">Service Desk menu</title>
 
@@ -36,7 +36,8 @@
 		`sp_draft_hours` planu organizacie autora (inak 24 h). Formular
 		opusteny zatvorenim okna uvolnenie ulohy nestihne - toto je poistka.
 		Kazda verzia tejto siete ma svoj case a svoj upratovac; zmazanie uz
-		zmazaneho je neskodne. Su to dva striedajuce sa prechody (t_janitor,
+		zmazaneho je neskodne. Ten isty cyklus dorovnava stav zmluv o SLA
+		cakajucich na podpis v DocuSeale (`check_contracts`). Su to dva striedajuce sa prechody (t_janitor,
 		t_janitor_b): slucka jedneho prechodu do vlastneho miesta vystreli
 		len raz, engine ulohu recykluje bez noveho casovaca (sd_ticket, t_tick).
 
@@ -266,6 +267,30 @@ changeCaseProperty("title").about { summary }
     }
 }
 	]]></function>
+	<function scope="process" name="check_contracts"><![CDATA[
+{ ->
+    // Zmluvy o SLA, ktore cakaju na podpis: stav z DocuSealu do organizacie.
+    // Bez tokenu nerobi nic - podpis je vypnuty a organizacia to povie sama.
+    if (!podpisDostupny()) return
+    def org = "it/service_desk/sd_organization"
+    findCases { it.processIdentifier.eq(org) }.each { o ->
+        if (((o.dataSet["org_sign_status"]?.value ?: "") as String) != "sent") return
+        def s = stavPodpisu(o.dataSet["org_sign_submission"]?.value)
+        if (!s?.ok) return
+        def mine = ["completed": "signed", "declined": "declined", "expired": "expired"][(s.status ?: "") as String]
+        if (!mine) return
+        def payload = ["org_sign_status": ["value": mine, "type": "enumeration_map"]]
+        if (s.documentUrl) payload["org_sign_document"] = ["value": s.documentUrl as String, "type": "text"]
+        // Datum podpisu nie: setData s dateTime v 6.3.1 pada (ENGINE_ISSUES E24).
+        // Doplni ho tlacidlo "Check signature" v organizacii.
+        try {
+            setData("t_org", o, payload)
+        } catch (Exception e) {
+            // Dalsia hodina to skusi znova.
+        }
+    }
+}
+	]]></function>
 	<function scope="process" name="nastav_zobrazenie"><![CDATA[
 { def menuItem, def nets, def headers ->
     // `enable_case_title`  - vypnuty dialog "Vyplnte nazov pripadu" pri "+";
@@ -344,6 +369,7 @@ changeCaseProperty("title").about { summary }
 			<actions phase="pre">
 				<action id="2"><![CDATA[
 clean_drafts()
+check_contracts()
 				]]></action>
 			</actions>
 		</event>
@@ -368,6 +394,7 @@ clean_drafts()
 			<actions phase="pre">
 				<action id="3"><![CDATA[
 clean_drafts()
+check_contracts()
 				]]></action>
 			</actions>
 		</event>

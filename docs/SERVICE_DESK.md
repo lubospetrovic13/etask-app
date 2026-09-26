@@ -4,7 +4,7 @@
 priradený k jeho organizácii, organizácie a SLA plány spravuje **správca**.
 Zákazníka ani agenta nikto nezakladá ručne: správca ho pridá do organizácie
 a tým mu príde pozvánka. Overené za behu na Netgrif AE 6.3.1 —
-`tools/sdcheck.py`, 110 kontrol na čistej databáze.
+`tools/sdcheck.py`, 112 kontrol na čistej databáze.
 
 Appka je v angličtine, slovenčina je druhý jazyk (`<i18n locale="sk">`
 v každej sieti, prepínač v portáli).
@@ -53,6 +53,37 @@ organizácie.
 Človek patrí **najviac do jednej organizácie** a nemôže byť zároveň agent.
 Každá zmena ľudí alebo agentov sa **kaskáduje** do existujúcich tiketov
 (`recompute_tickets` → `setData("t_detail", …)`).
+
+## Zmluva o SLA – elektronický podpis
+
+Organizácia má sekciu *Contract*: admin zadá podpisujúceho klienta a
+*Send contract for signature* pošle **šablónu zmluvy z SLA plánu**
+(`sp_contract_template`) na podpis cez **DocuSeal** (http://localhost:3002,
+v Docker stacku). Stav (`org_sign_status`: none → sent → signed / declined /
+expired) dorovná tlačidlo *Check signature* a raz za hodinu upratovač
+v `sd_menu`. Podpísaný dokument je odkaz v `org_sign_document`.
+
+Prečo DocuSeal, nie OpenSign: free self-hosted OpenSign **nemá API token**,
+takže by sa zmluva z appky poslať nedala. Open-source DocuSeal API má, ale
+podpis vie založiť len zo **šablóny** (`POST /api/submissions`); z PDF či
+HTML je to Pro funkcia. Preto šablónu raz pripraví človek.
+
+Primitíva v delegáte: `podpisDostupny()`, `poslatNaPodpis(sablona, email,
+meno, rola, hodnoty, sprava)`, `stavPodpisu(id)` (`sign/SignService`). Polia
+šablóny sa predvyplnia len keď v nej sú (Organization, Code, Plan, SLA,
+Name) — zistí sa to z `GET /api/templates/{id}`.
+
+Nastavenie (raz, robí to človek):
+
+1. http://localhost:3002 → založiť admin účet DocuSealu,
+2. *Settings → API* → token do `deploy/.env`: `DOCUSEAL_API_TOKEN=...`,
+3. *Templates* → nahrať PDF zmluvy, pole podpisu pre rolu **Client**
+   (voliteľne textové polia Organization, Code, Plan), id šablóny zadať do
+   SLA plánu,
+4. `tools/up.sh --docker` — backend si token načíta pri štarte.
+
+Bez tokenu organizácia povie „Signing is not configured" a beží ďalej.
+E-maily s odkazom na podpis idú do mailpitu.
 
 ## Kto čo vidí
 

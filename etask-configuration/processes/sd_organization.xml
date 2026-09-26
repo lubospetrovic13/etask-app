@@ -1,6 +1,6 @@
 <document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
 	<id>it/service_desk/sd_organization</id>
-	<version>1.0.0</version>
+	<version>3.0.0</version>
 	<initials>SDO</initials>
 	<title name="net_title">Organization</title>
 
@@ -52,6 +52,21 @@
 		<i18nString name="org_history_title">História (najnovšie navrchu)</i18nString>
 		<i18nString name="t_org_label">Organizácia</i18nString>
 		<i18nString name="t_org_view_label">Moja organizácia</i18nString>
+		<i18nString name="div_sign_init">Zmluva o SLA – elektronický podpis</i18nString>
+		<i18nString name="org_signer_email_title">E-mail podpisujúceho</i18nString>
+		<i18nString name="org_signer_email_desc">Kto za klienta zmluvu podpíše. Príde mu e-mail z DocuSealu.</i18nString>
+		<i18nString name="org_signer_name_title">Meno podpisujúceho</i18nString>
+		<i18nString name="btn_send_contract_placeholder">Poslať zmluvu na podpis</i18nString>
+		<i18nString name="btn_check_sign_placeholder">Skontrolovať podpis</i18nString>
+		<i18nString name="org_sign_status_title">Stav zmluvy</i18nString>
+		<i18nString name="org_sign_status_opt_none">Neodoslaná</i18nString>
+		<i18nString name="org_sign_status_opt_sent">Čaká na podpis</i18nString>
+		<i18nString name="org_sign_status_opt_signed">Podpísaná</i18nString>
+		<i18nString name="org_sign_status_opt_declined">Odmietnutá</i18nString>
+		<i18nString name="org_sign_status_opt_expired">Vypršala</i18nString>
+		<i18nString name="org_sign_submission_title">Podpis v DocuSeale (id)</i18nString>
+		<i18nString name="org_sign_document_title">Podpísaný dokument</i18nString>
+		<i18nString name="org_signed_at_title">Podpísané</i18nString>
 	</i18n>
 	<icon>domain</icon>
 	<defaultRole>false</defaultRole>
@@ -84,6 +99,11 @@
 		Rola ma stringId per verziu siete: po re-importe sd_ticket ju ludia
 		na novej verzii nemaju. Zosuladuje tlacidlo "Refresh" a sd_menu.
 		Viditelnost tiketov je cez userRef, a ten re-import prezije.
+
+		ZMLUVA. Tlacidlo "Send contract" posle sablonu zmluvy z planu
+		(`sp_contract_template`) na elektronicky podpis cez DocuSeal
+		(`poslatNaPodpis` v delegate); stav sa dorovna tlacidlom "Check" a raz
+		za hodinu upratovacom v sd_menu (`stavPodpisu`).
 
 		Moznosti `org_plan` sa nastavuju v `assign` a pri obnove, nie v `create`
 		udalosti prípadu - tam by sa neuchovali (B11).
@@ -245,6 +265,19 @@ changeCaseProperty("title").about { ((useCase.visualId ?: "New organization") as
         }
     }
     return [ok: ok, errors: errors]
+}
+	]]></function>
+	<function scope="process" name="apply_sign"><![CDATA[
+{ def s, def org_sign_status, def org_sign_document, def org_signed_at ->
+    // Stav z DocuSealu do formulara. `s` je vysledok `stavPodpisu`.
+    if (!s?.ok) return
+    def st = (s.status ?: "") as String
+    def mine = ["completed": "signed", "declined": "declined", "expired": "expired"][st] ?: "sent"
+    change org_sign_status value { mine }
+    if (s.documentUrl) change org_sign_document value { s.documentUrl as String }
+    if (mine == "signed" && org_signed_at.value == null) {
+        change org_signed_at value { java.time.LocalDateTime.now() }
+    }
 }
 	]]></function>
 	<function scope="process" name="who"><![CDATA[
@@ -477,6 +510,56 @@ change org_history value {
 		<title/>
 		<placeholder name="btn_refresh_placeholder">Refresh accounts, plans and access</placeholder>
 		<init>1</init>
+	</data>
+	<data type="i18n">
+		<id>div_sign</id>
+		<title/>
+		<init name="div_sign_init">SLA contract - electronic signature</init>
+	</data>
+	<data type="text" immediate="true">
+		<id>org_signer_email</id>
+		<title name="org_signer_email_title">Signer e-mail</title>
+		<desc name="org_signer_email_desc">Who signs the contract for the client. They get an e-mail from DocuSeal.</desc>
+	</data>
+	<data type="text" immediate="true">
+		<id>org_signer_name</id>
+		<title name="org_signer_name_title">Signer name</title>
+	</data>
+	<data type="button">
+		<id>btn_send_contract</id>
+		<title/>
+		<placeholder name="btn_send_contract_placeholder">Send contract for signature</placeholder>
+		<init>1</init>
+	</data>
+	<data type="button">
+		<id>btn_check_sign</id>
+		<title/>
+		<placeholder name="btn_check_sign_placeholder">Check signature</placeholder>
+		<init>1</init>
+	</data>
+	<data type="enumeration_map" immediate="true">
+		<id>org_sign_status</id>
+		<title name="org_sign_status_title">Contract status</title>
+		<options>
+			<option key="none" name="org_sign_status_opt_none">Not sent</option>
+			<option key="sent" name="org_sign_status_opt_sent">Waiting for signature</option>
+			<option key="signed" name="org_sign_status_opt_signed">Signed</option>
+			<option key="declined" name="org_sign_status_opt_declined">Declined</option>
+			<option key="expired" name="org_sign_status_opt_expired">Expired</option>
+		</options>
+		<init>none</init>
+	</data>
+	<data type="text">
+		<id>org_sign_submission</id>
+		<title name="org_sign_submission_title">Signature in DocuSeal (id)</title>
+	</data>
+	<data type="text">
+		<id>org_sign_document</id>
+		<title name="org_sign_document_title">Signed document</title>
+	</data>
+	<data type="dateTime">
+		<id>org_signed_at</id>
+		<title name="org_signed_at_title">Signed</title>
 	</data>
 	<data type="text">
 		<id>org_result</id>
@@ -885,14 +968,120 @@ change org_result value {
 				</event>
 			</dataRef>
 			<dataRef>
+				<id>div_sign</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>22</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>org_signer_email</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>23</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_signer_name</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>23</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_sign_status</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>24</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_signed_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>24</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_sign_submission</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>4</x><y>24</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_sign_document</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>25</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_send_contract</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>26</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_send_contract_set</id>
+					<actions phase="pre">
+						<action id="11"><![CDATA[
+org_signer_email: f.org_signer_email, org_signer_name: f.org_signer_name, org_contact: f.org_contact,
+org_name: f.org_name, org_code: f.org_code, org_plan: f.org_plan, org_sla_summary: f.org_sla_summary,
+org_sign_status: f.org_sign_status, org_sign_submission: f.org_sign_submission,
+org_sign_document: f.org_sign_document, org_signed_at: f.org_signed_at,
+org_result: f.org_result, org_history: f.org_history;
+
+// Odmietnutie sa NEHADZE - veta vo formulari (rovnako ako pri pridani cloveka).
+def mail = ((org_signer_email.value ?: "") as String).trim()
+if (!is_email(mail)) {
+    change org_result value { "Fill in the signer e-mail first." }
+    return
+}
+if ((org_sign_status.value as String) == "signed") {
+    change org_result value { "The contract is already signed." }
+    return
+}
+def plan = plan_case(org_plan.value)
+if (plan == null) {
+    change org_result value { "Choose the SLA plan first - the contract is the plan's template." }
+    return
+}
+def signer = ((org_signer_name.value ?: org_contact.value ?: mail) as String).trim()
+def planName = ((plan.dataSet["sp_name"]?.value ?: plan.title) as String)
+def r = poslatNaPodpis(plan.dataSet["sp_contract_template"]?.value, mail, signer, "Client",
+        ["Organization": (org_name.value ?: "") as String, "Code": (org_code.value ?: "") as String,
+         "Plan": planName, "SLA": (org_sla_summary.value ?: "") as String, "Name": signer],
+        "Please sign the Service Desk contract for " + ((org_name.value ?: "") as String) + " (plan " + planName + ").")
+change org_result value { r.sprava as String }
+if (r.ok) {
+    change org_sign_submission value { r.submissionId as String }
+    change org_sign_status value { "sent" }
+    change org_sign_document value { "" }
+    change org_signed_at value { null }
+    change org_history value { log(org_history, "contract (" + planName + ") sent for signature to " + mail) }
+}
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
+				<id>btn_check_sign</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>26</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<event type="set">
+					<id>btn_check_sign_set</id>
+					<actions phase="pre">
+						<action id="12"><![CDATA[
+org_sign_status: f.org_sign_status, org_sign_submission: f.org_sign_submission,
+org_sign_document: f.org_sign_document, org_signed_at: f.org_signed_at,
+org_result: f.org_result, org_history: f.org_history;
+
+def before = org_sign_status.value as String
+def s = stavPodpisu(org_sign_submission.value)
+change org_result value { s.sprava as String }
+apply_sign(s, org_sign_status, org_sign_document, org_signed_at)
+if (s.ok && before != "signed" && (s.status as String) == "completed") {
+    change org_history value { log(org_history, "contract signed") }
+}
+						]]></action>
+					</actions>
+				</event>
+			</dataRef>
+			<dataRef>
 				<id>org_result</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>22</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>27</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>org_history</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>24</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>29</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 		</dataGroup>
 		<event type="assign">
@@ -972,6 +1161,16 @@ if (!((org_name.value ?: "") as String).trim()) {
 				<id>org_agent_list</id>
 				<logic><behavior>visible</behavior></logic>
 				<layout><x>3</x><y>4</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+					<dataRef>
+				<id>org_sign_status</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>org_signed_at</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 		</dataGroup>
 	</transition>

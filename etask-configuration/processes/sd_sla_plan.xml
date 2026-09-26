@@ -36,6 +36,8 @@
 		<i18nString name="sp_max_accounts_title">Počet účtov klienta</i18nString>
 		<i18nString name="sp_max_agents_title">Počet priradených agentov</i18nString>
 		<i18nString name="sp_note_title">Poznámka</i18nString>
+		<i18nString name="sp_contract_template_title">Šablóna zmluvy v DocuSeale (id)</i18nString>
+		<i18nString name="sp_contract_template_desc">Číslo šablóny z DocuSealu (http://localhost:3002, Templates). Podpisuje rola Client; polia Organization, Code a Plan sa predvyplnia.</i18nString>
 		<i18nString name="t_plan_label">SLA plán</i18nString>
 	</i18n>
 	<icon>timer</icon>
@@ -199,6 +201,11 @@ if (n) {
 		<title name="sp_max_agents_title">Assigned agents</title>
 		<init>2</init>
 	</data>
+	<data type="text" immediate="true">
+		<id>sp_contract_template</id>
+		<title name="sp_contract_template_title">Contract template in DocuSeal (id)</title>
+		<desc name="sp_contract_template_desc">Template number from DocuSeal (http://localhost:3002, Templates). The Client role signs; fields Organization, Code and Plan are prefilled.</desc>
+	</data>
 	<data type="text">
 		<id>sp_note</id>
 		<title name="sp_note_title">Note</title>
@@ -338,6 +345,11 @@ if (n) {
 				<id>sp_max_agents</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
 				<layout><x>2</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>sp_contract_template</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>sp_note</id>

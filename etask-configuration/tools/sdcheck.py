@@ -152,6 +152,15 @@ def main():
     pf.check("sumar planu nesie cas reakcie 'high 3 h'", "high 3 h" in (v.get("org_sla_summary") or ""),
              v.get("org_sla_summary"))
 
+    # Zmluva o SLA na podpis (DocuSeal). Bez DOCUSEAL_API_TOKEN to formular
+    # povie vetou; s tokenom a sablonou v plane by zmluva odisla.
+    v = press(boss, to, "btn_send_contract", {"org_signer_email": {"type": "text", "value": "signer@test.local"}})
+    res = v.get("org_result") or ""
+    pf.check("odoslanie zmluvy odpovie vetou (nie chybou)",
+             "not configured" in res or "no contract template" in res or "sent to" in res, res)
+    pf.check("bez uspechu zmluva ostava neodoslana",
+             v.get("org_sign_status") == ("sent" if "sent to" in res else "none"), v.get("org_sign_status"))
+
     v = press(boss, to, "btn_add", {"org_new_email": {"type": "text", "value": CUSTOMER}})
     pf.check("existujuci ucet dostal pristup bez pozvanky",
              "access granted" in (v.get("org_result") or ""), v.get("org_result"))
