@@ -1,24 +1,84 @@
-# eTask
+# Describe a business process. Your AI assistant turns it into a running app.
 
 [![Open in GitHub Codespaces](https://img.shields.io/badge/Open_in-GitHub_Codespaces-2497f2?logo=github&logoColor=white)](https://codespaces.new/lubospetrovic13/etask-app)
 [![Open in Dev Container](https://img.shields.io/badge/Open_in-Dev_Container-3abead?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect?url=vscode%3A%2F%2Fms-vscode-remote.remote-containers%2FcloneInVolume%3Furl%3Dhttps%3A%2F%2Fgithub.com%2Flubospetrovic13%2Fetask-app)
 [![Open in Claude Code](https://img.shields.io/badge/Open_in-Claude_Code-6038b2?logo=claude&logoColor=white)](#one-click-if-you-already-have-claude-code)
 
-A Petriflow-first application stack on top of the Netgrif Application Engine 6.3.1.
+**eTask** is a starter on the [Netgrif](https://netgrif.com) platform. Login, roles,
+permissions, forms, task lists, the portal and the database already run. Your AI assistant
+writes only the business process, as a Petriflow model, and it becomes a working
+application in the portal.
+
+![A Word request goes into the AI assistant and comes out as a running onboarding app](docs/media/demo.gif)
+
+<sub>A Word document from HR went in unedited. A few minutes later HR raises a request, the
+manager approves it and IT ticks off the accounts. [Full video](https://claude.ai/artifact/Nfms7SUMAAuejGeVf7aLnb)</sub>
+
+## 1. Start Netgrif
+
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and Git.
+
+```bash
+git clone https://github.com/lubospetrovic13/etask-app.git
+cd etask-app
+docker compose up -d
+```
+
+Or open the folder in **IntelliJ IDEA** or **VS Code**, open `compose.yaml` and click the
+green ▶ next to `services:`.
+
+The first start builds the images, which takes about ten minutes. After that it is under two.
+When `docker compose logs -f setup` prints `eTask is running`, open
+**http://localhost:4200** and sign in as `super@netgrif.com` / `password`.
+
+## 2. Describe your business problem
+
+Open the same folder in your AI assistant: Claude Code, Cursor, GitHub Copilot, Codex,
+Gemini CLI or Windsurf. The rules for the platform are already in the repository
+(`AGENTS.md`, `CLAUDE.md`), so there is nothing to configure. Then tell it what your business
+needs, the way you would tell a colleague:
+
+> We need an app for **[your process]**. **[Who]** starts it and fills in **[what]**.
+> **[Who]** approves it, and if they send it back, **[what happens]**. After approval
+> **[who]** does **[what]**. Everyone should see where each request is stuck.
+> Build it on this platform and prove it runs in the engine before you tell me it is done.
+
+A Word document, an e-mail or a diagram you already have works too. The one from the video
+is [`docs/examples/app-request-onboarding.md`](docs/examples/app-request-onboarding.md).
+
+## What it is good for
+
+**A good fit:** internal processes with people, steps and decisions. Requests and
+approvals, employee onboarding, orders and invoices, leave requests, complaints and claims,
+a service desk, asset records, case management. Anything that is today a spreadsheet, an
+e-mail thread or a shared folder with rules nobody wrote down.
+
+**Not a good fit:** consumer mobile apps, games, marketing websites, design-first custom UIs,
+real-time analytics or streaming data. The platform draws the screens from the process, so
+if the screen *is* the product, this is the wrong tool.
+
+**Licence:** the Community Edition is free and source-available, not open source. See
+[Licensing](#licensing).
+
+---
+
+## How it works
 
 The database, the REST layer, the frontend, login, IAM, roles and permissions are already
 here and already work. What you add is the **business logic**: Petriflow nets. The
 framework is around 5 500 lines, the nets around 9 700, and that ratio is the point.
 
-This is the repository behind the recorded demo where one Word document from the business
-("onboarding a new employee") became a running agenda in the portal. The nets that came out
-of it are `etask-configuration/processes/on_request.xml` and `on_menu.xml`.
+The nets that came out of the demo are `etask-configuration/processes/on_request.xml` and
+`on_menu.xml`.
 
 ---
 
-## Run it
+## Run it with the scripts
 
-Two ways. Pick the first unless you already have Java 11 on the machine.
+`docker compose up` above is the shortest path. `up.sh` does the same and more: it checks
+the ports before it builds anything, rebuilds the images when your sources are newer, and
+can stop, rebuild or wipe the stack. Two ways. Pick the first unless you already have Java
+11 on the machine.
 
 ### Everything in Docker (recommended)
 
