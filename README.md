@@ -54,10 +54,20 @@ is [`docs/examples/app-request-onboarding.md`](docs/examples/app-request-onboard
 
 ## What it is good for
 
-**A good fit:** internal processes with people, steps and decisions. Requests and
-approvals, employee onboarding, orders and invoices, leave requests, complaints and claims,
-a service desk, asset records, case management. Anything that is today a spreadsheet, an
-e-mail thread or a shared folder with rules nobody wrote down.
+**A good fit:** any process where people, steps, decisions and documents meet, inside a
+company or open to its customers and partners, from a single agenda up to the backbone of
+a whole organisation:
+
+- **Requests and approvals**, where someone asks, someone decides and everyone sees the state
+- **Case handling**, where a case moves through several teams until it is resolved
+- **Forms with a back office**, where a customer, citizen or partner fills in a form and staff process it
+- **Contracts and documents**, from intake and review to signature and archive
+- **Portals** for customers, partners or field staff, each seeing only their own work
+- **Service desks and ticketing**, with queues, deadlines and escalation
+- **Orchestration** of people and existing systems into one task list
+
+Anything that is today a spreadsheet, an e-mail thread or a shared folder with rules nobody
+wrote down is a candidate.
 
 **Not a good fit:** consumer mobile apps, games, marketing websites, design-first custom UIs,
 real-time analytics or streaming data. The platform draws the screens from the process, so
