@@ -6,14 +6,25 @@ nets in `processes/` and the acceptance test in `tools/oncheck.py`.
 
 Use it as a reference: ask your assistant to build the request yourself and compare.
 
-## Install it into your running instance
+**This example is active.** It is installed in `ai-config/` and appears in the portal as
+*Employee onboarding* right after `docker compose up`, with its roles already in
+`ai-config/seed.json`. Sign in as `operator@test.local` (HR) or `druhy@test.local` (manager and
+IT) with the test password to walk through it, and prove it works from `ai-config/`:
+
+```bash
+python3 tools/oncheck.py
+```
+
+## Installing it elsewhere
+
+In another checkout, or after `python3 tools/pfapp.py remove onboarding`:
 
 ```bash
 cd ai-config
 python3 tools/pfapp.py install ../examples/onboarding
 ```
 
-Then give the test users the three roles of the app. Add them to `ai-config/seed.json`:
+Then give the test users the three roles of the app in `ai-config/seed.json`:
 
 | user | roles |
 |---|---|

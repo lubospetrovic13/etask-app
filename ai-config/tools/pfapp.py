@@ -74,6 +74,7 @@ Exit 0 = hotovo (pri `status` aj "vsetko sedi"), 1 = chyba alebo rozdiel,
 """
 
 import argparse
+import os
 import json
 import shutil
 import sys
@@ -206,8 +207,15 @@ def install(src_arg, dry):
         seed.setdefault("netScope", []).extend(added_scope)
         save(SEED, seed)
 
+    # Zdroj vnutri repozitara (examples/) sa zapisuje relativne k ai-config/:
+    # apps-installed.json sa commituje a absolutna cesta by na inom stroji,
+    # alebo v kopii sablony, ukazovala do prazdna.
+    try:
+        source = os.path.relpath(src.resolve(), ROOT) if ROOT.parent in src.resolve().parents else str(src)
+    except ValueError:  # iny disk na Windows
+        source = str(src)
     installed[name] = {
-        "source": str(src),
+        "source": source.replace("\\", "/"),
         "title": app.get("title") or name,
         "processes": nets,
         "tools": tools,
@@ -454,6 +462,8 @@ def status():
     diffs = 0
     for name, rec in sorted(installed.items()):
         src = Path(rec.get("source", ""))
+        if not src.is_absolute():
+            src = ROOT / src
         print(f"{name}  ({rec.get('title')})")
         if not src.is_dir():
             print(f"  ! zdroj {src} nie je dostupny - porovnat sa neda")

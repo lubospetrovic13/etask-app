@@ -52,7 +52,9 @@
     "configuration_tiles.xml",
     "pu_pouzivatel.xml",
     "pu_zalozenie.xml",
-    "pu_menu.xml"
+    "pu_menu.xml",
+    "on_request.xml",
+    "on_menu.xml"
   ],
   "bootstrapCase": [
     {
@@ -62,6 +64,10 @@
     "admin/pouzivatelia/pu_zalozenie",
     {
       "net": "admin/pouzivatelia/pu_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "onboarding/on_menu",
       "rebuildOnNewVersion": true
     }
   ],
@@ -85,6 +91,15 @@
       "requiredAuthorities": [],
       "requiredProcessRoles": [
         "spravca"
+      ]
+    },
+    "onboarding": {
+      "icon": "how_to_reg",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "hr",
+        "approver",
+        "it_admin"
       ]
     }
   }

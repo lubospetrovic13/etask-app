@@ -47,10 +47,10 @@ nezobrazí vlastné polia a build o tom mlčí.
 ## Šablóna, nie nasadenie
 
 Repozitár drží platformu (`platform/`), AI konfiguráciu so sieťami
-(`ai-config/`) a správu používateľov. **Žiadnu príkladovú appku nemá
-nasadenú** — v `ai-config/processes/` je len to, čo potrebuje každá inštancia.
-Príklad z dema je v `examples/onboarding/` a nasadí sa `pfapp install`, rovnako
-ako klientske appky z vlastných repozitárov:
+(`ai-config/`) a správu používateľov. Nasadená je **jedna** ukážková appka, onboarding z dema
+(`examples/onboarding/`, v `ai-config/` cez `pfapp install`). Ďalšie príklady sú
+v `examples/` a nie sú aktívne; nasadia sa `pfapp install`, rovnako ako
+klientske appky z vlastných repozitárov:
 
 | appka | repozitár |
 |---|---|

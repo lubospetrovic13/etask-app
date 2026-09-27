@@ -1,0 +1,43 @@
+{
+  "_comment": [
+    "Manifest tejto aplikácie. Číta ho `pfapp.py` v starteri a zlúči ho do",
+    "`ai-config/processes.json` a `seed.json`.",
+    "",
+    "Formát je zámerne ten istý ako v manifeste starteru - `import`,",
+    "`bootstrapCase`, `uriNodes`, `netScope` - aby sa nemuselo prekladať medzi",
+    "dvoma tvarmi a aby sa dalo pochopiť bez čítania inštalátora.",
+    "",
+    "`bootstrapCase` s `rebuildOnNewVersion` je pre menu sieť: jej akcia je",
+    "v udalosti `create`, teda beží raz za prípad, a prípad si drží verziu",
+    "siete - bez nového prípadu by sa po re-importe zmena zobrazení nikdy",
+    "neprejavila.",
+    "",
+    "`roles` NIKOMU NEPRIDEĽUJEME. Kto má ktorú rolu dostať, je rozhodnutie",
+    "nasadenia, nie aplikácie. `netScope` tu je preto, aby `pfseed` vedel, že",
+    "role tejto aplikácie má spravovať - bez neho by nepridelil nič ani po tom,",
+    "čo si to niekto do `seed.json` dopíše, a to je presne ten druh ticha,",
+    "kvôli ktorému inštalácia vyzerá, že nefunguje."
+  ],
+  "name": "dovolenky",
+  "title": "Dovolenky",
+  "import": [
+    "dv_ziadost.xml",
+    "dv_menu.xml"
+  ],
+  "bootstrapCase": [
+    {"net": "dovolenky/dv_menu", "rebuildOnNewVersion": true}
+  ],
+  "uriNodes": {
+    "dovolenky": {
+      "icon": "beach_access",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": ["zamestnanec", "veduci"]
+    }
+  },
+  "netScope": [
+    "dovolenky/*"
+  ],
+  "tools": [
+    "dvcheck.py"
+  ]
+}

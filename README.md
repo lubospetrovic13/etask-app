@@ -1,7 +1,7 @@
 # Describe a business process. Your AI assistant turns it into a running app.
 
-[![Open in GitHub Codespaces](https://img.shields.io/badge/Open_in-GitHub_Codespaces-2497f2?logo=github&logoColor=white)](https://codespaces.new/netgrif/netgrif-ai-starter)
-[![Open in Dev Container](https://img.shields.io/badge/Open_in-Dev_Container-3abead?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect?url=vscode%3A%2F%2Fms-vscode-remote.remote-containers%2FcloneInVolume%3Furl%3Dhttps%3A%2F%2Fgithub.com%2Fnetgrif%2Fnetgrif-ai-starter)
+[![Open in GitHub Codespaces](https://img.shields.io/badge/Open_in-GitHub_Codespaces-2497f2?logo=github&logoColor=white)](https://codespaces.new/lubospetrovic13/netgrif-ai-starter)
+[![Open in Dev Container](https://img.shields.io/badge/Open_in-Dev_Container-3abead?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect?url=vscode%3A%2F%2Fms-vscode-remote.remote-containers%2FcloneInVolume%3Furl%3Dhttps%3A%2F%2Fgithub.com%2Flubospetrovic13%2Fnetgrif-ai-starter)
 [![Open in Claude Code](https://img.shields.io/badge/Open_in-Claude_Code-6038b2?logo=claude&logoColor=white)](docs/DEVELOPER.md#one-click-if-you-already-have-claude-code)
 
 **eTask** is a starter on the [Netgrif](https://netgrif.com) platform. Login, roles,
@@ -16,10 +16,12 @@ manager approves it and IT ticks off the accounts. [Full video](https://claude.a
 
 ## 1. Start Netgrif
 
-You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and Git.
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and Git. To build
+your own apps in your own repository, click **Use this template** at the top of this page
+first and clone your copy instead.
 
 ```bash
-git clone https://github.com/netgrif/netgrif-ai-starter.git
+git clone https://github.com/lubospetrovic13/netgrif-ai-starter.git
 cd netgrif-ai-starter
 docker compose up -d
 ```
@@ -35,7 +37,8 @@ green ▶ next to `services:`.
 
 The first start builds the images, which takes about ten minutes. After that it is under two.
 When `docker compose logs -f setup` prints `eTask is running`, open
-**http://localhost:4200** and sign in as `super@netgrif.com` / `password`.
+**http://localhost:4200** and sign in as `super@netgrif.com` / `password`. The portal already
+holds one app, *Employee onboarding*, the one from the video.
 
 ## 2. Describe your business problem
 
@@ -80,7 +83,9 @@ if the screen *is* the product, this is the wrong tool.
 ## More
 
 Other ways to run it, the AI assistants in detail, adding and verifying an app, and what to
-do when it does not start: [docs/DEVELOPER.md](docs/DEVELOPER.md).
+do when it does not start: [docs/DEVELOPER.md](docs/DEVELOPER.md). Four more finished apps
+(leave requests, orders and invoices, an asset register, a service desk) are in
+[examples/](examples/README.md), one command each to install.
 
 ## Licensing
 

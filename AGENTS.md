@@ -24,7 +24,7 @@ keeping it is part of your job here.
 ```
 ai-config/     the AI-native configuration: nets (processes/), manifest, tools
 platform/      the engine: backend, frontend, docker compose. Layer 2 and 3
-examples/      finished apps with their input, e.g. onboarding from the demo
+examples/      finished apps; onboarding (from the demo) is active, the rest install with pfapp
 docs/          the long form documentation, read by chapter through pfdoc
 ```
 

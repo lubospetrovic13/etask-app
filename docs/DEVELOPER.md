@@ -30,7 +30,7 @@ tool in `ai-config/tools/` is Python, including the one below that proves the
 agenda actually runs.
 
 ```bash
-git clone https://github.com/netgrif/netgrif-ai-starter.git
+git clone https://github.com/lubospetrovic13/netgrif-ai-starter.git
 cd netgrif-ai-starter
 ai-config/tools/up.sh --docker
 ```
@@ -55,8 +55,8 @@ Sign in as `super@netgrif.com` / `password`.
 
 Then prove it rather than assume it. The onboarding app from the demo comes with an
 acceptance test that walks the whole path against the running engine: raising a request,
-having it sent back, completed, approved, and the three accounts ticked off. Install it and
-run its test as described in [`examples/onboarding/`](../examples/onboarding/README.md).
+having it sent back, completed, approved, and the three accounts ticked off. It is active out of
+the box, so run it from `ai-config/`: `python3 tools/oncheck.py`.
 
 It prints one line per check and a count at the end. If that passes, the platform and the
 agenda both work on your machine.
@@ -198,7 +198,7 @@ Claude Code registers a `claude-cli://` URL handler, so a link can open a sessio
 Paste this into your browser's address bar:
 
 ```text
-claude-cli://open?repo=netgrif/netgrif-ai-starter&q=This%20is%20the%20Netgrif%20AI%20starter.%20If%20you%20do%20not%20have%20it%20yet%2C%20clone%20https%3A%2F%2Fgithub.com%2Fnetgrif%2Fnetgrif-ai-starter%20and%20cd%20into%20it.%0AThen%20read%20README.md%2C%20start%20the%20stack%20with%20ai-config%2Ftools%2Fup.sh%20--docker%2C%20and%20tell%20me%20when%20the%20portal%20is%20up%20on%20http%3A%2F%2Flocalhost%3A4200.
+claude-cli://open?repo=lubospetrovic13/netgrif-ai-starter&q=This%20is%20the%20Netgrif%20AI%20starter.%20If%20you%20do%20not%20have%20it%20yet%2C%20clone%20https%3A%2F%2Fgithub.com%2Flubospetrovic13%2Fnetgrif-ai-starter%20and%20cd%20into%20it.%0AThen%20read%20README.md%2C%20start%20the%20stack%20with%20ai-config%2Ftools%2Fup.sh%20--docker%2C%20and%20tell%20me%20when%20the%20portal%20is%20up%20on%20http%3A%2F%2Flocalhost%3A4200.
 ```
 
 It opens a terminal session in your clone of this repository with the prompt already written.
@@ -322,12 +322,13 @@ platform/
   backend/              Java and Groovy: the engine, EtaskActionDelegate, runners
   frontend/             Angular 13: portal, theme and custom field components
   docker-compose.yml    the stack, included by compose.yaml in the root
-examples/onboarding/    the demo app: input document, nets, acceptance test
+examples/               finished apps; onboarding (from the demo) is active, the rest install with pfapp
 docs/                   the long form documentation (Slovak), read through pfdoc
 ```
 
-Nothing in `ai-config/processes/` is an example: it holds user management and what every
-instance needs. Example apps live in `examples/` and are installed with `pfapp install`.
+`ai-config/processes/` holds user management, what every instance needs, and the one active
+example, onboarding. The other examples live in `examples/` and are installed with
+`pfapp install`, see [examples/README.md](../examples/README.md).
 
 ---
 

@@ -1,0 +1,87 @@
+{
+  "name": "objednavky-faktury",
+  "title": "Objednávky a faktúry",
+  "import": [
+    "fa_faktura.xml",
+    "ob_objednavka.xml",
+    "sc_menu.xml",
+    "sc_nastavenia.xml"
+  ],
+  "bootstrapCase": [
+    {
+      "net": "schvalovanie/sc_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "nastavenia/sc_nastavenia",
+      "rebuildOnNewVersion": true
+    }
+  ],
+  "uriNodes": {
+    "schvalovanie": {
+      "icon": "request_quote",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "schvalovanie/faktury": {
+      "icon": "receipt_long",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "schvalovanie/objednavky": {
+      "icon": "shopping_cart",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "nastavenia": {
+      "icon": "tune",
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
+    }
+  },
+  "netScope": [
+    "schvalovanie/*",
+    "nastavenia/*"
+  ],
+  "tools": [
+    "sccheck.py"
+  ],
+  "docs": [
+    "PRIRUCKA.md"
+  ]
+}

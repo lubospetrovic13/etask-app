@@ -1,1 +1,23 @@
-{}
+{
+  "onboarding": {
+    "source": "../examples/onboarding",
+    "title": "Employee onboarding",
+    "processes": [
+      "on_request.xml",
+      "on_menu.xml"
+    ],
+    "tools": [
+      "oncheck.py"
+    ],
+    "docs": [],
+    "bootstrapCase": [
+      "onboarding/on_menu"
+    ],
+    "uriNodes": [
+      "onboarding"
+    ],
+    "netScope": [
+      "onboarding/*"
+    ]
+  }
+}
