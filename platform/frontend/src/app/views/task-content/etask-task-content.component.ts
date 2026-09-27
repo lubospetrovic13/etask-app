@@ -13,6 +13,7 @@ import {
   TaskRefField,
 } from '@netgrif/components-core';
 import {Subscription} from 'rxjs';
+import {DocumentFocusService} from './services/document-focus.service';
 
 /**
  * Application copy of @netgrif/components' TaskContentComponent, differing in the
@@ -67,7 +68,8 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
               @Optional() taskEventService: TaskEventService,
               @Optional() @Inject(NAE_ASYNC_RENDERING_CONFIGURATION) config,
               @Optional() private _taskDataService: TaskDataService,
-              @Optional() private _changedFieldsService: ChangedFieldsService) {
+              @Optional() private _changedFieldsService: ChangedFieldsService,
+              private readonly _documentFocus: DocumentFocusService) {
     super(fieldConverter, taskContentService, paperView, logger, taskEventService, config);
     // Capture, because the scrolling happens on inner elements that do not bubble scroll.
     document.addEventListener('scroll', this.hideOnScroll, true);
@@ -140,8 +142,47 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
     return walk(changedFields);
   }
 
+  /**
+   * The subgrid that holds a document viewer (`<component><name>document</name>`), or
+   * undefined. The viewer's x is where the form ends and the document begins.
+   */
+  private documentItem(subgrid: any): any {
+    return (subgrid?.content || []).find(i => i?.item?.component?.name === 'document' && i?.item?.layout);
+  }
+
+  /** A form with a document next to it: hints move to the info icon, see _overrides.scss. */
+  isCompact(): boolean {
+    return (this.dataSource || []).some(sg => !!this.documentItem(sg));
+  }
+
+  /**
+   * Grid columns of one subgrid. Without a document viewer it is the library's
+   * `repeat(n, 1fr)`. With one, the columns left of the viewer share the form's part of
+   * the width and the rest share the document's, so dragging the viewer's handle moves
+   * the boundary without the net knowing. `minmax(0, …)` lets a column shrink below its
+   * content's minimum - without it a long value would push the document off screen.
+   */
+  columnsOf(subgrid: any): string {
+    const doc = this.documentItem(subgrid);
+    const cols = subgrid?.cols || 1;
+    const x = doc?.item?.layout?.x || 0;
+    if (!doc || x <= 0 || x >= cols) {
+      return subgrid.getGridColumns();
+    }
+    const split = this._documentFocus.split$.value;
+    const left = (split / x).toFixed(4);
+    const right = ((1 - split) / (cols - x)).toFixed(4);
+    return `repeat(${x}, minmax(0, ${left}fr)) repeat(${cols - x}, minmax(0, ${right}fr))`;
+  }
+
   @HostListener('mouseover', ['$event'])
   public onMouseOver(event: MouseEvent): void {
+    // The info icon of a compact form: always shows its text, there is no clamp to test.
+    const info = (event.target as HTMLElement)?.closest?.('.app-field-info') as HTMLElement;
+    if (info && info.closest('app-etask-task-content') === this._elementRef.nativeElement) {
+      this.show(info, info.dataset.desc || '');
+      return;
+    }
     const hint = (event.target as HTMLElement)?.closest?.(EtaskTaskContentComponent.HINT) as HTMLElement;
     if (!hint || hint.classList.contains('mat-error')) {
       return;
@@ -161,7 +202,7 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
 
   @HostListener('mouseout', ['$event'])
   public onMouseOut(event: MouseEvent): void {
-    const hint = (event.target as HTMLElement)?.closest?.(EtaskTaskContentComponent.HINT);
+    const hint = (event.target as HTMLElement)?.closest?.(EtaskTaskContentComponent.HINT + ', .app-field-info');
     if (hint && hint === this.anchor) {
       this.hide();
     }
@@ -182,14 +223,14 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
     return el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
   }
 
-  private show(hint: HTMLElement): void {
+  private show(hint: HTMLElement, text?: string): void {
     if (!this.popover) {
       this.popover = document.createElement('div');
       this.popover.className = 'app-desc-popover';
       document.body.appendChild(this.popover);
     }
     this.anchor = hint;
-    this.popover.textContent = hint.textContent.trim();
+    this.popover.textContent = (text ?? hint.textContent).trim();
     this.position(hint);
     this.popover.classList.add('app-desc-popover-visible');
   }

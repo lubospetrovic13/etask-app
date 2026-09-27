@@ -34,6 +34,11 @@ vidno, **u koho práve leží** a **kto čo kedy rozhodol**.
 sken alebo XML e-faktúra). Pri zápise sa do pravej polovice faktúra nahrá (pretiahnutím
 alebo kliknutím), v ďalších krokoch sa s ňou porovnáva, bez sťahovania a prepínania okien.
 
+**Obrazovka:** vľavo sekcie *Dodávateľ, Faktúra, Zaradenie*; to, čo sa v kroku rozhoduje,
+je hneď pod hlavičkou a lišta s tlačidlom je pripnutá dole. Vstupné kontroly sú farebné
+štítky. Keď referent ukáže myšou na pole, jeho hodnota sa vo faktúre zvýrazní (PDF s textom
+a XML). Hranica medzi formulárom a faktúrou sa dá potiahnuť. Popisy polí sú v ikonke ⓘ.
+
 **Jazyk:** portál je predvolene v angličtine, slovenčina je v prepínači. Texty, ktoré
 appka do faktúry zapisuje (priebeh, vstupné kontroly, výsledok načítania, e-maily), sú
 v jazyku, v ktorom bola faktúra založená. Chybové hlášky sú v jazyku toho, kto ich číta.

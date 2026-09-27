@@ -585,9 +585,28 @@ a pole `file` s `<component><name>document</name>` ide na prehliadač dokladu.
 ### Doklad vedľa formulára (`document`)
 
 Knižničný `preview` na poli `file` je náhľad: 20 % šírky poľa a `<img>`, takže
-PDF nezobrazí vôbec. `app-etask-file-document` ukáže prílohu veľkú: PDF vo
-vstavanom prehliadači prehliadača (na šírku), obrázok, a XML e-faktúru ako
-text. Nad dokladom je jedna lišta (názov, nahrať alebo nahradiť, odstrániť,
+PDF nezobrazí vôbec. `app-etask-file-document` ukáže prílohu veľkú: PDF
+vykreslené cez **PDF.js** (na šírku, so zväčšovaním), obrázok, a XML
+e-faktúru ako text.
+
+PDF.js a nie vstavaný prehliadač prehliadača, lebo ten je zatvorený `iframe`,
+nedá sa v ňom nič označiť. Pole, nad ktorým je myš alebo kurzor, sa v doklade
+**zvýrazní** (resolver ho hlási cez `DocumentFocusService`): suma v tvaroch
+`84.40` aj `84,40`, dátum ako `7.11.2022` aj `07.11.2022`, IBAN bez ohľadu na
+medzery, text aj keď je v PDF rozdelený na viac kúskov. Funguje na PDF
+s textovou vrstvou a na XML; sken bez textu nemá čo zvýrazniť. Ťahadlo na
+ľavom okraji dokladu posúva hranicu medzi formulárom a dokladom (30 až 70 %),
+šírka sa pamätá v prehliadači (`etask.documentSplit`). Stĺpce gridu pre to
+prepočíta `EtaskTaskContentComponent.columnsOf`; sieť sa nemení.
+
+Formulár s dokladom je **kompaktný** (`app-compact-form`): popisy polí nie sú
+pod poľami, ale v ikonke ⓘ (tá istá bublinka ako pri orezanom popise), polia
+len na čítanie sú bez rámčeka ako text, a lišta s tlačidlami úlohy je
+pripnutá dole. Ostatné formuláre sa nemenia.
+
+Text s `<component><name>checks</name>` (`app-etask-text-checks`) sa vykreslí
+ako farebné štítky: riadok `✓ …` zelený, `! …` oranžový, iný sivý. Hodnota
+zostáva obyčajný text, API a testy ho vidia rovnako. Nad dokladom je jedna lišta (názov, nahrať alebo nahradiť, odstrániť,
 stiahnuť, otvoriť na novej karte), bez chýbajúceho súboru plocha na
 pretiahnutie. Doklad pri posúvaní formulára zostáva hore a nie je vyšší než
 okno, takže jediný posuvník je ten v PDF. Nahratie a mazanie idú cez skryté
@@ -603,8 +622,9 @@ jeho. Rozloženie „vľavo polia, vpravo doklad" je v sieti, gridom:
 </dataRef>
 ```
 
-Výška prehliadača je `rows` × výška riadku gridu, takže koľko miesta doklad
-dostane, rozhoduje sieť. Komponent je na `dataRef`, nie na `<data>`: na
+Výška prehliadača je `rows` × výška riadku gridu, najviac však výška okna,
+a pri posúvaní formulára zostáva hore (bunka s dokladom musí mať
+`overflow: visible`, inak nemá sticky k čomu sa prilepiť). Komponent je na `dataRef`, nie na `<data>`: na
 zápise faktúry je to isté pole obyčajné tlačidlo na nahratie, prehliadač
 dostane len úloha, kde sa porovnáva (`fa_faktura`, `t_fa_kontrola`).
 

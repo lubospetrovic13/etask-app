@@ -58,7 +58,8 @@
     "objednavky": "Objednávky",
     "onboarding": "Nástupy zamestnancov",
     "schvalovanie": "Objednávky a faktúry",
-    "service_desk": "Service Desk"
+    "service_desk": "Service Desk",
+    "nastavenia": "Nastavenia"
   },
   "view": {
     "publicForm": {
@@ -96,6 +97,11 @@
     "download": "Stiahnuť",
     "openInTab": "Otvoriť na novej karte",
     "dropTitle": "Nahrajte faktúru",
-    "dropHint": "Pretiahnite sem PDF, obrázok alebo XML e-faktúru, alebo kliknite."
+    "dropHint": "Pretiahnite sem PDF, obrázok alebo XML e-faktúru, alebo kliknite.",
+    "resize": "Potiahnutím zmeníte šírku",
+    "foundHint": "Kde je v doklade hodnota poľa, na ktoré ukazujete",
+    "zoomIn": "Priblížiť",
+    "zoomOut": "Oddialiť",
+    "zoomFit": "Prispôsobiť šírke"
   }
 }

@@ -117,6 +117,9 @@
 		<i18nString name="empty_button"></i18nString>
 		<i18nString name="referent_title">Invoice officer</i18nString>
 		<i18nString name="fa_jazyk_title">Case language</i18nString>
+		<i18nString name="div_fa_dodavatel_init">Supplier</i18nString>
+		<i18nString name="div_fa_zaradenie_init">Assignment</i18nString>
+		<i18nString name="div_fa_vysledok_init">Decisions</i18nString>
 		<i18nString name="div_fa_kontrola_init">Check by the invoice officer</i18nString>
 		<i18nString name="fa_kanal_title">Received via</i18nString>
 		<i18nString name="fa_kanal_desc">How the invoice got into the system. Only manual entry exists so far; e-mail, the network folder and the e-mail provider need an integration.</i18nString>
@@ -643,7 +646,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
         }
     }
     change fa_validacia value {
-        zistenia ? zistenia.collect { "• " + it }.join("\n") : tx("Všetko sedí.", "Everything matches.")
+        zistenia ? zistenia.collect { "! " + it }.join("\n") : "✓ " + tx("Všetko sedí.", "Everything matches.")
     }
     return zistenia
 }
@@ -1235,6 +1238,21 @@ if (r.chyba) {
 		-->
 	</data>
 	<data type="i18n">
+		<id>div_fa_dodavatel</id>
+		<title/>
+		<init name="div_fa_dodavatel_init">Dodávateľ</init>
+	</data>
+	<data type="i18n">
+		<id>div_fa_zaradenie</id>
+		<title/>
+		<init name="div_fa_zaradenie_init">Zaradenie</init>
+	</data>
+	<data type="i18n">
+		<id>div_fa_vysledok</id>
+		<title/>
+		<init name="div_fa_vysledok_init">Rozhodnutia</init>
+	</data>
+	<data type="i18n">
 		<id>div_fa_kontrola</id>
 		<title/>
 		<init name="div_fa_kontrola_init">Kontrola referentom</init>
@@ -1370,7 +1388,7 @@ if (r.chyba) {
 		</userRef>
 		<dataGroup>
 			<id>g_fa_zapis</id>
-			<cols>6</cols>
+			<cols>4</cols>
 			<layout>grid</layout>
 			<!--
 				Stav a poznamka su hore aj pri prvom zapise, kedy su prazdne.
@@ -1399,109 +1417,121 @@ if (r.chyba) {
 			<dataRef>
 				<id>fa_poznamka</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>0</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>1</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>div_fa_faktura</id>
+				<id>div_fa_dodavatel</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_dodavatel</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_ico</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_iban</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>1</x><y>5</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_faktura</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_cislo</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>2</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_suma</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_datum_vystavenia</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>1</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_datum_splatnosti</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>2</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_kontrola</id>
 				<logic><behavior>hidden</behavior></logic>
-				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_stredisko</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka_vyber</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka_info</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>8</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_predmet</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>9</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>10</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_zaradenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_stredisko</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka_vyber</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>1</x><y>13</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka_info</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_priloha</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>16</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>btn_fa_nacitat</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>17</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_nacitanie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>14</y><rows>4</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_ico</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>18</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_iban</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>1</x><y>18</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>18</y><rows>3</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zdroj</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>18</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>21</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_kanal</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>19</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>21</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>3</x><y>0</y><rows>20</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>22</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
@@ -1598,7 +1628,7 @@ objednavky_options(fa_objednavka_vyber)
 		</roleRef>
 		<dataGroup>
 			<id>g_fa_kontrola</id>
-			<cols>6</cols>
+			<cols>4</cols>
 			<layout>grid</layout>
 			<!--
 				Dve polovice: vlavo udaje faktury, vpravo faktura sama (komponent
@@ -1609,130 +1639,143 @@ objednavky_options(fa_objednavka_vyber)
 			<dataRef>
 				<id>fa_stav_label</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_kanal</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>10</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zadal_meno</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_validacia</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_fa_faktura</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_dodavatel</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_cislo</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>2</x><y>5</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_suma</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_datum_vystavenia</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>1</x><y>6</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_datum_splatnosti</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>2</x><y>6</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_ico</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_iban</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>1</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_stredisko</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>2</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_predmet</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_zdroj</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>10</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka_vyber</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>11</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>11</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka_info</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>1</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>checks</name></component>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_kontrola</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_dodanie</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>14</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_kontrola_volba</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>1</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_poznamka</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>15</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>5</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_dodavatel</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_ico</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_iban</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>1</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_faktura</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_cislo</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_suma</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>1</x><y>11</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_datum_vystavenia</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_datum_splatnosti</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>1</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_zaradenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_stredisko</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>16</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka_vyber</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>1</x><y>16</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>17</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka_info</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>18</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_zdroj</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>19</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_kanal</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>19</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_priebeh</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>18</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>20</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_historia</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>19</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>21</y><rows>4</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>0</y><rows>22</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>25</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
@@ -1876,95 +1919,107 @@ vstupne_kontroly(fa_objednavka_vyber, fa_suma, fa_datum_vystavenia,
 		</userRef>
 		<dataGroup>
 			<id>g_fa_schvalenie</id>
-			<cols>6</cols>
+			<cols>4</cols>
 			<layout>grid</layout>
-			<dataRef>
-				<id>div_fa_faktura</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_dodavatel</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_cislo</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>1</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_suma</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_datum_splatnosti</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_stredisko</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_predmet</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
 			<dataRef>
 				<id>fa_zadal_meno</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka_info</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_zdroj</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_fa_priebeh</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>9</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_historia</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>10</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_rozhodnutie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_rozhodnutie</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_poznamka</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>15</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>3</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_faktura</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_cislo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_suma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_datum_splatnosti</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_zaradenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>13</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka_info</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_zdroj</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_priebeh</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>16</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_historia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>17</y><rows>4</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>0</y><rows>18</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>21</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
@@ -2101,80 +2156,92 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		</roleRef>
 		<dataGroup>
 			<id>g_fa_riaditel</id>
-			<cols>6</cols>
+			<cols>4</cols>
 			<layout>grid</layout>
-			<dataRef>
-				<id>div_fa_faktura</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_dodavatel</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_cislo</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>1</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_suma</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_stredisko</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
 			<dataRef>
 				<id>fa_schvalil_stredisko</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_predmet</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_zdroj</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_fa_priebeh</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_historia</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_rozhodnutie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>10</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_rozhodnutie</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>11</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_poznamka</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>12</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>3</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_faktura</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_cislo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_suma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_zaradenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_zdroj</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_priebeh</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_historia</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>4</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>0</y><rows>15</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>19</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
@@ -2287,58 +2354,49 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		</roleRef>
 		<dataGroup>
 			<id>g_fa_zauctovanie</id>
-			<cols>6</cols>
+			<cols>4</cols>
 			<layout>grid</layout>
 			<dataRef>
 				<id>fa_stav_label</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_schvalene_o</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>div_fa_faktura</id>
+				<id>div_fa_uctovanie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_uctovanie</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_doklad</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>1</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_poznamka</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_dodavatel</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_cislo</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_suma</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_datum_splatnosti</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_stredisko</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka_info</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_ico</id>
@@ -2351,46 +2409,67 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 				<layout><x>1</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
+				<id>div_fa_faktura</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_cislo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_suma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_datum_splatnosti</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_zaradenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka_info</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
 				<id>fa_zdroj</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_priebeh</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_historia</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>9</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_fa_uctovanie</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_uctovanie</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_doklad</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_poznamka</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>15</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>16</y><rows>4</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>0</y><rows>18</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>20</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
@@ -2547,7 +2626,7 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		</roleRef>
 		<dataGroup>
 			<id>g_fa_prehlad</id>
-			<cols>6</cols>
+			<cols>4</cols>
 			<layout>grid</layout>
 			<!--
 				Posledna poznamka patri aj na uzavretu fakturu: pri zamietnuti je to
@@ -2567,162 +2646,163 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 			<dataRef>
 				<id>fa_zadal_meno</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>div_fa_faktura</id>
+				<id>fa_validacia</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>2</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>checks</name></component>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_vysledok</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_dodanie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_doklad</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>5</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_poznamka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_schvalil_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_schvalil_riaditel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_schvalene_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_skontroloval</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>9</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_zauctoval</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_zauctovane_o</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>10</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_export_xml</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>11</y><rows>4</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_dodavatel</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_cislo</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_suma</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_datum_splatnosti</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_stredisko</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_predmet</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka_info</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>16</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_ico</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>17</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_iban</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>17</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_faktura</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>18</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_cislo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>19</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_suma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>19</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_datum_splatnosti</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>20</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>21</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_zaradenie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>23</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>24</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>24</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka_info</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>25</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zdroj</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>26</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
-				<id>div_fa_rozhodnutie</id>
+				<id>fa_kanal</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>9</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_poznamka</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>10</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_schvalil_stredisko</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_schvalil_riaditel</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_schvalene_o</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_fa_uctovanie</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_doklad</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>14</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_zauctoval</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>14</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_zauctovane_o</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>14</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>26</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_priebeh</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>15</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>27</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_historia</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>16</y><rows>4</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_fa_kontrola</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>20</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_kanal</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>21</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_dodanie</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>21</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_skontroloval</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>21</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_validacia</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>22</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_export_xml</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>24</y><rows>4</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>28</y><rows>4</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>0</y><rows>28</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>32</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>

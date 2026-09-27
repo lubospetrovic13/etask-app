@@ -64,3 +64,8 @@
 .phl-item::before {
   box-sizing: border-box;
 }
+
+// Anchor for the info icon of compact forms.
+:host {
+  position: relative;
+}

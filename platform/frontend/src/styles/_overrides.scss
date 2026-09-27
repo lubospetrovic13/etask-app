@@ -527,3 +527,96 @@ body {
     color: rgba(0, 0, 0, 0.87);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Compact form: a form with a document viewer next to it (`app-compact-form`, set by
+// EtaskTaskContentComponent when a field uses `<component><name>document</name>`).
+//
+// Half a screen is not much, and in these forms the descriptions under the fields took
+// about a third of the height. So:
+//   * descriptions move to a small info icon at the field's corner; hovering it shows
+//     the same popover a clipped hint shows. Errors still print under the field.
+//   * read-only fields drop their outline and read as label + value. In the approval
+//     steps nothing is typed, so empty-looking input boxes only suggested there was.
+// Other forms are untouched.
+// ---------------------------------------------------------------------------
+
+.app-field-info {
+  display: none;
+}
+
+.app-compact-form {
+  .netgrif-input .mat-hint:not(.mat-error) {
+    display: none;
+  }
+
+  .app-field-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 2px;
+    right: 6px;
+    z-index: 2;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--app-border-strong);
+    color: var(--app-fg-muted);
+    background: var(--app-surface);
+    font: italic 600 10px/1 Georgia, 'Times New Roman', serif;
+    cursor: help;
+    opacity: 0.75;
+
+    &:hover {
+      opacity: 1;
+      color: var(--app-fg);
+    }
+  }
+
+  // Read-only reads as text. The outline is drawn by three border boxes; Material
+  // sets their colour in a component stylesheet, hence !important.
+  .mat-form-field-appearance-outline.mat-form-field-disabled {
+    .mat-form-field-outline-start,
+    .mat-form-field-outline-gap,
+    .mat-form-field-outline-end {
+      border-color: transparent !important;
+    }
+
+    .mat-input-element,
+    .mat-select-value {
+      color: var(--app-fg);
+    }
+
+    .mat-select-arrow-wrapper,
+    .mat-datepicker-toggle {
+      visibility: hidden;
+    }
+  }
+}
+
+// Sticky needs an ancestor that does not clip: Material's expansion panel is
+// `overflow: hidden`, which made both the document viewer and the action row scroll
+// away with the form. Only for panels that hold a compact form, so the expand
+// animation of every other panel keeps its clipping.
+.mat-expansion-panel.mat-expanded:has(.app-compact-form) {
+  overflow: visible;
+
+  // The grid cell is `overflow-y: auto` in the library, which makes it a scroll
+  // container of its own - one that never scrolls - so the document had nothing to
+  // stick to and left with the form. Measured: with this, it stays at the top.
+  .border:has(app-etask-file-document) {
+    overflow: visible;
+  }
+
+  // The decision is always at hand: the panel's action row (Finish, Release...) stays
+  // at the bottom of the window while the form scrolls above it.
+  .mat-action-row {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: var(--app-surface-raised);
+    border-top: 1px solid var(--app-border);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.18);
+  }
+}

@@ -58,7 +58,8 @@
     "objednavky": "Orders",
     "onboarding": "Employee onboarding",
     "schvalovanie": "Orders and invoices",
-    "service_desk": "Service Desk"
+    "service_desk": "Service Desk",
+    "nastavenia": "Settings"
   },
   "view": {
     "publicForm": {
@@ -96,6 +97,11 @@
     "download": "Download",
     "openInTab": "Open in a new tab",
     "dropTitle": "Upload the invoice",
-    "dropHint": "Drag a PDF, an image or an XML e-invoice here, or click."
+    "dropHint": "Drag a PDF, an image or an XML e-invoice here, or click.",
+    "resize": "Drag to change the width",
+    "foundHint": "Where the value of the field you point at is in the document",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomFit": "Fit to width"
   }
 }
