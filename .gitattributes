@@ -1,0 +1,23 @@
+# Shell skripty MUSIA mat v pracovnej kopii LF, aj na Windowse.
+#
+# Preco: `git config core.autocrlf=true` (default na Windowse) prepise pri
+# checkoute konce riadkov na CRLF. Skript sa potom v Linuxovom kontejneri
+# nespusti, lebo shebang sa cita ako `#!/usr/bin/env bash\r`:
+#
+#   /usr/bin/env: 'bash\r': No such file or directory
+#
+# Nevyzera to ako problem s koncami riadkov, ale ako chybajuci bash v obraze.
+# Rovnaka past plati pre docker-entrypoint.sh (kontejner spadne pri starte)
+# a pre tools/*.sh spustane z Git Bash.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+
+# Petriflow modely a manifesty cita engine v kontejneri - LF, aby bola
+# naimportovana kopia bajt za bajtom rovnaka ako zdroj (na tom stoji pfsync).
+*.xml text eol=lf
+*.json text eol=lf
+
+*.py text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

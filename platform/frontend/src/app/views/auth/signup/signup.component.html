@@ -1,0 +1,45 @@
+<nc-authentication-overlay>
+  <!--
+      Prepinac jazyka je tu z toho isteho dovodu ako na prihlaseni: kto formular
+      neprecita, nema ako uhadnut, ktore pole je heslo - a na tejto obrazovke
+      este nema ani ucet, cez ktory by si jazyk nastavil.
+  -->
+  <div class="auth-language" fxLayout="row" fxLayoutAlign="end center">
+    <app-etask-language-selector [language]="currentLanguage"></app-etask-language-selector>
+  </div>
+
+  <div class="fill-all-space" fxLayout="row" fxLayoutAlign="center center">
+    <div class="auth-card" fxLayout="column" fxLayoutAlign="start stretch" fxLayoutGap="16px">
+
+      <div class="auth-title">{{ 'auth.signup.title' | translate }}</div>
+
+      <!-- Token chyba: clovek sem prisiel inak nez z mailu. -->
+      <ng-container *ngIf="tokenMissing; else hasToken">
+        <div class="auth-message">{{ 'auth.signup.noToken' | translate }}</div>
+        <button mat-raised-button color="primary" (click)="toLogin()">
+          {{ 'auth.backToLogin' | translate }}
+        </button>
+      </ng-container>
+
+      <ng-template #hasToken>
+        <!-- Token je, ale engine ho odmietol - vyprsal, alebo uz bol pouzity. -->
+        <ng-container *ngIf="tokenInvalid; else form">
+          <div class="auth-message">{{ 'auth.signup.invalidToken' | translate }}</div>
+          <button mat-raised-button color="primary" (click)="toLogin()">
+            {{ 'auth.backToLogin' | translate }}
+          </button>
+        </ng-container>
+
+        <ng-template #form>
+          <div class="auth-message">{{ 'auth.signup.intro' | translate }}</div>
+          <nc-registration-form *ngIf="!done"
+                                [token]="token"
+                                [displayLegalNotice]="false"
+                                (register)="onRegister($event)"
+                                (invalidToken)="onInvalidToken()"></nc-registration-form>
+        </ng-template>
+      </ng-template>
+
+    </div>
+  </div>
+</nc-authentication-overlay>

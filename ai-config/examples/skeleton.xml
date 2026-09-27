@@ -1,0 +1,132 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<!--
+		Najmenšia funkčná sieť. Skopíruj do processes/, premenuj <id>, <initials>
+		a <title>, a dopíš riadok do processes.json.
+
+		Čo tu je zámerne:
+		  - jedno miesto s tokenom a read arc, takže task je trvale otvorený
+		    a nedá sa "dokončiť" do prázdna;
+		  - immediate="true" na textovom poli, ktoré číta akcia tlačidla —
+		    bez toho by akcia prečítala prázdno (blur a klik sú jedna požiadavka);
+		  - rola deklarovaná v <role> aj použitá v <roleRef>; `default`
+		    a `anonymous` sú vstavané, vlastné role treba deklarovať.
+
+		Over: python3 tools/pflint.py examples/skeleton.xml
+	-->
+	<id>skeleton</id>
+	<version>1.0.0</version>
+	<initials>SKL</initials>
+	<title>Skeleton</title>
+	<icon>widgets</icon>
+	<defaultRole>true</defaultRole>
+	<transitionRole>false</transitionRole>
+
+	<role>
+		<id>owner</id>
+		<title>Vlastník</title>
+	</role>
+
+	<data type="text" immediate="true">
+		<id>subject</id>
+		<title>Predmet</title>
+		<desc>Textové pole, ktoré číta akcia tlačidla, musí mať immediate="true".</desc>
+	</data>
+	<data type="text">
+		<id>message</id>
+		<title>Stav</title>
+	</data>
+	<data type="button">
+		<id>btn_save</id>
+		<title/>
+		<placeholder>Uložiť</placeholder>
+		<component>
+			<name>raised</name>
+		</component>
+		<init>1</init>
+		<event type="set">
+			<id>btn_save_set</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+subject: f.subject, message: f.message;
+
+def value = ((subject.value ?: "") as String).trim()
+if (!value) {
+    change message value { "Vyplňte predmet." }
+} else {
+    change message value { "Uložené: " + value }
+    changeCaseProperty("title").about { value }
+}
+				]]></action>
+			</actions>
+		</event>
+	</data>
+
+	<transition>
+		<id>t_main</id>
+		<x>140</x>
+		<y>80</y>
+		<label>Formulár</label>
+		<icon>edit</icon>
+		<assignPolicy>auto</assignPolicy>
+		<roleRef>
+			<id>owner</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_main</id>
+			<cols>4</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>subject</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x><y>0</y><rows>1</rows><cols>4</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>btn_save</id>
+				<logic>
+					<behavior>editable</behavior>
+				</logic>
+				<layout>
+					<x>0</x><y>1</y><rows>1</rows><cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+			<dataRef>
+				<id>message</id>
+				<logic>
+					<behavior>visible</behavior>
+				</logic>
+				<layout>
+					<x>2</x><y>1</y><rows>1</rows><cols>2</cols>
+					<template>material</template>
+					<appearance>outline</appearance>
+				</layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+
+	<place>
+		<id>p_alive</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_main</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_main</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

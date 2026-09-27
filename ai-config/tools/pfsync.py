@@ -1,0 +1,343 @@
+#!/usr/bin/env python3
+"""
+pfsync - povie, ktore siete sa rozisli s tym, co drzi bezici engine.
+
+Preco to existuje: `NetRunner` importuje siet len ked v databaze CHYBA. Po
+zmene existujuceho XML sa teda pri starte nestane nic - engine dalej drzi staru
+verziu, `LATEST` mieri na nu a nove casy vznikaju zo stareho modelu. Nikde sa to
+neohlasi. RUNBOOK dlho tvrdil "po zmene siete staci tools/up.sh"; pre novu siet
+to platilo, pre zmenenu nie.
+
+Zistuje sa to bezstavovo: `GET /api/petrinet/{id}/file` vrati presne to XML,
+ktore bolo naimportovane, bajt za bajtom. Staci ho porovnat s lokalnym suborom -
+netreba ziadny marker, checksum subor ani pamat medzi behmi.
+
+    python3 tools/pfsync.py             # co sa rozislo, citatelne
+    python3 tools/pfsync.py --list      # len cesty, na rure do pfcheck
+    python3 tools/pfsync.py --sync      # rozdielne naimportuje a prideli role
+    python3 tools/pfsync.py --pull      # OPACNY SMER: zoberie verzie z enginu
+                                        # a PREPISE nimi lokalne XML
+
+`--sync` vola tools/pfcheck.sh (import + ground truth z logu) a potom
+tools/pfseed.py (role maju stringId per verziu siete, takze po re-importe treba
+pridelit znova). Presne toto robi aj `tools/up.sh` po starte backendu.
+
+`--pull` je na opacnu situaciu: pozadu je REPOZITAR, nie engine. Instancia
+bezi zo starsieho/ineho stromu a jej siete vedia viac nez lokalne subory -
+vtedy je `--sync` DOWNGRADE, zmazal by funkcionalitu, ktora v XML v repozitari
+nikdy nebola. `--pull` zoberie to, co realne bezi, a zapise to sem.
+
+Nespustat proti produkcii - `--sync` importuje nove verzie sieti.
+
+Exit 0 = vsetko sedi (alebo synchronizovane), 1 = nieco sa rozislo (bez --sync),
+2 = zle prostredie.
+"""
+
+import base64
+import json
+import os
+import shutil
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+PROCESSES = ROOT / "processes"
+
+# Koniec riadku sa normalizuje na LF. `compare()` porovnava rovnako, takze
+# po `--pull` nesmie v subore zostat CRLF - inak by sa siet javila ako
+# rozidena hned po tom, co sa stiahla.
+CRLF = chr(13) + chr(10)
+LF = chr(10)
+MANIFEST = ROOT / "processes.json"
+
+URL = os.environ.get("PF_URL", "http://127.0.0.1:8080")
+USER = os.environ.get("PF_USER", "super@netgrif.com")
+PASS = os.environ.get("PF_PASS", "password")
+
+HAL = "application/hal+json, application/json;q=0.9, */*;q=0.8"
+
+
+def login():
+    req = urllib.request.Request(
+        URL + "/api/auth/login", method="GET",
+        headers={"Authorization": "Basic " + base64.b64encode(
+            f"{USER}:{PASS}".encode()).decode()})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            token = r.headers.get("X-Auth-Token")
+    except urllib.error.HTTPError as e:
+        # Endpoint vracia 405, ale token uz je v hlavicke - autentifikacny
+        # filter bezi pred handlerom. To iste robi pfcheck.sh.
+        token = e.headers.get("X-Auth-Token")
+    except urllib.error.URLError:
+        sys.exit(f"pfsync: engine na {URL} neodpoveda")
+    if not token:
+        sys.exit(f"pfsync: prihlasenie {USER} zlyhalo")
+    return token
+
+
+def call(token, method, path, body=None, raw=False):
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    headers = {"X-Auth-Token": token, "Accept": HAL}
+    if data:
+        headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(URL + path, data=data, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            text = r.read().decode("utf-8")
+            return r.status, (text if raw else (json.loads(text) if text else None))
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", "replace")
+
+
+def find_bash():
+    """Cesta k bashu, ktory vie spustit tools/*.sh.
+
+    Na Windows `bash` v PATH ukazuje na WSL (C:\\Windows\\System32\\bash.exe)
+    a ten padne na `execvpe(/bin/bash) failed`, ak WSL distribucia nie je
+    nainstalovana - pricom Git Bash, v ktorom sa tento repozitar realne
+    pouziva, je inde. Preto sa System32 preskakuje.
+    """
+    env = os.environ.get("PFSYNC_BASH")
+    if env and Path(env).exists():
+        return env
+    found = shutil.which("bash")
+    if found and "system32" not in found.replace("\\", "/").lower():
+        return found
+    for candidate in (r"C:\Program Files\Git\bin\bash.exe",
+                      r"C:\Program Files\Git\usr\bin\bash.exe",
+                      r"C:\Program Files (x86)\Git\bin\bash.exe",
+                      "/bin/bash", "/usr/bin/bash"):
+        if Path(candidate).exists():
+            return candidate
+    return found  # nech to padne s citatelnou chybou volajuceho
+
+
+def identifier_of(path):
+    """<id> z XML. Rovnako ako NetRunner: regexom, prvy vyskyt, bez XML parsera -
+    v CDATA byva to, co parser nema rad."""
+    import re
+    xml = path.read_text(encoding="utf-8")
+    m = re.search(r"(?s)<document\b.*?<id>\s*([^<\s][^<]*?)\s*</id>", xml)
+    return m.group(1) if m else None
+
+
+def newest(token, identifier):
+    st, r = call(token, "POST", "/api/petrinet/search?size=200", {"identifier": identifier})
+    if not isinstance(r, dict):
+        return None
+    refs = [x for x in (r.get("_embedded") or {}).get("petriNetReferences", [])
+            if x["identifier"] == identifier]
+    if not refs:
+        return None
+    refs.sort(key=lambda x: [int(n) for n in x["version"].split(".")])
+    return refs[-1]
+
+
+def imports():
+    try:
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    except Exception as e:
+        sys.exit(f"pfsync: {MANIFEST} sa neda precitat: {e}")
+    return [str(f) for f in manifest.get("import", [])]
+
+
+def manifest_vs_engine(token):
+    """Co je v engine a nie v manifeste, a naopak.
+
+    Preco to tu je: manifest je JEDINE miesto, kde je zapisane, co ma byt
+    nasadene - a nic ho doteraz neoverovalo. Siet, ktora sa do enginu dostala
+    rucnym importom, v nom bezne zije dalej a vsetky kontroly su zelene, lebo
+    bezia proti bezucej instancii alebo proti suborom v processes/. Na cistej
+    databaze taka appka NEEXISTUJE a zisti sa to az tam.
+
+    Presne takto sa stratila cela appka Pracovne cesty: styri siete, 13
+    pripadov, polozky v menu, a v manifeste ani riadok (analyza 8.3).
+
+    Vracia (v_engine_nie_v_manifeste, v_manifeste_nie_v_engine).
+    """
+    st, r = call(token, "POST", "/api/petrinet/search?size=1000", {})
+    refs = (r or {}).get("_embedded", {}).get("petriNetReferences", []) if isinstance(r, dict) else []
+    v_engine = {x["identifier"] for x in refs}
+
+    v_manifeste = set()
+    for f in imports():
+        cesta = PROCESSES / f
+        if not cesta.exists():
+            # Siet z classpath backendu (configuration_tiles) - ta v processes/
+            # nie je a jej identifikator sa tu precitat neda.
+            continue
+        ident = identifier_of(cesta)
+        if ident:
+            v_manifeste.add(ident)
+
+    # Systemove siete enginu sa v manifeste neuvadzaju a nie su chybou.
+    SYSTEMOVE = {"preference_item", "filter", "impersonation_config",
+                 "org_group", "import_filters", "export_filters",
+                 "single_settings", "configuration_tiles",
+                 "impersonation_users_select", "preference_filter_item"}
+    chyba_v_manifeste = sorted(i for i in v_engine - v_manifeste if i not in SYSTEMOVE)
+    chyba_v_engine = sorted(v_manifeste - v_engine)
+    return chyba_v_manifeste, chyba_v_engine
+
+
+def compare():
+    """[(path, identifier, stav, verzia)] pre kazdu siet z manifestu."""
+    token = login()
+    out = []
+    for name in imports():
+        path = PROCESSES / name
+        if not path.exists():
+            # Napr. configuration_tiles.xml zije v resources backendu, nie tu.
+            continue
+        ident = identifier_of(path)
+        if ident is None:
+            out.append((path, name, "BEZ_ID", "-"))
+            continue
+        ref = newest(token, ident)
+        if ref is None:
+            out.append((path, ident, "CHYBA_V_ENGINE", "-"))
+            continue
+        st, stored = call(token, "GET", f"/api/petrinet/{ref['stringId']}/file", raw=True)
+        if st != 200 or not isinstance(stored, str):
+            out.append((path, ident, "NEDA_SA_PRECITAT", ref["version"]))
+            continue
+        local = path.read_text(encoding="utf-8")
+        same = stored.replace("\r\n", "\n").strip() == local.replace("\r\n", "\n").strip()
+        out.append((path, ident, "SEDI" if same else "ROZISLO_SA", ref["version"]))
+    return out
+
+
+def pull(rows):
+    """Stiahne XML rozidenych sieti z enginu a prepise nimi lokalne subory.
+
+    Zapisuje sa presne to, co porovnava `compare()` (LF, bez CRLF) - inak by
+    `pfsync` hned po `--pull` hlasil, ze sa siet zase rozisla.
+    """
+    token = login()
+    zapisane, zlyhali = [], []
+    for path, ident, stav, ver in rows:
+        if stav != "ROZISLO_SA":
+            continue
+        ref = newest(token, ident)
+        st, stored = call(token, "GET", "/api/petrinet/" + ref["stringId"] + "/file", raw=True)
+        if st != 200 or not isinstance(stored, str):
+            zlyhali.append((path.name, "HTTP " + str(st)))
+            continue
+        path.write_text(stored.replace(CRLF, LF), encoding="utf-8", newline=LF)
+        zapisane.append((path.name, ident, ref["version"]))
+    for meno, ident, ver in zapisane:
+        print("  <- {:24s} {:34s} v{}".format(meno, ident, ver))
+    for meno, preco in zlyhali:
+        print("  !! {}: {}".format(meno, preco), file=sys.stderr)
+    print("")
+    print("pfsync: stiahnutych " + str(len(zapisane)) + " sieti z enginu do processes/")
+    if zapisane:
+        print("        Lokalne XML su prepisane - pozri `git diff`.")
+        print("        Potom: pflint, pfgroovy, pfi18n, pfview")
+    return 1 if zlyhali else 0
+
+
+def manifest_hlaska(rows):
+    """Vypise rozdiel medzi manifestom a enginom. Nezhadzuje beh - je to
+    upozornenie na stav NASADENIA, nie na chybu v sieti."""
+    try:
+        token = login()
+        chyba_v_manifeste, chyba_v_engine = manifest_vs_engine(token)
+    except SystemExit:
+        raise
+    except Exception:
+        return
+    if not chyba_v_manifeste and not chyba_v_engine:
+        return
+    print("")
+    if chyba_v_manifeste:
+        print("pfsync: v ENGINE a NIE v manifeste - na cistej databaze zanikne:")
+        for i in chyba_v_manifeste:
+            print(f"          {i}")
+    if chyba_v_engine:
+        print("pfsync: v MANIFESTE a NIE v engine - up.sh to naimportuje:")
+        for i in chyba_v_engine:
+            print(f"          {i}")
+
+
+def main(argv):
+    only_list = "--list" in argv
+    do_sync = "--sync" in argv
+    do_pull = "--pull" in argv
+
+    rows = compare()
+    changed = [r for r in rows if r[2] != "SEDI"]
+
+    if only_list:
+        for path, _, _, _ in changed:
+            print(path.relative_to(ROOT).as_posix())
+        return 0
+
+    for path, ident, stav, ver in rows:
+        mark = "  " if stav == "SEDI" else "->"
+        print(f"{mark} {path.name:24s} {ident:28s} v{ver:8s} {stav}")
+
+    manifest_hlaska(rows)
+
+    if not changed:
+        print("\npfsync: vsetky siete sedia s tym, co drzi engine")
+        if not do_sync:
+            return 0
+        # Na CISTEJ databaze sa nerozide NIC: `NetRunner` naimportuje vsetky
+        # siete uz pri prvom starte, takze sa sem dojde aj vtedy, ked este
+        # nikto nema ziadnu rolu. Kym sa `pfseed` spustal len po zmene siete,
+        # prvy beh po `git clone` skoncil bez pridelenych rol - a appka vtedy
+        # vyzera ako nenaimportovana ("siet nie je naimportovana") alebo vracia
+        # pri zakladani casu 403. Preto sa role dorovnavaju vzdy: `pfseed` je
+        # idempotentny a ked niet co menit, povie to jednym riadkom.
+        print("\n== pfseed (rola ma stringId per verziu siete)")
+        return subprocess.call([sys.executable, str(ROOT / "tools" / "pfseed.py")])
+
+    print(f"\npfsync: rozislo sa {len(changed)} sieti")
+    if do_pull:
+        print("        --pull: beriem verzie z ENGINU a prepisujem lokalne XML")
+        print("")
+        return pull(rows)
+    if not do_sync:
+        print("        engine drzi stary model, LATEST mieri na neho a nove casy")
+        print("        vzniknu z neho. Zosuladit: python3 tools/pfsync.py --sync")
+        return 1
+
+    files = [str(p) for p, _, _, _ in changed]
+    print("\n== pfcheck (import + ground truth z logu)")
+    log = ROOT.parent / ".run" / "backend.log"
+    bash = find_bash()
+    if not bash:
+        print("pfsync: bash sa nenasiel - nastav PFSYNC_BASH na cestu k bashu")
+        return 2
+    cmd = [bash, str(ROOT / "tools" / "pfcheck.sh")]
+    # Bez zdroja logu pfcheck povie len "500 bez dovodu". Pri lokalnom behu je
+    # log v .run/backend.log, pri `up.sh --docker` v kontejneri - vtedy ho sem
+    # posle up.sh cez PF_CONTAINER. Kym to tu nebolo, prvá vec, ktorú človek na
+    # čerstvom Dockeri uvidel, bolo POZOR o tom, že príčinu nemožno zistiť.
+    container = os.environ.get("PF_CONTAINER", "")
+    if log.exists():
+        cmd += ["--log", str(log)]
+    elif container:
+        cmd += ["--container", container]
+    rc = subprocess.call(cmd + files)
+    if rc != 0:
+        print("pfsync: import zlyhal, role sa neprideluju")
+        return 1
+
+    print("\n== pfseed (rola ma stringId per verziu siete)")
+    rc = subprocess.call([sys.executable, str(ROOT / "tools" / "pfseed.py")])
+    if rc != 0:
+        return 1
+
+    print("\npfsync: hotovo. Prihlasene sessiony drzia stare id roli -")
+    print("        v prehliadaci sa treba odhlasit a prihlasit, inak vracia 403.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

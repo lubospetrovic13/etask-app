@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "vscjava.vscode-java-pack",
+    "vmware.vscode-boot-dev-pack",
+    "marlon407.code-groovy",
+    "redhat.vscode-xml",
+    "angular.ng-template",
+    "ms-python.python",
+    "ms-azuretools.vscode-docker",
+    "ms-vscode-remote.remote-containers",
+    "anthropic.claude-code"
+  ]
+}

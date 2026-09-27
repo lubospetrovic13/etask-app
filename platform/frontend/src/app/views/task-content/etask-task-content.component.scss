@@ -1,0 +1,27 @@
+// Carried over from @netgrif/components task-content.component.scss,
+// with the light-only border replaced by a token.
+// The library's value. It used to be forced to `visible` so the CSS description popup
+// could escape the cell; the popover now renders into document.body, so the cell can keep
+// behaving as the library intends.
+.border {
+  overflow-y: auto;
+}
+
+.paper-view-content {
+  padding: 20px;
+  width: 22cm;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.scrolling_data {
+  overflow-y: auto !important;
+}
+
+.grid-rows-auto {
+  grid-template-rows: auto;
+}
+
+.responsive-grid {
+  display: block !important;
+}

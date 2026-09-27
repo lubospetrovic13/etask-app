@@ -1,0 +1,25 @@
+.fill-all-space {
+  min-width: 100%;
+  min-height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.login-language {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 2;
+}
+
+.login-recover {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--app-accent);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.login-recover:hover {
+  text-decoration: underline;
+}

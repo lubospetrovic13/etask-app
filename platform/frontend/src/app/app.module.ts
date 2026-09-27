@@ -1,0 +1,190 @@
+import {CommonModule} from '@angular/common';
+import {NgModule} from '@angular/core';
+import {FlexLayoutModule, FlexModule} from '@angular/flex-layout';
+import {BrowserModule} from '@angular/platform-browser';
+import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
+import {
+  AuthenticationComponentModule,
+  EmailSubmissionFormComponentModule,
+  ForgottenPasswordFormComponentModule,
+  CaseViewComponentModule,
+  DashboardComponentModule,
+  DataFieldsComponentModule,
+  HeaderComponentModule,
+  ImportNetComponent,
+  LoginFormComponentModule,
+  NavigationComponentModule,
+  NewCaseComponent,
+  PanelComponentModule,
+  QuickPanelComponentModule,
+  RoleAssignmentComponent,
+  SearchComponentModule,
+  SideMenuComponentModule,
+  SideMenuContentComponentModule,
+  SideMenuNewCaseComponentModule,
+  TabsComponentModule,
+  ToolbarComponentModule,
+  UserComponentModule,
+} from '@netgrif/components';
+import {
+  AuthenticationModule,
+  SignUpModule,
+  ConfigurationService,
+  GroupNavigationComponentResolverService,
+  MaterialModule,
+  PermissionService,
+  TaskResourceService,
+  TranslateLibModule,
+  UriResourceService,
+  UriService,
+  ViewService,
+} from '@netgrif/components-core';
+import {PieChartModule} from '@swimlane/ngx-charts';
+import {ResizableModule} from 'angular-resizable-element';
+import {AppRoutingModule} from './app-routing.module';
+import {AppComponent} from './app.component';
+import {EtaskFrontendConfigurationService} from './etask-frontend-configuration.service';
+import {EtaskPermissionService} from './etask-permission.service';
+import {EtaskFrontendViewService} from './etask-frontend-view.service';
+import {DashboardComponent} from './views/dashboard/dashboard/dashboard.component';
+import {EtaskUriResourceService} from './views/dashboard/service/etask-uri-resource.service';
+import {EtaskUriService} from './views/dashboard/service/etask-uri.service';
+import {LoginComponent} from './views/login/login.component';
+import {
+  EtaskTaskListPaginationComponent,
+} from './views/panel/task-panel-list-pagination/etask-task-list-pagination.component';
+import {EtaskTaskListComponent} from './views/panel/task-panel-list/etask-task-list.component';
+import {EtaskTaskPanelComponent} from './views/panel/task-panel/etask-task-panel.component';
+import {
+  EtaskFieldComponentResolverComponent,
+} from './views/task-content/etask-field-component-resolver.component';
+import {EtaskTaskContentComponent} from './views/task-content/etask-task-content.component';
+import {EtaskBooleanFieldComponent} from './views/task-content/fields/etask-boolean-field.component';
+import {EtaskButtonFieldComponent} from './views/task-content/fields/etask-button-field.component';
+import {EtaskTabbedTaskViewComponent} from './views/task-view/etask-tabbed-task-view.component';
+import {PublicResolverComponent} from './views/public/public-resolver/public-resolver.component';
+import {PublicSingleTaskViewComponent} from './views/public/public-single-task-view/public-single-task-view.component';
+import {PublicTaskViewComponent} from './views/public/public-task-view/public-task-view.component';
+import {PublicWorkflowViewComponent} from './views/public/public-workflow-view/public-workflow-view.component';
+import {ETaskTaskResourceService} from './views/public/service/e-task-task-resource.service';
+import {EtaskTabbedCaseViewComponent} from './views/side-nav/cases/etask-tabbed-case-view.component';
+import {SideNavCasesCaseViewComponent} from './views/side-nav/cases/side-nav-cases-case-view.component';
+import {EmptyViewComponent} from './views/side-nav/emptyView/empty-view.component';
+import {ETaskBreadcrumbsComponent} from './views/side-nav/e-task-breadcrumbs/e-task-breadcrumbs.component';
+import {FolderViewComponent} from './views/side-nav/folder/folder-view.component';
+import {RecoverComponent} from './views/auth/recover/recover.component';
+import {ResetPasswordComponent} from './views/auth/reset-password/reset-password.component';
+import {ETaskDoubleDrawerComponent} from './views/side-nav/etask-double-drawer/e-task-double-drawer.component';
+import {EtaskLanguageSelectorComponent} from './views/side-nav/etask-language-selector/etask-language-selector.component';
+import {UriNodeTitlePipe} from './views/side-nav/uri-node-title.pipe';
+import {
+  EtaskGroupNavigationComponentResolverService,
+} from './views/side-nav/service/etask-group-navigation-component-resolver.service';
+import {SidenavComponent} from './views/side-nav/sidenav.component';
+import {EtaskTabViewComponent} from './views/side-nav/tab-view/etask-tab-view.component';
+import {SideNavTasksTaskViewComponent} from './views/side-nav/tasks/side-nav-tasks-task-view.component';
+import {WorkflowPanelComponent} from './views/workflow/workflow-panel/workflow-panel.component';
+import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-view.component';
+
+
+@NgModule({
+  bootstrap: [AppComponent],
+  declarations: [
+    AppComponent,
+    LoginComponent,
+    SidenavComponent,
+    SideNavCasesCaseViewComponent,
+    EtaskTabbedCaseViewComponent,
+    SideNavTasksTaskViewComponent,
+    EmptyViewComponent,
+    DashboardComponent,
+    PublicResolverComponent,
+    PublicTaskViewComponent,
+    PublicWorkflowViewComponent,
+    EtaskTaskListComponent,
+    EtaskTaskPanelComponent,
+    EtaskTaskListPaginationComponent,
+    PublicSingleTaskViewComponent,
+    ETaskDoubleDrawerComponent,
+    ETaskBreadcrumbsComponent,
+    FolderViewComponent,
+    RecoverComponent,
+    ResetPasswordComponent,
+    EtaskLanguageSelectorComponent,
+    UriNodeTitlePipe,
+    WorkflowPanelComponent,
+    WorkflowViewComponent,
+    EtaskTabViewComponent,
+    EtaskTaskContentComponent,
+    EtaskFieldComponentResolverComponent,
+    EtaskBooleanFieldComponent,
+    EtaskButtonFieldComponent,
+    EtaskTabbedTaskViewComponent,
+  ],
+  entryComponents: [NewCaseComponent, LoginComponent, SidenavComponent, DashboardComponent, ImportNetComponent, RoleAssignmentComponent],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule,
+    AppRoutingModule,
+    FlexModule,
+    MaterialModule,
+    FlexLayoutModule,
+    AuthenticationModule,
+    // Nesie `SignUpService`, ktory je `providedIn: SignUpModule`, nie root.
+    // Obrazovka obnovy hesla ho potrebuje; bez tohto importu spadne DI
+    // (`NullInjectorError`) a zostane prazdna stranka bez hlasky.
+    SignUpModule,
+    SideMenuComponentModule,
+    AuthenticationComponentModule,
+    // Formulare obnovy hesla: `nc-email-submission-form` (zadanie adresy)
+    // a `nc-forgotten-password-form` (nastavenie noveho hesla z tokenu).
+    EmailSubmissionFormComponentModule,
+    ForgottenPasswordFormComponentModule,
+    TranslateLibModule,
+    LoginFormComponentModule,
+    ToolbarComponentModule,
+    NavigationComponentModule,
+    HeaderComponentModule,
+    PanelComponentModule,
+    CaseViewComponentModule,
+    SearchComponentModule,
+    QuickPanelComponentModule,
+    TabsComponentModule,
+    SideMenuNewCaseComponentModule,
+    DashboardComponentModule,
+    ResizableModule,
+    UserComponentModule,
+    PieChartModule,
+    CommonModule,
+    MaterialModule,
+    SideMenuContentComponentModule,
+    HeaderComponentModule,
+    PanelComponentModule,
+    DataFieldsComponentModule,
+  ],
+  providers: [
+    {provide: ConfigurationService, useClass: EtaskFrontendConfigurationService},
+    {provide: ViewService, useClass: EtaskFrontendViewService},
+    {provide: TaskResourceService, useClass: ETaskTaskResourceService},
+    {provide: UriResourceService, useClass: EtaskUriResourceService},
+    // Dashboard aj lave menu musia mat TU ISTU instanciu.
+    //
+    // `EtaskUriService` je `providedIn: 'root'`, takze existuje - ale je to iny
+    // token nez kniznicny `UriService`. Angular preto vyrobil DVE instancie,
+    // kazdu s vlastnym `_activeNode$`. Dashboard zapisoval `activeNode` do
+    // svojej, drawer bol prihlaseny na druhu - a klik na kartu preto lave menu
+    // neprepol. Zobrazenie sa otvorilo spravne, len strom zostal tam, kde bol,
+    // co vyzeralo ako chyba navigacie.
+    //
+    // `useExisting`, nie `useClass`: `useClass` by vyrobil DRUHU instanciu
+    // `EtaskUriService` a chyba by zostala, len by sa presunula.
+    {provide: UriService, useExisting: EtaskUriService},
+    {provide: GroupNavigationComponentResolverService, useClass: EtaskGroupNavigationComponentResolverService},
+    // Klientska kontrola opravneni musi vediet o ROLE_ADMIN, inak zakazuje
+    // to, co server povoluje - podrobne v EtaskPermissionService.
+    // `useExisting`: sluzba je `providedIn: 'root'`, `useClass` by vyrobil druhu instanciu.
+    {provide: PermissionService, useExisting: EtaskPermissionService},
+  ],
+})
+export class AppModule {
+}

@@ -1,0 +1,29 @@
+# Build kontext backendu je ROOT repozitara (Dockerfile potrebuje aj
+# platform/vendor-deps.sh a ai-config/processes), takze bez tohto
+# suboru by sa do daemonu posielal cely repozitar vratane node_modules
+# frontendu a .git - stovky MB pri kazdom builde.
+#
+# Co Dockerfile backendu naozaj potrebuje:
+#   platform/vendor-deps.sh
+#   platform/backend/pom.xml, src, docker-entrypoint.sh
+#   ai-config/processes
+# Nic z toho tu nesmie byt vylucene.
+
+.git
+.gitignore
+.run
+**/node_modules
+**/dist
+**/target
+**/.angular
+**/.idea
+*.log
+*.iml
+
+# Frontend ma vlastny build kontext (platform/frontend/) a vlastny
+# .dockerignore; do backendoveho obrazu nepatri.
+platform/frontend
+
+# Kluce a lokalne nastavenia nepatria do obrazu - entrypoint si JWT kluc
+# vygeneruje sam do volume.
+certificates

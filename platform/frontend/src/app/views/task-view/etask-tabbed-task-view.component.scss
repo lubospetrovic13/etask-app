@@ -1,0 +1,52 @@
+// Carried over verbatim from @netgrif/components default-tabbed-task-view.component.scss.
+//
+// Spacing is deliberately NOT tuned here: the density pass lives in
+// src/styles/_overrides.scss so the same numbers apply to the case and workflow views
+// we do not own. This component exists for the header column set, not for spacing.
+
+.task-tab-background {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+  background-color: transparent;
+}
+
+.search-panel {
+  margin-top: 20px;
+}
+
+.content-margin {
+  margin: 0 20px;
+}
+
+.task-panel-padding-mini {
+  padding-bottom: 20px;
+  padding-top: 20px;
+}
+
+.full-height {
+  height: 100%;
+}
+
+.search-width {
+  width: 100%;
+}
+
+.min-height-task-custom {
+  min-height: 400px;
+  height: 400px;
+}
+
+// The search field has neither a hint nor an error (fulltext-search.component.html is
+// just a mat-form-field with an input), so the subscript row that the global
+// stylesheet keeps in normal flow - needed for <desc> to wrap - is empty here.
+.search-panel {
+  .mat-form-field-wrapper {
+    margin: 0;
+    padding-bottom: 0;
+  }
+
+  .mat-form-field-subscript-wrapper {
+    display: none;
+  }
+}

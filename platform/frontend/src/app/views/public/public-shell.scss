@@ -1,0 +1,122 @@
+// Vzhlad VEREJNYCH formularov - to, co vidi clovek bez uctu.
+//
+// Zamerne SVETLY a nezavisly od temy portalu. Portal je nastroj pre ludi,
+// ktori v nom pracuju kazdy den a maju ho tmavy; verejny formular je jedna
+// obrazovka pre cudzieho cloveka, ktory na nu prisiel z odkazu a viac ju
+// nikdy neuvidi. Tmavy formular na takom mieste vyzera ako chyba, nie ako
+// rozhodnutie - preto sa tu farby neberu z temy, ale su tu napisane.
+//
+// Struktura je ta ista, aku ma kazdy verejny formular postaveny na NAE:
+//   pruh s logom -> farebny akcent -> karta s nazvom -> formular -> paticka.
+
+$public-bg: #f4f6f8;
+$public-surface: #ffffff;
+$public-border: #e0e4e8;
+$public-text: #1f2933;
+$public-muted: #52606d;
+$public-accent: #2196f3;
+
+.public-shell {
+  min-height: 100%;
+  width: 100%;
+  overflow: auto;
+  background: $public-bg;
+  color: $public-text;
+}
+
+.public-topbar {
+  background: $public-surface;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+}
+
+.public-topbar img {
+  height: 34px;
+  width: auto;
+}
+
+// Farebny pruh pod logom - to, co z celej obrazovky nesie znacku.
+.public-accent {
+  height: 6px;
+  background: $public-accent;
+}
+
+// `align-self`, NIE `margin: 0 auto`. Shell je flex stlpec a auto margin na
+// priecnej osi vypne stretch - polozka sa potom zmrsti na sirku obsahu
+// a karta vysla siroka 176 px namiesto 900. Zistene az v prehliadaci;
+// zo scss to nevidno.
+// Plna sirka, nie uzky stlpec. Formular ma stvorstlpcove rozlozenie poli
+// (`cols` v dataRef) a v 900 px sa pole vedla pola nezmesti - v portali ma
+// pritom celu sirku okna. Uzka karta bola navrh pre jednoduchy formular,
+// nie pre tento.
+.public-body {
+  width: 100%;
+  align-self: stretch;
+  padding: 16px 16px 24px;
+}
+
+.public-card {
+  background: $public-surface;
+  border: 1px solid $public-border;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.public-card-title {
+  padding: 16px 24px;
+  border-bottom: 1px solid $public-border;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  color: $public-text;
+}
+
+// SKUTOCNA VYSKA, nie `auto`. Zoznam uloh stoji na CDK virtual scrolle:
+// panel je vo vnutri mimo toku, takze kontajner z neho ziadnu vysku
+// NEDOSTANE - `height: auto` znamena nulu a formular je cely v DOM, pritom
+// na obrazovke nie je nic. V portali vysku dava flex stlpec cez celu stranku;
+// tu ju treba povedat.
+//
+// Zmerane v prehliadaci: s `min-height` zostal zoznam na 120 px, kym panel
+// v nom mal 858. Zo SCSS to nevidno.
+.public-card-body {
+  height: calc(100vh - 230px);
+  min-height: 420px;
+  padding: 0 8px 8px;
+}
+
+app-etask-task-list {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+// Formularove polia kniznice dedia farbu textu z okolia. Bez tohto by na
+// svetlej karte zostali svetle - citatelne asi ako biela na bielej.
+.public-card-body,
+.public-card-body * {
+  color: $public-text;
+}
+
+.public-actions {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 20px;
+}
+
+.public-actions button {
+  min-width: 220px;
+}
+
+.public-footer {
+  background: $public-accent;
+  color: #ffffff;
+  padding: 16px 24px;
+  font-size: 13px;
+}
+
+.public-language {
+  margin-left: auto;
+}

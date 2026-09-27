@@ -1,0 +1,94 @@
+<!--
+  Based on @netgrif/components boolean-field.component.html. The scaffolding is kept
+  (nc-data-field-template for the layout/offset, the label, the hint, the error) and only
+  the control itself is switched on the variant read from <properties>.
+-->
+<nc-data-field-template *ngIf="!dataField.behavior.hidden"
+                        [dataField]="dataField"
+                        [dataFieldTemplate]="boolean"
+                        [offset]="taskOffset">
+</nc-data-field-template>
+
+<ng-template #boolean let-showLargeLayout="showLargeLayout">
+  <div [ngSwitch]="variant">
+
+    <!--
+      section: the row is the control, so it carries the title itself - but only in the
+      small layout. In the large layout nc-data-field-template already prints the title in
+      the left column, and repeating it inside the row would duplicate it.
+    -->
+    <button *ngSwitchCase="'section'" type="button" class="app-section-row"
+            [disabled]="formControl.disabled" [attr.aria-expanded]="isOn()" (click)="toggle()">
+      <span class="app-section-title" *ngIf="!showLargeLayout.value">
+        {{dataField.title}}
+        <ng-container *ngTemplateOutlet="requiredMark"></ng-container>
+      </span>
+      <mat-icon class="app-section-chevron">{{sectionIcon()}}</mat-icon>
+    </button>
+
+    <!-- segmented -->
+    <div *ngSwitchCase="'segmented'">
+      <ng-container *ngTemplateOutlet="label; context: {large: showLargeLayout}"></ng-container>
+      <mat-button-toggle-group class="app-segmented" [value]="isOn()"
+                               [disabled]="formControl.disabled"
+                               (change)="setValue($event.value)">
+        <mat-button-toggle [value]="true">{{'dataField.values.boolean.true' | translate}}</mat-button-toggle>
+        <mat-button-toggle [value]="false">{{'dataField.values.boolean.false' | translate}}</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+
+    <!-- checkbox -->
+    <div *ngSwitchCase="'checkbox'">
+      <mat-checkbox color="primary" [formControl]="formControl" class="app-checkbox">
+        {{dataField.title}}
+        <ng-container *ngTemplateOutlet="requiredMark"></ng-container>
+      </mat-checkbox>
+    </div>
+
+    <!-- chip -->
+    <div *ngSwitchCase="'chip'">
+      <ng-container *ngTemplateOutlet="label; context: {large: showLargeLayout}"></ng-container>
+      <button type="button" class="app-chip" [ngClass]="chipClass()"
+              [class.app-chip-static]="formControl.disabled"
+              [disabled]="formControl.disabled" (click)="toggle()">
+        <span class="app-chip-dot"></span>
+        <span>{{createValueLabel()}}</span>
+      </button>
+    </div>
+
+    <!-- toggle: the library's presentation, and the default -->
+    <div *ngSwitchDefault>
+      <ng-container *ngTemplateOutlet="label; context: {large: showLargeLayout}"></ng-container>
+      <mat-slide-toggle color="primary" [formControl]="formControl">
+        {{createValueLabel()}}
+      </mat-slide-toggle>
+    </div>
+  </div>
+
+  <!--
+    The description. A boolean is not a mat-form-field, so it has no subscript row - but it
+    only needs the `mat-hint` class: the clamp and the hover popover are driven from that
+    class alone, by the global stylesheet and by EtaskTaskContentComponent, so this behaves
+    exactly like a description on any other field type.
+  -->
+  <div class="mat-hint" *ngIf="dataField.description">{{dataField.description}}</div>
+
+  <mat-error *ngIf="dataField.isInvalid(formControl)">{{getErrorMessage()}}</mat-error>
+</ng-template>
+
+<ng-template #label let-large="large">
+  <mat-label class="netgrif-label" *ngIf="!large.value">
+    {{dataField.title}}
+    <ng-container *ngTemplateOutlet="requiredMark"></ng-container>
+    <br>
+  </mat-label>
+</ng-template>
+
+<!--
+  The library's <nc-required-label> is declared but not exported by
+  DataFieldsComponentModule, so it cannot be used from AppModule. This is its markup.
+-->
+<ng-template #requiredMark>
+  <span *ngIf="dataField.behavior.required" class="required-label-color"
+        [ngClass]="{'disabled-opacity-45': dataField.disabled}"> * </span>
+</ng-template>

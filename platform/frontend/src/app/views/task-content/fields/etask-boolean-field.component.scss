@@ -1,0 +1,155 @@
+// All four presentations draw from the same tokens, so they follow light/dark without
+// duplicated rules.
+
+// --- section ---------------------------------------------------------------
+// A section heading, not a control: no fill, no box, just a label with a chevron over a
+// hairline rule - the same role a <fieldset> legend plays. A raised, bordered, rounded
+// button reads as something to press and sits on top of the form instead of in it.
+//
+// The whole width stays the hit area, and the rule doubles as the separator between the
+// heading and the fields it governs.
+.app-section-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px solid var(--app-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--app-fg-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.app-section-row:hover:not(:disabled) {
+  color: var(--app-fg);
+  border-bottom-color: var(--app-border-strong);
+}
+
+.app-section-row:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+// Label weight and letter-spacing of a group heading rather than of a field label, so it
+// reads as structure and does not compete with the fields' own labels.
+.app-section-title {
+  flex: 1 1 auto;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.app-section-chevron {
+  flex: 0 0 auto;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: inherit;
+}
+
+// --- segmented -------------------------------------------------------------
+// The active half is filled with the accent; Material would otherwise only tick it.
+.app-segmented {
+  border-radius: 6px;
+
+  ::ng-deep .mat-button-toggle-checked {
+    background: var(--app-accent);
+
+    .mat-button-toggle-label-content {
+      color: var(--app-accent-contrast);
+      font-weight: 500;
+    }
+  }
+
+  ::ng-deep .mat-button-toggle-label-content {
+    line-height: 32px;
+    padding: 0 14px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+}
+
+// --- checkbox --------------------------------------------------------------
+.app-checkbox {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+// --- chip ------------------------------------------------------------------
+.app-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface-raised);
+  color: var(--app-fg);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.app-chip:hover:not(:disabled) {
+  border-color: var(--app-border-strong);
+}
+
+// A chip on a read-only field is a status indicator, so it drops the affordances
+// rather than looking like a disabled button.
+.app-chip-static,
+.app-chip:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.app-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+// The tone colours only the dot - a fully coloured pill competes with the form.
+.app-chip-success .app-chip-dot {
+  background: var(--app-success);
+}
+
+.app-chip-danger .app-chip-dot {
+  background: var(--app-danger);
+}
+
+.app-chip-warning .app-chip-dot {
+  background: var(--app-warning);
+}
+
+.app-chip-info .app-chip-dot {
+  background: var(--app-info);
+}
+
+.app-chip-accent .app-chip-dot {
+  background: var(--app-accent);
+}
+
+.app-chip-muted .app-chip-dot {
+  background: var(--app-fg-faint);
+}
+
+// --- shared ----------------------------------------------------------------
+// Inlined from @netgrif/components required-label.component, which the library declares
+// but does not export.
+.required-label-color {
+  color: var(--app-danger);
+}
+
+.disabled-opacity-45 {
+  opacity: 0.45;
+}

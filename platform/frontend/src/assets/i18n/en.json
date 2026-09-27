@@ -1,0 +1,88 @@
+{
+  "title": "ETask",
+  "views": {
+    "console": "Konzola"
+  },
+  "cases": {
+    "allCases": "All Cases",
+    "myCases": "My Cases"
+  },
+  "tasks": {
+    "allTasks": "All Tasks",
+    "myTasks": "My Tasks"
+  },
+  "dashboard": {
+    "tasks": "task",
+    "cases": "cases"
+  },
+  "menu": {
+    "emptyFolder": "There is nothing in this folder yet.",
+    "folders": "Folders",
+    "root-folders": "Categories",
+    "settings": "Settings",
+    "views": "Views"
+  },
+  "workflow": {
+    "publicUrl": "Public URL",
+    "goToPublicView": "Go to public view",
+    "upload": "Upload process",
+    "uploadHint": "Upload Petriflow XML to add an application",
+    "openInBuilder": "Open in builder",
+    "search": "Search processes",
+    "searchIn": "Search in",
+    "searchClear": "Clear search",
+    "searchField": {
+      "identifier": "Identifier",
+      "initials": "Initials"
+    },
+    "anonymousView": "Public form"
+  },
+  "snackbar": {
+    "filterDeleteSuccess": "Filter deleted successfully. Refreshing view.",
+    "publicUrlCopied": "Public URL of process copied",
+    "builderLinkFailed": "Could not create a link to the model.",
+    "builderInsecureContext": "The portal runs on HTTP and the builder on HTTPS - the browser may block the model from loading."
+  },
+  "app": {
+    "theme": {
+      "toDark": "Dark mode",
+      "toLight": "Light mode"
+    },
+    "login": {
+      "forgotten": "Forgotten password?"
+    }
+  },
+  "uriNode": {
+    "faktury": "Invoices",
+    "general": "General",
+    "objednavky": "Orders",
+    "onboarding": "Employee onboarding",
+    "schvalovanie": "Orders and invoices",
+    "service_desk": "Service Desk"
+  },
+  "view": {
+    "publicForm": {
+      "title": "Submit a request",
+      "footer": "Request submission form for Netgrif eTask"
+    }
+  },
+  "auth": {
+    "backToLogin": "Back to sign in",
+    "recover": {
+      "askAgain": "Ask for a new link",
+      "done": "Your password is set, you can sign in.",
+      "failed": "The password could not be set.",
+      "intro": "Choose a new password. Once it is set you can sign in with it right away.",
+      "invalidToken": "The link is invalid or has expired.",
+      "noToken": "The link carries no token. Open it straight from the e-mail.",
+      "title": "Set a new password"
+    },
+    "reset": {
+      "failed": "The password reset request could not be sent.",
+      "intro": "Enter the address you sign in with. We will send a link for setting a new password to it.",
+      "sent": "If an account with that address exists, the recovery link is on its way.",
+      "sentInfo": "If an account with that address exists, the link is on its way. Check your inbox.",
+      "title": "Forgotten password"
+    }
+  }
+}

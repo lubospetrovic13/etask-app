@@ -1,0 +1,97 @@
+# Offline kontroly sietí a nástrojov.
+#
+# Prečo samostatný workflow a nie krok v deploy.yml: `deploy.yml` sa spúšťa
+# RUČNE a stavia obrazy (minúty). Toto beží pri každom push a trvá sekundy —
+# a chytá presne tú vrstvu chýb, ktoré sa inak neprejavia ako chyba:
+# preklep vo volaní delegáta, chýbajúci preklad, komponent, ktorý frontend
+# nevykreslí, alebo prekrytie v gride.
+#
+# Čo tu NIE JE a byť nemôže: `pfcheck` a `pfsync` — tie potrebujú bežiaci
+# engine, teda Mongo, Elastic a Redis. Ground truth zostáva lokálny beh
+# (`tools/up.sh`) a akceptačné sady (`<app>check.py`).
+
+name: kvalita
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  siete-a-nastroje:
+    runs-on: ubuntu-latest
+
+    env:
+      # Dva nástroje potrebujú Maven artefakt, ktorý lokálne leží v ~/.m2
+      # a na čistom runneri nie je:
+      #   pfgroovy  skutočný Groovy parser (kontroluje syntax akcií)
+      #   pfapi     jar enginu (inventár metód sa číta cez javap)
+      # Oba vtedy zámerne končia kódom 2 — preskočená kontrola nie je "čisté",
+      # lebo tichý skip je horší než červené CI. Preto sa jary sťahujú.
+      GROOVY_VERSION: "3.0.10"
+      PF_GROOVY_JAR: ${{ github.workspace }}/.ci/groovy-3.0.10.jar
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Groovy 3 na JDK 21+ padá na "Unsupported class file major version 65",
+      # a runner má v predvolenom stave novšiu Javu. Engine beží na 11, parser
+      # na 17 stačí — hlavne to nesmie byť 21+.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Jary z Maven Central (pfgroovy, pfapi)
+        run: |
+          set -eu
+          mkdir -p .ci
+          # Verzia enginu sa berie z pom.xml, nie natvrdo: inventár má
+          # zodpovedať verzii, na ktorej appka naozaj stojí. Po jej zdvihnutí
+          # sa CI posunie samo.
+          ENGINE_VERSION=$(grep -A2 '<artifactId>application-engine</artifactId>' \
+            platform/backend/pom.xml | grep -m1 '<version>' \
+            | sed -E 's/.*<version>([^<]+)<.*/\1/')
+          echo "engine: $ENGINE_VERSION, groovy: $GROOVY_VERSION"
+
+          curl -sSfL -o ".ci/groovy-${GROOVY_VERSION}.jar" \
+            "https://repo1.maven.org/maven2/org/codehaus/groovy/groovy/${GROOVY_VERSION}/groovy-${GROOVY_VERSION}.jar"
+          curl -sSfL -o ".ci/application-engine-${ENGINE_VERSION}.jar" \
+            "https://repo1.maven.org/maven2/com/netgrif/application-engine/${ENGINE_VERSION}/application-engine-${ENGINE_VERSION}.jar"
+
+          # Stiahnuté súbory musia byť čitateľné zipy — Maven Central vie vrátiť
+          # HTML chybovú stránku a tá by sa tvárila ako jar až do prvého volania.
+          unzip -tqq ".ci/groovy-${GROOVY_VERSION}.jar" >/dev/null
+          unzip -tqq ".ci/application-engine-${ENGINE_VERSION}.jar" >/dev/null
+
+          echo "PF_ENGINE_JAR=$GITHUB_WORKSPACE/.ci/application-engine-${ENGINE_VERSION}.jar" >> "$GITHUB_ENV"
+
+      - name: pflint (štruktúra, tiché pasce, grid)
+        working-directory: ai-config
+        run: python3 tools/pflint.py processes/
+
+      - name: pfgroovy (syntax akcií)
+        working-directory: ai-config
+        run: python3 tools/pfgroovy.py processes/
+
+      - name: pfi18n (každý viditeľný text má preklad)
+        working-directory: ai-config
+        # `single_settings.xml` je systémová sieť enginu (vendorovaná na
+        # classpath) - jej preklady nevieme opraviť, a červené CI, ktoré sa
+        # nedá opraviť, sa naučia ignorovať aj so skutočnými nálezmi.
+        run: python3 tools/pfi18n.py processes/ --ignore single_settings.xml
+
+      - name: pfapi (inventár primitív je aktuálny)
+        working-directory: ai-config
+        run: python3 tools/pfapi.py --check
+
+      - name: pftest (testy samotných nástrojov)
+        working-directory: ai-config
+        # `pfview` sa vnútri preskočí, keď chýba node_modules — inventár
+        # komponentov sa číta z nainštalovanej knižnice, nie zo zoznamu v kóde.
+        run: bash tools/pftest.sh

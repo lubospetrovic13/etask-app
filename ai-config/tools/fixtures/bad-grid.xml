@@ -1,0 +1,83 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>fixtures/bad_grid</id>
+	<version>1.0.0</version>
+	<initials>BGR</initials>
+	<title>Fixture - dve polia na tom istom miesto v gride</title>
+	<defaultRole>true</defaultRole>
+	<!--
+		Toto nie je ukazka, je to TEST. `pflint` na tejto sieti MUSI zlyhat.
+
+		Engine ju naimportuje bez namietky, `pfcheck` prejde a `pfview` tiez -
+		typy poli aj komponenty su v poriadku. Chyba je v LAYOUTE: `popis` ma
+		tri riadky od y=1, takze zabera 1..3, a `suma` sedi na y=2. Angular
+		grid v tej chvili vyhodi
+
+		    Cannot place element xsuma into the grid layout, because it's space
+		    (x: 0, y: 2) is already occupied by another element (xpopis)
+
+		a uloha sa NEVYKRESLI - formular zostane na nekonecnom spinneri. Chyba
+		je len v konzole prehliadaca, takze zvonku to vyzera na zaseknuty
+		server a hlada sa uplne inde.
+
+		Takto to vznika v praxi: niekto zvysi `rows` jedneho pola, aby dlhy text
+		netiekol, a nepohne tym, co je pod nim.
+	-->
+	<role>
+		<id>ktokolvek</id>
+		<title>Ktokoľvek</title>
+	</role>
+	<data type="text">
+		<id>popis</id>
+		<title>Popis</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="number">
+		<id>suma</id>
+		<title>Suma</title>
+	</data>
+	<transition>
+		<id>t_zle</id>
+		<x>100</x>
+		<y>80</y>
+		<label>Zlý grid</label>
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>ktokolvek</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_zle</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>popis</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>suma</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a</id>
+		<type>read</type>
+		<sourceId>p</sourceId>
+		<destinationId>t_zle</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

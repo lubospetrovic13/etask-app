@@ -1,0 +1,26 @@
+<!--
+  Copy of @netgrif/components field-component-resolver.component.html.
+
+  Zámerne zaostalá: chýbajú vetvy pre FILTER, I18N a TASK_REF, presne tak, ako
+  by vyzerala kópia po tom, čo knižnica pridá nový typ poľa. Build prejde,
+  pole sa vykreslí ako prázdne miesto.
+-->
+<div [ngSwitch]="getElementType()">
+  <nc-text-field *ngSwitchCase="fieldTypeEnum.TEXT"></nc-text-field>
+  <nc-number-field *ngSwitchCase="fieldTypeEnum.NUMBER"></nc-number-field>
+  <app-etask-boolean-field *ngSwitchCase="fieldTypeEnum.BOOLEAN"></app-etask-boolean-field>
+  <nc-button-field *ngSwitchCase="fieldTypeEnum.BUTTON"></nc-button-field>
+  <nc-date-field *ngSwitchCase="fieldTypeEnum.DATE"></nc-date-field>
+  <nc-date-time-field *ngSwitchCase="fieldTypeEnum.DATE_TIME"></nc-date-time-field>
+  <nc-enumeration-field *ngSwitchCase="fieldTypeEnum.ENUMERATION"></nc-enumeration-field>
+  <nc-enumeration-field *ngSwitchCase="fieldTypeEnum.ENUMERATION_MAP"></nc-enumeration-field>
+  <nc-multichoice-field *ngSwitchCase="fieldTypeEnum.MULTICHOICE"></nc-multichoice-field>
+  <nc-multichoice-field *ngSwitchCase="fieldTypeEnum.MULTICHOICE_MAP"></nc-multichoice-field>
+  <nc-file-field *ngSwitchCase="fieldTypeEnum.FILE"></nc-file-field>
+  <nc-file-list-field *ngSwitchCase="fieldTypeEnum.FILE_LIST"></nc-file-list-field>
+  <nc-user-field *ngSwitchCase="fieldTypeEnum.USER"></nc-user-field>
+  <nc-user-list-field *ngSwitchCase="fieldTypeEnum.USER_LIST"></nc-user-list-field>
+  <div *ngSwitchCase="taskElementEnum.DATA_GROUP_TITLE"></div>
+  <div *ngSwitchCase="taskElementEnum.LOADER"></div>
+  <div *ngSwitchCase="taskElementEnum.BLANK"></div>
+</div>

@@ -1,0 +1,66 @@
+// Carried over from @netgrif/components field-component-resolver.component.scss,
+// with the light-only colours replaced by tokens.
+.line-datagroup {
+  height: 1px;
+  background: var(--app-border);
+}
+
+.margin-default {
+  margin-right: 8px;
+  margin-left: 8px;
+}
+
+// Library value is 75px. The description no longer reserves a fixed two lines, so rows
+// without one were left with dead space; 64px still gives a comfortable target.
+.min-row-height {
+  min-height: 64px;
+}
+
+.phl-row {
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.phl-col {
+  height: 70px;
+  flex: 0 0 90%;
+  background-color: var(--app-surface-raised);
+  border-radius: var(--app-radius);
+}
+
+.phl-item {
+  width: 100%;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  overflow: hidden;
+  background-color: var(--app-surface);
+}
+
+.phl-item::after {
+  position: absolute;
+  inset: 0;
+  transform: translate(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(var(--app-overlay), 0) 0,
+    rgba(var(--app-overlay), 0.2) 20%,
+    rgba(var(--app-overlay), 0.5) 60%,
+    rgba(var(--app-overlay), 0)
+  );
+  animation: shimmer 1s infinite;
+  content: '';
+}
+
+@keyframes shimmer {
+  to {
+    transform: translate(100%);
+  }
+}
+
+.phl-item,
+.phl-item *,
+.phl-item::after,
+.phl-item::before {
+  box-sizing: border-box;
+}

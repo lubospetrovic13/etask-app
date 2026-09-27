@@ -1,0 +1,155 @@
+// Application design tokens.
+//
+// Angular Material 13 is pre-MDC: its themes compile to static CSS, so runtime
+// theme switching needs two emitted theme blocks (see themes/custom-themes.scss).
+// Our own styles do not have that limitation - they read these custom properties,
+// which flip with the `.app-dark` class, so every rule below is written once.
+//
+// Light values live on :root, dark values override them under .app-dark.
+//
+// MAPOVACIA VRSTVA. Od septembra 2026 tu nie su farby, ale odkazy na `--n-*`
+// z `_n-tokens.scss` - prepisu Netgrif Design System z Figmy. Rozdelenie je
+// zámerné a je to to jediné, čo drží dizajn a aplikáciu oddelene:
+//
+//   --n-*     ČO dizajn definuje. Generované z Figmy, neupravuje sa ručne,
+//             nevie o eTasku a dá sa presunúť do `@netgrif/components`.
+//   --app-*   NA ČO to appka používa. Tento súbor. Mená sa nemenia, takže
+//             zvyšok štýlov ani komponenty o výmene dizajnu nevedia.
+//
+// Keď DS pridá odtieň alebo zmení rampu, mení sa `_n-tokens.scss` (generátorom)
+// a nanajvýš jeden riadok tu. Bez tej medzivrstvy by sa každá zmena palety
+// musela prepísať na desiatkach miest.
+//
+// KONTRAST SA NEODHADUJE. Každý pár nižšie je zmeraný `node tools/contrast.js`
+// nad skompilovaným `styles.css`; čísla v komentároch sú z neho. Odtieň z rampy
+// sa vyberá tak, aby prah sedel - nie tak, aby sa páčil.
+
+:root {
+  // Surfaces, from furthest back to closest to the user
+  --app-bg: var(--n-color-neutral-50); // page / content background
+  // Rail je na `neutral-50`, nie `neutral-100`: na tom svetlejsom `--app-fg-muted`
+  // meria 4.63:1, na `neutral-100` len 4.39:1 - tesne pod prahom.
+  --app-rail: var(--n-color-neutral-50); // narrow icon rail on the far left
+  --app-drawer: var(--n-color-neutral-0); // 300px navigation drawer
+  --app-surface: var(--n-color-neutral-0); // cards, panels, task content
+  --app-surface-raised: var(--n-color-neutral-100); // hover, selected rows, chips
+  // rgba() potrebuje zložky, nie farbu, takže tieto dva zostávajú doslovné.
+  // Musia sedieť s --app-surface / --app-surface-raised nad nimi.
+  --app-surface-rgb: 255, 255, 255;
+  --app-surface-raised-rgb: 243, 244, 246;
+  --app-border: var(--n-color-neutral-200); // decorative hairlines: separators, card edges
+  --app-border-strong: var(--n-color-neutral-300);
+  // The boundary of something you can type in or click. WCAG asks for 3:1 on UI
+  // component boundaries. `neutral-400` z DS je na bielej 2.4:1, čiže by zopakovalo
+  // presne tú chybu, pre ktorú tento token vznikol - formulár bez viditeľných polí.
+  // `neutral-500` meria 4.84:1.
+  --app-border-interactive: var(--n-color-neutral-500);
+
+  // Filled chrome bars: the case list column header and the panel footer.
+  // V návrhu je horná lišta a rail tmavé, takže chrome ide na najtmavší neutrál
+  // namiesto pôvodnej firemnej navy.
+  --app-chrome: var(--n-color-neutral-900);
+  --app-chrome-fg: var(--n-color-neutral-0);
+
+  // Text
+  // Zmerané na --app-surface: fg 17.76:1, muted 4.84:1, faint 4.69:1, disabled 17.76:1.
+  //
+  // `faint` je váha placeholderu a drží sa na 3:1. Neutrálna rampa DS na to
+  // nemá stupeň: `neutral-400` meria 2.60:1 (padá) a hneď ďalší `neutral-500`
+  // 4.84:1, teda to isté čo `muted`. Preto sa berie z alfa stupnice, ktorá má
+  // medzi nimi rungy - `alpha-black-56` sedí na 4.69:1.
+  --app-fg: var(--n-color-neutral-900);
+  --app-fg-muted: var(--n-color-neutral-500);
+  --app-fg-faint: var(--n-color-alpha-black-56);
+  // In a Petriflow form "disabled" means a `visible` field, i.e. a computed value the
+  // user is meant to read - not a control that is unavailable. So it gets the same
+  // contrast as any other content; what marks it as read-only is losing the input box,
+  // not being greyed out.
+  --app-fg-disabled: var(--n-color-neutral-900);
+
+  // Accent used for interactive chrome (active tab underline, primary button).
+  // Brand 500 (#00B5D4) je v návrhu VÝPLŇ tlačidla, nie text - na bielej meria
+  // 2.18:1, takže ako podčiarknutie či text by zmizol. Preto sa sem berie
+  // brand-700 a samotná výplň tlačidla si berie `--n-color-brand-500` priamo.
+  --app-accent: var(--n-color-brand-700);
+  --app-accent-contrast: var(--n-color-neutral-0);
+  // Material "accent" - highlights, counts, badges. Purple, nie brand: akcent
+  // má byť iný odtieň než primárna, inak zvýraznenia splynú s chrómou.
+  --app-accent-secondary: var(--n-color-purple-600);
+
+  // Status colours. Z DS rámp, ale o stupeň tmavšie, než na aké siaha návrh:
+  // pastelové badge v tabuľke sú výplne s tmavým textom, kým tieto tokeny sa
+  // používajú aj ako text na bielej, kde platí 4.5:1.
+  --app-success: var(--n-color-green-700);
+  --app-danger: var(--n-color-red-700);
+  --app-warning: var(--n-color-orange-700);
+  --app-info: var(--n-color-blue-600);
+
+  // The description popover. Follows the mode - a floating card, not a dark Material
+  // tooltip; the border and shadow are what make it read as being in front.
+  --app-tooltip: var(--n-color-neutral-0);
+  --app-tooltip-fg: var(--n-color-neutral-900);
+
+  // Effects
+  --app-overlay: 0, 0, 0; // rgb triplet for hover/ripple overlays
+  --app-overlay-hover: 0.04;
+  // DS má tiene ako EFFECT štýly vo Figme, tie sa do `--n-*` tabuliek nedostali -
+  // zostávajú pôvodné, kým ich niekto neprepíše.
+  --app-shadow-1: 0 1px 2px rgba(13, 45, 60, 0.08), 0 2px 6px rgba(84, 110, 122, 0.08);
+  --app-shadow-2: 0 2px 4px rgba(13, 45, 60, 0.16), 0 4px 8px rgba(84, 110, 122, 0.16);
+  --app-radius: var(--n-border-radius-8);
+
+  // How many lines of a data field description (<desc>) are shown before it is
+  // clipped with an ellipsis. Hovering reveals the rest. Mode-independent.
+  --app-hint-lines: 2;
+
+  // Scrollbars
+  --app-scrollbar-track: var(--n-color-neutral-0);
+  --app-scrollbar-thumb: var(--n-color-neutral-300);
+
+  color-scheme: light;
+}
+
+.app-dark {
+  --app-bg: var(--n-color-neutral-950);
+  --app-rail: var(--n-color-neutral-950);
+  --app-drawer: var(--n-color-neutral-900);
+  --app-surface: var(--n-color-neutral-900);
+  --app-surface-raised: var(--n-color-neutral-800);
+  --app-surface-rgb: 17, 24, 38;
+  --app-surface-raised-rgb: 31, 41, 56;
+
+  --app-tooltip: var(--n-color-neutral-800);
+  --app-tooltip-fg: var(--n-color-neutral-50);
+  --app-border: var(--n-color-neutral-800);
+  --app-border-strong: var(--n-color-neutral-700);
+  --app-border-interactive: var(--n-color-neutral-500);
+
+  --app-chrome: var(--n-color-neutral-900);
+  --app-chrome-fg: var(--n-color-neutral-50);
+
+  --app-fg: var(--n-color-neutral-50);
+  --app-fg-muted: var(--n-color-neutral-400);
+  --app-fg-faint: var(--n-color-neutral-500);
+  --app-fg-disabled: var(--n-color-neutral-50);
+
+  // V tmavom režime je brand svetlý, takže funguje aj ako text.
+  --app-accent: var(--n-color-brand-400);
+  --app-accent-contrast: var(--n-color-neutral-950);
+  --app-accent-secondary: var(--n-color-purple-400);
+
+  --app-success: var(--n-color-green-400);
+  --app-danger: var(--n-color-red-400);
+  --app-warning: var(--n-color-orange-400);
+  --app-info: var(--n-color-blue-400);
+
+  --app-overlay: 255, 255, 255;
+  --app-overlay-hover: 0.08;
+  --app-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.32);
+  --app-shadow-2: 0 2px 4px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  --app-scrollbar-track: var(--n-color-neutral-950);
+  --app-scrollbar-thumb: var(--n-color-neutral-700);
+
+  color-scheme: dark;
+}

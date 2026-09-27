@@ -1,0 +1,23 @@
+// Same "table mode" scroll-on-top trick as `side-nav-cases-case-view.component.scss` -
+// see the comment there for why the double `rotateX` is needed. Base spacing
+// (`.case-view-container`, `.case-header-padding`, `.case-view-search-container`) comes
+// for free from the global overrides in `_overrides.scss`.
+.overflow-div {
+  overflow-x: scroll;
+}
+
+.transform-div {
+  transform: rotateX(180deg);
+  -ms-transform: rotateX(180deg);
+  -webkit-transform: rotateX(180deg);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.max-width-fix {
+  max-width: calc(100% - 8px) !important;
+}

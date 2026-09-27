@@ -1,0 +1,20 @@
+<!--
+    Copy of @netgrif/components language-selector.component.html.
+
+    Only the language list differs, and that lives in the component (see the class
+    doc). The markup is kept identical so a library upgrade shows up as a diff here
+    rather than as a silently stale copy - `pfview` check A compares this file
+    against the template compiled into the library and reports when they drift.
+-->
+<mat-menu #languageMenu="matMenu">
+    <button *ngFor="let lang of langMenuItems" mat-menu-item (click)="setLang(lang.key)" fxLayout="row"
+            fxLayoutAlign="start center" [style.backgroundColor]="lang.key === language ? 'rgba(253,151,31,0.1)':''">
+        <img [src]='getFlag(flagCode(lang.key))' alt="Country icon" class="icon-small-dimensions">
+        <span class="margin-left-default">{{'toolbar.menu.' + lang.value | translate}}</span>
+    </button>
+</mat-menu>
+
+<button mat-icon-button [matMenuTriggerFor]="languageMenu">
+    <img [src]='getFlag(flagCountryCode)'
+         alt="Country icon" class="icon-medium-dimensions">
+</button>

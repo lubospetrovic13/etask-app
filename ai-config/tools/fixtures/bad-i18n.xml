@@ -1,0 +1,71 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>fixture_bad_i18n</id>
+	<version>1.0.0</version>
+	<initials>BI</initials>
+	<title name="net_title">Zla dvojjazycnost</title>
+	<!--
+		Fixture pre pfi18n. Kazda z tychto styroch chyb sa v beziacej appke
+		neprejavi NIJAKO - zobrazi sa povodna hodnota - takze jedina obrana je
+		staticka kontrola:
+
+		  1. `locale="en-US"` sa naimportuje a nikdy sa nepouzije: kluc sa
+		     uklada verbatim, ale hlada sa cez Locale.getLanguage()
+		     (ENGINE_ISSUES E15).
+		  2. `<title>Bez kluca</title>` nema `name`, takze sa neda prelozit.
+		  3. `net_title` nema v bloku `en` preklad vobec.
+		  4. `bi_stav_title` ma v bloku len TODO, teda nie preklad.
+		  5. `bi_neexistuje_title` preklada kluc, ktory v sieti nikto nema -
+		     typicky po premenovani pola.
+	-->
+	<i18n locale="en-US">
+		<i18nString name="bi_predmet_title">Subject</i18nString>
+	</i18n>
+	<i18n locale="en">
+		<i18nString name="bi_predmet_title">Subject</i18nString>
+		<i18nString name="bi_stav_title">TODO Stav</i18nString>
+		<i18nString name="bi_neexistuje_title">Gone</i18nString>
+	</i18n>
+	<defaultRole>true</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<data type="text">
+		<id>bi_predmet</id>
+		<title name="bi_predmet_title">Predmet</title>
+	</data>
+	<data type="text">
+		<id>bi_stav</id>
+		<title name="bi_stav_title">Stav</title>
+	</data>
+	<data type="text">
+		<id>bi_bez</id>
+		<title>Bez kluca</title>
+	</data>
+	<transition>
+		<id>t_bi</id>
+		<x>100</x>
+		<y>100</y>
+		<label name="t_bi_label">Uloha</label>
+		<assignPolicy>manual</assignPolicy>
+		<dataGroup>
+			<id>g_bi</id>
+			<dataRef>
+				<id>bi_predmet</id>
+				<logic><behavior>editable</behavior></logic>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p_bi</id>
+		<x>40</x>
+		<y>100</y>
+		<label>Pult</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a1</id>
+		<type>read</type>
+		<sourceId>p_bi</sourceId>
+		<destinationId>t_bi</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

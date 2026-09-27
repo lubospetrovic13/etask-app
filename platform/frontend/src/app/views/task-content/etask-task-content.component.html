@@ -1,0 +1,34 @@
+<!--
+  Copy of @netgrif/components task-content.component.html.
+  Only difference: the grid cell renders <app-etask-field-component-resolver>.
+-->
+<div *ngIf="loading$ | async; else notLoading" fxLayout="column" fxLayoutAlign="center center">
+  <mat-spinner color="primary"></mat-spinner>
+</div>
+
+<ng-template #notLoading>
+  <div *ngIf="hasDataToDisplay$ | async; else noContentToDisplay"
+       [ngClass]="{'paper-view-content mat-elevation-z10': isPaperView(), 'scrolling_data': this.scrollingNeeded()}"
+       [ngStyle]="{'max-height': this.resolveContentHeightCss()}">
+    <div fxLayout="column" fxLayoutAlign="start stretch"
+         *ngFor="let subgrid of dataSource; trackBy: trackBySubgridFn">
+      <div [gdAreas]="subgrid.gridAreas" [gdColumns]="subgrid.getGridColumns()" class="grid-rows-auto"
+           [ngClass.lt-sm]="{'responsive-grid': true}">
+        <div *ngFor="let item of subgrid.content; trackBy: trackByFn"
+             [gdArea]="item.gridAreaId"
+             class="border" fxLayout="row" [fxLayoutAlign]="getItemAlignment(item)">
+          <app-etask-field-component-resolver [id]="item?.item?.stringId" [gridElement]="item"
+                                              [taskContentComponentClassReference]="taskContentComponentClass"
+                                              fxFlex></app-etask-field-component-resolver>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #noContentToDisplay>
+  <div fxLayout="column" fxLayoutAlign="center center">
+    <mat-icon *ngIf="displayNoDataIcon">{{noDataIcon ? noDataIcon : 'block'}}</mat-icon>
+    <span>{{(noDataText ? noDataText : 'tasks.view.noData') | translate}}</span>
+  </div>
+</ng-template>
