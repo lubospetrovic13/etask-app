@@ -19,5 +19,36 @@
     "netScope": [
       "onboarding/*"
     ]
+  },
+  "objednavky-faktury": {
+    "source": "../examples/objednavky-faktury",
+    "title": "Objednávky a faktúry",
+    "processes": [
+      "fa_faktura.xml",
+      "ob_objednavka.xml",
+      "sc_menu.xml",
+      "sc_nastavenia.xml"
+    ],
+    "tools": [
+      "sccheck.py",
+      "fakcheck.py"
+    ],
+    "docs": [
+      "PRIRUCKA.md"
+    ],
+    "bootstrapCase": [
+      "schvalovanie/sc_menu",
+      "nastavenia/sc_nastavenia"
+    ],
+    "uriNodes": [
+      "schvalovanie",
+      "schvalovanie/faktury",
+      "schvalovanie/objednavky",
+      "nastavenia"
+    ],
+    "netScope": [
+      "schvalovanie/*",
+      "nastavenia/*"
+    ]
   }
 }

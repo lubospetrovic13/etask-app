@@ -22,6 +22,7 @@
       "icon": "request_quote",
       "requiredAuthorities": [],
       "requiredProcessRoles": [
+        "referent",
         "zadavatel",
         "schvalovatel",
         "riaditel",
@@ -38,6 +39,7 @@
       "icon": "receipt_long",
       "requiredAuthorities": [],
       "requiredProcessRoles": [
+        "referent",
         "zadavatel",
         "schvalovatel",
         "riaditel",
@@ -79,7 +81,8 @@
     "nastavenia/*"
   ],
   "tools": [
-    "sccheck.py"
+    "sccheck.py",
+    "fakcheck.py"
   ],
   "docs": [
     "PRIRUCKA.md"

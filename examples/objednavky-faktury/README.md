@@ -1,5 +1,10 @@
 # Example: orders and invoices
 
+**On the branch `app/faktury-objednavky` this example is active and extended** with a draft of
+the colleagues' specification: an invoice officer who checks, matches and records delivery,
+input checks, a rule for when no approval is needed, returns to any earlier level and an XML
+export for accounting. What is done and what is missing is in [BRIEF.md](BRIEF.md).
+
 Purchase orders and incoming invoices with approval by the approver of the cost centre, a four-eyes rule and posting by the accountant. The invoice is read from its attachment (e-invoice XML, PDF, OCR) by the `precitajFakturu` primitive, and people are notified by e-mail with `notifikuj`.
 
 It was built on this platform with an AI assistant, before this repository existed. The
@@ -17,7 +22,7 @@ Give the test users the roles of the app in `ai-config/seed.json`:
 
 | user | roles |
 |---|---|
-| `super@netgrif.com` | `riaditel`, `schv_hotel`, `schv_marketing`, `schv_restauracia`, `schv_sprava`, `schv_udrzba`, `schv_wellness`, `schvalovatel`, `spravca`, `uctovnik`, `zadavatel` |
+| `super@netgrif.com` | `riaditel`, `schv_hotel`, `schv_marketing`, `schv_restauracia`, `schv_sprava`, `schv_udrzba`, `schv_wellness`, `schvalovatel`, `spravca`, `uctovnik`, `zadavatel`, `referent` |
 | `admin@test.local` | `riaditel`, `schv_restauracia`, `schv_wellness`, `schvalovatel`, `spravca`, `uctovnik` |
 | `operator@test.local` | `schv_wellness`, `schvalovatel`, `uctovnik`, `zadavatel` |
 | `druhy@test.local` | `zadavatel` |
@@ -34,6 +39,7 @@ Sign out and back in, because a running session keeps the old roles. Prove it wo
 
 ```bash
 python3 tools/sccheck.py
+python3 tools/fakcheck.py     # the draft: invoice officer, rules, returns, XML
 ```
 
 To remove it again: `python3 tools/pfapp.py remove objednavky-faktury`, then rebuild.

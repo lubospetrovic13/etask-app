@@ -54,7 +54,11 @@
     "pu_zalozenie.xml",
     "pu_menu.xml",
     "on_request.xml",
-    "on_menu.xml"
+    "on_menu.xml",
+    "fa_faktura.xml",
+    "ob_objednavka.xml",
+    "sc_menu.xml",
+    "sc_nastavenia.xml"
   ],
   "bootstrapCase": [
     {
@@ -68,6 +72,14 @@
     },
     {
       "net": "onboarding/on_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "schvalovanie/sc_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "nastavenia/sc_nastavenia",
       "rebuildOnNewVersion": true
     }
   ],
@@ -101,6 +113,63 @@
         "approver",
         "it_admin"
       ]
+    },
+    "schvalovanie": {
+      "icon": "request_quote",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "referent",
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "schvalovanie/faktury": {
+      "icon": "receipt_long",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "referent",
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "schvalovanie/objednavky": {
+      "icon": "shopping_cart",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "nastavenia": {
+      "icon": "tune",
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
     }
   }
 }

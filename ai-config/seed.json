@@ -11,7 +11,9 @@
   ],
   "netScope": [
     "admin/pouzivatelia/*",
-    "onboarding/*"
+    "onboarding/*",
+    "schvalovanie/*",
+    "nastavenia/*"
   ],
   "users": [
     {
@@ -20,7 +22,18 @@
         "approver",
         "hr",
         "it_admin",
-        "spravca"
+        "referent",
+        "riaditel",
+        "schv_hotel",
+        "schv_marketing",
+        "schv_restauracia",
+        "schv_sprava",
+        "schv_udrzba",
+        "schv_wellness",
+        "schvalovatel",
+        "spravca",
+        "uctovnik",
+        "zadavatel"
       ]
     },
     {
@@ -29,21 +42,31 @@
         "approver",
         "hr",
         "it_admin",
-        "spravca"
+        "riaditel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schvalovatel",
+        "spravca",
+        "uctovnik"
       ]
     },
     {
       "email": "operator@test.local",
       "roles": [
         "approver",
-        "hr"
+        "hr",
+        "schv_wellness",
+        "schvalovatel",
+        "uctovnik",
+        "zadavatel"
       ]
     },
     {
       "email": "druhy@test.local",
       "roles": [
         "approver",
-        "it_admin"
+        "it_admin",
+        "zadavatel"
       ]
     },
     {

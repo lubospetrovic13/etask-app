@@ -8,7 +8,7 @@ against the live engine.
 |---|---|---|
 | [onboarding](onboarding/) | the app from the demo video, with the request it was built from | **yes** |
 | [dovolenky](dovolenky/) | leave requests: approval, return for completion, remaining balance | no |
-| [objednavky-faktury](objednavky-faktury/) | orders and invoices: cost-centre approval, four eyes, reading invoice attachments, e-mail | no |
+| [objednavky-faktury](objednavky-faktury/) | orders and invoices: cost-centre approval, four eyes, reading invoice attachments, e-mail; on this branch extended by an invoice officer step ([BRIEF](objednavky-faktury/BRIEF.md)) | **yes, on this branch** |
 | [majetok](majetok/) | asset register: the smallest complete app | no |
 | [service-desk](service-desk/) | tickets from a public form without sign-in, triage, work items | no |
 
