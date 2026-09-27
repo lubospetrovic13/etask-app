@@ -229,6 +229,24 @@ def main():
           "čakajú na integráciu" in (d.get("fa_historia") or ""),
           (d.get("fa_historia") or "")[-160:])
 
+    print("\n=== 7. jazyk pripadu vs. jazyk citatela ===")
+    # Pripad zalozeny v anglickom portali pise priebeh a kontroly po anglicky,
+    # hoci ho kontroluje referent v slovenskom portali - zapisany text sa uz
+    # neprelozi. Chybova hlaska je ale pre toho, kto ju cita: po slovensky.
+    zad_en = Client("druhy@test.local", TEST_PASS, lang="en")
+    fa7, r = podaj_fakturu(zad_en, net_fa, 120.0, "N-EN-1")
+    check("anglicky pripad podany", ok_body(r), str(r)[:140])
+    t7 = tasks_raw(ref, fa7)["t_fa_kontrola"]
+    assign(ref, t7)
+    d = fields(ref, t7)
+    check("vstupne kontroly su v jazyku pripadu (en)",
+          "is missing" in (d.get("fa_validacia") or ""), d.get("fa_validacia"))
+    check("priebeh je v jazyku pripadu (en)",
+          "entered:" in (d.get("fa_historia") or ""), (d.get("fa_historia") or "")[-120:])
+    set_data(ref, t7, {"fa_kontrola_volba": {"type": "enumeration_map", "value": "pokracovat"}})
+    st, r = finish(ref, t7)
+    check("chyba je v jazyku citatela (sk)", "Vyplňte" in str(r), str(r)[:160])
+
     print(f"\nfakcheck: {len(sc.OK)} preslo, {len(sc.FAIL)} zlyhalo")
     for f in sc.FAIL:
         print("  ZLYHALO:", f)

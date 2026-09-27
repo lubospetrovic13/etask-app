@@ -80,10 +80,13 @@ OK, FAIL = [], []
 
 
 class Client:
-    def __init__(self, email, password, lang="zz"):
+    def __init__(self, email, password, lang="sk"):
         self.email = email
-        # `zz` je jazyk, ktory engine NEPOZNA, takze `getTranslation` spadne na
-        # `defaultValue` - teda na to, co je v XML (PETRIFLOW_LEARNINGS B24).
+        # `sk`: siete appky maju prekladovy blok len pre `en`, takze `sk` spadne
+        # na `defaultValue` - na to, co je v XML (PETRIFLOW_LEARNINGS B24).
+        # A zaroven je to jazyk portalu, v ktorom pripad VZNIKNE: fa_faktura
+        # pise priebeh a kontroly v jazyku pripadu (`tx`). Kedysi tu bol `zz`,
+        # jazyk, ktory engine nepozna - dnes by z neho bol anglicky pripad.
         # Na overenie prekladu sa pouzije `en`.
         self.lang = lang
         req = urllib.request.Request(
@@ -104,8 +107,7 @@ class Client:
         headers = {"X-Auth-Token": self.token,
                    # Bez hal+json vracaju HATEOAS endpointy 406.
                    "Accept": "application/hal+json, application/json;q=0.9, */*;q=0.8",
-                   # Locale, ktore engine NEPOZNA => `getTranslation` spadne na
-                   # `defaultValue`, teda na to, co je v XML (PETRIFLOW_LEARNINGS B24).
+                   # Jazyk portalu (vid __init__).
                    "Accept-Language": self.lang}
         if data:
             headers["Content-Type"] = "application/json"

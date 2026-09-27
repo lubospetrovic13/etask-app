@@ -42,7 +42,7 @@
 		<i18nString name="fa_objednavka_title">Order no.</i18nString>
 		<i18nString name="fa_objednavka_desc">Number of the approved order the invoice belongs to, if there is one.</i18nString>
 		<i18nString name="fa_skan_title">Invoice attachment</i18nString>
-		<i18nString name="fa_skan_desc">XML e-invoice, PDF or a scan. The button below reads what it can out of it.</i18nString>
+		<i18nString name="fa_skan_desc">XML e-invoice, PDF or a scan. "Read from the attachment" fills in what it can find in it.</i18nString>
 		<i18nString name="div_fa_priloha_init">Attachment</i18nString>
 		<i18nString name="btn_fa_nacitat_placeholder">Read from the attachment</i18nString>
 		<i18nString name="btn_fa_nacitat_desc">Fills in empty fields from the attachment. It never overwrites what you typed - a difference is reported instead.</i18nString>
@@ -116,6 +116,7 @@
 		<i18nString name="t_fa_zauctovanie_cancel">Release for someone else</i18nString>
 		<i18nString name="empty_button"></i18nString>
 		<i18nString name="referent_title">Invoice officer</i18nString>
+		<i18nString name="fa_jazyk_title">Case language</i18nString>
 		<i18nString name="div_fa_kontrola_init">Check by the invoice officer</i18nString>
 		<i18nString name="fa_kanal_title">Received via</i18nString>
 		<i18nString name="fa_kanal_desc">How the invoice got into the system. Only manual entry exists so far; e-mail, the network folder and the e-mail provider need an integration.</i18nString>
@@ -234,9 +235,13 @@
 fa_zadal: f.fa_zadal, fa_zadal_meno: f.fa_zadal_meno,
 fa_stav: f.fa_stav, fa_stav_label: f.fa_stav_label, fa_ceka_na: f.fa_ceka_na,
 fa_dodavatel: f.fa_dodavatel, fa_cislo: f.fa_cislo, fa_suma: f.fa_suma,
-fa_kanal: f.fa_kanal;
+fa_kanal: f.fa_kanal, fa_jazyk: f.fa_jazyk;
 
 def u = loggedUser()
+
+// Jazyk pripadu = jazyk portalu toho, kto ho zaklada. Prvy riadok, lebo vsetko,
+// co akcie neskor zapisu (`tx`), sa podla neho riadi.
+change fa_jazyk value { jazyk_poziadavky() }
 
 change fa_zadal value { [u.id] }
 change fa_zadal_meno value { kto(u) }
@@ -257,6 +262,31 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
 			</actions>
 		</event>
 	</caseEvents>
+	<function scope="process" name="tx"><![CDATA[
+{ def sk, def en ->
+    // Text, ktory appka ZAPISUJE do pripadu (priebeh, vstupne kontroly, vysledok
+    // nacitania, notifikacie), v jazyku PRIPADU: v tom, v ktorom bol zalozeny
+    // (`fa_jazyk`, zapise `create`). Zapisany text sa uz neprelozi - `text` pole
+    // je `String` - takze jazyk treba zvolit v case zapisu. Pripad bez jazyka
+    // (vznikol pred touto verziou) je anglicky, rovnako ako portal.
+    def j = ((useCase?.dataSet?.get("fa_jazyk")?.value ?: "en") as String)
+    return j == "sk" ? sk : en
+}
+	]]></function>
+	<function scope="process" name="ty"><![CDATA[
+{ def sk, def en ->
+    // Text pre toho, kto ho PRAVE CITA (chybova hlaska, zive upozornenie pri
+    // pisani): v jazyku jeho portalu. Frontend posiela jazyk s kazdou poziadavkou
+    // a Spring ho drzi v LocaleContextHolder.
+    return jazyk_poziadavky() == "sk" ? sk : en
+}
+	]]></function>
+	<function scope="process" name="jazyk_poziadavky"><![CDATA[
+{ ->
+    def l = org.springframework.context.i18n.LocaleContextHolder.getLocale()
+    return ((l?.language ?: "en") as String).toLowerCase().startsWith("sk") ? "sk" : "en"
+}
+	]]></function>
 	<function scope="process" name="limit_riaditela"><![CDATA[
 { ->
     // Hranica dvoch urovni schvalenia, v EUR s DPH: do limitu vratane staci
@@ -299,7 +329,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
 	<function scope="process" name="suma_slovom"><![CDATA[
 { def fa_suma ->
     def v = fa_suma.value
-    if (v == null) return "suma nevyplnená"
+    if (v == null) return tx("suma nevyplnená", "no amount")
     // Locale.US zamerne: formatovanie sa deje na serveri a nema zavisiet od
     // toho, aky locale ma nahodou JVM. Oddelovac je preto bodka.
     return String.format(java.util.Locale.US, "%.2f", (v as Number).doubleValue()) + " €"
@@ -320,7 +350,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     // jazykovo neutralne a v zozname sa da podla neho odkazat. "—" by bolo
     // nerozlisitelne od kazdej inej rozpisanej faktury.
     def co = dod ?: ((useCase.visualId ?: "?") as String)
-    if (cis) co = co + " č. " + cis
+    if (cis) co = co + tx(" č. ", " no. ") + cis
     def suma = fa_suma.value
     if (suma != null && (suma as Number).doubleValue() > 0) {
         co = co + " · " + suma_slovom(fa_suma)
@@ -358,13 +388,13 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     }
     def d = (v as Number).doubleValue()
     if (d <= 0) {
-        change fa_kontrola value { "Suma musí byť väčšia ako nula – takto sa faktúra podať nedá." }
+        change fa_kontrola value { ty("Suma musí byť väčšia ako nula – takto sa faktúra podať nedá.", "The amount has to be greater than zero - the invoice cannot be submitted like this.") }
         return true
     }
     if (d > limit_riaditela()) {
         change fa_kontrola value {
-            "Nad " + String.format(java.util.Locale.US, "%.0f", limit_riaditela()) +
-                    " € schvaľuje po stredisku ešte riaditeľ."
+            ty("Nad ", "Above ") + String.format(java.util.Locale.US, "%.0f", limit_riaditela()) +
+                    ty(" € schvaľuje po stredisku ešte riaditeľ.", " € the director approves after the cost centre.")
         }
         return true
     }
@@ -391,16 +421,16 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
         change pole value { hodnota }
         doplnene << (popis as String)
     } else if (stara != nova) {
-        rozdiely << ((popis as String) + ": v prílohe „" + nova + "“, vo formulári „" + stara + "“")
+        rozdiely << ((popis as String) + tx(": v prílohe „", ": in the attachment \"") + nova + tx("“, vo formulári „", "\", in the form \"") + stara + "“")
     }
 }
 	]]></function>
 	<function scope="process" name="zdroj_slovom"><![CDATA[
 { def kod ->
-    def m = ["xml" : "XML e-faktúra (čítané)",
-             "text": "PDF, textová vrstva (čítané)",
-             "ocr" : "OCR skenu (odhad)",
-             "nic" : "nepodarilo sa"]
+    def m = ["xml" : tx("XML e-faktúra (čítané)", "XML e-invoice (read)"),
+             "text": tx("PDF, textová vrstva (čítané)", "PDF, text layer (read)"),
+             "ocr" : tx("OCR skenu (odhad)", "OCR of a scan (estimate)"),
+             "nic" : tx("nepodarilo sa", "failed")]
     return m[(kod ?: "nic") as String] ?: (kod as String)
 }
 	]]></function>
@@ -419,15 +449,15 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     def preco = null
     if (!kandidati) {
         kandidati = bezZadavatela(usersWithRoleAll("schvalovatel"))
-        preco = "stredisko nemá vlastného schvaľovateľa, ide to všetkým schvaľovateľom"
+        preco = tx("stredisko nemá vlastného schvaľovateľa, ide to všetkým schvaľovateľom", "the cost centre has no approver of its own, it goes to all approvers")
     }
     if (!kandidati) {
         kandidati = bezZadavatela(usersWithRoleAll("riaditel"))
-        preco = "nikto okrem riaditeľa nemôže túto faktúru schváliť"
+        preco = tx("nikto okrem riaditeľa nemôže túto faktúru schváliť", "nobody but the director can approve this invoice")
     }
     change fa_schvalovatelia value { kandidati }
     if (preco) {
-        zapis_historie(fa_historia, "smerovanie: " + preco)
+        zapis_historie(fa_historia, tx("smerovanie: ", "routing: ") + preco)
     }
     return kandidati
 }
@@ -449,14 +479,14 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
 	<function scope="process" name="veta_o_stave"><![CDATA[
 { def kod ->
     def k = ((kod ?: "") as String)
-    if (k == "na_kontrolu") return "Faktúra čaká na kontrolu a spárovanie referentom."
-    if (k == "na_schvalenie") return "Faktúra čaká na schválenie za stredisko."
-    if (k == "u_riaditela") return "Faktúra je nad limitom a čaká na schválenie riaditeľom."
-    if (k == "na_zauctovanie") return "Faktúra je schválená a čaká na zaúčtovanie."
-    if (k == "vratena") return "Faktúra bola vrátená na doplnenie."
-    if (k == "zamietnuta") return "Faktúra bola zamietnutá."
-    if (k == "zauctovana") return "Faktúra bola zaúčtovaná."
-    return "Faktúra je rozpísaná."
+    if (k == "na_kontrolu") return tx("Faktúra čaká na kontrolu a spárovanie referentom.", "The invoice waits for the invoice officer to check and match it.")
+    if (k == "na_schvalenie") return tx("Faktúra čaká na schválenie za stredisko.", "The invoice waits for the cost centre approval.")
+    if (k == "u_riaditela") return tx("Faktúra je nad limitom a čaká na schválenie riaditeľom.", "The invoice is above the limit and waits for the director.")
+    if (k == "na_zauctovanie") return tx("Faktúra je schválená a čaká na zaúčtovanie.", "The invoice is approved and waits for posting.")
+    if (k == "vratena") return tx("Faktúra bola vrátená na doplnenie.", "The invoice was sent back for completion.")
+    if (k == "zamietnuta") return tx("Faktúra bola zamietnutá.", "The invoice was rejected.")
+    if (k == "zauctovana") return tx("Faktúra bola zaúčtovaná.", "The invoice was posted.")
+    return tx("Faktúra je rozpísaná.", "The invoice is a draft.")
 }
 	]]></function>
 	<function scope="process" name="po_zmene_stavu"><![CDATA[
@@ -476,18 +506,18 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
 
     def dod = ((fa_dodavatel.value ?: "") as String).trim()
     def cis = ((fa_cislo.value ?: "") as String).trim()
-    def popis = (dod ?: "faktúra") + (cis ? " č. " + cis : "")
+    def popis = (dod ?: tx("faktúra", "invoice")) + (cis ? tx(" č. ", " no. ") + cis : "")
 
     def telo = new StringBuilder()
     telo.append(veta_o_stave(k)).append("\n\n")
-    telo.append("Faktúra:   ").append(popis).append("\n")
-    telo.append("Suma:      ").append(suma_slovom(fa_suma)).append("\n")
-    telo.append("Stredisko: ").append(((fa_stredisko.value ?: "-") as String)).append("\n")
-    telo.append("\nPortál eTask → Objednávky a faktúry → Faktúry.\n")
+    telo.append(tx("Faktúra:   ", "Invoice:   ")).append(popis).append("\n")
+    telo.append(tx("Suma:      ", "Amount:    ")).append(suma_slovom(fa_suma)).append("\n")
+    telo.append(tx("Stredisko: ", "Cost centre: ")).append(((fa_stredisko.value ?: "-") as String)).append("\n")
+    telo.append(tx("\nPortál eTask → Objednávky a faktúry → Faktúry.\n", "\nPortal → Orders and invoices → Invoices.\n"))
 
     def poslane = notifikuj(komu, popis + " – " + veta_o_stave(k), telo.toString())
     if (poslane > 0) {
-        zapis_historie(fa_historia, "upozornenie e-mailom: " + poslane + "×")
+        zapis_historie(fa_historia, tx("upozornenie e-mailom: ", "e-mail notice: ") + poslane + "×")
     }
     return poslane
 }
@@ -505,7 +535,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
         def cislo = ((c.dataSet["ob_cislo"]?.value ?: "") as String).trim()
         def dod = ((c.dataSet["ob_dodavatel"]?.value ?: "") as String).trim()
         def suma = c.dataSet["ob_suma"]?.value
-        def popis = (cislo ?: "bez čísla") + " · " + (dod ?: "?") +
+        def popis = (cislo ?: tx("bez čísla", "no number")) + " · " + (dod ?: "?") +
                 (suma == null ? "" : (" · " + String.format(java.util.Locale.US, "%.2f",
                         (suma as Number).doubleValue()) + " €"))
         // Kluc je id casu - 24 hex znakov, teda ziadna bodka ani dolar, ktore
@@ -528,7 +558,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     // `stringId` nema. Ide sa cez ObjectId (B13).
     def c = findCase { it._id.eq(new org.bson.types.ObjectId(id)) }
     if (c == null) {
-        change fa_objednavka_info value { "Objednávka sa nenašla - vyberte ju znova." }
+        change fa_objednavka_info value { tx("Objednávka sa nenašla - vyberte ju znova.", "The order was not found - pick it again.") }
         return
     }
     def cislo = ((c.dataSet["ob_cislo"]?.value ?: "") as String).trim()
@@ -542,9 +572,9 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     }
 
     def text = new StringBuilder()
-    text.append(predmet ?: "objednávka")
+    text.append(predmet ?: tx("objednávka", "order"))
     if (objSuma != null) {
-        text.append(" · objednané za ")
+        text.append(tx(" · objednané za ", " · ordered for "))
                 .append(String.format(java.util.Locale.US, "%.2f", (objSuma as Number).doubleValue()))
                 .append(" €")
     }
@@ -554,9 +584,9 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     if (objSuma != null && faSuma != null) {
         double rozdiel = (faSuma as Number).doubleValue() - (objSuma as Number).doubleValue()
         if (rozdiel > 0.005d) {
-            text.append(" · POZOR: fakturuje o ")
+            text.append(tx(" · POZOR: fakturuje o ", " · WARNING: invoices "))
                     .append(String.format(java.util.Locale.US, "%.2f", rozdiel))
-                    .append(" € viac, než bolo objednané")
+                    .append(tx(" € viac, než bolo objednané", " € more than was ordered"))
         }
     }
     change fa_objednavka_info value { text.toString() }
@@ -587,33 +617,33 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     def vyst = fa_datum_vystavenia.value
     def spl = fa_datum_splatnosti.value
     if (vyst instanceof java.time.LocalDate && vyst.isAfter(dnes)) {
-        zistenia << "dátum vystavenia je v budúcnosti"
+        zistenia << tx("dátum vystavenia je v budúcnosti", "the issue date is in the future")
     }
     if (vyst instanceof java.time.LocalDate && spl instanceof java.time.LocalDate && spl.isBefore(vyst)) {
-        zistenia << "splatnosť je skôr ako vystavenie"
+        zistenia << tx("splatnosť je skôr ako vystavenie", "the due date is before the issue date")
     }
     if (fa_skan.value == null || !((fa_skan.value?.name ?: "") as String)) {
-        zistenia << "chýba príloha - doklad sa nedá porovnať s originálom"
+        zistenia << tx("chýba príloha - doklad sa nedá porovnať s originálom", "no attachment - the data cannot be compared with the original")
     }
     if (!((fa_ico.value ?: "") as String).trim()) {
-        zistenia << "chýba IČO dodávateľa (doplnenie podľa IČO z registra zatiaľ nie je)"
+        zistenia << tx("chýba IČO dodávateľa (doplnenie podľa IČO z registra zatiaľ nie je)", "supplier reg. no. is missing (lookup by reg. no. is not there yet)")
     }
     if (!((fa_iban.value ?: "") as String).trim()) {
-        zistenia << "chýba IBAN"
+        zistenia << tx("chýba IBAN", "IBAN is missing")
     }
     def obj = objednavka_k_fakture(fa_objednavka_vyber)
     if (obj == null) {
-        zistenia << "faktúra nie je spárovaná so schválenou objednávkou"
+        zistenia << tx("faktúra nie je spárovaná so schválenou objednávkou", "the invoice is not matched with an approved order")
     } else {
         def objSuma = obj.dataSet["ob_suma"]?.value
         def faSuma = fa_suma.value
         if (objSuma != null && faSuma != null &&
                 (faSuma as Number).doubleValue() - (objSuma as Number).doubleValue() > 0.005d) {
-            zistenia << "fakturuje sa viac, než bolo objednané"
+            zistenia << tx("fakturuje sa viac, než bolo objednané", "more is invoiced than was ordered")
         }
     }
     change fa_validacia value {
-        zistenia ? zistenia.collect { "• " + it }.join("\n") : "Všetko sedí."
+        zistenia ? zistenia.collect { "• " + it }.join("\n") : tx("Všetko sedí.", "Everything matches.")
     }
     return zistenia
 }
@@ -635,7 +665,7 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     if (objSuma == null || faSuma == null) return null
     if ((faSuma as Number).doubleValue() - (objSuma as Number).doubleValue() > 0.005d) return null
     def cislo = ((obj.dataSet["ob_cislo"]?.value ?: "") as String).trim()
-    return "krytá schválenou objednávkou " + (cislo ?: "bez čísla") + ", dodané kompletne"
+    return tx("krytá schválenou objednávkou ", "covered by approved order ") + (cislo ?: tx("bez čísla", "no number")) + tx(", dodané kompletne", ", delivered in full")
 }
 	]]></function>
 	<function scope="process" name="export_xml"><![CDATA[
@@ -674,8 +704,8 @@ changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "konc
     def ja = loggedUser().id as String
     if (zadal.contains(ja)) {
         throw new java.lang.IllegalStateException(
-                "Faktúru, ktorú ste zapísali, nemôžete schváliť ako " + (rola as String) +
-                        ". Nech ju schváli niekto iný.")
+                ty("Faktúru, ktorú ste zapísali, nemôžete schváliť ako ", "You cannot approve an invoice you entered yourself as ") + (rola as String) +
+                        ty(". Nech ju schváli niekto iný.", ". Someone else has to approve it."))
     }
 }
 	]]></function>
@@ -987,7 +1017,7 @@ spoj_s_objednavkou(fa_objednavka_vyber, fa_objednavka, fa_dodavatel, fa_suma,
 	<data type="file">
 		<id>fa_skan</id>
 		<title name="fa_skan_title">Faktúra ako súbor</title>
-		<desc name="fa_skan_desc">XML e-faktúra, PDF alebo sken. Tlačidlo nižšie z nej prečíta, čo sa dá.</desc>
+		<desc name="fa_skan_desc">XML e-faktúra, PDF alebo sken. „Načítať z prílohy“ z neho vyplní, čo nájde.</desc>
 		<!--
 			`preview` je jediny komponent, ktory `nc-file-field` na tomto type
 			pozna (`component.name === 'preview'`), a zapina nahlad priamo vo
@@ -1026,21 +1056,21 @@ if (r.chyba) {
     def doplnene = []
     def rozdiely = []
 
-    dopln_ak_prazdne(fa_dodavatel, r.dodavatel, "dodávateľ", doplnene, rozdiely)
-    dopln_ak_prazdne(fa_cislo, r.cislo, "číslo faktúry", doplnene, rozdiely)
+    dopln_ak_prazdne(fa_dodavatel, r.dodavatel, tx("dodávateľ", "supplier"), doplnene, rozdiely)
+    dopln_ak_prazdne(fa_cislo, r.cislo, tx("číslo faktúry", "invoice number"), doplnene, rozdiely)
     dopln_ak_prazdne(fa_suma, r.suma, "suma", doplnene, rozdiely)
-    dopln_ak_prazdne(fa_datum_splatnosti, r.splatnost, "splatnosť", doplnene, rozdiely)
-    dopln_ak_prazdne(fa_datum_vystavenia, r.vystavenie, "dátum vystavenia", doplnene, rozdiely)
-    dopln_ak_prazdne(fa_ico, r.ico, "IČO", doplnene, rozdiely)
+    dopln_ak_prazdne(fa_datum_splatnosti, r.splatnost, tx("splatnosť", "due date"), doplnene, rozdiely)
+    dopln_ak_prazdne(fa_datum_vystavenia, r.vystavenie, tx("dátum vystavenia", "issue date"), doplnene, rozdiely)
+    dopln_ak_prazdne(fa_ico, r.ico, tx("IČO", "Reg. no."), doplnene, rozdiely)
     dopln_ak_prazdne(fa_iban, r.iban, "IBAN", doplnene, rozdiely)
 
     def sprava = new StringBuilder()
-    sprava.append("Zdroj: ").append(zdroj_slovom(r.zdroj))
-    if (doplnene) sprava.append(". Doplnené: ").append(doplnene.join(", "))
-    if (r.nedocitane) sprava.append(". Neprečítané: ").append((r.nedocitane as List).join(", "))
-    if (rozdiely) sprava.append(". POZOR, nesúhlasí – ").append(rozdiely.join("; "))
+    sprava.append(tx("Zdroj: ", "Source: ")).append(zdroj_slovom(r.zdroj))
+    if (doplnene) sprava.append(tx(". Doplnené: ", ". Filled in: ")).append(doplnene.join(", "))
+    if (r.nedocitane) sprava.append(tx(". Neprečítané: ", ". Not read: ")).append((r.nedocitane as List).join(", "))
+    if (rozdiely) sprava.append(tx(". POZOR, nesúhlasí – ", ". WARNING, does not match - ")).append(rozdiely.join("; "))
     if (r.poznamka) sprava.append(". ").append(r.poznamka as String)
-    if (!doplnene && !rozdiely && !r.nedocitane) sprava.append(". Nič nové som nenašiel.")
+    if (!doplnene && !rozdiely && !r.nedocitane) sprava.append(tx(". Nič nové som nenašiel.", ". Nothing new found."))
 
     change fa_nacitanie value { sprava.toString() }
     change fa_zdroj value { zdroj_slovom(r.zdroj) }
@@ -1195,6 +1225,15 @@ if (r.chyba) {
 			<name>textarea</name>
 		</component>
 	</data>
+	<data type="text">
+		<id>fa_jazyk</id>
+		<title name="fa_jazyk_title">Jazyk prípadu</title>
+		<!--
+			Jazyk, v ktorom bol pripad zalozeny ("sk" alebo "en"). V nom su texty,
+			ktore appka do pripadu zapisuje (funkcia `tx`), lebo zapisany text sa
+			uz prelozit neda. Zapise ho `create`, clovek sa ho nedotyka.
+		-->
+	</data>
 	<data type="i18n">
 		<id>div_fa_kontrola</id>
 		<title/>
@@ -1340,83 +1379,12 @@ if (r.chyba) {
 				to riadit `copyBehavior` alebo akcia, teda dalsie miesto,
 				kde sa da pomylit.
 			-->
-			<dataRef>
-				<id>fa_stav_label</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_poznamka</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>0</y><rows>2</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_fa_faktura</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_dodavatel</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_cislo</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_suma</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_datum_vystavenia</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>2</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_datum_splatnosti</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>4</x><y>4</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_kontrola</id>
-				<logic><behavior>hidden</behavior></logic>
-				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_stredisko</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka_vyber</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>3</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
 			<!--
 				Cislo objednavky zostava na formulari VIDITELNE, hoci ho uz nikto
 				nepise rukou - pride z vyberu. Bez dataRefu by sa cez API vobec
 				nevratilo (pole mimo dataGroup neexistuje pre `GET .../data`)
 				a clovek by nevidel, ktore cislo sa na fakturu vlastne dostalo.
 			-->
-			<dataRef>
-				<id>fa_objednavka</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka_info</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>7</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_predmet</id>
-				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
 			<!--
 				Priloha je AZ ZA polami zamerne. Kto ma XML alebo PDF, prilozi ho
 				a stlaci Nacitat z prilohy - polia sa vyplnia samy. Kto ma papier,
@@ -1424,45 +1392,117 @@ if (r.chyba) {
 				povinna a ziadna sa nevnucuje.
 			-->
 			<dataRef>
-				<id>div_fa_priloha</id>
+				<id>fa_stav_label</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>11</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_poznamka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>0</y><rows>2</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_faktura</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
-				<id>fa_skan</id>
+				<id>fa_dodavatel</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_cislo</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_suma</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_datum_vystavenia</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>12</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_datum_splatnosti</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>2</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_kontrola</id>
+				<logic><behavior>hidden</behavior></logic>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_stredisko</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka_vyber</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka_info</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>8</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_predmet</id>
+				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_priloha</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>btn_fa_nacitat</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>4</x><y>12</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_nacitanie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>14</y><rows>4</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_ico</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>17</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>18</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_iban</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>2</x><y>17</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>18</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zdroj</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>17</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>18</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_kanal</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>18</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>19</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_skan</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>3</x><y>0</y><rows>20</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
 		<event type="finish">
@@ -1478,10 +1518,10 @@ fa_suma: f.fa_suma, fa_datum_splatnosti: f.fa_datum_splatnosti;
 // v tele ako `error` - test na stavovy kod ho prehliadne.
 def v = fa_suma.value
 if (v == null || (v as Number).doubleValue() <= 0) {
-    throw new java.lang.IllegalStateException("Suma s DPH musí byť väčšia ako nula.")
+    throw new java.lang.IllegalStateException(ty("Suma s DPH musí byť väčšia ako nula.", "The amount incl. VAT has to be greater than zero."))
 }
 if (fa_datum_splatnosti.value == null) {
-    throw new java.lang.IllegalStateException("Vyplňte dátum splatnosti.")
+    throw new java.lang.IllegalStateException(ty("Vyplňte dátum splatnosti.", "Fill in the due date."))
 }
 				]]></action>
 			</actions>
@@ -1503,9 +1543,9 @@ change fa_stav_label value { "na_kontrolu" }
 changeCaseProperty("color").about { farba("na_kontrolu") }
 change fa_zapisane_o value { java.time.LocalDateTime.now() }
 change fa_kontrola value { "" }
-zapis_historie(fa_historia, (opakovane ? "doplnené a podané znova: " : "zapísaná: ") +
-        suma_slovom(fa_suma) + (nad_limit(fa_suma) ? " (nad limit, pôjde aj riaditeľovi)" : "") +
-        (((fa_zdroj.value ?: "") as String) ? ", údaje z: " + fa_zdroj.value : ""))
+zapis_historie(fa_historia, (opakovane ? tx("doplnené a podané znova: ", "completed and submitted again: ") : tx("zapísaná: ", "entered: ")) +
+        suma_slovom(fa_suma) + (nad_limit(fa_suma) ? tx(" (nad limit, pôjde aj riaditeľovi)", " (above the limit, the director approves too)") : "") +
+        (((fa_zdroj.value ?: "") as String) ? tx(", údaje z: ", ", data from: ") + fa_zdroj.value : ""))
 changeCaseProperty("title").about { nazov(fa_dodavatel, fa_cislo, fa_suma, "na_kontrolu") }
 po_zmene_stavu("na_kontrolu", fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
         fa_dodavatel, fa_cislo, fa_suma, fa_stredisko)
@@ -1711,13 +1751,13 @@ fa_to_koncept: f.fa_to_koncept, fa_to_uzavreta: f.fa_to_uzavreta;
 // viacerych prechodov a hodnota, ktoru tu niekto nechal, by smerovala aj dalej.
 def volba = ((fa_kontrola_volba.value ?: "") as String).trim()
 if (!(volba in ["pokracovat", "vratit"])) {
-    throw new java.lang.IllegalStateException("Vyberte výsledok kontroly.")
+    throw new java.lang.IllegalStateException(ty("Vyberte výsledok kontroly.", "Choose the result of the check."))
 }
 if (volba == "pokracovat" && !((fa_dodanie.value ?: "") as String)) {
-    throw new java.lang.IllegalStateException("Vyplňte, či bolo dodané kompletne, čiastočne, alebo nedodané.")
+    throw new java.lang.IllegalStateException(ty("Vyplňte, či bolo dodané kompletne, čiastočne, alebo nedodané.", "Fill in whether it was delivered in full, partly, or not at all."))
 }
 if (volba == "vratit" && !((fa_poznamka.value ?: "") as String).trim()) {
-    throw new java.lang.IllegalStateException("Napíšte, čo má zadávateľ na faktúre doplniť.")
+    throw new java.lang.IllegalStateException(ty("Napíšte, čo má zadávateľ na faktúre doplniť.", "Write what the clerk has to complete on the invoice."))
 }
 def bez = (volba == "pokracovat") ? bez_schvalenia(fa_objednavka_vyber, fa_dodanie, fa_suma) : null
 
@@ -1753,22 +1793,22 @@ change fa_skontrolovane_o value { java.time.LocalDateTime.now() }
 def kod
 if (volba == "vratit") {
     kod = "vratena"
-    zapis_historie(fa_historia, "referent vrátil na doplnenie (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, tx("referent vrátil na doplnenie (", "invoice officer sent back for completion (") + meno + "): " + pozn)
 } else {
     def bez = bez_schvalenia(fa_objednavka_vyber, fa_dodanie, fa_suma)
     def dodanie = ((fa_dodanie.value ?: "") as String)
-    def upoz = zistenia ? " (upozornenia: " + zistenia.join("; ") + ")" : ""
+    def upoz = zistenia ? tx(" (upozornenia: ", " (warnings: ") + zistenia.join("; ") + ")" : ""
     if (bez != null) {
         kod = "na_zauctovanie"
         change fa_schvalene_o value { java.time.LocalDateTime.now() }
-        zapis_historie(fa_historia, "skontrolované (" + meno + "), dodanie: " + dodanie +
-                " - schvaľovanie netreba: " + bez + upoz)
+        zapis_historie(fa_historia, tx("skontrolované (", "checked (") + meno + tx("), dodanie: ", "), delivery: ") + dodanie +
+                tx(" - schvaľovanie netreba: ", " - no approval needed: ") + bez + upoz)
     } else {
         kod = "na_schvalenie"
         // Kto smie fakturu schvalit - az teraz, ked je stredisko skontrolovane.
         schvalovatelia_strediska(fa_stredisko, fa_zadal, fa_schvalovatelia, fa_historia)
-        zapis_historie(fa_historia, "skontrolované (" + meno + "), dodanie: " + dodanie +
-                " - ide na schválenie" + upoz)
+        zapis_historie(fa_historia, tx("skontrolované (", "checked (") + meno + tx("), dodanie: ", "), delivery: ") + dodanie +
+                tx(" - ide na schválenie", " - goes for approval") + upoz)
     }
 }
 
@@ -1841,90 +1881,91 @@ vstupne_kontroly(fa_objednavka_vyber, fa_suma, fa_datum_vystavenia,
 			<dataRef>
 				<id>div_fa_faktura</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_dodavatel</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_cislo</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_suma</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_datum_splatnosti</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_stredisko</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_predmet</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>3</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_objednavka</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zadal_meno</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_skan</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_objednavka_info</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zdroj</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_priebeh</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>9</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_historia</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>10</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>10</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_rozhodnutie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_rozhodnutie</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>14</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_poznamka</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>15</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>15</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_skan</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>0</y><rows>18</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
 		<event type="finish">
@@ -1941,7 +1982,7 @@ fa_to_kontrola: f.fa_to_kontrola, fa_to_schvalenie: f.fa_to_schvalenie;
 // STVORI OCI. Je to tu a nie v udalosti `assign`, hoci tam by to zabralo
 // skor: vynimka z akcie v `assign` vracia HOLE HTTP 500 bez spravy, kym tu
 // vrati engine HTTP 200 a vetu v tele ako `error` (ENGINE_ISSUES E18).
-nie_vlastnu(fa_zadal, "schvaľovateľ strediska")
+nie_vlastnu(fa_zadal, ty("schvaľovateľ strediska", "cost centre approver"))
 
 // SMEROVANIE MUSI BYT V phase="pre". Engine vyhodnoti nasobnosti variable
 // arcov po `pre` a pred `post`; keby sa flagy nastavili v `post`, token by sa
@@ -1951,22 +1992,22 @@ def volba = ((fa_rozhodnutie.value ?: "") as String).trim()
 
 if (!volba) {
     throw new java.lang.IllegalStateException(
-            "Vyberte, či faktúru schvaľujete, vraciate na doplnenie alebo zamietate.")
+            ty("Vyberte, či faktúru schvaľujete, vraciate na doplnenie alebo zamietate.", "Choose whether you approve, send back or reject the invoice."))
 }
 if (volba == "vratit_stredisko") {
     throw new java.lang.IllegalStateException(
-            "Faktúra je práve u strediska. Vrátiť ju môžete referentovi alebo zadávateľovi.")
+            ty("Faktúra je práve u strediska. Vrátiť ju môžete referentovi alebo zadávateľovi.", "The invoice is with the cost centre now. You can send it back to the invoice officer or to the clerk."))
 }
 if (!(volba in ["schvalit", "vratit", "vratit_kontrola", "zamietnut"])) {
     // Bez tohto by nezname rozhodnutie nechalo vsetky flagy na nule a token by
     // sa z p_na_schvalenie stratil bez toho, aby kdekolvek pribudol.
-    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+    throw new java.lang.IllegalStateException(ty("Neznáme rozhodnutie: ", "Unknown decision: ") + volba)
 }
 if (volba != "schvalit" && !((fa_poznamka.value ?: "") as String).trim()) {
     // Povinne je to len pri vrateni a zamietnuti, takze sa to neda vyjadrit
     // `required` na dataRefe - ten plati pre vsetky tri moznosti naraz.
     throw new java.lang.IllegalStateException(
-            "Napíšte dôvod - zadávateľ inak nevie, čo s faktúrou robiť.")
+            ty("Napíšte dôvod - zadávateľ inak nevie, čo s faktúrou robiť.", "Write the reason - otherwise the clerk does not know what to do with the invoice."))
 }
 
 boolean naRiaditela = (volba == "schvalit" && nad_limit(fa_suma))
@@ -1995,26 +2036,26 @@ def pozn = ((fa_poznamka.value ?: "") as String).trim()
 def kod
 if (volba == "vratit") {
     kod = "vratena"
-    zapis_historie(fa_historia, "vrátené na doplnenie (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, tx("vrátené na doplnenie (", "sent back for completion (") + meno + "): " + pozn)
 } else if (volba == "vratit_kontrola") {
     kod = "na_kontrolu"
-    zapis_historie(fa_historia, "stredisko vrátilo referentovi (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, tx("stredisko vrátilo referentovi (", "cost centre sent back to the invoice officer (") + meno + "): " + pozn)
 } else if (volba == "zamietnut") {
     kod = "zamietnuta"
-    zapis_historie(fa_historia, "zamietnuté strediskom (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, tx("zamietnuté strediskom (", "rejected by the cost centre (") + meno + "): " + pozn)
 } else {
     change fa_schvalil_stredisko value { meno }
     if (nad_limit(fa_suma)) {
         kod = "u_riaditela"
-        zapis_historie(fa_historia, "schválené strediskom (" + meno + "), suma " +
-                suma_slovom(fa_suma) + " je nad limit – ide riaditeľovi" +
+        zapis_historie(fa_historia, tx("schválené strediskom (", "approved by the cost centre (") + meno + tx("), suma ", "), amount ") +
+                suma_slovom(fa_suma) + tx(" je nad limit – ide riaditeľovi", " is above the limit - goes to the director") +
                 (pozn ? ": " + pozn : ""))
     } else {
         kod = "na_zauctovanie"
         // Kedy bola faktura schvalena, ma zmysel az vtedy, ked je schvalovanie
         // dokoncene - pri postupe k riaditelovi este nie je.
         change fa_schvalene_o value { java.time.LocalDateTime.now() }
-        zapis_historie(fa_historia, "schválené strediskom (" + meno + ")" +
+        zapis_historie(fa_historia, tx("schválené strediskom (", "approved by the cost centre (") + meno + ")" +
                 (pozn ? ": " + pozn : ""))
     }
 }
@@ -2065,75 +2106,76 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 			<dataRef>
 				<id>div_fa_faktura</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_dodavatel</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_cislo</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>1</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_suma</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_stredisko</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_schvalil_stredisko</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_predmet</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_skan</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>3</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zdroj</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_priebeh</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_historia</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>7</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_rozhodnutie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>11</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>10</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_rozhodnutie</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>11</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_poznamka</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>12</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_skan</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>0</y><rows>15</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
 		<event type="finish">
@@ -2146,19 +2188,19 @@ fa_to_riaditel: f.fa_to_riaditel, fa_to_zauctovanie: f.fa_to_zauctovanie,
 fa_to_koncept: f.fa_to_koncept, fa_to_uzavreta: f.fa_to_uzavreta,
 fa_to_kontrola: f.fa_to_kontrola, fa_to_schvalenie: f.fa_to_schvalenie;
 
-nie_vlastnu(fa_zadal, "riaditeľ")
+nie_vlastnu(fa_zadal, ty("riaditeľ", "director"))
 
 def volba = ((fa_rozhodnutie.value ?: "") as String).trim()
 if (!volba) {
     throw new java.lang.IllegalStateException(
-            "Vyberte, či faktúru schvaľujete, vraciate na doplnenie alebo zamietate.")
+            ty("Vyberte, či faktúru schvaľujete, vraciate na doplnenie alebo zamietate.", "Choose whether you approve, send back or reject the invoice."))
 }
 if (!(volba in ["schvalit", "vratit", "vratit_kontrola", "vratit_stredisko", "zamietnut"])) {
-    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+    throw new java.lang.IllegalStateException(ty("Neznáme rozhodnutie: ", "Unknown decision: ") + volba)
 }
 if (volba != "schvalit" && !((fa_poznamka.value ?: "") as String).trim()) {
     throw new java.lang.IllegalStateException(
-            "Napíšte dôvod - zadávateľ inak nevie, čo s faktúrou robiť.")
+            ty("Napíšte dôvod - zadávateľ inak nevie, čo s faktúrou robiť.", "Write the reason - otherwise the clerk does not know what to do with the invoice."))
 }
 
 // Riaditel je posledna uroven schvalenia, takze `fa_to_riaditel` je vzdy 0.
@@ -2188,22 +2230,22 @@ def pozn = ((fa_poznamka.value ?: "") as String).trim()
 def kod
 if (volba == "vratit") {
     kod = "vratena"
-    zapis_historie(fa_historia, "riaditeľ vrátil na doplnenie (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, tx("riaditeľ vrátil na doplnenie (", "director sent back for completion (") + meno + "): " + pozn)
 } else if (volba == "vratit_kontrola") {
     kod = "na_kontrolu"
-    zapis_historie(fa_historia, "riaditeľ vrátil referentovi (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, tx("riaditeľ vrátil referentovi (", "director sent back to the invoice officer (") + meno + "): " + pozn)
 } else if (volba == "vratit_stredisko") {
     kod = "na_schvalenie"
     // Schvalovatelia strediska zostavaju tí isti - stredisko sa nemenilo.
-    zapis_historie(fa_historia, "riaditeľ vrátil stredisku (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, tx("riaditeľ vrátil stredisku (", "director sent back to the cost centre (") + meno + "): " + pozn)
 } else if (volba == "zamietnut") {
     kod = "zamietnuta"
-    zapis_historie(fa_historia, "zamietnuté riaditeľom (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, tx("zamietnuté riaditeľom (", "rejected by the director (") + meno + "): " + pozn)
 } else {
     kod = "na_zauctovanie"
     change fa_schvalil_riaditel value { meno }
     change fa_schvalene_o value { java.time.LocalDateTime.now() }
-    zapis_historie(fa_historia, "schválené riaditeľom (" + meno + ")" +
+    zapis_historie(fa_historia, tx("schválené riaditeľom (", "approved by the director (") + meno + ")" +
             (pozn ? ": " + pozn : ""))
 }
 
@@ -2250,105 +2292,106 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 			<dataRef>
 				<id>fa_stav_label</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_schvalene_o</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>0</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_faktura</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_dodavatel</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_cislo</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_suma</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_datum_splatnosti</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_stredisko</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>4</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_objednavka</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_skan</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>4</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>5</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_objednavka_info</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>5</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_ico</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_iban</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zdroj</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>7</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_priebeh</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_historia</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>9</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_uctovanie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>11</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_uctovanie</id>
 				<logic><behavior>editable</behavior><behavior>required</behavior></logic>
-				<layout><x>0</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_doklad</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>3</x><y>12</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_poznamka</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>3</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>15</y><rows>3</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_skan</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>0</y><rows>18</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
 		<event type="finish">
@@ -2364,19 +2407,19 @@ fa_to_kontrola: f.fa_to_kontrola, fa_to_schvalenie: f.fa_to_schvalenie;
 def volba = ((fa_uctovanie.value ?: "") as String).trim()
 if (!volba) {
     throw new java.lang.IllegalStateException(
-            "Vyberte, či je faktúra zaúčtovaná, alebo ju vraciate na doplnenie.")
+            ty("Vyberte, či je faktúra zaúčtovaná, alebo ju vraciate na doplnenie.", "Choose whether the invoice is posted or you send it back."))
 }
 if (!(volba in ["zauctovat", "vratit", "vratit_kontrola"])) {
-    throw new java.lang.IllegalStateException("Neznáme rozhodnutie: " + volba)
+    throw new java.lang.IllegalStateException(ty("Neznáme rozhodnutie: ", "Unknown decision: ") + volba)
 }
 if (volba == "zauctovat" && !((fa_doklad.value ?: "") as String).trim()) {
     // Cislo dokladu je jedina stopa, po ktorej sa faktura v eTasku spari
     // s uctovnictvom. Bez neho je "zauctovane" tvrdenie, ktore sa neda overit.
     throw new java.lang.IllegalStateException(
-            "Vyplňte číslo dokladu, pod ktorým je faktúra zaúčtovaná.")
+            ty("Vyplňte číslo dokladu, pod ktorým je faktúra zaúčtovaná.", "Fill in the document number the invoice is posted under."))
 }
 if (volba != "zauctovat" && !((fa_poznamka.value ?: "") as String).trim()) {
-    throw new java.lang.IllegalStateException("Napíšte, čo treba na faktúre doplniť.")
+    throw new java.lang.IllegalStateException(ty("Napíšte, čo treba na faktúre doplniť.", "Write what has to be completed on the invoice."))
 }
 
 change fa_to_riaditel    value { 0 as Double }
@@ -2407,15 +2450,15 @@ def pozn = ((fa_poznamka.value ?: "") as String).trim()
 def kod
 if (volba == "vratit") {
     kod = "vratena"
-    zapis_historie(fa_historia, "účtovník vrátil na doplnenie (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, tx("účtovník vrátil na doplnenie (", "accountant sent back for completion (") + meno + "): " + pozn)
 } else if (volba == "vratit_kontrola") {
     kod = "na_kontrolu"
-    zapis_historie(fa_historia, "účtovník vrátil referentovi (" + meno + "): " + pozn)
+    zapis_historie(fa_historia, tx("účtovník vrátil referentovi (", "accountant sent back to the invoice officer (") + meno + "): " + pozn)
 } else {
     kod = "zauctovana"
     change fa_zauctoval value { meno }
     change fa_zauctovane_o value { java.time.LocalDateTime.now() }
-    zapis_historie(fa_historia, "zaúčtované (" + meno + "), doklad č. " +
+    zapis_historie(fa_historia, tx("zaúčtované (", "posted (") + meno + tx("), doklad č. ", "), document no. ") +
             ((fa_doklad.value ?: "") as String).trim())
     // Export a archivacia z dokumentu kolegov. XML sa pripravi TU; odoslat ho
     // do uctovneho systemu, pockat na spatnu synchronizaciu a nahrat do
@@ -2425,7 +2468,7 @@ if (volba == "vratit") {
                 fa_datum_splatnosti, fa_stredisko, fa_objednavka, fa_doklad,
                 fa_schvalil_stredisko, fa_schvalil_riaditel)
     }
-    zapis_historie(fa_historia, "export pre účtovníctvo pripravený; odoslanie a archivácia čakajú na integráciu")
+    zapis_historie(fa_historia, tx("export pre účtovníctvo pripravený; odoslanie a archivácia čakajú na integráciu", "export for accounting prepared; sending and archiving wait for an integration"))
 }
 
 change fa_stav value { kod }
@@ -2506,180 +2549,181 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 			<id>g_fa_prehlad</id>
 			<cols>6</cols>
 			<layout>grid</layout>
-			<dataRef>
-				<id>fa_stav_label</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_ceka_na</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_zadal_meno</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_fa_faktura</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>1</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
-			<dataRef>
-				<id>fa_dodavatel</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>2</y><rows>1</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_cislo</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_suma</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_datum_splatnosti</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_stredisko</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>3</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_predmet</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>4</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_skan</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>3</x><y>6</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_objednavka_info</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>7</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_ico</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>8</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_iban</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>8</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>fa_zdroj</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>8</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
-				<id>div_fa_rozhodnutie</id>
-				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>9</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
-				<component><name>divider</name></component>
-			</dataRef>
 			<!--
 				Posledna poznamka patri aj na uzavretu fakturu: pri zamietnuti je to
 				jedine miesto, kde zadavatel precita DOVOD bez lustrovania Priebehu.
 				Chybala a odhalil to az akceptacny test (tools/sccheck.py).
 			-->
 			<dataRef>
+				<id>fa_stav_label</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_ceka_na</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_zadal_meno</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_faktura</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>1</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
+				<id>fa_dodavatel</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>2</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_cislo</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>2</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_suma</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_datum_splatnosti</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_stredisko</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>3</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_predmet</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>4</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>6</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_objednavka_info</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>7</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_ico</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_iban</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>1</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_zdroj</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>2</x><y>8</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>div_fa_rozhodnutie</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>9</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>divider</name></component>
+			</dataRef>
+			<dataRef>
 				<id>fa_poznamka</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>10</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>10</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_schvalil_stredisko</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>12</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_schvalil_riaditel</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>12</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_schvalene_o</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>12</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>12</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_uctovanie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>13</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>13</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_doklad</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>14</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zauctoval</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>14</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zauctovane_o</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>14</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>14</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_priebeh</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>15</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>15</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_historia</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>16</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>16</y><rows>4</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>div_fa_kontrola</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>20</y><rows>1</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>20</y><rows>1</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
 				<id>fa_kanal</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>21</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>21</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_dodanie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>21</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>21</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_skontroloval</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>4</x><y>21</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>21</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_validacia</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>22</y><rows>2</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>22</y><rows>2</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_export_xml</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>24</y><rows>4</rows><cols>6</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>24</y><rows>4</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>fa_skan</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>3</x><y>0</y><rows>28</rows><cols>3</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
 		<event type="assign">

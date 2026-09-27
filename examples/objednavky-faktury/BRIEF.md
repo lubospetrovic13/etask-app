@@ -30,6 +30,14 @@ vidno, **u koho práve leží** a **kto čo kedy rozhodol**.
 
 ## Faktúra krok za krokom
 
+**Každý krok je rozdelený na polovice:** vľavo údaje faktúry, vpravo faktúra sama (PDF,
+sken alebo XML e-faktúra). Pri zápise sa do pravej polovice faktúra nahrá (pretiahnutím
+alebo kliknutím), v ďalších krokoch sa s ňou porovnáva, bez sťahovania a prepínania okien.
+
+**Jazyk:** portál je predvolene v angličtine, slovenčina je v prepínači. Texty, ktoré
+appka do faktúry zapisuje (priebeh, vstupné kontroly, výsledok načítania, e-maily), sú
+v jazyku, v ktorom bola faktúra založená. Chybové hlášky sú v jazyku toho, kto ich číta.
+
 ```mermaid
 flowchart LR
     A[Rozpísaná] -->|zadávateľ podá| K[Čaká na referenta]
@@ -50,9 +58,7 @@ flowchart LR
 1. **Zadávateľ** zapíše faktúru v portáli. Ak má prílohu (XML e-faktúru, PDF, sken),
    *Načítať z prílohy* vyplní polia sám. E-faktúra sa číta presne, PDF podľa popiskov, sken
    cez OCR. Podá na kontrolu.
-2. **Referent** *(nové)* dostane faktúru do fronty *Faktúry na kontrolu*. Obrazovka je
-   rozdelená na polovice: **vľavo údaje faktúry, vpravo faktúra sama** (PDF, sken alebo
-   XML e-faktúra), takže vyťažené údaje porovnáva s originálom bez sťahovania. Vidí **vstupné
+2. **Referent** *(nové)* dostane faktúru do fronty *Faktúry na kontrolu*. Vidí **vstupné
    kontroly**: chýbajúca príloha, IČO alebo IBAN, dátum vystavenia v budúcnosti, splatnosť
    pred vystavením, chýbajúca objednávka, faktúra drahšia ako objednávka. Kontroly faktúru
    nezastavia, rozhodne referent. Doplní údaje, **spáruje s objednávkou** a zapíše

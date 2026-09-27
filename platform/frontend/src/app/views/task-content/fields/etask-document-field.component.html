@@ -1,19 +1,50 @@
-<div class="etask-document" fxLayout="column" fxFlex>
+<div class="doc" [class.doc--dragging]="dragging">
   <!--
-    Upload, download and delete are the library's own. Wrapping `nc-file-field` inside
-    our component is the one use of an `nc-` field that pfview check B allows.
+    The library field does the real work (upload, validation, size limit, delete) and
+    stays hidden; the toolbar below drives it. Wrapping `nc-file-field` inside our own
+    component is the one use of an `nc-` field that pfview check B allows.
   -->
-  <nc-file-field [dataField]="dataField" [taskId]="taskId" [taskOffset]="taskOffset"></nc-file-field>
+  <nc-file-field class="doc__library" [dataField]="dataField" [taskId]="taskId" [taskOffset]="taskOffset"></nc-file-field>
 
-  <div class="etask-document__viewer" [style.height.px]="viewerHeight">
-    <iframe *ngIf="pdfUrl" [src]="pdfUrl" [title]="fileName" class="etask-document__frame"></iframe>
-    <img *ngIf="imageUrl" [src]="imageUrl" [alt]="fileName" class="etask-document__image">
-    <pre *ngIf="text !== undefined" class="etask-document__text">{{ text }}</pre>
+  <div class="doc__toolbar">
+    <mat-icon class="doc__type">{{ kind === 'image' ? 'image' : kind === 'text' ? 'code' : 'description' }}</mat-icon>
+    <div class="doc__name" [matTooltip]="fileName">
+      <span class="doc__title">{{ dataField?.title }}</span>
+      <span class="doc__file">{{ fileName || ('document.noFile' | translate) }}</span>
+    </div>
+    <span class="doc__spacer"></span>
+    <button *ngIf="editable" mat-icon-button type="button" (click)="pick()"
+            [matTooltip]="(fileName ? 'document.replace' : 'document.upload') | translate">
+      <mat-icon>{{ fileName ? 'swap_horiz' : 'file_upload' }}</mat-icon>
+    </button>
+    <button *ngIf="editable && fileName" mat-icon-button type="button" (click)="remove()"
+            [matTooltip]="'document.remove' | translate">
+      <mat-icon>delete_outline</mat-icon>
+    </button>
+    <button *ngIf="fileName" mat-icon-button type="button" (click)="saveFile()"
+            [matTooltip]="'document.download' | translate">
+      <mat-icon>download</mat-icon>
+    </button>
+    <button *ngIf="hasDocument && kind !== 'text'" mat-icon-button type="button" (click)="openInTab()"
+            [matTooltip]="'document.openInTab' | translate">
+      <mat-icon>open_in_new</mat-icon>
+    </button>
+  </div>
 
-    <div *ngIf="!pdfUrl && !imageUrl && text === undefined" class="etask-document__empty"
-         fxLayout="column" fxLayoutAlign="center center">
-      <mat-icon>description</mat-icon>
-      <span *ngIf="!fileName">{{ 'document.noFile' | translate }}</span>
+  <div class="doc__sheet" [style.height.px]="viewerHeight">
+    <iframe *ngIf="pdfUrl" [src]="pdfUrl" [title]="fileName" class="doc__frame"></iframe>
+    <div *ngIf="imageUrl" class="doc__image-wrap">
+      <img [src]="imageUrl" [alt]="fileName" class="doc__image">
+    </div>
+    <pre *ngIf="text !== undefined" class="doc__text">{{ text }}</pre>
+
+    <div *ngIf="!hasDocument" class="doc__empty" [class.doc__empty--action]="editable && !fileName"
+         (click)="!fileName && pick()">
+      <mat-icon>{{ !fileName && editable ? 'upload_file' : 'description' }}</mat-icon>
+      <ng-container *ngIf="!fileName">
+        <strong>{{ (editable ? 'document.dropTitle' : 'document.noFile') | translate }}</strong>
+        <span *ngIf="editable">{{ 'document.dropHint' | translate }}</span>
+      </ng-container>
       <span *ngIf="fileName && loading">{{ 'document.loading' | translate }}</span>
       <span *ngIf="fileName && failed">{{ 'document.failed' | translate }}</span>
       <span *ngIf="fileName && !loading && !failed && kind === 'none'">{{ 'document.unsupported' | translate }}</span>

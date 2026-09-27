@@ -587,8 +587,12 @@ a pole `file` s `<component><name>document</name>` ide na prehliadač dokladu.
 Knižničný `preview` na poli `file` je náhľad: 20 % šírky poľa a `<img>`, takže
 PDF nezobrazí vôbec. `app-etask-file-document` ukáže prílohu veľkú: PDF vo
 vstavanom prehliadači prehliadača (na šírku), obrázok, a XML e-faktúru ako
-text. Nahratie, stiahnutie a mazanie zostávajú knižničné (`nc-file-field`
-vnútri). Rozloženie „vľavo polia, vpravo doklad" je v sieti, gridom:
+text. Nad dokladom je jedna lišta (názov, nahrať alebo nahradiť, odstrániť,
+stiahnuť, otvoriť na novej karte), bez chýbajúceho súboru plocha na
+pretiahnutie. Doklad pri posúvaní formulára zostáva hore a nie je vyšší než
+okno, takže jediný posuvník je ten v PDF. Nahratie a mazanie idú cez skryté
+knižničné `nc-file-field` - validácia, limit veľkosti aj volania backendu sú
+jeho. Rozloženie „vľavo polia, vpravo doklad" je v sieti, gridom:
 
 ```xml
 <dataRef>
@@ -983,6 +987,31 @@ v `PETRIFLOW_LEARNINGS.md` B24; `pfseed` a `pucheck` to už robia.
   reťazec a ten je jednojazyčný. Ak sa má prepínať, musí to byť pole s
   možnosťami a preložené `options`, alebo `i18n(...)`:
   `change pole options { ["a": i18n("Aktívny", ["en": "Active"])] }`.
+
+### Texty, ktoré appka zapisuje: jazyk prípadu
+
+Priebeh, výsledky kontrol, notifikácie a hlásenia z načítania prílohy sú `text`,
+teda po zapísaní jednojazyčné. Jazyk sa preto musí zvoliť **v čase zápisu**,
+a ktorý to je, nie je jedno:
+
+| čo | v akom jazyku | prečo |
+|---|---|---|
+| priebeh, vstupné kontroly, výsledok načítania, e-mail | **jazyk prípadu**: portál toho, kto prípad založil | zostáva v prípade a číta ho každý ďalší; jeden prípad nemá mať priebeh v dvoch jazykoch |
+| chybová hláška, živé upozornenie pri písaní | **jazyk čitateľa**: portál toho, kto ju práve dostal | nezapisuje sa, žije jednu obrazovku |
+
+Vzor je v `fa_faktura` (`examples/objednavky-faktury`): pole `fa_jazyk`, ktoré
+zapíše `create` z `LocaleContextHolder.getLocale()` (frontend posiela jazyk
+portálu s každou požiadavkou), a dve funkcie:
+
+```groovy
+tx("Faktúra bola zaúčtovaná.", "The invoice was posted.")   // jazyk prípadu
+ty("Vyplňte dátum splatnosti.", "Fill in the due date.")    // jazyk čitateľa
+```
+
+Prípad bez `fa_jazyk` (vznikol pred touto verziou) je anglický, rovnako ako
+predvolený portál. Testy, ktoré čítajú slovenské texty, preto posielajú
+`Accept-Language: sk` - kedysi posielali `zz`, jazyk, ktorý engine nepozná, a
+dnes by z neho vznikol anglický prípad.
 
 **Stav preto nie je `text`, ale `enumeration_map`.** To je jediné textové pole,
 ktoré appka prepisuje pri každom prechode, a zároveň to, čo používateľ v zozname

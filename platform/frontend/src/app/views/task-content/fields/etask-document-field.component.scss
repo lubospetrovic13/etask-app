@@ -1,57 +1,166 @@
+// Fills its grid cell; the document sticks to the top while the form next to it is
+// scrolled. Nothing here scrolls except the document itself.
 :host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+.doc {
+  position: sticky;
+  top: 8px;
   display: flex;
+  flex-direction: column;
   width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(128, 128, 128, 0.06);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+
+  &--dragging {
+    border-color: var(--mat-accent, #26c6da);
+    box-shadow: 0 0 0 2px rgba(38, 198, 218, 0.35);
+  }
 }
 
-.etask-document {
-  width: 100%;
+// The library field is only the engine behind the toolbar.
+.doc__library {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
-// The document sits on a light sheet in both themes: invoices are printed on white,
-// and a dark background around a white PDF page reads as a hole in the form.
-.etask-document__viewer {
+.doc__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 48px;
+  padding: 0 4px 0 12px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+  flex: 0 0 auto;
+}
+
+.doc__type {
+  opacity: 0.7;
+  flex: 0 0 auto;
+}
+
+.doc__name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+  margin-left: 4px;
+}
+
+.doc__title {
+  font-size: 11px;
+  opacity: 0.65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc__file {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc__spacer {
+  flex: 1 1 auto;
+}
+
+// Invoices are printed on white, so the sheet is light in both themes: a dark frame
+// around a white PDF page reads as a hole in the form.
+.doc__sheet {
   position: relative;
-  width: 100%;
-  overflow: auto;
-  border: 1px solid rgba(128, 128, 128, 0.35);
-  border-radius: 4px;
-  background: #f4f4f4;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #eceff1;
 }
 
-.etask-document__frame {
+.doc__frame {
+  display: block;
   width: 100%;
   height: 100%;
   border: 0;
-  display: block;
 }
 
-.etask-document__image {
+.doc__image-wrap {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 12px;
+}
+
+.doc__image {
   display: block;
   max-width: 100%;
   margin: 0 auto;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  background: #fff;
 }
 
-.etask-document__text {
+.doc__text {
   margin: 0;
-  padding: 12px;
-  color: #222;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 16px;
+  color: #263238;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.etask-document__empty {
+.doc__empty {
   height: 100%;
-  color: #666;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
+  padding: 24px;
   text-align: center;
-  padding: 16px;
+  color: #546e7a;
 
   mat-icon {
-    font-size: 40px;
-    width: 40px;
-    height: 40px;
-    opacity: 0.6;
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    opacity: 0.55;
+  }
+
+  strong {
+    font-size: 15px;
+    color: #37474f;
+  }
+
+  &--action {
+    margin: 12px;
+    height: calc(100% - 24px);
+    border: 2px dashed #b0bec5;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #26c6da;
+      background: rgba(38, 198, 218, 0.06);
+    }
   }
 }

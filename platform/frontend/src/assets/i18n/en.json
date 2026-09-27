@@ -89,6 +89,13 @@
     "noFile": "No document uploaded yet.",
     "loading": "Loading the document…",
     "failed": "The document could not be loaded. Download it with the link above.",
-    "unsupported": "This file type cannot be shown here. Download it with the link above."
+    "unsupported": "This file type cannot be shown here. Download it with the link above.",
+    "upload": "Upload the invoice",
+    "replace": "Replace with another file",
+    "remove": "Remove the file",
+    "download": "Download",
+    "openInTab": "Open in a new tab",
+    "dropTitle": "Upload the invoice",
+    "dropHint": "Drag a PDF, an image or an XML e-invoice here, or click."
   }
 }

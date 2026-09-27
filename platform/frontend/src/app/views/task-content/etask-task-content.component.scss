@@ -25,3 +25,21 @@
 .responsive-grid {
   display: block !important;
 }
+
+// A field shrinks to its grid cell. Material gives `.mat-form-field-infix` a fixed
+// 180px, so in a one-column cell (~160px at 1440px wide, common since forms are split
+// into fields | document) every field overflowed and the cell showed its own
+// horizontal scrollbar - a thin "slider" under each narrow field.
+:host ::ng-deep .border {
+  overflow-x: hidden;
+
+  .mat-form-field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mat-form-field-infix {
+    width: auto;
+    min-width: 0;
+  }
+}
