@@ -1,7 +1,7 @@
 # Nová aplikácia a kde je čo
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pfnew.py mojaapp ziadost "Žiadosť o niečo" --role pracovnik
 ```
 
@@ -38,7 +38,7 @@ identifikátor tú cestu nesie, takže sieť odkazujúca na uzol patrí za ňu.
 ## Kde je čo
 
 ```
-etask-configuration/          PRÍKAZOVÝ priečinok — nič na čítanie
+ai-config/          PRÍKAZOVÝ priečinok — nič na čítanie
   processes/                  aplikačná logika, siete (toto upravuješ)
   processes.json, seed.json   manifest a cieľový stav rolí
   examples/skeleton.xml       najmenšia funkčná sieť
@@ -50,8 +50,7 @@ docs/                         dokumentácia (číta sa cez pfdoc, po kapitolách
   RUNBOOK.md                  recepty 1–12
   PETRIFLOW_LEARNINGS.md      čo referencia nepokrýva alebo tvrdí zle
   ENGINE_ISSUES.md            defekty enginu — obídenie + návrh opravy
-  obsidian/                   ako agent na tomto repozitári pracuje (graf)
-etask-backend-starter/
+platform/backend/
   src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy   ← vrstva 2
   src/main/groovy/com/netgrif/etask/startup/NetRunner.groovy     import sietí
 ```

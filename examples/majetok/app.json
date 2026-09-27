@@ -1,0 +1,29 @@
+{
+  "name": "majetok",
+  "title": "Majetok",
+  "import": [
+    "ma_zariadenie.xml",
+    "ma_menu.xml"
+  ],
+  "bootstrapCase": [
+    {
+      "net": "majetok/ma_menu",
+      "rebuildOnNewVersion": true
+    }
+  ],
+  "uriNodes": {
+    "majetok": {
+      "icon": "assignment",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "spravca_majetku"
+      ]
+    }
+  },
+  "netScope": [
+    "majetok/*"
+  ],
+  "tools": [
+    "majetokcheck.py"
+  ]
+}

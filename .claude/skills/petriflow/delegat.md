@@ -12,7 +12,7 @@ vrátane pasce `u?._id`, ktorá zhodí celú akciu.
 ## Ako pridať metódu
 
 ```groovy
-// etask-backend-starter/src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy
+// platform/backend/src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy
 @Component
 class EtaskActionDelegate extends ActionDelegate {
 

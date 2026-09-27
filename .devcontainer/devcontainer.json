@@ -43,7 +43,7 @@
   // Deliberately non fatal: in Docker mode the backend entrypoint generates its
   // own key into a volume, so this key is not used there and a failure here
   // must not stop the container from being created.
-  "postCreateCommand": "etask-configuration/tools/bootstrap.sh || true",
+  "postCreateCommand": "ai-config/tools/bootstrap.sh || true",
 
   "customizations": {
     "vscode": {

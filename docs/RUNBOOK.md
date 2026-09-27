@@ -12,7 +12,7 @@ Petriflow ako jazyk je v `.claude/skills/petriflow/SKILL.md` a v
 ## 1. Rozbehať aplikáciu
 
 ```bash
-etask-configuration/tools/up.sh
+ai-config/tools/up.sh
 ```
 
 Jeden príkaz: JWT kľúč, Java 11, docker daemon, Mongo + Elasticsearch + Redis,
@@ -93,7 +93,7 @@ mlčia rovnako ako to ostatné:
 | python nástroje padajú na vlastnom výpise | `UnicodeEncodeError` na `→` a diakritike — `PYTHONIOENCODING=utf-8` |
 | `bash` v PATH je WSL | `execvpe(/bin/bash) failed` pri volaní `.sh` z pythonu; `pfsync` to obchádza sám, inak `PFSYNC_BASH` |
 | jar spustený ručne bez `-Dsun.jnu.encoding=UTF-8` | sieť s diakritikou v `<title>` sa **naimportuje do Mongu, ale jej XML sa neuloží** do `storage/uploadedModels`. `GET /api/petrinet/{id}/file` potom navždy vracia 500 a `pfsync` ju hlási ako `NEDA_SA_PRECITAT`. Rieši sa re-importom zo správne spusteného JVM |
-| jar spustený ručne z koreňa repozitára | `PdfRunner` asserts na relatívne `src/main/resources/...` a **aplikácia nenaskočí** — siete sa pritom naimportujú, takže log vyzerá polovične úspešne. Jar sa spúšťa z `etask-backend-starter/` |
+| jar spustený ručne z koreňa repozitára | `PdfRunner` asserts na relatívne `src/main/resources/...` a **aplikácia nenaskočí** — siete sa pritom naimportujú, takže log vyzerá polovične úspešne. Jar sa spúšťa z `platform/backend/` |
 
 Obe posledné dve platia len pri ručnom spúšťaní; `up.sh` to robí správne. Preto
 sa naň vyplatí držať.
@@ -109,7 +109,7 @@ a `pfseed` — importujú a prepisujú.
 ## 2. Nová aplikácia (sieť)
 
 ```bash
-cd etask-configuration
+cd ai-config
 cp examples/skeleton.xml processes/mojaapp.xml   # prepíš <id>, <initials>, <title>
 # dopíš "mojaapp.xml" do processes.json → "import"
 python3 tools/pflint.py processes/mojaapp.xml
@@ -151,7 +151,7 @@ Starter je šablóna: framework, infraštruktúra, správa používateľov a jed
 príkladová appka. Keď v ňom vznikne klientska appka, patrí do vlastného repa:
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pfapp.py extract objednavky-faktury ../../etask-app-objednavky-faktury \
     --title "Objednávky a faktúry" \
     --nets fa_faktura.xml ob_objednavka.xml sc_menu.xml sc_nastavenia.xml \
@@ -218,7 +218,7 @@ Metóda pridaná do `EtaskActionDelegate` je **nové Petriflow primitívum** —
 volateľné z akcie menom, bez importu, bez wiringu, z každej siete.
 
 ```groovy
-// etask-backend-starter/src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy
+// platform/backend/src/main/groovy/com/netgrif/etask/EtaskActionDelegate.groovy
 @Component
 class EtaskActionDelegate extends ActionDelegate {
 
@@ -236,7 +236,7 @@ Potom regeneruj inventár, inak o metóde nebude vedieť ani `pflint`, ani ďal�
 agent:
 
 ```bash
-cd etask-configuration && python3 tools/pfapi.py > docs/reference/action-api.md
+cd ai-config && python3 tools/pfapi.py > docs/reference/action-api.md
 ```
 
 **Najprv sa pozri do `docs/reference/action-api.md`.** Je to generovaný zoznam 169
@@ -268,7 +268,7 @@ Uzol URI sám o sebe **žiadne zobrazenia nenesie**. Karta bez nich existuje, al
 vedie do prázdneho panelu.
 
 ```json
-// etask-configuration/processes.json
+// ai-config/processes.json
 "uriNodes": {
   "mojaapp": {
     "icon": "receipt_long",
@@ -520,9 +520,9 @@ Knižnice sú npm závislosti pinnuté na 6.3.1. Meniť `node_modules` je zbyto�
 **Update-safe seam je téma** — `@netgrif/components` posiela SCSS ako zdroj:
 
 ```
-etask-frontend-starter/src/styles/themes/_palettes.scss        farby
-etask-frontend-starter/src/styles/themes/custom-themes.scss    light + dark
-etask-frontend-starter/src/styles.scss                         globálne prepisy
+platform/frontend/src/styles/themes/_palettes.scss        farby
+platform/frontend/src/styles/themes/custom-themes.scss    light + dark
+platform/frontend/src/styles.scss                         globálne prepisy
 ```
 
 Všetko, čo `nae-lib-theme` generuje, sú **globálne** pravidlá, takže sa dajú
@@ -550,11 +550,11 @@ a to rozdelenie je jediné, čo drží dizajn a aplikáciu oddelene:
 | `src/styles/_tokens.scss` | `--app-*` — na čo tie tokeny appka používa | človek, a meria pri tom kontrast |
 
 ```bash
-cd etask-configuration
+cd ai-config
 curl -H "X-Figma-Token: $FIGMA_TOKEN"      "https://api.figma.com/v1/files/DvZiv1wChuQM3Mpr4XjwHH" -o .run/figma-tokens.json
 python3 tools/figmatokens.py .run/figma-tokens.json --kontrola   # čo si v DS odporuje
-python3 tools/figmatokens.py .run/figma-tokens.json     -o ../etask-frontend-starter/src/styles/_n-tokens.scss
-node tools/sassc.js ../etask-frontend-starter/src/styles.scss .run/out.css
+python3 tools/figmatokens.py .run/figma-tokens.json     -o ../platform/frontend/src/styles/_n-tokens.scss
+node tools/sassc.js ../platform/frontend/src/styles.scss .run/out.css
 node tools/contrast.js .run/out.css                              # musí byť zelené
 ```
 
@@ -791,7 +791,7 @@ a staré nie, a že odobraná rola je naozaj odobraná.
 a casom. Deklaratívny cieľový stav pre dev a seedovanie je v `seed.json`:
 
 ```bash
-cd etask-configuration && python3 tools/pfseed.py
+cd ai-config && python3 tools/pfseed.py
 ```
 
 **Rolu treba prideliť znova po každom re-importe siete.** Rola má `stringId`
@@ -820,7 +820,7 @@ Na verejný formulár treba tri veci naraz. Chýbajúca ktorákoľvek sa prejav�
 **1. JWT podpisový kľúč.** Bez neho engine nepodpíše token anonymnej session:
 
 ```bash
-etask-configuration/tools/bootstrap.sh    # idempotentné, existujúci neprepíše
+ai-config/tools/bootstrap.sh    # idempotentné, existujúci neprepíše
 ```
 
 `certificates/` je v `.gitignore` — po `git clone` tam nie je nič. V produkcii
@@ -843,7 +843,7 @@ Cieľová sieť preto potrebuje na úrovni procesu:
 </roleRef>
 ```
 
-URL verejného formulára (routy sú v `etask-frontend-starter/nae.json`,
+URL verejného formulára (routy sú v `platform/frontend/nae.json`,
 `access: public`):
 
 ```
@@ -895,7 +895,7 @@ sa nepoužije — kľúč sa ukladá verbatim, ale hľadá sa cez `Locale.getLan
 ### Postup
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pfi18n.py --init processes/mojaapp.xml   # doplní name= a blok i18n
 # prelož TODO riadky
 python3 tools/pfi18n.py processes/                     # 0 chýb, 0 upozornení
@@ -951,7 +951,7 @@ v `PETRIFLOW_LEARNINGS.md` B24; `pfseed` a `pucheck` to už robia.
   v praxi najčastejší zdroj jednej slovenskej veci na anglickom formulári.
 * **Názov uzla URI** (karta priečinka). Nie je `I18nString` vôbec —
   `UriService` mu nastaví názov ako `String` z cesty. Prekladá sa na frontende:
-  kľúč `uriNode.<segment>` v `etask-frontend-starter/src/assets/i18n/*.json`,
+  kľúč `uriNode.<segment>` v `platform/frontend/src/assets/i18n/*.json`,
   pipe `uriNodeTitle`. Uzol bez záznamu spadne na skrášlený segment.
 * **Hodnota, ktorú vypočíta akcia.** `change pole value { "Aktívny" }` zapíše
   reťazec a ten je jednojazyčný. Ak sa má prepínať, musí to byť pole s
@@ -1118,7 +1118,7 @@ schvalovanie/objednavky/ob_objednavka  -> ten istý rodič, druhý priečinok
 
 Do `processes.json` → `uriNodes` patrí **každý** uzol zvlášť (rodič aj deti) —
 ikona a role sa dedia z ničoho. Názov, ktorý človek v menu vidí, je
-`uriNode.<segment>` v `etask-frontend-starter/src/assets/i18n/*.json`; bez
+`uriNode.<segment>` v `platform/frontend/src/assets/i18n/*.json`; bez
 kľúča sa zobrazí surový segment cesty. Zobrazenia sa vešajú na konkrétny uzol
 druhým argumentom `createOrUpdateMenuItem`.
 
@@ -1215,13 +1215,13 @@ overiť nedá. `sccheck` na to používa `operator@test.local` (bez ROLE_ADMIN).
 ## 12. Celý stack v Dockeri (OCR, SMTP, notifikácie)
 
 ```bash
-etask-configuration/tools/up.sh --docker            # postaví, zdvihne, naimportuje siete
-etask-configuration/tools/up.sh --docker --build    # vynúti rebuild obrazov
-etask-configuration/tools/up.sh --docker --stop     # zastaví, dáta zostanú
-etask-configuration/tools/up.sh --docker --fresh --build   # od nuly, ZMAŽE dáta
+ai-config/tools/up.sh --docker            # postaví, zdvihne, naimportuje siete
+ai-config/tools/up.sh --docker --build    # vynúti rebuild obrazov
+ai-config/tools/up.sh --docker --stop     # zastaví, dáta zostanú
+ai-config/tools/up.sh --docker --fresh --build   # od nuly, ZMAŽE dáta
 ```
 
-Compose je `deploy/docker-compose.dev.yml` (projekt `etask`), takže Docker
+Compose je `platform/docker-compose.yml` (projekt `etask`), takže Docker
 Desktop ukáže jeden stack so všetkým, čo appka používa:
 
 | služba | čo to je | odkiaľ sa na to ide |
@@ -1244,7 +1244,7 @@ povinné: bez nich tesseract na slovenskej faktúre vráti zmes znakov, ktorá
 predvyplnené polia. Overiť sa to dá priamo v obraze:
 
 ```bash
-docker run --rm --entrypoint sh etask-backend:dev -c 'tesseract --list-langs'
+docker run --rm --entrypoint sh netgrif-backend:dev -c 'tesseract --list-langs'
 ```
 
 ### Notifikačné maily
@@ -1285,13 +1285,13 @@ curl -s -X DELETE localhost:8025/api/v1/messages     # vyčistí schránku
 
 ### Prenos dát z lokálneho behu do stacku (a prečo Elastic vyzerá prázdny)
 
-Starý `etask-backend-starter/docker-compose.yml` mal Mongo v **anonymnom**
+Starý `platform/backend/docker-compose.yml` mal Mongo v **anonymnom**
 volume a Elastic **bez** volume. Po prechode na `etask` stack sú volumes iné,
 takže appka vyzerá prázdna. Mongo sa prenesie kópiou:
 
 ```bash
 OLD=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data/db"}}{{.Name}}{{end}}{{end}}' \
-      etask-backend-starter-docker-mongo-1)
+      platform/backend-docker-mongo-1)
 docker volume create etask_mongo-data
 docker run --rm -v "$OLD":/from -v etask_mongo-data:/to alpine sh -c 'cp -a /from/. /to/'
 ```
@@ -1327,7 +1327,7 @@ Všetky tri vyzerali ako niečo iné, než čím boli:
 | `ZipException opening "xml-apis-ext-1.3.04.jar": zip END header not found` + `cannot access java` | JitPack ako Maven repozitár v `settings.xml` odpovedal na **cudzí** artefakt 403 s HTML telom a Maven to uložil ako `.jar`. Maven nevie repozitár obmedziť na jednu groupId, takže jediná obrana je nemať ho tam — `vendor-deps.sh` si qrgen ťahá `curl`om sám a každý stiahnutý jar overí, že je čitateľný zip |
 | `JedisConnectionException: Could not get a resource from the pool` → `Connection refused`, hoci redis kontejner je healthy | engine si Jedis factory stavia sám a číta `spring.session.redis.host` cez `@Value` (`SessionConfiguration`), čo starter plní z `${REDIS_HOST}`. `SPRING_REDIS_HOST` (štandardné Spring Boot property) sa naň **nedostane** — appka beží na `localhost`. Správne env sú `REDIS_HOST` a `REDIS_PORT`; prod compose to mal tiež zle |
 | služba je `unhealthy`, hoci z hostiteľa odpovedá 200 — a `depends_on` kvôli tomu nespustí, čo na ňu čaká | healthcheck volal `http://localhost/` **vnútri** kontejnera. Tam sa `localhost` rozloží najprv na `::1`, ale nginx počúva len na IPv4 `0.0.0.0:80` → `Connection refused`. V healthchecku patrí `127.0.0.1` |
-| v logu `NetRunner: ziadne siete na import` a `BootstrapCaseRunner finished` za 13 ms — prázdna appka bez menu | Dockerfile kopíroval `etask-configuration/processes`, ale **nie** `processes.json`. Maven chýbajúci resource mlčky preskočí, takže jar mal siete a nemal manifest — a manifest je to, čo NetRunner aj BootstrapCaseRunner čítajú. Build to teraz kontroluje (`test -f target/classes/petriNets/processes.json`) |
+| v logu `NetRunner: ziadne siete na import` a `BootstrapCaseRunner finished` za 13 ms — prázdna appka bez menu | Dockerfile kopíroval `ai-config/processes`, ale **nie** `processes.json`. Maven chýbajúci resource mlčky preskočí, takže jar mal siete a nemal manifest — a manifest je to, čo NetRunner aj BootstrapCaseRunner čítajú. Build to teraz kontroluje (`test -f target/classes/petriNets/processes.json`) |
 
 ### Po `pfsync --sync` v Dockeri: menu a konfigurácia potrebujú nový prípad
 
@@ -1337,7 +1337,7 @@ behu (RUNBOOK 4): menu aj konfigurácia ostanú na starej verzii, kým nevznikne
 nový prípad. V Dockeri je to jeden príkaz:
 
 ```bash
-docker compose -f deploy/docker-compose.dev.yml restart backend
+docker compose -f platform/docker-compose.yml restart backend
 ```
 
 ### Čo `--docker` nerobí
@@ -1407,7 +1407,7 @@ pri štarte v tomto priečinku (na Linuxe/macOS zmeň `py -3` na `python3`):
 
 ```json
 {"mcpServers": {"petriflow": {"command": "py",
-  "args": ["-3", "etask-configuration/tools/pfmcp.py"]}}}
+  "args": ["-3", "ai-config/tools/pfmcp.py"]}}}
 ```
 
 | nástroj | vracia |
@@ -1474,7 +1474,7 @@ zdieľaný** — inak odkaz vydaný jednou inštanciou druhá neoverí.
 Tri veci, ktoré k tomu patria a inak sa spravia zle:
 
 * **Endpoint vracia cestu, nie absolútnu URL.** Za reverse proxy ju backend
-  zložiť nevie — `deploy/nginx.conf` posiela `proxy_set_header Host $host`,
+  zložiť nevie — `platform/nginx.conf` posiela `proxy_set_header Host $host`,
   čo zahadzuje port, takže portál na `:4200` by dostal odkaz na `:80`. Origin
   pozná prehliadač; prefix dopĺňa frontend.
 * **Okno sa otvára v obsluhe kliknutia, nie v callbacku.** `window.open`

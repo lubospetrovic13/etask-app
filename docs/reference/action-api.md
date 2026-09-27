@@ -127,7 +127,7 @@ Mena uzivatelov, "Meno Priezvisko" (alebo e-mail, ked meno chyba).
 > funkčná update cesta cez `changeFilter`/`changeMenuItem`) a v enginu
 > (11 argumentov, na update volá neexistujúce `updateFilter` a **padne**).
 > Rozlišujú sa len aritou. Použi tú s 7 argumentmi. Funkčný príklad je
-> v `etask-backend-starter/src/main/resources/petriNets/configuration_tiles.xml`.
+> v `platform/backend/src/main/resources/petriNets/configuration_tiles.xml`.
 
 ## Engine `ActionDelegate`
 

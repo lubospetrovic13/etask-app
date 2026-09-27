@@ -1,0 +1,54 @@
+{
+  "_comment": [
+    "Deklaratívny cieľový stav procesných rolí. Spúšťa sa tools/pfseed.py.",
+    "roles sú importId (z <role><id> v sieti), nie stringId - stringId sa razí",
+    "per verziu siete, takže po re-importe by zoznam bol okamžite neplatný.",
+    "pfseed pridelí každú uvedenú rolu na VŠETKÝCH verziách sietí v netScope.",
+    "",
+    "netScope: pfnew a pfapp install doplnia vzor pre kazdu appku (napr. \"mojaapp/*\").",
+    "Roly onboardingu (hr, approver, it_admin) su tu preto, ze onboarding je",
+    "nasadeny ako ukazka z dema - bez nich by jeho karta nemala komu sa ukazat."
+  ],
+  "netScope": [
+    "admin/pouzivatelia/*",
+    "onboarding/*"
+  ],
+  "users": [
+    {
+      "email": "super@netgrif.com",
+      "roles": [
+        "approver",
+        "hr",
+        "it_admin",
+        "spravca"
+      ]
+    },
+    {
+      "email": "admin@test.local",
+      "roles": [
+        "approver",
+        "hr",
+        "it_admin",
+        "spravca"
+      ]
+    },
+    {
+      "email": "operator@test.local",
+      "roles": [
+        "approver",
+        "hr"
+      ]
+    },
+    {
+      "email": "druhy@test.local",
+      "roles": [
+        "approver",
+        "it_admin"
+      ]
+    },
+    {
+      "email": "viewer@test.local",
+      "roles": []
+    }
+  ]
+}

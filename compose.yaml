@@ -1,19 +1,19 @@
 # One-click start: `docker compose up`, or the green triangle next to `services:`
 # in IntelliJ IDEA / VS Code (Docker extension). Same stack as `tools/up.sh --docker`.
 #
-# Services are defined once, in deploy/docker-compose.dev.yml. This file adds only
+# Services are defined once, in platform/docker-compose.yml. This file adds only
 # `setup`: the step up.sh runs at the end (roles and nets reconciled with the
-# engine), which a bare `compose up` would otherwise skip. See deploy/first-run.sh.
+# engine), which a bare `compose up` would otherwise skip. See platform/first-run.sh.
 #
 #   docker compose up -d          start (first run builds the images, ~10 min)
 #   docker compose logs -f setup  when is it ready
 #   docker compose down           stop, data stays
 #   docker compose down -v        stop and DELETE the data
 
-name: ${COMPOSE_PROJECT_NAME:-etask}
+name: ${COMPOSE_PROJECT_NAME:-netgrif}
 
 include:
-  - deploy/docker-compose.dev.yml
+  - platform/docker-compose.yml
 
 services:
   setup:
@@ -29,6 +29,6 @@ services:
       FRONTEND_PORT: ${FRONTEND_PORT:-4200}
       MAILPIT_PORT: ${MAILPIT_PORT:-8025}
     volumes:
-      - ./etask-configuration:/etask-configuration
-      - ./deploy/first-run.sh:/first-run.sh:ro
+      - ./ai-config:/ai-config
+      - ./platform/first-run.sh:/first-run.sh:ro
     entrypoint: ["sh", "/first-run.sh"]

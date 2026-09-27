@@ -55,7 +55,7 @@ jobs:
           # zodpovedať verzii, na ktorej appka naozaj stojí. Po jej zdvihnutí
           # sa CI posunie samo.
           ENGINE_VERSION=$(grep -A2 '<artifactId>application-engine</artifactId>' \
-            etask-backend-starter/pom.xml | grep -m1 '<version>' \
+            platform/backend/pom.xml | grep -m1 '<version>' \
             | sed -E 's/.*<version>([^<]+)<.*/\1/')
           echo "engine: $ENGINE_VERSION, groovy: $GROOVY_VERSION"
 
@@ -72,26 +72,26 @@ jobs:
           echo "PF_ENGINE_JAR=$GITHUB_WORKSPACE/.ci/application-engine-${ENGINE_VERSION}.jar" >> "$GITHUB_ENV"
 
       - name: pflint (štruktúra, tiché pasce, grid)
-        working-directory: etask-configuration
+        working-directory: ai-config
         run: python3 tools/pflint.py processes/
 
       - name: pfgroovy (syntax akcií)
-        working-directory: etask-configuration
+        working-directory: ai-config
         run: python3 tools/pfgroovy.py processes/
 
       - name: pfi18n (každý viditeľný text má preklad)
-        working-directory: etask-configuration
+        working-directory: ai-config
         # `single_settings.xml` je systémová sieť enginu (vendorovaná na
         # classpath) - jej preklady nevieme opraviť, a červené CI, ktoré sa
         # nedá opraviť, sa naučia ignorovať aj so skutočnými nálezmi.
         run: python3 tools/pfi18n.py processes/ --ignore single_settings.xml
 
       - name: pfapi (inventár primitív je aktuálny)
-        working-directory: etask-configuration
+        working-directory: ai-config
         run: python3 tools/pfapi.py --check
 
       - name: pftest (testy samotných nástrojov)
-        working-directory: etask-configuration
+        working-directory: ai-config
         # `pfview` sa vnútri preskočí, keď chýba node_modules — inventár
         # komponentov sa číta z nainštalovanej knižnice, nie zo zoznamu v kóde.
         run: bash tools/pftest.sh

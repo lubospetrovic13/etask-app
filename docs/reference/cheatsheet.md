@@ -21,7 +21,7 @@ v tomto súbore alebo v nástroji, nie v sieti.
 ## Postup
 
 ```bash
-cd etask-configuration
+cd ai-config
 cp examples/skeleton.xml processes/mojaapp.xml      # prepíš <id>, <initials>, <title>
 # dopíš "mojaapp.xml" do processes.json → "import"
 python3 tools/pflint.py processes/        # 0,3 s  štruktúra a tiché pasce
@@ -138,7 +138,7 @@ ako „nefunguje to". Všetky sú overené na bežiacom engine.
 
 - Java **11**. `LANG=C.UTF-8` a `-Dsun.jnu.encoding=UTF-8`, inak sa sieť
   s diakritikou naimportuje, ale jej XML sa neuloží a `pfsync` ju už neprečíta.
-- Jar sa spúšťa z `etask-backend-starter/` (`PdfRunner` asserts na relatívne
+- Jar sa spúšťa z `platform/backend/` (`PdfRunner` asserts na relatívne
   cesty). Najlepšie `tools/up.sh`, ktorý to robí správne.
 - Odmietnutie z akcie vracia **HTTP 200** a dôvod v tele ako `error`. Test na
   stavový kód taký blok prehliadne.
@@ -175,7 +175,7 @@ istý Groovy píšeš v druhej sieti, presuň ho tam a regeneruj inventár
 | chyby enginu a knižnice — čo nahlásiť upstream (E1–E20) | `pfdoc engine E20` |
 | metódy volateľné z akcie | `docs/reference/action-api.md` |
 | rozhodovací postup pre agenta | `.claude/skills/petriflow/SKILL.md` |
-| worked example (eForm, SLA, oprávnenia per organizácia) | `pfdoc sd` |
+| worked example (žiadosť, schválenie, vrátenie, akceptačný test) | `pfdoc onboarding` |
 | prečo je repozitár takto postavený | `pfdoc analyza` |
 
 Vzory, ktoré vyšli z reálnych appiek a inak sa vymyslia zle:

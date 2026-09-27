@@ -1,0 +1,106 @@
+{
+  "_comment": [
+    "Jediný zoznam toho, čo runtime robí so sieťami. Číta ho ProcessManifest.",
+    "",
+    "Pridanie novej aplikácie: hoď XML do processes/ a dopíš sem riadok do",
+    "\"import\". Pridanie appky zásah do Javy nevyžaduje - to by protirečilo tomu,",
+    "že aplikačná logika patrí do Petriflow.",
+    "",
+    "import        súbory sietí, v poradí importu. Poradie záleží: uzol URI",
+    "              vznikne až importom prvej siete, ktorej identifikátor tú cestu",
+    "              nesie, takže sieť odkazujúca na uzol (typicky menu) patrí za ňu.",
+    "              Identifikátor sa NEUVÁDZA - NetRunner ho číta z <id> v XML.",
+    "bootstrapCase siete, ktorých má pri štarte existovať bootstrap case.",
+    "              Položka je identifikátor, alebo {\"net\": ...,",
+    "              \"rebuildOnNewVersion\": true}. Sú to dva rôzne druhy:",
+    "              - identifikátor = jeden case NAVŽDY. Pre pracujúci singleton",
+    "                (pult, počítadlo); druhý case = druhá trvale otvorená úloha.",
+    "              - rebuildOnNewVersion = jeden case NA VERZIU siete. Pre sieť",
+    "                stavajúcu menu: jej akcia je v udalosti create, teda beží raz",
+    "                za case, a case si drží verziu siete - takže bez nového casu",
+    "                sa po re-importe zmena zobrazení nikdy neprejaví.",
+    "              Prečo to menu vôbec potrebuje: uzol URI sám žiadne zobrazenia",
+    "              nenesie a menu API enginu je na action delegate, teda",
+    "              dosiahnuteľné len z akcie - a akcia chce case.",
+    "uriNodes      ikona a viditeľnosť karty v bočnom menu. requiredProcessRoles",
+    "              sú importId rolí (z <role><id> v sieti), nie stringId -",
+    "              stringId sa razí per verziu siete a re-import by zoznam vyprázdnil.",
+    "              Prázdne oboje = uzol vidí každý prihlásený.",
+    "",
+    "Používatelia (pu_*) sú súčasť starteru, nie príklad: správa účtov a rolí",
+    "je to, čo potrebuje každá inštancia, a bez nej sa nový používateľ zakladá",
+    "cez API. Jej kartu vidí rola spravca.",
+    "",
+    "Nová appka: python3 tools/pfnew.py (RUNBOOK 2) - dopíše sem import,",
+    "bootstrapCase aj uriNodes. Ručne sa tento súbor needituje.",
+    "",
+    "Pozor: uzol URI riadi len VIDITEĽNOSŤ KARTY. Zobrazenia pod ňou stavia",
+    "menu sieť appky s visibility \"public\", takže kto pozná URL, otvorí ich aj tak;",
+    "čo v nich uvidí, riadia oprávnenia v sietiach. Skrytie karty nie je",
+    "prístupové opatrenie.",
+    "",
+    "Čo je v processes/ a NIE je v tomto zozname:",
+    "  single_settings.xml   systémová sieť enginu. Na classpath sa dostane cez",
+    "                        pom.xml (processes/*.xml) a engine si ju importuje",
+    "                        sám - v `import` teda nemá byť.",
+    "Čo je v tomto zozname a NIE je v processes/:",
+    "  configuration_tiles.xml   žije v platform/backend/src/main/resources/",
+    "                        petriNets/. NetRunner číta z classpath, nie z disku.",
+    "Šablóna novej siete je v examples/skeleton.xml - v processes/ patrí len to, čo je nasadené."
+  ],
+  "import": [
+    "configuration_tiles.xml",
+    "pu_pouzivatel.xml",
+    "pu_zalozenie.xml",
+    "pu_menu.xml",
+    "on_request.xml",
+    "on_menu.xml"
+  ],
+  "bootstrapCase": [
+    {
+      "net": "configuration_tiles",
+      "rebuildOnProcessChange": true
+    },
+    "admin/pouzivatelia/pu_zalozenie",
+    {
+      "net": "admin/pouzivatelia/pu_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "onboarding/on_menu",
+      "rebuildOnNewVersion": true
+    }
+  ],
+  "uriNodes": {
+    "general": {
+      "icon": "widgets",
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
+    },
+    "admin": {
+      "icon": "shield",
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
+    },
+    "admin/pouzivatelia": {
+      "icon": "manage_accounts",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "spravca"
+      ]
+    },
+    "onboarding": {
+      "icon": "how_to_reg",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "hr",
+        "approver",
+        "it_admin"
+      ]
+    }
+  }
+}

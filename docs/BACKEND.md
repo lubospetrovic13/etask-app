@@ -4,7 +4,7 @@ Messages API - `POST /v1/messages`, hlavičky `x-api-key` a `anthropic-version`,
 odpoveď v `content[].text`, metriky v `usage.input_tokens` a `output_tokens`.
 LLM podľa AI konfigurácie
 
-Projekt: `C:\Users\petro\IdeaProjects\etask-backend-starter`
+Projekt: `C:\Users\petro\IdeaProjects\platform/backend`
 
 ---
 

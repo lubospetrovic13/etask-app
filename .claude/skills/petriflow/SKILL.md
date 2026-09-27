@@ -1,6 +1,6 @@
 ---
 name: petriflow
-description: Práca s Petriflow sieťami v tomto repozitári — tvorba a úprava procesov (.xml v etask-configuration/processes), akcie v Groovy, oprávnenia, dátové polia, formuláre, menu. Použi VŽDY pred písaním alebo úpravou Petriflow siete, a tiež keď sa rozhoduješ, či má funkcionalita ísť do Petriflow, do action delegate alebo do Java/Angular kódu. Trigger aj na: proces, sieť, transition, dataGroup, taskRef, dataRef, roleRef, userRef, action delegate, setData, createCase.
+description: Práca s Petriflow sieťami v tomto repozitári — tvorba a úprava procesov (.xml v ai-config/processes), akcie v Groovy, oprávnenia, dátové polia, formuláre, menu. Použi VŽDY pred písaním alebo úpravou Petriflow siete, a tiež keď sa rozhoduješ, či má funkcionalita ísť do Petriflow, do action delegate alebo do Java/Angular kódu. Trigger aj na: proces, sieť, transition, dataGroup, taskRef, dataRef, roleRef, userRef, action delegate, setData, createCase.
 ---
 
 # Petriflow v tomto repozitári
@@ -12,7 +12,7 @@ Tento súbor je **rozcestník**: rozhodnutia a čo si pri nich pýtať. Podrobno
 v súboroch vedľa a v dokumentácii, ktorá sa číta **po kapitolách**:
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pfdoc.py hladaj "menu"     # v ktorej kapitole to je
 python3 tools/pfdoc.py runbook 4         # len tá kapitola
 ```
@@ -72,7 +72,7 @@ Celý zoznam s obídeniami: [pasce.md](pasce.md), `pfdoc learnings`, `pfdoc engi
 ## Nová appka
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pfnew.py mojaapp ziadost "Žiadosť o niečo" --role pracovnik
 ```
 
@@ -83,6 +83,6 @@ a je v poriadku — [delegat.md](delegat.md)). Manifest sa needituje ručne — 
 z jeho štyroch sekcií vie chýbať tak, že to nič nepovie.
 Podrobne: [nova-appka.md](nova-appka.md).
 
-Funkčný príklad je pri Petriflow užitočnejší než špecifikácia: Service Desk
-(`processes/sd_*.xml`, `pfdoc sd`) — verejný viackrokový eForm cez taskRef,
-child casy, per-organizačné oprávnenia, SLA.
+Funkčný príklad je pri Petriflow užitočnejší než špecifikácia: onboarding
+(`examples/onboarding/`, `pfdoc onboarding`) — žiadosť, výber schvaľovateľa,
+vrátenie na doplnenie ako ten istý case, akceptačný test proti enginu.

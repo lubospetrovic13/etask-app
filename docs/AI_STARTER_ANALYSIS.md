@@ -20,7 +20,7 @@ vlastný `menu_item()` helper na idempotenciu, pretože `createOrUpdate*MenuItem
 v 6.3.1 na update ceste padá.
 
 Pritom v tom istom repozitári, v súbore
-`etask-backend-starter/src/main/resources/petriNets/configuration_tiles.xml`,
+`platform/backend/src/main/resources/petriNets/configuration_tiles.xml`,
 už tri roky existuje toto:
 
 ```groovy

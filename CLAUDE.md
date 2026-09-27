@@ -9,7 +9,7 @@ a pravidlá. Vysvetlenia sú v dokumentácii a berú sa **po kapitolách**, nie 
 súboroch — celá dokumentácia má ~86 000 tokenov, jedna kapitola ~500:
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pfdoc.py                  # čo kde je, s cenou v tokenoch
 python3 tools/pfdoc.py hladaj "menu"    # kde o tom je (nadpisy, nie telo)
 python3 tools/pfdoc.py runbook 4        # len tá kapitola
@@ -46,10 +46,11 @@ nezobrazí vlastné polia a build o tom mlčí.
 
 ## Šablóna, nie nasadenie
 
-Repozitár drží framework, infraštruktúru, správu používateľov a **jednu**
-príkladovú appku (Service Desk) — jej kartu vidí len admin, aby sa príklad
-nedal zameniť za skutočnú appku. Klientske appky žijú vo vlastných repách
-a do checkoutu sa dostanú `pfapp install`:
+Repozitár drží platformu (`platform/`), AI konfiguráciu so sieťami
+(`ai-config/`) a správu používateľov. Nasadená je **jedna** ukážková appka, onboarding z dema
+(`examples/onboarding/`, v `ai-config/` cez `pfapp install`). Ďalšie príklady sú
+v `examples/` a nie sú aktívne; nasadia sa `pfapp install`, rovnako ako
+klientske appky z vlastných repozitárov:
 
 | appka | repozitár |
 |---|---|
@@ -85,7 +86,7 @@ parserom aj importom a spadne až za behu; ten zoznam je jediná obrana.
 ## Nová aplikácia
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pfnew.py mojaapp ziadost "Žiadosť o niečo" --role pracovnik
 ```
 
@@ -118,7 +119,7 @@ needituje ručne: `pfnew` pri novej appke, `pfapp` pri appke z iného repa.
 Po zmene siete, v tomto poradí:
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pflint.py processes/        # 0,3 s
 python3 tools/pfgroovy.py processes/      # 3 s
 python3 tools/pfi18n.py processes/        # každý viditeľný text má preklad
@@ -178,8 +179,8 @@ a spusti `tools/pftest.sh`.
 ## Čerstvý checkout
 
 ```bash
-etask-configuration/tools/up.sh           # kompletný stack, idempotentne
-etask-configuration/tools/up.sh --docker  # to isté celé v Dockeri (RUNBOOK 12)
+ai-config/tools/up.sh           # kompletný stack, idempotentne
+ai-config/tools/up.sh --docker  # to isté celé v Dockeri (RUNBOOK 12)
 ```
 
 `up.sh` volá `bootstrap.sh` sám. Ten vygeneruje JWT podpisový kľúč — je

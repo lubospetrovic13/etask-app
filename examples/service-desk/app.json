@@ -1,0 +1,33 @@
+{
+  "name": "service-desk",
+  "title": "Service Desk",
+  "import": [
+    "sd_customer.xml",
+    "sd_work_item.xml",
+    "sd_ticket.xml",
+    "sd_intake.xml",
+    "sd_menu.xml"
+  ],
+  "bootstrapCase": [
+    {
+      "net": "it/service_desk/sd_menu",
+      "rebuildOnNewVersion": true
+    }
+  ],
+  "uriNodes": {
+    "it": {
+      "icon": "dns",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": []
+    },
+    "it/service_desk": {
+      "icon": "support_agent",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": []
+    }
+  },
+  "netScope": [
+    "it/service_desk/*"
+  ],
+  "tools": []
+}

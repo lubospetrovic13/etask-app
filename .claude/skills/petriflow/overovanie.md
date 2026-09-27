@@ -3,13 +3,13 @@
 Bežiaci stack (bez neho sa `pfcheck` nemá čoho pýtať):
 
 ```bash
-etask-configuration/tools/up.sh             # alebo --docker, RUNBOOK 12
+ai-config/tools/up.sh             # alebo --docker, RUNBOOK 12
 ```
 
 Po každej zmene siete:
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pflint.py processes/      # 0,3 s  štruktúra, tiché pasce, grid
 python3 tools/pfgroovy.py processes/    # 3 s    syntax Groovy
 python3 tools/pfi18n.py processes/      #        každý viditeľný text má preklad

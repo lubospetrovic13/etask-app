@@ -4,7 +4,7 @@
 it is the file the other assistants read, so it is kept current. This file exists because
 Copilot looks here rather than there; it is a pointer plus the few rules that matter most.
 
-- Application logic belongs in **Petriflow nets** (`etask-configuration/processes/*.xml`), not
+- Application logic belongs in **Petriflow nets** (`ai-config/processes/*.xml`), not
   in Java and not in Angular. Never start in framework code.
 - Moving down a layer (net, then action delegate, then framework) has to be justified by one
   sentence naming **which primitive is missing one layer up**.

@@ -21,6 +21,15 @@ application logic belongs in Petriflow nets, **not in Java and not in Angular**.
 framework is around 5 500 lines and the nets around 9 700. That ratio is intentional, and
 keeping it is part of your job here.
 
+```
+ai-config/     the AI-native configuration: nets (processes/), manifest, tools
+platform/      the engine: backend, frontend, docker compose. Layer 2 and 3
+examples/      finished apps; onboarding (from the demo) is active, the rest install with pfapp
+docs/          the long form documentation, read by chapter through pfdoc
+```
+
+A new application goes into `ai-config/processes/` through `pfnew`, never by hand.
+
 ## Before you change anything
 
 Read `docs/reference/cheatsheet.md` (around 2 000 tokens): the procedure, the eight
@@ -34,7 +43,7 @@ Do not read the documentation file by file. It is around 86 000 tokens in total 
 indexed by chapter, at roughly 500 tokens each:
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pfdoc.py                  # what is where, priced in tokens
 python3 tools/pfdoc.py hladaj "menu"    # which chapter covers it
 python3 tools/pfdoc.py runbook 4        # just that chapter
@@ -65,7 +74,7 @@ parser and the import and only fails at runtime. That list is the only defence.
 ## Adding an application
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pfnew.py myapp request "Request for something" --role worker
 ```
 
@@ -79,7 +88,7 @@ one can be missing in a way that reports nothing, which is why it is not edited 
 After a net change, in this order:
 
 ```bash
-cd etask-configuration
+cd ai-config
 python3 tools/pflint.py processes/        # 0.3 s
 python3 tools/pfgroovy.py processes/      # 3 s
 python3 tools/pfi18n.py processes/        # every visible string has a translation
@@ -112,7 +121,7 @@ If you touched startup order, URI nodes, the manifest or the runners, add one mo
 clean database, and **ask the user first because it deletes data**:
 
 ```bash
-etask-configuration/tools/up.sh --docker --fresh --build
+ai-config/tools/up.sh --docker --fresh --build
 ```
 
 A running instance carries state from earlier runs and that is exactly what masks ordering
@@ -143,8 +152,9 @@ bugs.
 ## Running it
 
 ```bash
-etask-configuration/tools/up.sh           # the whole stack, idempotent
-etask-configuration/tools/up.sh --docker  # the same thing entirely in Docker
+docker compose up -d            # the whole stack in Docker, what the README tells users
+ai-config/tools/up.sh --docker  # the same, plus port checks and rebuild detection
+ai-config/tools/up.sh           # backend on the host, faster edit loop for layer 2/3
 ```
 
 `EtaskRunner` prints a security check at every startup: default admin password, test

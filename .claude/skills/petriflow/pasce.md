@@ -25,7 +25,7 @@ ich aj tak. Plný zoznam s meraniami: `pfdoc learnings`, `pfdoc engine`.
   ```
 
   Rola zostáva autoritatívna — koho niekto pridá do zoznamu omylom a rolu nemá,
-  prístup nedostane. Vzor je v `sd_ticket` (`apply_customer`).
+  prístup nedostane. Vzor bol v Service Desku (`sd_ticket`, `apply_customer`), ktorý zostal v `etask-app`.
 * **Read-only pohľad na read arcu z konzumovaného miesta zmizne natrvalo.**
   Keď na tom mieste niekto klikne DOKONČIŤ a dokončenie sa odmietne (prázdne
   `required` pole alebo výnimka z `phase="pre"`), engine tú read-only úlohu
