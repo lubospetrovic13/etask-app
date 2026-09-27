@@ -147,6 +147,13 @@ if [ -d ../platform/frontend/node_modules/@netgrif ]; then
   else
     ok "pfview chytil fixtures/pfview-*"
   fi
+  # `<component>` na dataRefe prebije ten z `<data>` a dlho ho nikto
+  # nekontroloval - preklep v mene na ulohe presiel ticho.
+  if $PY tools/pfview.py --nets tools/fixtures/pfview-nets-dataref >/dev/null 2>&1; then
+    bad "pfview neoznacil preklep v komponente na dataRefe"
+  else
+    ok "pfview chytil preklep v komponente na dataRefe"
+  fi
   # Falosny pozitiv je tu drahsi nez inde: `toggle` na boolean poli je platny
   # (variant sa cita z properties) a naivny inventar ho hlasi 15x.
   if $PY tools/pfview.py >/dev/null 2>&1; then

@@ -128,6 +128,14 @@ export class EtaskFieldComponentResolverComponent extends AbstractFieldComponent
     this.typed$.next(target.value);
   }
 
+  /**
+   * A file field that asks for the document viewer (`<component><name>document</name>`)
+   * instead of the library's upload row. Everywhere else a file field stays the library's.
+   */
+  isDocument(): boolean {
+    return this.getDataField()?.component?.name === 'document';
+  }
+
   private saveWhileTyping(): boolean {
     if (!TYPABLE.includes(this.getElementType())) {
       return false;

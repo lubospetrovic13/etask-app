@@ -1,0 +1,22 @@
+<div class="etask-document" fxLayout="column" fxFlex>
+  <!--
+    Upload, download and delete are the library's own. Wrapping `nc-file-field` inside
+    our component is the one use of an `nc-` field that pfview check B allows.
+  -->
+  <nc-file-field [dataField]="dataField" [taskId]="taskId" [taskOffset]="taskOffset"></nc-file-field>
+
+  <div class="etask-document__viewer" [style.height.px]="viewerHeight">
+    <iframe *ngIf="pdfUrl" [src]="pdfUrl" [title]="fileName" class="etask-document__frame"></iframe>
+    <img *ngIf="imageUrl" [src]="imageUrl" [alt]="fileName" class="etask-document__image">
+    <pre *ngIf="text !== undefined" class="etask-document__text">{{ text }}</pre>
+
+    <div *ngIf="!pdfUrl && !imageUrl && text === undefined" class="etask-document__empty"
+         fxLayout="column" fxLayoutAlign="center center">
+      <mat-icon>description</mat-icon>
+      <span *ngIf="!fileName">{{ 'document.noFile' | translate }}</span>
+      <span *ngIf="fileName && loading">{{ 'document.loading' | translate }}</span>
+      <span *ngIf="fileName && failed">{{ 'document.failed' | translate }}</span>
+      <span *ngIf="fileName && !loading && !failed && kind === 'none'">{{ 'document.unsupported' | translate }}</span>
+    </div>
+  </div>
+</div>

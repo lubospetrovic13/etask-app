@@ -84,5 +84,11 @@
       "sentInfo": "Ak účet s tou adresou existuje, odkaz je na ceste. Skontroluj si schránku.",
       "title": "Zabudnuté heslo"
     }
+  },
+  "document": {
+    "noFile": "Doklad zatiaľ nie je nahratý.",
+    "loading": "Načítavam doklad…",
+    "failed": "Doklad sa nepodarilo načítať. Stiahnite ho odkazom vyššie.",
+    "unsupported": "Tento typ súboru sa tu zobraziť nedá. Stiahnite ho odkazom vyššie."
   }
 }

@@ -258,6 +258,25 @@ def resolver_property_keys():
     return set()
 
 
+def resolver_component_names():
+    """Mena komponentov, ktore cita nas resolver poli (`component?.name === '...'`).
+
+    Resolver sa podla mena rozhoduje, KTORY komponent vykresli - napriklad pole
+    `file` s `<name>document</name>` ide na prehliadac dokladu namiesto
+    kniznicneho pola. Take meno teda cita appka, hoci ho nema ani kniznica, ani
+    komponent jedneho typu. Rovnako ako `resolver_property_keys` sa scanuje LEN
+    resolver.
+    """
+    for ts in SRC.rglob("*.ts"):
+        if ts.name.endswith(".spec.ts"):
+            continue
+        text = ts.read_text(encoding="utf-8", errors="replace")
+        if "selector: 'app-etask-field-component-resolver'" not in text:
+            continue
+        return set(re.findall(r"component(?:\?)?\.name ?===? ?'([^']+)'", text))
+    return set()
+
+
 def project_field_components():
     """{typ pola: {"keys": kluce properties, "names": mena komponentov, "file": cesta}}
 
@@ -374,7 +393,8 @@ def check_overrides():
 # --------------------------------------------- C. siete proti frontendu
 
 def check_nets(per_type, any_name, field_types, resolver_types,
-               lib_prop_keys, project, resolver_keys=frozenset()):
+               lib_prop_keys, project, resolver_keys=frozenset(),
+               resolver_names=frozenset()):
     """Siet si vypyta komponent alebo property, ktoru nikto nerenderuje.
 
     Kto typ pola vlastni, urcuje, co sa da overit:
@@ -391,6 +411,43 @@ def check_nets(per_type, any_name, field_types, resolver_types,
     known_types = set(field_types.values())
     skipped_names = set()
     bad = False
+
+    def check_component(where, t, comp):
+        """Jeden `<component>`, z `<data>` aj z `<dataRef>`. Vracia True pri chybe."""
+        found = False
+        own = project.get(t)
+        name = (comp.findtext("name") or "").strip()
+        mine = set((own or {}).get("names", ())) | set(resolver_names)
+        allowed = set(per_type.get(t, ())) | mine
+        if name and own and not own["reads_name"]:
+            skipped_names.add(t)
+        elif name and name not in (any_name | mine):
+            err(f"{where}: komponent '{name}' nepozna kniznica ani appka "
+                f"- ticho sa vykresli default. Zname pre {t}: "
+                f"{', '.join(sorted(allowed)) or '(ziadne)'}")
+            found = True
+        elif name and allowed and name not in allowed:
+            warn(f"{where}: komponent '{name}' existuje, ale nie pre typ {t} "
+                 f"- zname pre {t}: {', '.join(sorted(allowed))}")
+
+        for prop in comp.iter("property"):
+            key = (prop.get("key") or "").strip()
+            if not key:
+                continue
+            if key in resolver_keys:
+                # Property cita resolver, ktory renderuje kazdy typ.
+                continue
+            if own is not None:
+                if key not in own["keys"]:
+                    err(f"{where}: property '{key}' nikde v {own['file']} "
+                        f"necita - ticho sa zahodi. Zname: "
+                        f"{', '.join(sorted(own['keys'])) or '(ziadne)'}")
+                    found = True
+            elif key not in lib_prop_keys:
+                err(f"{where}: property '{key}' kniznica necita "
+                    f"- ticho sa zahodi")
+                found = True
+        return found
     for xml in sorted(NETS.glob("*.xml")):
         label = rel(xml)
         try:
@@ -399,9 +456,11 @@ def check_nets(per_type, any_name, field_types, resolver_types,
             err(f"{label}: XML sa neda rozparsovat ({e})")
             bad = True
             continue
+        types = {}
         for data in root.iter("data"):
             t = data.get("type")
             fid = (data.findtext("id") or "?").strip()
+            types[fid] = t
             where = f"{label}: pole '{fid}' (type={t})"
             if t not in known_types:
                 err(f"{where}: taky typ pola frontend nepozna")
@@ -412,39 +471,23 @@ def check_nets(per_type, any_name, field_types, resolver_types,
                     f"- pole ostane prazdne miesto")
                 bad = True
             comp = data.find("component")
-            if comp is None:
-                continue
-            own = project.get(t)
-            name = (comp.findtext("name") or "").strip()
-            allowed = set(per_type.get(t, ())) | set((own or {}).get("names", ()))
-            if name and own and not own["reads_name"]:
-                skipped_names.add(t)
-            elif name and name not in (any_name | set((own or {}).get("names", ()))):
-                err(f"{where}: komponent '{name}' nepozna kniznica ani appka "
-                    f"- ticho sa vykresli default. Zname pre {t}: "
-                    f"{', '.join(sorted(allowed)) or '(ziadne)'}")
-                bad = True
-            elif name and allowed and name not in allowed:
-                warn(f"{where}: komponent '{name}' existuje, ale nie pre typ {t} "
-                     f"- zname pre {t}: {', '.join(sorted(allowed))}")
-
-            for prop in comp.iter("property"):
-                key = (prop.get("key") or "").strip()
-                if not key:
+            if comp is not None:
+                bad |= check_component(where, t, comp)
+        # `<component>` na dataRefe prebije ten z `<data>` - a doteraz ho nikto
+        # nekontroloval: preklep v mene na ulohe presiel ticho, hoci na `<data>`
+        # by ho tato kontrola chytila.
+        for tr in root.iter("transition"):
+            tid = (tr.findtext("id") or "?").strip()
+            for ref in tr.iter("dataRef"):
+                comp = ref.find("component")
+                if comp is None:
                     continue
-                if key in resolver_keys:
-                    # Property cita resolver, ktory renderuje kazdy typ.
+                fid = (ref.findtext("id") or "?").strip()
+                t = types.get(fid)
+                if t is None:
                     continue
-                if own is not None:
-                    if key not in own["keys"]:
-                        err(f"{where}: property '{key}' nikde v {own['file']} "
-                            f"necita - ticho sa zahodi. Zname: "
-                            f"{', '.join(sorted(own['keys'])) or '(ziadne)'}")
-                        bad = True
-                elif key not in lib_prop_keys:
-                    err(f"{where}: property '{key}' kniznica necita "
-                        f"- ticho sa zahodi")
-                    bad = True
+                bad |= check_component(
+                    f"{label}: dataRef '{fid}' v '{tid}' (type={t})", t, comp)
 
     for t in sorted(skipped_names):
         note(f"typ '{t}' renderuje {project[t]['file']}, ktory `component.name` "
@@ -488,6 +531,7 @@ def main():
     res_types = resolver_field_types(field_types)
     lib_prop_keys = library_property_keys()
     resolver_keys = resolver_property_keys()
+    resolver_names = resolver_component_names()
     project = project_field_components()
 
     if "--inventory" in sys.argv:
@@ -505,6 +549,7 @@ def main():
             d = project[t]
             print(f"  {t:16s} properties: {', '.join(sorted(d['keys'])) or '-'}"
                   f"   cita component.name: {'ano' if d['reads_name'] else 'NE'}")
+        print(f"mena, podla ktorych vybera resolver: {', '.join(sorted(resolver_names)) or '-'}")
         print(f"properties, ktore cita kniznica: {', '.join(sorted(lib_prop_keys))}")
         return 0
 
@@ -513,7 +558,7 @@ def main():
     check_copies(templates)
     check_overrides()
     check_nets(per_type, any_name, field_types, res_types, lib_prop_keys, project,
-               resolver_keys)
+               resolver_keys, resolver_names)
 
     print(f"\npfview: {len(errors)} chyb, {len(warnings)} upozorneni, {len(notes)} poznamok")
     return 1 if errors else 0

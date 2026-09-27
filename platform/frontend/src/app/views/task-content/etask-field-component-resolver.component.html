@@ -1,6 +1,7 @@
 <!--
   Copy of @netgrif/components field-component-resolver.component.html.
-  Differences: BOOLEAN and BUTTON render our own components instead of the nc- ones.
+  Differences: BOOLEAN and BUTTON render our own components instead of the nc- ones,
+  and FILE with <component><name>document</name> renders the document viewer.
 -->
 <div fxLayout="row" fxLayoutAlign="start center" class="netgrif-input"
      [ngClass]="{'min-row-height': isField() && !isCustomHeight()}" [ngSwitch]="getElementType()">
@@ -31,8 +32,14 @@
   <nc-date-time-field *ngSwitchCase="fieldTypeEnum.DATE_TIME" [dataField]="getDataField()" [taskOffset]="getFieldOffset()" fxFlex class="date-field-fix">
   </nc-date-time-field>
 
-  <nc-file-field *ngSwitchCase="fieldTypeEnum.FILE" [dataField]="getDataField()" [taskId]="getTaskId()" [taskOffset]="getFieldOffset()" fxFlex>
-  </nc-file-field>
+  <ng-container *ngSwitchCase="fieldTypeEnum.FILE">
+    <app-etask-file-document *ngIf="isDocument(); else libraryFile" [dataField]="getDataField()" [taskId]="getTaskId()" [taskOffset]="getFieldOffset()" fxFlex>
+    </app-etask-file-document>
+    <ng-template #libraryFile>
+      <nc-file-field [dataField]="getDataField()" [taskId]="getTaskId()" [taskOffset]="getFieldOffset()" fxFlex>
+      </nc-file-field>
+    </ng-template>
+  </ng-container>
 
   <nc-file-list-field *ngSwitchCase="fieldTypeEnum.FILE_LIST" [dataField]="getDataField()" [taskId]="getTaskId()" [taskOffset]="getFieldOffset()" fxFlex>
   </nc-file-list-field>

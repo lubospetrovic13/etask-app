@@ -84,5 +84,11 @@
       "sentInfo": "If an account with that address exists, the link is on its way. Check your inbox.",
       "title": "Forgotten password"
     }
+  },
+  "document": {
+    "noFile": "No document uploaded yet.",
+    "loading": "Loading the document…",
+    "failed": "The document could not be loaded. Download it with the link above.",
+    "unsupported": "This file type cannot be shown here. Download it with the link above."
   }
 }

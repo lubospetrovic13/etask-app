@@ -579,7 +579,33 @@ EtaskTaskPanelComponent → EtaskTaskContentComponent
 ```
 
 Resolver je **hardcoded `ngSwitch` bez registry**, takže vlastný komponent
-znamená vlastniť šablónu resolvera. Aktuálne vlastníme `boolean` a `button`.
+znamená vlastniť šablónu resolvera. Aktuálne vlastníme `boolean` a `button`,
+a pole `file` s `<component><name>document</name>` ide na prehliadač dokladu.
+
+### Doklad vedľa formulára (`document`)
+
+Knižničný `preview` na poli `file` je náhľad: 20 % šírky poľa a `<img>`, takže
+PDF nezobrazí vôbec. `app-etask-file-document` ukáže prílohu veľkú: PDF vo
+vstavanom prehliadači prehliadača (na šírku), obrázok, a XML e-faktúru ako
+text. Nahratie, stiahnutie a mazanie zostávajú knižničné (`nc-file-field`
+vnútri). Rozloženie „vľavo polia, vpravo doklad" je v sieti, gridom:
+
+```xml
+<dataRef>
+    <id>fa_skan</id>
+    <logic><behavior>visible</behavior></logic>
+    <layout><x>3</x><y>0</y><rows>22</rows><cols>3</cols>...</layout>
+    <component><name>document</name></component>
+</dataRef>
+```
+
+Výška prehliadača je `rows` × výška riadku gridu, takže koľko miesta doklad
+dostane, rozhoduje sieť. Komponent je na `dataRef`, nie na `<data>`: na
+zápise faktúry je to isté pole obyčajné tlačidlo na nahratie, prehliadač
+dostane len úloha, kde sa porovnáva (`fa_faktura`, `t_fa_kontrola`).
+
+`pfview` kontroluje `<component>` aj na `dataRef` - dlho to nerobil a preklep
+v mene na úlohe prešiel ticho.
 
 Konfigurácia ide cez `<component><properties>`, ktoré knižnica ignoruje, ale
 `DataField.component` ich prenesie:

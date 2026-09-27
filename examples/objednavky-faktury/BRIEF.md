@@ -50,7 +50,9 @@ flowchart LR
 1. **Zadávateľ** zapíše faktúru v portáli. Ak má prílohu (XML e-faktúru, PDF, sken),
    *Načítať z prílohy* vyplní polia sám. E-faktúra sa číta presne, PDF podľa popiskov, sken
    cez OCR. Podá na kontrolu.
-2. **Referent** *(nové)* dostane faktúru do fronty *Faktúry na kontrolu*. Vidí **vstupné
+2. **Referent** *(nové)* dostane faktúru do fronty *Faktúry na kontrolu*. Obrazovka je
+   rozdelená na polovice: **vľavo údaje faktúry, vpravo faktúra sama** (PDF, sken alebo
+   XML e-faktúra), takže vyťažené údaje porovnáva s originálom bez sťahovania. Vidí **vstupné
    kontroly**: chýbajúca príloha, IČO alebo IBAN, dátum vystavenia v budúcnosti, splatnosť
    pred vystavením, chýbajúca objednávka, faktúra drahšia ako objednávka. Kontroly faktúru
    nezastavia, rozhodne referent. Doplní údaje, **spáruje s objednávkou** a zapíše
