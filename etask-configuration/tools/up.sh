@@ -217,12 +217,16 @@ if [ "$DO_DOCKER" = 1 ]; then
   # rozbita ("siet nie je naimportovana", 403 pri zakladani casu), hoci stack
   # hlasil Hotovo. Preto sa caka na to, co nas naozaj zaujima: ze sa admin
   # vie prihlasit.
-  step "Cakam na admin ucet"
+  #
+  # Ani login admina nestaci: super admin vznika medzi prvymi runnermi,
+  # NetRunner, testovacie ucty a menu az po nom. /manage/health/readiness je UP
+  # az po poslednom runneri (application.properties).
+  step "Cakam, kym engine dobehne start"
   ok=0
   for _ in $(seq 1 60); do
     code=$(curl -s -o /dev/null -w '%{http_code}' -m 5 \
              -u "super@netgrif.com:${ADMIN_PASSWORD:-password}" \
-             http://localhost:8080/api/auth/login || true)
+             http://localhost:${BACKEND_PORT:-8080}/manage/health/readiness || true)
     [ "$code" = "200" ] && { ok=1; break; }
     printf .
     sleep 3
@@ -231,7 +235,7 @@ if [ "$DO_DOCKER" = 1 ]; then
   if [ "$ok" = 1 ]; then
     echo "ok"
   else
-    echo "POZOR: super@netgrif.com sa este neda prihlasit."
+    echo "POZOR: engine este nedobehol start (readiness nie je UP)."
     echo "       Siete a role sa nemusia dorovnat; po chvili spusti znova:"
     echo "         cd etask-configuration && python3 tools/pfsync.py --sync"
   fi
