@@ -52,7 +52,19 @@
     "configuration_tiles.xml",
     "pu_pouzivatel.xml",
     "pu_zalozenie.xml",
-    "pu_menu.xml"
+    "pu_menu.xml",
+    "on_request.xml",
+    "on_menu.xml",
+    "dv_ziadost.xml",
+    "dv_menu.xml",
+    "pc_nastavenia.xml",
+    "pc_profil.xml",
+    "pc_vyuctovanie.xml",
+    "pc_menu.xml",
+    "fa_faktura.xml",
+    "ob_objednavka.xml",
+    "sc_menu.xml",
+    "sc_nastavenia.xml"
   ],
   "bootstrapCase": [
     {
@@ -62,6 +74,27 @@
     "admin/pouzivatelia/pu_zalozenie",
     {
       "net": "admin/pouzivatelia/pu_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "onboarding/on_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "hr/dovolenky/dv_menu",
+      "rebuildOnNewVersion": true
+    },
+    "hr/cesty/pc_nastavenia",
+    {
+      "net": "hr/cesty/pc_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "financie/sc_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "admin/nastavenia/sc_nastavenia",
       "rebuildOnNewVersion": true
     }
   ],
@@ -86,6 +119,100 @@
       "requiredProcessRoles": [
         "spravca"
       ]
+    },
+    "onboarding": {
+      "icon": "how_to_reg",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "hr",
+        "approver",
+        "it_admin"
+      ]
+    },
+    "hr": {
+      "icon": "groups",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "mzdy",
+        "spravca",
+        "veduci",
+        "zamestnanec"
+      ]
+    },
+    "hr/dovolenky": {
+      "icon": "beach_access",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zamestnanec",
+        "veduci"
+      ]
+    },
+    "hr/cesty": {
+      "icon": "directions_car",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zamestnanec",
+        "veduci",
+        "mzdy",
+        "spravca"
+      ]
+    },
+    "financie": {
+      "icon": "account_balance",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "referent",
+        "riaditel",
+        "schv_hotel",
+        "schv_marketing",
+        "schv_restauracia",
+        "schv_sprava",
+        "schv_udrzba",
+        "schv_wellness",
+        "schvalovatel",
+        "uctovnik",
+        "zadavatel"
+      ]
+    },
+    "financie/faktury": {
+      "icon": "receipt_long",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "referent",
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "financie/objednavky": {
+      "icon": "shopping_cart",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "admin/nastavenia": {
+      "icon": "tune",
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
     }
   }
 }

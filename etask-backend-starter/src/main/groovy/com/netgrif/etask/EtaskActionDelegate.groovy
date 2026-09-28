@@ -15,7 +15,9 @@ import com.netgrif.application.engine.petrinet.domain.roles.ProcessRole
 import com.netgrif.application.engine.petrinet.domain.version.Version
 import com.netgrif.application.engine.workflow.domain.Case
 import com.netgrif.etask.ai.AiCallService
+import com.netgrif.application.engine.petrinet.domain.dataset.FileFieldValue
 import com.netgrif.etask.doc.InvoiceReaderService
+import com.netgrif.etask.doc.XlsxFillService
 import com.netgrif.etask.mail.NotifyService
 import com.netgrif.etask.petrinet.domain.UriNodeData
 import com.netgrif.etask.petrinet.domain.UriNodeDataRepository
@@ -41,6 +43,9 @@ class EtaskActionDelegate extends ActionDelegate {
 
     @Autowired
     private NotifyService notifyService
+
+    @Autowired
+    private XlsxFillService xlsxFillService
 
     // Id poli na `preference_filter_item` a prechod na `filter`, kde sa data
     // zapisuju. V engine su to `private static final` na `ActionDelegate`, takze
@@ -1145,6 +1150,46 @@ class EtaskActionDelegate extends ActionDelegate {
      */
     boolean ocrDostupne() {
         return invoiceReaderService.ocrAvailable()
+    }
+
+    // ==================================================================
+    // Vyplnenie cudzieho xlsx tlaciva
+    //
+    // Volá sa z Petriflow akcie (vyúčtovanie pracovnej cesty):
+    //     def v = vyplnXlsx([sablona: cfg.dataSet?.get("pcn_sablona"), harok: "...",
+    //                        bunky: [...], obrazky: [...], nazov: "x.xlsx",
+    //                        pole: "pc_vystup", prechod: "t_prehlad"])
+    //
+    // Logika je v com.netgrif.etask.doc.XlsxFillService; delegát vyrieši, kde
+    // leží šablóna a podpisy, a hotový zošit zapíše do `file` poľa prípadu.
+    // ==================================================================
+
+    /**
+     * Vyplni xlsx sablonu a vysledok ulozi do `file` pola aktualneho pripadu.
+     *
+     * Kluce argumentu: `sablona` (file pole alebo jeho hodnota, aj z ineho
+     * pripadu), `harok`, `bunky` (bunka -> hodnota), `obrazky` (zoznam
+     * [subor: file pole, bunka:, sirka:, vyska:]), `nazov` (meno suboru),
+     * `pole` (id cieloveho file pola), `prechod` (prechod, na ktorom pole je).
+     *
+     * Vrati vysledok sluzby: `ok`, `sprava`, `buniek`, `obrazkov`. Pri `ok`
+     * false do pola nic nezapise.
+     */
+    Map<String, Object> vyplnXlsx(Map<String, Object> args) {
+        File sablona = resolveAttachment(args?.sablona, null)
+        List<Map<String, Object>> obrazky = ((args?.obrazky ?: []) as List<Map<String, Object>>).collect { Map<String, Object> o ->
+            [subor: resolveAttachment(o.subor, useCase?.stringId), bunka: o.bunka, sirka: o.sirka, vyska: o.vyska] as Map<String, Object>
+        }
+        String pole = args?.pole as String
+        String nazov = (args?.nazov ?: "vystup.xlsx") as String
+        File ciel = new File(new FileFieldValue().getPath(useCase.stringId, pole))
+        ciel.parentFile?.mkdirs()
+        Map<String, Object> v = xlsxFillService.fill(sablona, args?.harok as String,
+                (args?.bunky ?: [:]) as Map<String, Object>, obrazky, ciel)
+        if (v?.ok) {
+            saveFileToField(useCase, args?.prechod as String, pole, nazov, ciel.path)
+        }
+        return v
     }
 
     // ==================================================================

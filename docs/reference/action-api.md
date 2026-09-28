@@ -114,6 +114,9 @@ Precita fakturu z prilohy a vrati polia, ktore sa z nej dali vytiahnut.
 ### `ocrDostupne()`
 Je OCR na tomto stroji k dispozicii? Siet to vie povedat cloveku skor,
 
+### `vyplnXlsx(Map<String, Object> args)`
+Vyplni xlsx sablonu a vysledok ulozi do `file` pola aktualneho pripadu.
+
 ### `notifikacieZapnute()`
 Da sa posielat? Siet sa to pyta, aby o tom vedela napisat do priebehu
 
