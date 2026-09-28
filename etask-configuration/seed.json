@@ -12,28 +12,41 @@
     "sedi na vzor - na dve appky s rovnako pomenovanou rolou a roznych ludi."
   ],
   "netScope": [
-    "admin/pouzivatelia/*"
+    "admin/pouzivatelia/*",
+    "onboarding/*"
   ],
   "users": [
     {
       "email": "super@netgrif.com",
       "roles": [
+        "approver",
+        "hr",
+        "it_admin",
         "spravca"
       ]
     },
     {
       "email": "admin@test.local",
       "roles": [
+        "approver",
+        "hr",
+        "it_admin",
         "spravca"
       ]
     },
     {
       "email": "operator@test.local",
-      "roles": []
+      "roles": [
+        "approver",
+        "hr"
+      ]
     },
     {
       "email": "druhy@test.local",
-      "roles": []
+      "roles": [
+        "approver",
+        "it_admin"
+      ]
     },
     {
       "email": "viewer@test.local",
