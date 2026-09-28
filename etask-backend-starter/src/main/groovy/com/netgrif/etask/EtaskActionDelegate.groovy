@@ -1153,46 +1153,6 @@ class EtaskActionDelegate extends ActionDelegate {
     }
 
     // ==================================================================
-    // Vyplnenie cudzieho xlsx tlaciva
-    //
-    // Volá sa z Petriflow akcie (vyúčtovanie pracovnej cesty):
-    //     def v = vyplnXlsx([sablona: cfg.dataSet?.get("pcn_sablona"), harok: "...",
-    //                        bunky: [...], obrazky: [...], nazov: "x.xlsx",
-    //                        pole: "pc_vystup", prechod: "t_prehlad"])
-    //
-    // Logika je v com.netgrif.etask.doc.XlsxFillService; delegát vyrieši, kde
-    // leží šablóna a podpisy, a hotový zošit zapíše do `file` poľa prípadu.
-    // ==================================================================
-
-    /**
-     * Vyplni xlsx sablonu a vysledok ulozi do `file` pola aktualneho pripadu.
-     *
-     * Kluce argumentu: `sablona` (file pole alebo jeho hodnota, aj z ineho
-     * pripadu), `harok`, `bunky` (bunka -> hodnota), `obrazky` (zoznam
-     * [subor: file pole, bunka:, sirka:, vyska:]), `nazov` (meno suboru),
-     * `pole` (id cieloveho file pola), `prechod` (prechod, na ktorom pole je).
-     *
-     * Vrati vysledok sluzby: `ok`, `sprava`, `buniek`, `obrazkov`. Pri `ok`
-     * false do pola nic nezapise.
-     */
-    Map<String, Object> vyplnXlsx(Map<String, Object> args) {
-        File sablona = resolveAttachment(args?.sablona, null)
-        List<Map<String, Object>> obrazky = ((args?.obrazky ?: []) as List<Map<String, Object>>).collect { Map<String, Object> o ->
-            [subor: resolveAttachment(o.subor, useCase?.stringId), bunka: o.bunka, sirka: o.sirka, vyska: o.vyska] as Map<String, Object>
-        }
-        String pole = args?.pole as String
-        String nazov = (args?.nazov ?: "vystup.xlsx") as String
-        File ciel = new File(new FileFieldValue().getPath(useCase.stringId, pole))
-        ciel.parentFile?.mkdirs()
-        Map<String, Object> v = xlsxFillService.fill(sablona, args?.harok as String,
-                (args?.bunky ?: [:]) as Map<String, Object>, obrazky, ciel)
-        if (v?.ok) {
-            saveFileToField(useCase, args?.prechod as String, pole, nazov, ciel.path)
-        }
-        return v
-    }
-
-    // ==================================================================
     // Notifikacne maily
     //
     // Volá sa z Petriflow akcie, napríklad po podaní faktúry:
@@ -1225,6 +1185,127 @@ class EtaskActionDelegate extends ActionDelegate {
             return notifyService.send(emailyOf(prijemcovia), predmet, telo)
         } catch (Throwable t) {
             return 0
+        }
+    }
+
+    // ==================================================================
+    // Vyplnenie xlsx tlaciva
+    //
+    // Vola sa z Petriflow akcie (pc_vyuctovanie, "Vyucotvanie pracovnych ciest"):
+    //     def v = vyplnXlsx([sablona: pcn_sablona, harok: "Tuzemská cesta",
+    //                        bunky: [...], obrazky: [...],
+    //                        nazov: "cesty.xlsx", pole: "pc_vystup"])
+    //
+    // CHYBAJUCE PRIMITIVUM: engine vie vyrobit PDF z formulara (`generatePdf`),
+    // teda dokument, ktoreho podobu urcuje sam. Nevie naplnit TLACIVO, ktore
+    // drzi niekto iny a raz za cas ho prepise - a presne to je tu zadanie.
+    // ==================================================================
+
+    /**
+     * Vyplni xlsx sablonu podla mapovania a vysledok ulozi do `file` pola case-u.
+     *
+     * Sablona je priloha v konfiguracii appky a mapovanie "bunka -> hodnota"
+     * pride z akcie, takze nova verzia tlaciva od uctovnej firmy je vymena
+     * prilohy a par riadkov mapovania - nie zmena kodu.
+     *
+     * Vzorce sablony zostavaju nedotknute a zapisuju sa len VSTUPY: sucty
+     * a sadzby si tlacivo pocita samo a su na nom to najcennejsie.
+     *
+     * Kluce `params`:
+     * <ul>
+     *   <li>{@code sablona}  - `file` pole so sablonou (povinne)</li>
+     *   <li>{@code harok}    - nazov harku, inak prvy</li>
+     *   <li>{@code bunky}    - mapa {@code "C4" -> hodnota}: String, Number,
+     *       Boolean, LocalDate, LocalDateTime, LocalTime; {@code null} vyprazdni</li>
+     *   <li>{@code obrazky}  - zoznam map {@code [subor: <file pole>, bunka: "A78",
+     *       sirka: 3, vyska: 3]}; PNG</li>
+     *   <li>{@code nazov}    - nazov vysledneho suboru</li>
+     *   <li>{@code pole}     - importId cieloveho `file` pola</li>
+     *   <li>{@code prechod}  - id prechodu s tym polom (len ked je cielom iny case)</li>
+     * </ul>
+     *
+     * @return {@code [ok, sprava, buniek, obrazkov]} - nikdy nevyhodi vynimku,
+     *         lebo sa vola z `finish`, teda vnutri transakcie, ktora prepina token
+     */
+    Map<String, Object> vyplnXlsx(Map params) {
+        String poleId = (params?.pole ?: "") as String
+        String nazov = ((params?.nazov ?: "") as String).trim() ?: "vyplnene.xlsx"
+        if (!poleId) {
+            return [ok: false, sprava: "vyplnXlsx: the target file field ('pole') is missing.",
+                    buniek: 0, obrazkov: 0]
+        }
+        try {
+            File sablona = resolveAttachment(params?.sablona, useCase?.stringId)
+            if (sablona == null) {
+                return [ok: false, buniek: 0, obrazkov: 0,
+                        sprava: "The xlsx template is not uploaded in the application settings."]
+            }
+
+            // Obrazky prichadzaju ako `file` polia (podpisy ulozene na ucte
+            // cloveka), takze sa musia rozlozit na subory tou istou cestou ako
+            // sablona - hodnota pola nesie nazov a cestu, nie bajty.
+            List<Map<String, Object>> obrazky = ((params?.obrazky ?: []) as List).collect { def o ->
+                File f = resolveAttachment((o as Map)?.subor, (((o as Map)?.caseId ?: useCase?.stringId) as String))
+                return [subor: f, bunka: (o as Map)?.bunka, sirka: (o as Map)?.sirka, vyska: (o as Map)?.vyska]
+            }.findAll { it.subor != null } as List<Map<String, Object>>
+
+            String cesta = new FileFieldValue(nazov, "").getPath(useCase.stringId, poleId)
+            File cielovy = new File(cesta)
+            Map<String, Object> v = xlsxFillService.fill(
+                    sablona,
+                    params?.harok == null ? null : (params.harok as String),
+                    (params?.bunky ?: [:]) as Map<String, Object>,
+                    obrazky,
+                    cielovy)
+            if (v.ok) {
+                saveFileToField(useCase, (params?.prechod ?: null) as String, poleId, nazov, cesta)
+            }
+            return v
+        } catch (Throwable t) {
+            log.warn("vyplnXlsx failed: {}", t.message, t)
+            return [ok: false, buniek: 0, obrazkov: 0,
+                    sprava: "The template could not be filled in: " + t.message]
+        }
+    }
+
+    /**
+     * Skopiruje prilohu z INEHO case-u do `file` pola tohto case-u.
+     *
+     * CHYBAJUCE PRIMITIVUM: `change pole value { ... }` vie na `file` poli
+     * prepisat nazov a cestu, ale cesta je RAZENA PER CASE
+     * ({@code storagePath/<caseId>-<fieldId>-<nazov>}). Priradenie cudzej cesty
+     * by teda spravilo dva zaznamy nad jednym suborom a zmazanie prveho case-u
+     * by vyprazdnilo aj druhy. Skopirovat bajty z akcie sa neda nijako.
+     *
+     * Pouzitie: podpis, ktory clovek nahral raz, sa prenesie do kazdeho
+     * dalsieho vyuctovania.
+     *
+     * @param zdroj       `file` pole zdrojoveho case-u (alebo jeho hodnota/cesta)
+     * @param zdrojCaseId stringId case-u, z ktoreho sa berie - kvoli dopocitaniu cesty
+     * @param cielovePole importId `file` pola v TOMTO case-e
+     */
+    Map<String, Object> prenesPrilohu(Object zdroj, String zdrojCaseId, String cielovePole,
+                                      String prechod = null) {
+        if (!cielovePole) {
+            return [ok: false, sprava: "prenesPrilohu: the target file field is missing."]
+        }
+        try {
+            File subor = resolveAttachment(zdroj, zdrojCaseId)
+            if (subor == null || subor.length() == 0) {
+                return [ok: false, sprava: "There is nothing to copy - the source attachment is missing."]
+            }
+            def hodnota = zdroj?.hasProperty("value") ? zdroj.value : null
+            String nazov = (hodnota?.hasProperty("name") ? (hodnota.name as String) : null) ?: subor.name
+
+            String cesta = new FileFieldValue(nazov, "").getPath(useCase.stringId, cielovePole)
+            File ciel = new File(cesta)
+            ciel.parentFile?.mkdirs()
+            ciel.bytes = subor.bytes
+            saveFileToField(useCase, prechod, cielovePole, nazov, cesta)
+            return [ok: true, sprava: "Copied: " + nazov, nazov: nazov]
+        } catch (Throwable t) {
+            log.warn("prenesPrilohu failed: {}", t.message, t)
+            return [ok: false, sprava: "The attachment could not be copied: " + t.message]
         }
     }
 
