@@ -214,9 +214,10 @@ def citaj_xlsx(data):
 def pridaj_cestu(cl, task_id, c):
     """Vyplni formular cesty a stlaci tlacidlo Pridat."""
     pf.set_data(cl, task_id, {
-        "pc_c_datum": {"type": "date", "value": c["datum"]},
-        "pc_c_od": {"type": "text", "value": c["od"]},
-        "pc_c_do": {"type": "text", "value": c["do"]},
+        # Siet od 18. 9. neberie datum, od a do, ale zaciatok a trvanie v hodinach;
+        # koniec si dopocita sama (aj cez polnoc).
+        "pc_c_zaciatok": {"type": "dateTime", "value": c["datum"] + "T" + c["od"] + ":00"},
+        "pc_c_trvanie": {"type": "number", "value": c["minut"] / 60},
         "pc_c_miesto_zac": {"type": "text", "value": c.get("zac", "Bratislava")},
         "pc_c_miesto_kon": {"type": "text", "value": c.get("kon", "Bratislava")},
         "pc_c_rokovanie": {"type": "text", "value": c.get("rokovanie", "Klient")},
