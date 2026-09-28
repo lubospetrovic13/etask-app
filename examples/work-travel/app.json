@@ -6,8 +6,8 @@
     "one category would otherwise both declare it and `pfapp install` would",
     "refuse the second one.",
     "",
-    "Filling in the travel expense xlsx form needs the `vyplnXlsx` primitive",
-    "(XlsxFillService), which lives on the `apps` branch."
+    "Filling in the xlsx form and carrying the signature over need the",
+    "`vyplnXlsx` and `prenesPrilohu` primitives, which live on the `apps` branch."
   ],
   "name": "work-travel",
   "title": "Work travel",
