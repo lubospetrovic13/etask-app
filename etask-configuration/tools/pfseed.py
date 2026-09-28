@@ -52,7 +52,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PROCESSES = ROOT / "processes"
-CONFIG = ROOT / "seed.json"
+CONFIG = Path(os.environ["PF_SEED"]) if os.environ.get("PF_SEED") else ROOT / "seed.json"
 
 
 # Locale, ktore engine NEPOZNA - a preto vrati `defaultValue`.
