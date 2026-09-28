@@ -26,7 +26,12 @@
             "assets": [
               "src/env.template.js",
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              {
+                "glob": "pdf.worker.min.js",
+                "input": "node_modules/pdfjs-dist/legacy/build/",
+                "output": "assets/pdfjs/"
+              }
             ],
             "styles": [
               "src/styles.scss"

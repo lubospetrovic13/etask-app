@@ -61,6 +61,8 @@ import {
 import {EtaskTaskContentComponent} from './views/task-content/etask-task-content.component';
 import {EtaskBooleanFieldComponent} from './views/task-content/fields/etask-boolean-field.component';
 import {EtaskButtonFieldComponent} from './views/task-content/fields/etask-button-field.component';
+import {EtaskDocumentFieldComponent} from './views/task-content/fields/etask-document-field.component';
+import {EtaskChecksFieldComponent} from './views/task-content/fields/etask-checks-field.component';
 import {EtaskTabbedTaskViewComponent} from './views/task-view/etask-tabbed-task-view.component';
 import {PublicResolverComponent} from './views/public/public-resolver/public-resolver.component';
 import {PublicSingleTaskViewComponent} from './views/public/public-single-task-view/public-single-task-view.component';
@@ -119,6 +121,8 @@ import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-vie
     EtaskFieldComponentResolverComponent,
     EtaskBooleanFieldComponent,
     EtaskButtonFieldComponent,
+    EtaskDocumentFieldComponent,
+    EtaskChecksFieldComponent,
     EtaskTabbedTaskViewComponent,
   ],
   entryComponents: [NewCaseComponent, LoginComponent, SidenavComponent, DashboardComponent, ImportNetComponent, RoleAssignmentComponent],

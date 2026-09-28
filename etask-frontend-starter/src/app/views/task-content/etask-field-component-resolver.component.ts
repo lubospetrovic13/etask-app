@@ -1,6 +1,7 @@
 import {Component, HostListener, Input, OnDestroy, Type} from '@angular/core';
 import {AbstractFieldComponentResolverComponent, TaskContentService} from '@netgrif/components-core';
 import {Subject, Subscription} from 'rxjs';
+import {DocumentFocusService} from './services/document-focus.service';
 import {debounceTime} from 'rxjs/operators';
 
 /** How long after the last keystroke the typed value is committed. */
@@ -18,6 +19,13 @@ const TYPING_DEBOUNCE_MS = 600;
  * only honest source.
  */
 const TYPABLE = ['text', 'number'];
+
+/** Values the document viewer can look for in the document (see DocumentFocusService). */
+const FINDABLE = ['text', 'number', 'date', 'dateTime'];
+
+/** Types that get the info icon for their description; the rest have no hint row. */
+const WITH_INFO = ['text', 'number', 'date', 'dateTime', 'enumeration', 'enumeration_map',
+  'multichoice', 'multichoice_map', 'user', 'userList', 'file', 'fileList'];
 
 /**
  * Application copy of @netgrif/components' FieldComponentResolverComponent.
@@ -94,7 +102,8 @@ export class EtaskFieldComponentResolverComponent extends AbstractFieldComponent
   private readonly typed$ = new Subject<string>();
   private readonly sub: Subscription;
 
-  constructor(taskContentService: TaskContentService) {
+  constructor(taskContentService: TaskContentService,
+              private readonly documentFocus: DocumentFocusService) {
     super(taskContentService);
     this.sub = this.typed$.pipe(debounceTime(TYPING_DEBOUNCE_MS)).subscribe(raw => this.commit(raw));
   }
@@ -126,6 +135,62 @@ export class EtaskFieldComponentResolverComponent extends AbstractFieldComponent
       return;
     }
     this.typed$.next(target.value);
+  }
+
+  /**
+   * The field under the pointer or in focus goes to the document viewer, which marks
+   * where its value is in the document. Hover counts, not only focus: in the approval
+   * steps the fields are read-only, and a disabled input never takes focus.
+   */
+  @HostListener('mouseenter')
+  @HostListener('focusin')
+  onLook(): void {
+    this.lookNow();
+  }
+
+  /**
+   * After typing: the value is committed on blur, so the field is announced again once
+   * it has its new value - otherwise the pointer never left it and the old (empty)
+   * value was what the viewer looked for.
+   */
+  @HostListener('focusout')
+  onLookAway(): void {
+    setTimeout(() => this.lookNow());
+  }
+
+  private lookNow(): void {
+    const field = this.getDataField();
+    const type = this.getElementType();
+    if (!field || !FINDABLE.includes(type) || field.value === undefined || field.value === null) {
+      return;
+    }
+    this.documentFocus.focus({type, value: field.value});
+  }
+
+  /** Text with `<component><name>checks</name>` renders as status chips (EtaskChecksFieldComponent). */
+  isChecks(): boolean {
+    return this.getDataField()?.component?.name === 'checks';
+  }
+
+  /**
+   * The description, for the info icon. In a compact form (one with a document next to
+   * it) descriptions are not printed under the fields - they took a third of the height
+   * - and are read from this icon instead, through the same popover as a clipped hint.
+   */
+  infoText(): string {
+    const field = this.getDataField();
+    if (!field || !WITH_INFO.includes(this.getElementType()) || this.isDocument()) {
+      return '';
+    }
+    return (field.description || '').trim();
+  }
+
+  /**
+   * A file field that asks for the document viewer (`<component><name>document</name>`)
+   * instead of the library's upload row. Everywhere else a file field stays the library's.
+   */
+  isDocument(): boolean {
+    return this.getDataField()?.component?.name === 'document';
   }
 
   private saveWhileTyping(): boolean {

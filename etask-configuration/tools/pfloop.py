@@ -177,6 +177,15 @@ def main(argv):
         print("\n== 2. mechanicke nalezy: ziadne")
 
     print("\n== 4. zvysok retaze")
+    # Rozlozenie na platne buildera je jednoznacne (funkcia struktury siete),
+    # takze sa pri --fix rovno zapise; bez neho sa len povie, ze sa rozislo.
+    kod, out = spusti(["tools/pflayout.py", cesta] + ([] if fix else ["--check"]))
+    zmeny = [r for r in out.splitlines() if r.strip()]
+    if zmeny:
+        print(f"  {'OK ' if fix else 'ZLE'} pflayout: {len(zmeny)} sieti "
+              f"{'rozlozenych' if fix else 'na rozlozenie (spusti s --fix)'}")
+    else:
+        print("  OK  pflayout: rozlozenie sedi")
     for nazov, prikaz in (("pfgroovy", ["tools/pfgroovy.py", cesta]),
                           ("pfi18n", ["tools/pfi18n.py", cesta, "--ignore", "single_settings.xml"]),
                           ("pfview", ["tools/pfview.py"])):

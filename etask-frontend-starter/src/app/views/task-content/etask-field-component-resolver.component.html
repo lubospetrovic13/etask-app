@@ -1,14 +1,23 @@
 <!--
   Copy of @netgrif/components field-component-resolver.component.html.
-  Differences: BOOLEAN and BUTTON render our own components instead of the nc- ones.
+  Differences: BOOLEAN and BUTTON render our own components instead of the nc- ones,
+  and FILE with <component><name>document</name> renders the document viewer, TEXT
+  with <component><name>checks</name> renders status chips, and every field with a
+  description gets an info icon (shown only in compact forms, see _overrides.scss).
 -->
 <div fxLayout="row" fxLayoutAlign="start center" class="netgrif-input"
      [ngClass]="{'min-row-height': isField() && !isCustomHeight()}" [ngSwitch]="getElementType()">
   <app-etask-boolean-field *ngSwitchCase="fieldTypeEnum.BOOLEAN" [dataField]="getDataField()" [taskOffset]="getFieldOffset()" fxFlex>
   </app-etask-boolean-field>
 
-  <nc-text-field *ngSwitchCase="fieldTypeEnum.TEXT" [dataField]="getDataField()" [taskOffset]="getFieldOffset()" fxFlex>
-  </nc-text-field>
+  <ng-container *ngSwitchCase="fieldTypeEnum.TEXT">
+    <app-etask-text-checks *ngIf="isChecks(); else libraryText" [dataField]="getDataField()" fxFlex>
+    </app-etask-text-checks>
+    <ng-template #libraryText>
+      <nc-text-field [dataField]="getDataField()" [taskOffset]="getFieldOffset()" fxFlex>
+      </nc-text-field>
+    </ng-template>
+  </ng-container>
 
   <nc-number-field *ngSwitchCase="fieldTypeEnum.NUMBER" [dataField]="getDataField()" [taskOffset]="getFieldOffset()" fxFlex>
   </nc-number-field>
@@ -31,8 +40,14 @@
   <nc-date-time-field *ngSwitchCase="fieldTypeEnum.DATE_TIME" [dataField]="getDataField()" [taskOffset]="getFieldOffset()" fxFlex class="date-field-fix">
   </nc-date-time-field>
 
-  <nc-file-field *ngSwitchCase="fieldTypeEnum.FILE" [dataField]="getDataField()" [taskId]="getTaskId()" [taskOffset]="getFieldOffset()" fxFlex>
-  </nc-file-field>
+  <ng-container *ngSwitchCase="fieldTypeEnum.FILE">
+    <app-etask-file-document *ngIf="isDocument(); else libraryFile" [dataField]="getDataField()" [taskId]="getTaskId()" [taskOffset]="getFieldOffset()" fxFlex>
+    </app-etask-file-document>
+    <ng-template #libraryFile>
+      <nc-file-field [dataField]="getDataField()" [taskId]="getTaskId()" [taskOffset]="getFieldOffset()" fxFlex>
+      </nc-file-field>
+    </ng-template>
+  </ng-container>
 
   <nc-file-list-field *ngSwitchCase="fieldTypeEnum.FILE_LIST" [dataField]="getDataField()" [taskId]="getTaskId()" [taskOffset]="getFieldOffset()" fxFlex>
   </nc-file-list-field>
@@ -73,3 +88,5 @@
 
   <div *ngSwitchCase="taskElementEnum.BLANK"></div>
 </div>
+
+<span *ngIf="infoText() as info" class="app-field-info" [attr.data-desc]="info" aria-hidden="true">i</span>

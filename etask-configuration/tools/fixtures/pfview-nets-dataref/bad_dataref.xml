@@ -1,0 +1,48 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>fixtures/bad_dataref</id>
+	<version>1.0.0</version>
+	<initials>BDR</initials>
+	<title>Fixture - preklep v komponente na dataRefe</title>
+	<defaultRole>true</defaultRole>
+	<!--
+		Pole samo komponent nema, ziada si ho az uloha - a presne tam ho pfview
+		nekontroloval. `docment` namiesto `document` by sa ticho vykreslil ako
+		obycajne pole na nahratie suboru, bez prehliadaca dokladu.
+	-->
+	<data type="file">
+		<id>priloha</id>
+		<title>Priloha</title>
+	</data>
+	<transition>
+		<id>t</id>
+		<x>0</x>
+		<y>0</y>
+		<label>T</label>
+		<dataGroup>
+			<id>g</id>
+			<cols>2</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>priloha</id>
+				<logic><behavior>visible</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>4</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<component><name>docment</name></component>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p</id>
+		<x>0</x>
+		<y>0</y>
+		<label>P</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a</id>
+		<type>read</type>
+		<sourceId>p</sourceId>
+		<destinationId>t</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

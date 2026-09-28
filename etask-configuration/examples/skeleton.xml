@@ -63,8 +63,8 @@ if (!value) {
 
 	<transition>
 		<id>t_main</id>
-		<x>140</x>
-		<y>80</y>
+		<x>180</x>
+		<y>40</y>
 		<label>Formulár</label>
 		<icon>edit</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -116,8 +116,8 @@ if (!value) {
 
 	<place>
 		<id>p_alive</id>
-		<x>40</x>
-		<y>80</y>
+		<x>60</x>
+		<y>40</y>
 		<label>Živé</label>
 		<tokens>1</tokens>
 		<static>false</static>

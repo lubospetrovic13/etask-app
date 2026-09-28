@@ -279,8 +279,8 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</data>
 	<transition>
 		<id>t_step1</id>
-		<x>112</x>
-		<y>80</y>
+		<x>180</x>
+		<y>40</y>
 		<label>Čo potrebujete</label>
 		<icon>help_outline</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -366,8 +366,8 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</transition>
 	<transition>
 		<id>t_step2</id>
-		<x>304</x>
-		<y>80</y>
+		<x>427</x>
+		<y>40</y>
 		<label>Popis situácie</label>
 		<icon>description</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -524,8 +524,8 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</transition>
 	<transition>
 		<id>t_step3</id>
-		<x>496</x>
-		<y>80</y>
+		<x>691</x>
+		<y>40</y>
 		<label>Kontakt a odoslanie</label>
 		<icon>person</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -783,8 +783,8 @@ try {
 	</transition>
 	<transition>
 		<id>t_receipt</id>
-		<x>688</x>
-		<y>80</y>
+		<x>931</x>
+		<y>40</y>
 		<label>Podané</label>
 		<icon>check_circle</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -867,32 +867,32 @@ try {
 	</transition>
 	<place>
 		<id>p_start</id>
-		<x>32</x>
-		<y>80</y>
+		<x>60</x>
+		<y>40</y>
 		<label>Začiatok</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_s2</id>
-		<x>208</x>
-		<y>80</y>
+		<x>304</x>
+		<y>40</y>
 		<label>Vyplnený krok 1</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_s3</id>
-		<x>400</x>
-		<y>80</y>
+		<x>551</x>
+		<y>40</y>
 		<label>Vyplnený krok 2</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_done</id>
-		<x>592</x>
-		<y>80</y>
+		<x>811</x>
+		<y>40</y>
 		<label>Podané</label>
 		<tokens>0</tokens>
 		<static>false</static>

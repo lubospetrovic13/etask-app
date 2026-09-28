@@ -1,0 +1,74 @@
+<div class="doc" [class.doc--dragging]="dragging" [class.doc--resizing]="resizing">
+  <!-- Drag to move the boundary between the form and the document. -->
+  <div class="doc__handle" (mousedown)="startResize($event)" [matTooltip]="'document.resize' | translate"
+       matTooltipPosition="left"></div>
+
+  <!--
+    The library field does the real work (upload, validation, size limit, delete) and
+    stays hidden; the toolbar below drives it. Wrapping `nc-file-field` inside our own
+    component is the one use of an `nc-` field that pfview check B allows.
+  -->
+  <nc-file-field class="doc__library" [dataField]="dataField" [taskId]="taskId" [taskOffset]="taskOffset"></nc-file-field>
+
+  <div class="doc__toolbar">
+    <mat-icon class="doc__type">{{ kind === 'image' ? 'image' : kind === 'text' ? 'code' : 'description' }}</mat-icon>
+    <div class="doc__name" [matTooltip]="fileName">
+      <span class="doc__title">{{ dataField?.title }}</span>
+      <span class="doc__file">{{ fileName || ('document.noFile' | translate) }}</span>
+    </div>
+    <span class="doc__spacer"></span>
+    <span *ngIf="found" class="doc__found" [matTooltip]="'document.foundHint' | translate">
+      <mat-icon>my_location</mat-icon>{{ found }}
+    </span>
+    <ng-container *ngIf="canZoom && hasDocument">
+      <button mat-icon-button type="button" (click)="zoomBy(1 / 1.2)" [matTooltip]="'document.zoomOut' | translate">
+        <mat-icon>zoom_out</mat-icon>
+      </button>
+      <button mat-button type="button" class="doc__zoom" (click)="zoomFit()" [matTooltip]="'document.zoomFit' | translate">
+        {{ zoom * 100 | number:'1.0-0' }} %
+      </button>
+      <button mat-icon-button type="button" (click)="zoomBy(1.2)" [matTooltip]="'document.zoomIn' | translate">
+        <mat-icon>zoom_in</mat-icon>
+      </button>
+      <span class="doc__sep"></span>
+    </ng-container>
+    <button *ngIf="editable" mat-icon-button type="button" (click)="pick()"
+            [matTooltip]="(fileName ? 'document.replace' : 'document.upload') | translate">
+      <mat-icon>{{ fileName ? 'swap_horiz' : 'file_upload' }}</mat-icon>
+    </button>
+    <button *ngIf="editable && fileName" mat-icon-button type="button" (click)="remove()"
+            [matTooltip]="'document.remove' | translate">
+      <mat-icon>delete_outline</mat-icon>
+    </button>
+    <button *ngIf="fileName" mat-icon-button type="button" (click)="saveFile()"
+            [matTooltip]="'document.download' | translate">
+      <mat-icon>download</mat-icon>
+    </button>
+    <button *ngIf="hasDocument" mat-icon-button type="button" (click)="openInTab()"
+            [matTooltip]="'document.openInTab' | translate">
+      <mat-icon>open_in_new</mat-icon>
+    </button>
+  </div>
+
+  <div class="doc__sheet" #sheet [style.height.px]="viewerHeight">
+    <div [hidden]="kind !== 'pdf' || loading || failed" class="doc__pages" #pages></div>
+
+    <div *ngIf="imageUrl" class="doc__image-wrap">
+      <img [src]="imageUrl" [alt]="fileName" class="doc__image" [style.width.%]="zoom * 100">
+    </div>
+
+    <pre *ngIf="text !== undefined" class="doc__text" [innerHTML]="textHtml ?? text"></pre>
+
+    <div *ngIf="!hasDocument || loading || failed" class="doc__empty"
+         [class.doc__empty--action]="editable && !fileName" (click)="!fileName && pick()">
+      <mat-icon>{{ !fileName && editable ? 'upload_file' : 'description' }}</mat-icon>
+      <ng-container *ngIf="!fileName">
+        <strong>{{ (editable ? 'document.dropTitle' : 'document.noFile') | translate }}</strong>
+        <span *ngIf="editable">{{ 'document.dropHint' | translate }}</span>
+      </ng-container>
+      <span *ngIf="fileName && loading">{{ 'document.loading' | translate }}</span>
+      <span *ngIf="fileName && failed">{{ 'document.failed' | translate }}</span>
+      <span *ngIf="fileName && !loading && !failed && kind === 'none'">{{ 'document.unsupported' | translate }}</span>
+    </div>
+  </div>
+</div>

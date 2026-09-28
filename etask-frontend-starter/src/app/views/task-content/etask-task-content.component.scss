@@ -25,3 +25,45 @@
 .responsive-grid {
   display: block !important;
 }
+
+// A field shrinks to its grid cell. Material gives `.mat-form-field-infix` a fixed
+// 180px, so in a one-column cell (~160px at 1440px wide, common since forms are split
+// into fields | document) every field overflowed and the cell showed its own
+// horizontal scrollbar - a thin "slider" under each narrow field.
+:host ::ng-deep .border {
+  overflow-x: hidden;
+
+  .mat-form-field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  // Width from the row, not from the content: with `width: auto` a select took the
+  // width of its value (a long order title) and ran under the document next to it,
+  // taking its arrow along.
+  .mat-form-field-infix {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+  }
+
+  // A long select value ends in an ellipsis, the arrow stays visible.
+  .mat-select-trigger {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .mat-select-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mat-select-arrow-wrapper {
+    flex: 0 0 auto;
+  }
+}

@@ -2,6 +2,14 @@ import {Component} from '@angular/core';
 import {LanguageSelectorComponent} from '@netgrif/components';
 import {LanguageService} from '@netgrif/components-core';
 
+/**
+ * Set by `setLang` below when a person picks a language. It is the only way to tell a
+ * choice from what `LanguageService` stores by itself: the service writes
+ * `localStorage['Language']` during its own construction, from the browser language,
+ * so a stored value alone proves nothing. AppComponent reads it at startup.
+ */
+export const LANGUAGE_CHOSEN_KEY = 'etask.languageChosen';
+
 /** The two languages this portal is actually translated into. */
 export const ETASK_LANGUAGES = [
   {key: 'sk-SK', value: 'sk'},
@@ -37,5 +45,15 @@ export class EtaskLanguageSelectorComponent extends LanguageSelectorComponent {
   constructor(languageService: LanguageService) {
     super(languageService);
     this.langMenuItems = ETASK_LANGUAGES;
+  }
+
+  /** A person picked a language: remember that it was a choice (see AppComponent). */
+  setLang(lang: string): void {
+    try {
+      localStorage.setItem(LANGUAGE_CHOSEN_KEY, '1');
+    } catch {
+      // Private mode: the choice holds for this tab only.
+    }
+    super.setLang(lang);
   }
 }

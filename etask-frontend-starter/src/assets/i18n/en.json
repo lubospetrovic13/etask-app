@@ -58,7 +58,8 @@
     "objednavky": "Orders",
     "onboarding": "Employee onboarding",
     "schvalovanie": "Orders and invoices",
-    "service_desk": "Service Desk"
+    "service_desk": "Service Desk",
+    "nastavenia": "Settings"
   },
   "view": {
     "publicForm": {
@@ -84,5 +85,23 @@
       "sentInfo": "If an account with that address exists, the link is on its way. Check your inbox.",
       "title": "Forgotten password"
     }
+  },
+  "document": {
+    "noFile": "No document uploaded yet.",
+    "loading": "Loading the document…",
+    "failed": "The document could not be loaded. Download it with the link above.",
+    "unsupported": "This file type cannot be shown here. Download it with the link above.",
+    "upload": "Upload the invoice",
+    "replace": "Replace with another file",
+    "remove": "Remove the file",
+    "download": "Download",
+    "openInTab": "Open in a new tab",
+    "dropTitle": "Upload the invoice",
+    "dropHint": "Drag a PDF, an image or an XML e-invoice here, or click.",
+    "resize": "Drag to change the width",
+    "foundHint": "Where the value of the field you point at is in the document",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomFit": "Fit to width"
   }
 }

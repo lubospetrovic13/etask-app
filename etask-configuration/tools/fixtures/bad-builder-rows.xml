@@ -1,0 +1,73 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>fixtures/bad_builder_rows</id>
+	<version>1.0.0</version>
+	<initials>BBR</initials>
+	<title>Fixture - pole vyssie nez 10 riadkov</title>
+	<defaultRole>true</defaultRole>
+	<!--
+		Toto nie je ukazka, je to TEST. `pflint` so `strict` na tejto sieti MUSI zlyhat.
+
+		Engine aj portal ju vykreslia spravne. Chyba sa ukaze az v Netgrif Builderi:
+		pole s viac nez 10 riadkami presunie pri otvoreni formulara prechodu na x=0
+		pod posledne pole a pri ulozeni ho tam aj zapise. `popis` ma rows=11 vedla
+		`suma` - po ulozeni z buildera by bol pod nou.
+	-->
+	<role>
+		<id>ktokolvek</id>
+		<title>Ktokoľvek</title>
+	</role>
+	<data type="text">
+		<id>popis</id>
+		<title>Popis</title>
+		<component>
+			<name>textarea</name>
+		</component>
+	</data>
+	<data type="number">
+		<id>suma</id>
+		<title>Suma</title>
+	</data>
+	<transition>
+		<id>t_zle</id>
+		<x>100</x>
+		<y>80</y>
+		<label>Zlý grid</label>
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>ktokolvek</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<dataGroup>
+			<id>g_zle</id>
+			<cols>6</cols>
+			<layout>grid</layout>
+			<dataRef>
+				<id>popis</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>2</x><y>0</y><rows>11</rows><cols>4</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+			<dataRef>
+				<id>suma</id>
+				<logic><behavior>editable</behavior></logic>
+				<layout><x>0</x><y>0</y><rows>1</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+			</dataRef>
+		</dataGroup>
+	</transition>
+	<place>
+		<id>p</id>
+		<x>40</x>
+		<y>80</y>
+		<label>Živé</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a</id>
+		<type>read</type>
+		<sourceId>p</sourceId>
+		<destinationId>t_zle</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

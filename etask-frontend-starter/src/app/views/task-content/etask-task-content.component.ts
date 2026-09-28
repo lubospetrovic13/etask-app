@@ -9,10 +9,12 @@ import {
   PaperViewService,
   TaskContentService,
   TaskDataService,
+  TaskElementType,
   TaskEventService,
   TaskRefField,
 } from '@netgrif/components-core';
 import {Subscription} from 'rxjs';
+import {DocumentFocusService} from './services/document-focus.service';
 
 /**
  * Application copy of @netgrif/components' TaskContentComponent, differing in the
@@ -57,6 +59,7 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
   private readonly hideOnScroll = () => this.hide();
 
   private changedFieldsSub: Subscription | null = null;
+  private readonly _layouts = new WeakMap<object, {key: string, source: any, areas: string, content: Array<any>}>();
   private reloading = false;
 
   constructor(fieldConverter: FieldConverterService,
@@ -67,7 +70,8 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
               @Optional() taskEventService: TaskEventService,
               @Optional() @Inject(NAE_ASYNC_RENDERING_CONFIGURATION) config,
               @Optional() private _taskDataService: TaskDataService,
-              @Optional() private _changedFieldsService: ChangedFieldsService) {
+              @Optional() private _changedFieldsService: ChangedFieldsService,
+              private readonly _documentFocus: DocumentFocusService) {
     super(fieldConverter, taskContentService, paperView, logger, taskEventService, config);
     // Capture, because the scrolling happens on inner elements that do not bubble scroll.
     document.addEventListener('scroll', this.hideOnScroll, true);
@@ -140,8 +144,93 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
     return walk(changedFields);
   }
 
+  /**
+   * The subgrid that holds a document viewer (`<component><name>document</name>`), or
+   * undefined. The viewer's x is where the form ends and the document begins.
+   */
+  private documentItem(subgrid: any): any {
+    return (subgrid?.content || []).find(i => i?.item?.component?.name === 'document' && i?.item?.layout);
+  }
+
+  /**
+   * Grid columns of one subgrid. Without a document viewer it is the library's
+   * `repeat(n, 1fr)`. With one, the columns left of the viewer share the form's part of
+   * the width and the rest share the document's, so dragging the viewer's handle moves
+   * the boundary without the net knowing. `minmax(0, …)` lets a column shrink below its
+   * content's minimum - without it a long value would push the document off screen.
+   */
+  /**
+   * Grid areas and cells of one subgrid, with the document viewer stretched down over
+   * every empty row below it - so it runs alongside the whole form, however long.
+   *
+   * The net cannot say that itself. Netgrif Builder keeps a field at most 10 rows tall:
+   * a taller one is moved below the form on opening the transition's form and written
+   * back there on save (measured: rows 10 stays at x=2, rows 11 lands at x=0 under the
+   * last field). So the net gives the viewer a builder-safe height (`rows` ≤ 10, which
+   * is also its minimum height here), and the rest of the column is claimed here. The
+   * library fills empty tiles with one blank cell each; those in the viewer's columns
+   * are dropped and their tiles given to the viewer. It stops at the first row where
+   * any of those columns holds a real field.
+   */
+  layoutOf(subgrid: any): {areas: string, content: Array<any>} {
+    const key = subgrid?.gridAreas || '';
+    const cached = this._layouts.get(subgrid);
+    if (cached && cached.key === key && cached.source === subgrid.content) {
+      return cached;
+    }
+    const layout = {key, source: subgrid.content, areas: key, content: subgrid.content || []};
+    const doc = this.documentItem(subgrid);
+    if (doc && key) {
+      const grid: Array<Array<string>> = key.split(' | ').map(row => row.split(' '));
+      const id = doc.gridAreaId;
+      const lastRow = grid.map(row => row.includes(id)).lastIndexOf(true);
+      const cols = lastRow < 0 ? [] : grid[lastRow].map((a, i) => a === id ? i : -1).filter(i => i >= 0);
+      const blanks = new Set(layout.content.filter(i => i?.type === TaskElementType.BLANK).map(i => i.gridAreaId));
+      const taken = new Set<string>();
+      for (let r = lastRow + 1; cols.length && r < grid.length; r++) {
+        if (!cols.every(c => blanks.has(grid[r][c]))) {
+          break;
+        }
+        cols.forEach(c => {
+          taken.add(grid[r][c]);
+          grid[r][c] = id;
+        });
+      }
+      if (taken.size) {
+        layout.areas = grid.map(row => row.join(' ')).join(' | ');
+        layout.content = layout.content.filter(i => !taken.has(i.gridAreaId));
+      }
+    }
+    this._layouts.set(subgrid, layout);
+    return layout;
+  }
+
+  /** Minimum height of the viewer's cell: the rows the net gave it. */
+  documentMinHeight(item: any): number | null {
+    return item?.item?.component?.name === 'document' ? (item.item.layout?.rows || 1) * 75 - 16 : null;
+  }
+
+  columnsOf(subgrid: any): string {
+    const doc = this.documentItem(subgrid);
+    const cols = subgrid?.cols || 1;
+    const x = doc?.item?.layout?.x || 0;
+    if (!doc || x <= 0 || x >= cols) {
+      return subgrid.getGridColumns();
+    }
+    const split = this._documentFocus.split$.value;
+    const left = (split / x).toFixed(4);
+    const right = ((1 - split) / (cols - x)).toFixed(4);
+    return `repeat(${x}, minmax(0, ${left}fr)) repeat(${cols - x}, minmax(0, ${right}fr))`;
+  }
+
   @HostListener('mouseover', ['$event'])
   public onMouseOver(event: MouseEvent): void {
+    // The info icon of a compact form: always shows its text, there is no clamp to test.
+    const info = (event.target as HTMLElement)?.closest?.('.app-field-info') as HTMLElement;
+    if (info && info.closest('app-etask-task-content') === this._elementRef.nativeElement) {
+      this.show(info, info.dataset.desc || '');
+      return;
+    }
     const hint = (event.target as HTMLElement)?.closest?.(EtaskTaskContentComponent.HINT) as HTMLElement;
     if (!hint || hint.classList.contains('mat-error')) {
       return;
@@ -161,7 +250,7 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
 
   @HostListener('mouseout', ['$event'])
   public onMouseOut(event: MouseEvent): void {
-    const hint = (event.target as HTMLElement)?.closest?.(EtaskTaskContentComponent.HINT);
+    const hint = (event.target as HTMLElement)?.closest?.(EtaskTaskContentComponent.HINT + ', .app-field-info');
     if (hint && hint === this.anchor) {
       this.hide();
     }
@@ -182,14 +271,14 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
     return el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
   }
 
-  private show(hint: HTMLElement): void {
+  private show(hint: HTMLElement, text?: string): void {
     if (!this.popover) {
       this.popover = document.createElement('div');
       this.popover.className = 'app-desc-popover';
       document.body.appendChild(this.popover);
     }
     this.anchor = hint;
-    this.popover.textContent = hint.textContent.trim();
+    this.popover.textContent = (text ?? hint.textContent).trim();
     this.position(hint);
     this.popover.classList.add('app-desc-popover-visible');
   }

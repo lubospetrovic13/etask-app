@@ -409,8 +409,8 @@ mark_updated(updated_at, updated_by)
 
 	<transition>
 		<id>t_settings</id>
-		<x>304</x>
-		<y>208</y>
+		<x>180</x>
+		<y>40</y>
 		<label name="t_settings_label">Single settings</label>
 		<icon>settings_applications</icon>
 		<roleRef>
@@ -718,8 +718,8 @@ load_models(origin, model, model_label, model_key, model_provider, models_status
 
 	<place>
 		<id>p_settings</id>
-		<x>112</x>
-		<y>208</y>
+		<x>60</x>
+		<y>40</y>
 		<label>Aktívny</label>
 		<tokens>1</tokens>
 		<static>false</static>

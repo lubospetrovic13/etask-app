@@ -435,8 +435,8 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 	</data>
 	<transition>
 		<id>t_define</id>
-		<x>112</x>
-		<y>80</y>
+		<x>180</x>
+		<y>40</y>
 		<label name="t_define_label">Zadanie úlohy</label>
 		<icon>edit_note</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -692,8 +692,8 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 	</transition>
 	<transition>
 		<id>t_wi_work</id>
-		<x>304</x>
-		<y>80</y>
+		<x>180</x>
+		<y>170</y>
 		<label name="t_wi_work_label">Moja úloha</label>
 		<icon>build</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -959,8 +959,8 @@ report_to_ticket(wi_ticket_id.value, "cancelled", wi_title.value, null, null)
 	</transition>
 	<place>
 		<id>p_alive</id>
-		<x>32</x>
-		<y>80</y>
+		<x>60</x>
+		<y>40</y>
 		<label>Živá</label>
 		<tokens>1</tokens>
 		<static>false</static>

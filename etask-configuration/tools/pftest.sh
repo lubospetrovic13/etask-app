@@ -60,6 +60,34 @@ else
   ok "pflint chytil bad-grid.xml"
 fi
 
+# pflint: musi upozornit na pole vyssie nez 10 riadkov. Engine aj portal su
+# v poriadku; Netgrif Builder ho pri ulozeni presunie pod formular.
+# Vystup do premennej, nie rurou: pri `pipefail` by nenulovy exit `--strict`
+# prebil uspesny grep.
+rows_out=$($PY tools/pflint.py --strict tools/fixtures/bad-builder-rows.xml 2>&1)
+if [ $? -ne 0 ] && grep -q "builder-rows" <<<"$rows_out"; then
+  ok "pflint upozornil na bad-builder-rows.xml"
+else
+  bad "pflint neupozornil na bad-builder-rows.xml (rows > 10)"
+fi
+
+# pflayout: siete su rozlozene a rozlozenie je idempotentne - druhy beh nic
+# nezmeni. Inak by kazde `pfloop --fix` menilo suradnice a diff by bol sum.
+if $PY tools/pflayout.py --check processes/ >/dev/null 2>&1; then
+  ok "pflayout: siete v processes/ su rozlozene"
+else
+  bad "pflayout: siete v processes/ nie su rozlozene (python3 tools/pflayout.py processes/)"
+fi
+tmp_lay=$(mktemp -d)
+cp processes/*.xml "$tmp_lay/"
+$PY tools/pflayout.py "$tmp_lay" >/dev/null 2>&1
+if $PY tools/pflayout.py --check "$tmp_lay" >/dev/null 2>&1; then
+  ok "pflayout je idempotentny"
+else
+  bad "pflayout: druhy beh zmenil rozlozenie"
+fi
+rm -rf "$tmp_lay"
+
 # pflint: nesmie oznacit platne siete
 if $PY tools/pflint.py processes/ >/dev/null 2>&1; then
   ok "pflint neoznacil platne siete"
@@ -148,6 +176,13 @@ if [ -d ../etask-frontend-starter/node_modules/@netgrif ]; then
     bad "pfview neoznacil fixtures/pfview-* - tri tiche chyby presli"
   else
     ok "pfview chytil fixtures/pfview-*"
+  fi
+  # `<component>` na dataRefe prebije ten z `<data>` a dlho ho nikto
+  # nekontroloval - preklep v mene na ulohe presiel ticho.
+  if $PY tools/pfview.py --nets tools/fixtures/pfview-nets-dataref >/dev/null 2>&1; then
+    bad "pfview neoznacil preklep v komponente na dataRefe"
+  else
+    ok "pfview chytil preklep v komponente na dataRefe"
   fi
   # Falosny pozitiv je tu drahsi nez inde: `toggle` na boolean poli je platny
   # (variant sa cita z properties) a naivny inventar ho hlasi 15x.
@@ -245,7 +280,7 @@ tmp_new=$(mktemp -d)
 trap 'rm -rf "$tmp_new"' EXIT
 mkdir -p "$tmp_new/tools" "$tmp_new/processes" "$tmp_new/reference"
 cp tools/pfnew.py tools/pfi18n.py tools/pflint.py tools/pfgroovy.py tools/pfapi.py \
-   tools/pftestlib.py "$tmp_new/tools/"
+   tools/pftestlib.py tools/pflayout.py "$tmp_new/tools/"
 cp ../docs/reference/action-api.md "$tmp_new/reference/"
 printf '{"import":[],"bootstrapCase":[],"uriNodes":{}}\n' > "$tmp_new/processes.json"
 printf '{"netScope":[],"users":[]}\n' > "$tmp_new/seed.json"
@@ -261,6 +296,11 @@ if (cd "$tmp_new" && $PY tools/pfnew.py skuska ziadost "Skúšobná žiadosť" \
     fi
   done
   [ "$bad_new" -eq 0 ] && ok "vygenerovana siet prejde pflint, pfgroovy aj pfi18n"
+  if (cd "$tmp_new" && $PY tools/pflayout.py --check processes/ >/dev/null 2>&1); then
+    ok "pfnew siet rovno rozlozil (pflayout --check sedi)"
+  else
+    bad "pfnew nerozlozil vygenerovanu siet - v builderi bude na kope"
+  fi
 
   # Skelet nesmie ucit vzory, ktore su uz vyvratene: stav ako `text` a stav
   # v nazve pripadu sa neprelozia (RUNBOOK 9).

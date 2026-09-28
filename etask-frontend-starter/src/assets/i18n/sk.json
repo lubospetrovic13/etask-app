@@ -58,7 +58,8 @@
     "objednavky": "Objednávky",
     "onboarding": "Nástupy zamestnancov",
     "schvalovanie": "Objednávky a faktúry",
-    "service_desk": "Service Desk"
+    "service_desk": "Service Desk",
+    "nastavenia": "Nastavenia"
   },
   "view": {
     "publicForm": {
@@ -84,5 +85,23 @@
       "sentInfo": "Ak účet s tou adresou existuje, odkaz je na ceste. Skontroluj si schránku.",
       "title": "Zabudnuté heslo"
     }
+  },
+  "document": {
+    "noFile": "Doklad zatiaľ nie je nahratý.",
+    "loading": "Načítavam doklad…",
+    "failed": "Doklad sa nepodarilo načítať. Stiahnite ho odkazom vyššie.",
+    "unsupported": "Tento typ súboru sa tu zobraziť nedá. Stiahnite ho odkazom vyššie.",
+    "upload": "Nahrať faktúru",
+    "replace": "Nahradiť iným súborom",
+    "remove": "Odstrániť súbor",
+    "download": "Stiahnuť",
+    "openInTab": "Otvoriť na novej karte",
+    "dropTitle": "Nahrajte faktúru",
+    "dropHint": "Pretiahnite sem PDF, obrázok alebo XML e-faktúru, alebo kliknite.",
+    "resize": "Potiahnutím zmeníte šírku",
+    "foundHint": "Kde je v doklade hodnota poľa, na ktoré ukazujete",
+    "zoomIn": "Priblížiť",
+    "zoomOut": "Oddialiť",
+    "zoomFit": "Prispôsobiť šírke"
   }
 }

@@ -1,0 +1,9 @@
+<div class="checks" *ngIf="checks.length">
+  <span class="checks__title">{{ dataField?.title }}</span>
+  <div class="checks__list">
+    <span *ngFor="let c of checks" class="checks__chip" [ngClass]="'checks__chip--' + c.tone">
+      <mat-icon>{{ c.tone === 'ok' ? 'check_circle' : c.tone === 'warn' ? 'error_outline' : 'info' }}</mat-icon>
+      <span>{{ c.text }}</span>
+    </span>
+  </div>
+</div>

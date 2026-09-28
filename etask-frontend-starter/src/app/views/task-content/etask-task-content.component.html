@@ -1,6 +1,9 @@
 <!--
   Copy of @netgrif/components task-content.component.html.
-  Only difference: the grid cell renders <app-etask-field-component-resolver>.
+  Differences: the grid cell renders <app-etask-field-component-resolver>; every form is
+  compact (`app-compact-form`, see _overrides.scss) and a subgrid with a document viewer
+  takes its columns from the viewer's handle (`columnsOf`) and runs the viewer down the
+  whole form (`layoutOf`).
 -->
 <div *ngIf="loading$ | async; else notLoading" fxLayout="column" fxLayoutAlign="center center">
   <mat-spinner color="primary"></mat-spinner>
@@ -8,14 +11,14 @@
 
 <ng-template #notLoading>
   <div *ngIf="hasDataToDisplay$ | async; else noContentToDisplay"
-       [ngClass]="{'paper-view-content mat-elevation-z10': isPaperView(), 'scrolling_data': this.scrollingNeeded()}"
+       [ngClass]="{'paper-view-content mat-elevation-z10': isPaperView(), 'scrolling_data': this.scrollingNeeded(), 'app-compact-form': true}"
        [ngStyle]="{'max-height': this.resolveContentHeightCss()}">
     <div fxLayout="column" fxLayoutAlign="start stretch"
          *ngFor="let subgrid of dataSource; trackBy: trackBySubgridFn">
-      <div [gdAreas]="subgrid.gridAreas" [gdColumns]="subgrid.getGridColumns()" class="grid-rows-auto"
+      <div [gdAreas]="layoutOf(subgrid).areas" [gdColumns]="columnsOf(subgrid)" class="grid-rows-auto"
            [ngClass.lt-sm]="{'responsive-grid': true}">
-        <div *ngFor="let item of subgrid.content; trackBy: trackByFn"
-             [gdArea]="item.gridAreaId"
+        <div *ngFor="let item of layoutOf(subgrid).content; trackBy: trackByFn"
+             [gdArea]="item.gridAreaId" [style.min-height.px]="documentMinHeight(item)"
              class="border" fxLayout="row" [fxLayoutAlign]="getItemAlignment(item)">
           <app-etask-field-component-resolver [id]="item?.item?.stringId" [gridElement]="item"
                                               [taskContentComponentClassReference]="taskContentComponentClass"

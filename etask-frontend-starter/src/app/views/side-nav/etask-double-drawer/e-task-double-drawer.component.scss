@@ -299,6 +299,34 @@
   background-color: var(--app-bg);
 }
 
+// Breadcrumbs on top, the view below them gets exactly the rest.
+//
+// Before, the view was `height: 100%` of this element and sat UNDER the 30px of
+// breadcrumbs, so every view was 30px taller than the window: the bottom of a task
+// list - and the sticky action row of a task - hung below the screen edge. Nobody saw it
+// until something was pinned to the bottom. Measured: viewport bottom 744 at a window
+// height of 714.
+:host ::ng-deep .content-color {
+  display: flex;
+  flex-direction: column;
+
+  > app-e-task-breadcrumbs {
+    flex: 0 0 auto;
+  }
+
+  // `height: 0` + grow, not `flex-basis: 0` alone: only then is the item's height
+  // definite for the `height: 100%` chain inside it. With `flex: 1 1 0` the chain
+  // fell back to content height and the list grew to 814px in a 714px window.
+  // Not the <router-outlet> marker either: it is an empty sibling of the routed
+  // view, and as a flex item it took half the height and pushed the view down.
+  > :not(app-e-task-breadcrumbs):not(router-outlet) {
+    display: block;
+    flex: 1 1 auto;
+    height: 0;
+    min-height: 0;
+  }
+}
+
 .expansion-indicator {
   color: var(--app-fg-muted);
   margin-right: 10px;

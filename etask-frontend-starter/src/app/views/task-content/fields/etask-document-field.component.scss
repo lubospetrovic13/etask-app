@@ -1,0 +1,281 @@
+// Fills its grid cell, which runs down beside the whole form; the document sticks to
+// the top while the form next to it is scrolled. Nothing here scrolls except the sheet.
+//
+// Out of the flow on purpose: the cell's height is the form's, so the viewer must not
+// add to it - in the flow, a viewer sized to its cell would keep the rows from ever
+// shrinking again. The cell is the containing block (_overrides.scss) and holds the
+// minimum height the net gave the field. The library centres a cell's content
+// vertically, which in the flow started the viewer in the middle of the form.
+:host {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  display: block;
+  min-width: 0;
+}
+
+.doc {
+  position: sticky;
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--app-border, rgba(128, 128, 128, 0.3));
+  border-radius: 10px;
+  background: var(--app-surface-raised, rgba(128, 128, 128, 0.06));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+
+  &--dragging {
+    border-color: var(--app-accent, #26c6da);
+    box-shadow: 0 0 0 3px rgba(38, 198, 218, 0.35);
+  }
+
+  &--resizing {
+    user-select: none;
+  }
+}
+
+// The boundary handle: a grip on the left edge, visible on hover.
+.doc__handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 3;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 50%;
+    width: 4px;
+    height: 44px;
+    margin-top: -22px;
+    border-radius: 2px;
+    background: var(--app-border-strong, #90a4ae);
+    opacity: 0.45;
+    transition: opacity 120ms ease, background 120ms ease;
+  }
+
+  &:hover::after,
+  .doc--resizing &::after {
+    opacity: 1;
+    background: var(--app-accent, #26c6da);
+  }
+}
+
+// The library field is only the engine behind the toolbar.
+.doc__library {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.doc__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 48px;
+  padding: 0 4px 0 12px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--app-border, rgba(128, 128, 128, 0.25));
+  flex: 0 0 auto;
+}
+
+.doc__type {
+  opacity: 0.7;
+  flex: 0 0 auto;
+}
+
+.doc__name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+  margin-left: 6px;
+}
+
+.doc__title {
+  font-size: 11px;
+  color: var(--app-fg-muted, inherit);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc__file {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc__spacer {
+  flex: 1 1 auto;
+}
+
+.doc__sep {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--app-border, rgba(128, 128, 128, 0.3));
+}
+
+.doc__zoom {
+  min-width: 56px;
+  padding: 0 6px;
+  font-size: 12px;
+}
+
+.doc__found {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: rgba(255, 193, 7, 0.2);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// Invoices are printed on white, so the sheet is light in both themes: a dark frame
+// around a white page reads as a hole in the form.
+.doc__sheet {
+  position: relative;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  overflow: auto;
+  border-radius: 0 0 10px 10px;
+  background: #e3e7ea;
+}
+
+.doc__pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+  min-width: min-content;
+}
+
+// Created by the component (renderPdf), hence ::ng-deep.
+:host ::ng-deep .doc__page {
+  position: relative;
+  flex: 0 0 auto;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+
+  canvas {
+    display: block;
+  }
+}
+
+:host ::ng-deep .doc__marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+:host ::ng-deep .doc__mark {
+  position: absolute;
+  border-radius: 3px;
+  background: rgba(255, 193, 7, 0.38);
+  box-shadow: 0 0 0 2px rgba(255, 160, 0, 0.9);
+  animation: doc-mark-in 220ms ease-out;
+}
+
+@keyframes doc-mark-in {
+  from {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.doc__image-wrap {
+  box-sizing: border-box;
+  padding: 12px;
+}
+
+.doc__image {
+  display: block;
+  max-width: none;
+  margin: 0 auto;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  background: #fff;
+}
+
+.doc__text {
+  margin: 0;
+  box-sizing: border-box;
+  padding: 16px;
+  color: #263238;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  ::ng-deep mark {
+    border-radius: 2px;
+    background: rgba(255, 193, 7, 0.55);
+    box-shadow: 0 0 0 2px rgba(255, 160, 0, 0.8);
+  }
+}
+
+.doc__empty {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  color: #546e7a;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    opacity: 0.55;
+  }
+
+  strong {
+    font-size: 15px;
+    color: #37474f;
+  }
+
+  &--action {
+    inset: 12px;
+    border: 2px dashed #b0bec5;
+    border-radius: 10px;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #26c6da;
+      background: rgba(38, 198, 218, 0.08);
+    }
+  }
+}

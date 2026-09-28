@@ -701,8 +701,8 @@ if (config_status.value != "ok") {
 	<!-- ============ TASK: ČÍSELNÍK ============ -->
 	<transition>
 		<id>t_codebook</id>
-		<x>304</x>
-		<y>80</y>
+		<x>180</x>
+		<y>170</y>
 		<label>Číselník modelov</label>
 		<icon>memory</icon>
 		<roleRef>
@@ -904,8 +904,8 @@ render_codebook(models_json, models_local, models_external)
 	<!-- ============ TASK: PLATNÁ KONFIGURÁCIA ============ -->
 	<transition>
 		<id>t_config</id>
-		<x>304</x>
-		<y>208</y>
+		<x>180</x>
+		<y>300</y>
 		<label>Platná konfigurácia</label>
 		<icon>settings_suggest</icon>
 		<roleRef>
@@ -1260,8 +1260,8 @@ load_settings_options(settings_selector)
 	<!-- ============ TASK: TEST VOLANIA ============ -->
 	<transition>
 		<id>t_test</id>
-		<x>304</x>
-		<y>336</y>
+		<x>180</x>
+		<y>40</y>
 		<label>Test volania</label>
 		<icon>play_circle</icon>
 		<roleRef>
@@ -1498,8 +1498,8 @@ load_settings_options(settings_selector)
 
 	<place>
 		<id>p_alive</id>
-		<x>112</x>
-		<y>208</y>
+		<x>60</x>
+		<y>170</y>
 		<label>Aktívny</label>
 		<tokens>1</tokens>
 		<static>false</static>

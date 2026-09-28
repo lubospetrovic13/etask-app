@@ -527,3 +527,120 @@ body {
     color: rgba(0, 0, 0, 0.87);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Compact form: every task form (`app-compact-form`, set by EtaskTaskContentComponent).
+//
+// It started with the forms that have a document next to them - half a screen is not
+// much, and the descriptions under the fields took about a third of the height - and
+// was then made the one look of the portal, so an invoice and an onboarding form
+// behave the same:
+//   * descriptions move to a small info icon at the field's corner; hovering it shows
+//     the same popover a clipped hint shows. Errors still print under the field.
+//   * read-only fields drop their outline and read as label + value. In the approval
+//     steps nothing is typed, so empty-looking input boxes only suggested there was.
+// ---------------------------------------------------------------------------
+
+.app-field-info {
+  display: none;
+}
+
+.app-compact-form {
+  .netgrif-input .mat-hint:not(.mat-error) {
+    display: none;
+  }
+
+  .app-field-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 2px;
+    right: 6px;
+    z-index: 2;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--app-border-strong);
+    color: var(--app-fg-muted);
+    background: var(--app-surface);
+    font: italic 600 10px/1 Georgia, 'Times New Roman', serif;
+    cursor: help;
+    opacity: 0.75;
+
+    &:hover {
+      opacity: 1;
+      color: var(--app-fg);
+    }
+  }
+
+  // Read-only reads as text. The outline is drawn by three border boxes; Material
+  // sets their colour in a component stylesheet, hence !important.
+  .mat-form-field-appearance-outline.mat-form-field-disabled {
+    .mat-form-field-outline-start,
+    .mat-form-field-outline-gap,
+    .mat-form-field-outline-end {
+      border-color: transparent !important;
+    }
+
+    .mat-input-element,
+    .mat-select-value {
+      color: var(--app-fg);
+    }
+
+    .mat-select-arrow-wrapper,
+    .mat-datepicker-toggle {
+      visibility: hidden;
+    }
+  }
+}
+
+// The cell holding a document viewer is its containing block (the viewer is absolutely
+// positioned, see etask-document-field.component.scss) - not the resolver inside it,
+// which is otherwise `position: relative` as the anchor of the info icon.
+.border:has(> app-etask-field-component-resolver app-etask-file-document) {
+  position: relative;
+
+  > app-etask-field-component-resolver {
+    position: static;
+  }
+}
+
+// Sticky needs an ancestor that does not clip: Material's expansion panel is
+// `overflow: hidden`, which made both the document viewer and the action row scroll
+// away with the form. Only while expanded, so the expand animation keeps its clipping.
+.mat-expansion-panel.mat-expanded:has(.app-compact-form) {
+  overflow: visible;
+
+  // The grid cell is `overflow-y: auto` in the library, which makes it a scroll
+  // container of its own - one that never scrolls - so the document had nothing to
+  // stick to and left with the form. Measured: with this, it stays at the top.
+  //
+  // `clip`, not `hidden`, horizontally: `clip` does not make a scroll container, so
+  // the sticky document keeps working, and the cell still cuts anything wider than it.
+  .border:has(app-etask-file-document) {
+    overflow-x: clip;
+    overflow-y: visible;
+
+    // The document took the width of its rendered page, not of its cell. A flex item
+    // is `min-width: auto` - never narrower than its content - so after the window
+    // got narrower the viewer ran past the panel edge, and after it got wider the
+    // page stayed small: the canvas held the whole chain at its old width and the
+    // viewer never saw a new width to re-render at. Measured at 1300px: cell 408px,
+    // viewer 484px.
+    > app-etask-field-component-resolver {
+      min-width: 0;
+    }
+  }
+
+  // The decision is always at hand: the panel's action row (Finish, Release...) stays
+  // at the bottom of the window while the form scrolls above it.
+  .mat-action-row {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: var(--app-surface-raised);
+    border-top: 1px solid var(--app-border);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.18);
+  }
+}

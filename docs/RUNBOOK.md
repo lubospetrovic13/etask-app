@@ -579,7 +579,70 @@ EtaskTaskPanelComponent → EtaskTaskContentComponent
 ```
 
 Resolver je **hardcoded `ngSwitch` bez registry**, takže vlastný komponent
-znamená vlastniť šablónu resolvera. Aktuálne vlastníme `boolean` a `button`.
+znamená vlastniť šablónu resolvera. Aktuálne vlastníme `boolean` a `button`,
+a pole `file` s `<component><name>document</name>` ide na prehliadač dokladu.
+
+### Doklad vedľa formulára (`document`)
+
+Knižničný `preview` na poli `file` je náhľad: 20 % šírky poľa a `<img>`, takže
+PDF nezobrazí vôbec. `app-etask-file-document` ukáže prílohu veľkú: PDF
+vykreslené cez **PDF.js** (na šírku, so zväčšovaním), obrázok, a XML
+e-faktúru ako text.
+
+PDF.js a nie vstavaný prehliadač prehliadača, lebo ten je zatvorený `iframe`,
+nedá sa v ňom nič označiť. Pole, nad ktorým je myš alebo kurzor, sa v doklade
+**zvýrazní** (resolver ho hlási cez `DocumentFocusService`): suma v tvaroch
+`84.40` aj `84,40`, dátum ako `7.11.2022` aj `07.11.2022`, IBAN bez ohľadu na
+medzery, text aj keď je v PDF rozdelený na viac kúskov. Funguje na PDF
+s textovou vrstvou a na XML; sken bez textu nemá čo zvýrazniť. Ťahadlo na
+ľavom okraji dokladu posúva hranicu medzi formulárom a dokladom (30 až 70 %),
+šírka sa pamätá v prehliadači (`etask.documentSplit`). Stĺpce gridu pre to
+prepočíta `EtaskTaskContentComponent.columnsOf`; sieť sa nemení.
+
+Každý formulár úlohy je **kompaktný** (`app-compact-form`): popisy polí nie sú
+pod poľami, ale v ikonke ⓘ (tá istá bublinka ako pri orezanom popise), polia
+len na čítanie sú bez rámčeka ako text, a lišta s tlačidlami úlohy je
+pripnutá dole. Najprv to platilo len pre formuláre s dokladom; teraz je to
+jeden vzhľad portálu, aby sa faktúra a onboarding správali rovnako.
+
+Text s `<component><name>checks</name>` (`app-etask-text-checks`) sa vykreslí
+ako farebné štítky: riadok `✓ …` zelený, `! …` oranžový, iný sivý. Hodnota
+zostáva obyčajný text, API a testy ho vidia rovnako. Nad dokladom je jedna lišta (názov, nahrať alebo nahradiť, odstrániť,
+stiahnuť, otvoriť na novej karte), bez chýbajúceho súboru plocha na
+pretiahnutie. Doklad pri posúvaní formulára zostáva hore a nie je vyšší než
+okno, takže jediný posuvník je ten v PDF. Nahratie a mazanie idú cez skryté
+knižničné `nc-file-field` - validácia, limit veľkosti aj volania backendu sú
+jeho. Rozloženie „vľavo polia, vpravo doklad" je v sieti, gridom:
+
+```xml
+<dataRef>
+    <id>fa_skan</id>
+    <logic><behavior>visible</behavior></logic>
+    <layout><x>2</x><y>0</y><rows>10</rows><cols>2</cols>...</layout>
+    <component><name>document</name></component>
+</dataRef>
+```
+
+**`rows` najviac 10.** Netgrif Builder drží pole najviac 10 riadkov vysoké:
+vyššie pri otvorení formulára prechodu presunie na `x=0` pod posledné pole
+a pri uložení ho tam aj zapíše, takže v portáli potom doklad sedí pod
+formulárom (namerané: 10 zostane na mieste, 11 už nie). `pflint` na to
+upozorní (`builder-rows`). `rows` je preto len minimálna výška: portál
+doklad natiahne cez všetky prázdne riadky pod ním, teda popri celom
+formulári (`EtaskTaskContentComponent.layoutOf`), najviac však na výšku
+okna. Pri posúvaní formulára zostáva hore (bunka s dokladom musí mať
+`overflow: visible`, inak nemá sticky k čomu sa prilepiť).
+
+Komponent je na `dataRef`, nie na `<data>`: v každom kroku faktúry
+(`fa_faktura`) je doklad vpravo, ale to isté pole môže byť v inej úlohe
+obyčajné tlačidlo na nahratie.
+
+Builder pri uložení zahodí aj `<properties>` na `<data>` (napr.
+`saveWhileTyping`) - sieť upravenú v builderi treba pred commitom porovnať
+s pôvodnou.
+
+`pfview` kontroluje `<component>` aj na `dataRef` - dlho to nerobil a preklep
+v mene na úlohe prešiel ticho.
 
 Konfigurácia ide cez `<component><properties>`, ktoré knižnica ignoruje, ale
 `DataField.component` ich prenesie:
@@ -656,7 +719,7 @@ Kde to je zapnuté a prečo:
 | pole | dôvod |
 |---|---|
 | `sd_intake.req_description` | verejný formulár, najdlhší text — píše sa doň minútu a dá sa odoslať bez odkliknutia |
-| `fa_faktura.fa_dodavatel`, `fa_cislo` | tlačidlo „Načítať z prílohy" v tom istom formulári tie polia číta (`dopln_ak_prazdne` sa podľa nich rozhoduje) |
+| `fa_faktura.fa_dodavatel`, `fa_cislo` | nahratie prílohy v tom istom formulári tie polia číta (`dopln_ak_prazdne` sa podľa nich rozhoduje) |
 
 **Najdrahšia chyba v histórii tohto frontendu:** `nc-task-list` renderuje
 knižničný panel a teda knižničný resolver — vlastné polia sa nezobrazia
@@ -958,6 +1021,31 @@ v `PETRIFLOW_LEARNINGS.md` B24; `pfseed` a `pucheck` to už robia.
   možnosťami a preložené `options`, alebo `i18n(...)`:
   `change pole options { ["a": i18n("Aktívny", ["en": "Active"])] }`.
 
+### Texty, ktoré appka zapisuje: jazyk prípadu
+
+Priebeh, výsledky kontrol, notifikácie a hlásenia z načítania prílohy sú `text`,
+teda po zapísaní jednojazyčné. Jazyk sa preto musí zvoliť **v čase zápisu**,
+a ktorý to je, nie je jedno:
+
+| čo | v akom jazyku | prečo |
+|---|---|---|
+| priebeh, vstupné kontroly, výsledok načítania, e-mail | **jazyk prípadu**: portál toho, kto prípad založil | zostáva v prípade a číta ho každý ďalší; jeden prípad nemá mať priebeh v dvoch jazykoch |
+| chybová hláška, živé upozornenie pri písaní | **jazyk čitateľa**: portál toho, kto ju práve dostal | nezapisuje sa, žije jednu obrazovku |
+
+Vzor je v `fa_faktura` (`examples/objednavky-faktury`): pole `fa_jazyk`, ktoré
+zapíše `create` z `LocaleContextHolder.getLocale()` (frontend posiela jazyk
+portálu s každou požiadavkou), a dve funkcie:
+
+```groovy
+tx("Faktúra bola zaúčtovaná.", "The invoice was posted.")   // jazyk prípadu
+ty("Vyplňte dátum splatnosti.", "Fill in the due date.")    // jazyk čitateľa
+```
+
+Prípad bez `fa_jazyk` (vznikol pred touto verziou) je anglický, rovnako ako
+predvolený portál. Testy, ktoré čítajú slovenské texty, preto posielajú
+`Accept-Language: sk` - kedysi posielali `zz`, jazyk, ktorý engine nepozná, a
+dnes by z neho vznikol anglický prípad.
+
 **Stav preto nie je `text`, ale `enumeration_map`.** To je jediné textové pole,
 ktoré appka prepisuje pri každom prechode, a zároveň to, čo používateľ v zozname
 číta najčastejšie. Ako `enumeration_map` má popisky možností v `<i18n>`, akcia
@@ -1048,8 +1136,11 @@ def r = precitajFakturu(fa_skan, useCase.stringId)
 //  r.ico r.dic r.iban r.vs r.chyba r.poznamka r.nedocitane
 ```
 
-Vzor je tlačidlo **Načítať z prílohy** v `processes/fa_faktura.xml`
-(`btn_fa_nacitat`). Logika je v `com.netgrif.etask.doc`:
+Vzor je `set` udalosť poľa `fa_skan` v `processes/fa_faktura.xml`: číta sa
+hneď po nahratí, bez tlačidla. Nahratie aj zmazanie súboru spustí `set` poľa
+(NAE 6.3.1 `DataService.saveFile` / `deleteFile`) a frontend zmenené polia
+prevezme z odpovede uploadu. Po zmazaní je hodnota prázdna - akcia to musí
+ošetriť. Logika je v `com.netgrif.etask.doc`:
 `DocumentTextService` (text z dokumentu) a `InvoiceReaderService` (polia
 z textu alebo z XML). Delegát len presmeruje a vyrieši, kde príloha na disku
 leží.
@@ -1371,6 +1462,25 @@ a prepis siete sa neprejaví ako chyba, ale ako iná appka.
 akcie), `findcase-stringid` (treba istotu, že premenná je id), `option-key-mongo`
 (kľúč sa používa aj inde a v dátach), `data-unused` (nástroj nevie, či pole plní
 iná sieť). Tie ostávajú `pflint`u — a `pfloop`u.
+
+### `pflayout` — rozloženie siete na plátne buildera
+
+Súradnice miest a prechodov vznikajú pri písaní siete odhadom, a v builderi
+potom uzly sedia na sebe a všetky spätné hrany („vrátiť“) idú jednou čiarou
+cez hlavný riadok. `pflayout` sieť rozloží zo štruktúry: stĺpce sú vrstvy
+toku od miesta s tokenom, najdlhšia cesta je hlavný riadok, vetvy pod ním,
+rozostup podľa popiskov. Hrana cez viac stĺpcov ide vlastnou dráhou **nad**
+riadkom (`<breakpoint>`) — pod ním by prečiarkla popisky uzlov, ktoré builder
+kreslí pod uzol. Samostatné časti (prehľad na read arcu) sú v riadku pod
+sieťou. Mení len `<x>`/`<y>` miest a prechodov a `<breakpoint>` hrán.
+
+```bash
+python3 tools/pflayout.py processes/            # prepíše
+python3 tools/pflayout.py --check processes/    # 1, ak by sa niečo zmenilo
+```
+
+Je idempotentný, takže ho `pfnew` spustí na novú sieť a `pfloop --fix` pri
+každom behu. Súradnice sa ručne neupravujú — ďalší beh by ich prepísal.
 
 ### `pfloop` — validuj, oprav, over, zvyšok priprav modelu
 
