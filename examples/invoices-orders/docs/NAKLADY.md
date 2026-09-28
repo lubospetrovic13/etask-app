@@ -1,112 +1,101 @@
-# Objednávky a faktúry – chargeable eventy a náklady na AWS
+# Náklady: chargeable eventy a prevádzka na AWS
 
-28. 9. 2026 · živá verzia na úpravy a komentáre: https://claude.ai/code/artifact/9927b63f-0c86-431d-bb40-b28bb36aa087
+Stav k 28. 9. 2026. Ceny AWS: región Frankfurt, Linux, bez DPH, z verejného cenníka AWS.
 
-## Zhrnutie
+## V skratke
 
-Pri 2 000 faktúrach a 500 objednávkach mesačne appka vyrobí **okolo 70 000 chargeable eventov za mesiac** (rozpätie 50 000 – 110 000), teda **\~830 000 za rok**. Ak sa rátajú aj čítania formulárov, je to \~92 000 mesačne a \~1,1 milióna ročne.
-
-- **Voucher 500 000 eventov** tomuto zákazníkovi vystačí na **\~7 mesiacov**, s čítaniami na \~5,5 mesiaca.
-- **AWS:** jeden server s rezervou pre 50 používateľov a OCR vyjde na **164 USD mesačne** On-Demand (1 970 USD ročne), so Savings Plan na 1 rok na \~112 USD. Presné položky a link sú v sekcii AWS kalkulačka.
-- Počty eventov sú **namerané** z logu bežiaceho enginu, nie odhadnuté z modelu. Odhad je len objem a to, čo presne EE ráta ako chargeable event.
-
-## Vstupy a predpoklady
-
-Počíta sa s appkou Objednávky a faktúry tak, ako je dnes nasadená (vetva `feature/referent-doklad` v tomto repozitári).
-
-| vstup | hodnota |
-| --- | --- |
-| používatelia | 50 (zadávatelia, referenti, schvaľovatelia stredísk, riaditeľ, účtovníci) |
-| faktúry | 2 000 mesačne, \~100 za pracovný deň |
-| objednávky | 500 mesačne, \~25 za pracovný deň |
-| prílohy | každá faktúra má prílohu (XML, PDF alebo sken), \~0,5 MB |
-
-**Cesta faktúry:** zápis s prílohou (čítanie pri nahratí, OCR pri skene) → kontrola referentom a párovanie s objednávkou → schválenie strediskom → riaditeľ nad limit 1 000 € → zaúčtovanie a export XML. Faktúra krytá schválenou objednávkou ide rovno na zaúčtovanie. Vrátenie je možné na ktorúkoľvek predošlú úroveň.
-
-**Cesta objednávky:** žiadosť s položkami → schválenie strediskom → riaditeľ nad limit → potvrdenie objednania číslom.
-
-**Čo je chargeable event (predpoklad):** každá udalosť procesu, ktorú engine zapíše do histórie: založenie case, prevzatie úlohy, dokončenie úlohy, uloženie dát. Čítanie formulára (GetData) je uvedené zvlášť, lebo nie je jasné, či ho EE ráta.
-
-## Namerané eventy na jeden case
-
-Jedna faktúra od zápisu po zaúčtovanie vyrobí priemerne **28 eventov**, objednávka **26**. Čítania formulárov sú zvlášť: v portáli ich je rádovo 10 na faktúru a 6 na objednávku.
-
-Zdroj: kolekcia `eventLogs` v Mongo bežiaceho enginu (NAE 6.3.1). Merané na 14 dokončených faktúrach a 7 dokončených objednávkach z akceptačných testov, ktoré prechádzajú celou cestou vrátane vrátení a schválenia riaditeľom. Počíta sa len fáza POST, engine každú udalosť zapisuje aj vo fáze PRE.
-
-| udalosť | faktúra (priemer, min–max) | objednávka (priemer) |
+| | malý zákazník (táto appka) | Agel |
 | --- | --- | --- |
-| založenie case | 1 | 1 |
-| prevzatie úlohy | 5,9 (3–9) | 3 |
-| dokončenie úlohy | 5,9 (3–9) | 3 |
-| uloženie dát | 15,6 (12–25) | 18,9 |
-| **spolu bez čítaní** | **28,4** | **25,9** |
-| čítanie formulára v portáli (odhad) | \~10 | \~6 |
+| objem | 2 000 faktúr a 500 objednávok mesačne | 100 000 faktúr ročne, 150 appiek, \~1 milión prípadov ročne |
+| chargeable eventy | \~70 000 mesačne, \~830 000 ročne | \~2,1 milióna mesačne, \~25 miliónov ročne |
+| licencia, nový cenník (6 € / 100 000) | \~50 € ročne, s free allowance 0 € | \~1 500 € ročne, s free allowance 1 M/mes. \~800 € |
+| licencia, dnešný cenník (26 € / 10 000) | \~2 150 € ročne | \~66 000 € ročne |
+| AWS | 164 USD mesačne (1 server) | 1 700 – 2 400 USD mesačne |
 
-Testy sa na dáta pýtajú po každom kroku (72 čítaní na faktúru, 162 na objednávku). Preto je počet čítaní v portáli odhadnutý: jedno až dve otvorenia na každú úlohu plus prehľad.
+Najväčšia neistota nie je objem, ale **čo presne EE ráta ako chargeable event** a **aká veľká bude free allowance**. Obe treba rozhodnúť, než sa čísla ukážu zákazníkovi.
 
-## Eventy mesačne a ročne
+## Koľko eventov robí jeden prípad
 
-Stredný scenár je **69 000 eventov mesačne** a 828 000 ročne. Voucher 500 000 pokryje \~7 mesiacov prevádzky.
+Namerané na bežiacom engine (NAE 6.3.1, kolekcia `eventLogs`), na 14 faktúrach a 7 objednávkach od zápisu po uzavretie, vrátane vrátení a schválenia riaditeľom:
 
-| scenár | eventov na faktúru / objednávku | mesačne | ročne | voucher 500k vystačí |
-| --- | --- | --- | --- | --- |
-| nízky: priama cesta, bez vrátení | 20 / 20 | 50 000 | 600 000 | 10 mesiacov |
-| **stredný: ako namerane** | **28 / 26** | **69 000** | **828 000** | **7 mesiacov** |
-| vysoký: časté vrátenia, viac úprav | 45 / 40 | 110 000 | 1 320 000 | 4,5 mesiaca |
-| stredný + čítania formulárov | 38 / 32 | 92 000 | 1 104 000 | 5,4 mesiaca |
+| | faktúra | objednávka |
+| --- | --- | --- |
+| založenie prípadu | 1 | 1 |
+| prevzatie úlohy | 6 | 3 |
+| dokončenie úlohy | 6 | 3 |
+| uloženie dát | 16 | 19 |
+| **spolu** | **28** | **26** |
 
-Výpočet: 2 000 × eventov na faktúru + 500 × eventov na objednávku. Stredný scenár: 2 000 × 28 + 500 × 26 = 69 000.
+**Predpoklad, čo je event:** založenie prípadu, prevzatie a dokončenie úlohy, uloženie dát. Otvorenie formulára (čítanie) tu nie je. Ak ho EE ráta, pripočítaj \~35 %: \~10 čítaní na faktúru, \~6 na objednávku.
 
-Nezaťažujú to: prihlásenia 50 používateľov, e-mailové notifikácie a zmeny nastavení. Sú to jednotky až stovky eventov mesačne.
+Faktúry a objednávky sú schvaľovacia appka s niekoľkými úrovňami. Jednoduchšia appka (žiadosť, jedno schválenie) urobí menej, zhruba 15 eventov na prípad.
 
-## Infraštruktúra
+## Malý zákazník: 2 000 faktúr a 500 objednávok mesačne
 
-Na tento objem stačí **jeden server s 4 vCPU a 16 GB RAM**, na ktorom beží celý stack v Docker Compose tak ako dnes. Pri 2 500 casoch mesačne je zaťaženie nízke, rezerva je pre OCR skenov a špičky ráno.
+**Eventy:** 2 000 × 28 + 500 × 26 = **69 000 mesačne**, 828 000 ročne. Pri častých vráteniach až 110 000 mesačne, pri priamej ceste 50 000.
 
-Namerané na bežiacom stacku (pokoj, testovacie dáta):
+**Licencia:** pri novom cenníku 828 000 / 100 000 × 6 € = **\~50 € ročne**. Ak bude free allowance aspoň 1 milión mesačne, neplatí nič. Pri dnešnom cenníku (26 € za 10 000 nad balík) je to \~180 € mesačne, \~2 150 € ročne.
 
-| kontajner | RAM |
-| --- | --- |
-| backend (NAE, Java 11) | 1,7 GB |
-| Elasticsearch 7.17 | 1,25 GB |
-| MongoDB 6 | 0,26 GB |
-| Redis, nginx (frontend), mailpit | 0,09 GB |
-
-**Prečo táto zostava:**
-
-- **16 GB RAM:** backend pri 50 používateľoch potrebuje 3–4 GB heapu, Elasticsearch 2 GB a Mongo cache \~2 GB. Zvyšok je pre OS a tesseract.
-- **4 vCPU (t3.xlarge):** OCR skenu zaberie jedno jadro na pár sekúnd. Pri \~100 faktúrach denne je to bez front. Burstable inštancia stačí, priemerné zaťaženie je hlboko pod baseline 40 %.
-- **Disk 150 GB gp3:** prílohy \~0,5 MB × 2 500 mesačne = \~15 GB ročne. Plus databáza, index a obrazy kontajnerov. Vystačí na \~5 rokov.
-- **Zálohy:** denný snapshot disku. Mongo a prílohy sú na tom istom disku, takže snapshot zálohuje všetko naraz.
-- **Bez spravovanej DB:** Amazon DocumentDB nie je plná náhrada MongoDB 6 a pri tomto objeme by náklady znásobila. Mongo ostane v kontajneri.
-
-## AWS kalkulačka
-
-Zostava vyjde na **164,16 USD mesačne On-Demand**, 1 969,92 USD ročne. So záväzkom na 1 rok (EC2 Instance Savings Plan, bez platby vopred) je to \~112 USD mesačne.
-
-[Odhad v AWS Pricing Calculator](https://calculator.aws/#/estimate?id=6098f5f53f5a9b1ef28a0dd843ff7938f81a2e38), región Europe (Frankfurt), ceny bez DPH.
+**AWS: jeden server, 164 USD mesačne On-Demand** (so Savings Plan na 1 rok \~112 USD). Celý stack beží v Docker Compose tak ako dnes. [Odhad v AWS Pricing Calculator](https://calculator.aws/#/estimate?id=6098f5f53f5a9b1ef28a0dd843ff7938f81a2e38).
 
 | položka | konfigurácia | USD mesačne |
 | --- | --- | --- |
-| EC2 | t3.xlarge (4 vCPU, 16 GB), Linux, 1 inštancia, 100 % času, On-Demand | 140,16 |
-| EBS | gp3, 150 GB | 14,28 |
-| EBS snapshoty | denne, \~2 GB zmien na snapshot | 9,72 |
-| **spolu On-Demand** |  | **164,16** |
+| EC2 | t3.xlarge (4 vCPU, 16 GB), On-Demand | 140,16 |
+| EBS | gp3, 150 GB (prílohy \~15 GB ročne) | 14,28 |
+| snapshoty | denne | 9,72 |
+| **spolu** |  | **164,16** |
 
-**Porovnanie platby za server** (disk a snapshoty ostanú 24 USD):
+Stačí to s rezervou: backend, Elasticsearch a Mongo dnes spolu zaberú \~3,3 GB RAM a OCR skenu vyťaží jedno jadro na pár sekúnd.
 
-| model | server USD mesačne | spolu USD mesačne |
+## Agel: 100 000 faktúr ročne, 150 appiek, \~1 milión prípadov ročne
+
+### Eventy
+
+Faktúry počítame nameranými 28 eventmi, ostatných \~900 000 prípadov v 149 appkách 25 eventmi (stred medzi jednoduchou žiadosťou a schvaľovaním faktúr):
+
+| scenár | eventov na faktúru / na iný prípad | ročne | mesačne |
+| --- | --- | --- | --- |
+| nízky: väčšina appiek jednoduchá | 20 / 15 | 15,5 M | 1,3 M |
+| **stredný** | **28 / 25** | **25,3 M** | **2,1 M** |
+| vysoký: veľa vrátení a úprav | 45 / 40 | 40,5 M | 3,4 M |
+
+Výpočet strednej hodnoty: 100 000 × 28 + 900 000 × 25 = 25,3 milióna ročne. Ak sa rátajú aj čítania formulárov, \~34 miliónov.
+
+### Licencia
+
+| scenár | nový cenník, bez allowance | nový cenník, allowance 1 M mesačne | dnešný cenník |
+| --- | --- | --- | --- |
+| nízky | 930 € ročne | 210 € ročne | \~40 000 € ročne |
+| **stredný** | **1 520 € ročne** | **800 € ročne** | **\~66 000 € ročne** |
+| vysoký | 2 430 € ročne | 1 710 € ročne | \~105 000 € ročne |
+
+Nový cenník: 6 € za každých 100 000 eventov mesačne nad free allowance. Pri allowance 100 miliónov (druhá hodnota zo zadania) Agel neplatí za eventy nič. Dnešný cenník: 26 € za 10 000 eventov mesačne nad balík, bez odpočtu balíka.
+
+### Infraštruktúra
+
+Agel má dnes on-premise \~60 CPU a \~120 GB RAM. Na AWS sú dve cesty:
+
+| | A: rovnaký výkon ako dnes | B: odhad podľa záťaže, s vysokou dostupnosťou |
 | --- | --- | --- |
-| On-Demand | 140,16 | 164,16 |
-| Compute Savings Plan, 1 rok | 116,22 | 140,22 |
-| EC2 Instance Savings Plan, 1 rok | 88,33 | 112,33 |
+| servery | 4 × c6i.4xlarge (16 vCPU, 32 GB) | backend 2 × m6i.2xlarge (8 vCPU, 32 GB), Mongo 3 × r6i.large (2 vCPU, 16 GB), Elasticsearch 3 × m6i.xlarge (4 vCPU, 16 GB) |
+| spolu | 64 vCPU, 128 GB | 34 vCPU, 160 GB |
+| EC2 On-Demand | 2 266 USD | 1 508 USD |
+| disky gp3 a snapshoty | \~145 USD (1 000 GB) | \~175 USD (1 300 GB) |
+| load balancer | – | \~25 USD |
+| **spolu mesačne On-Demand** | **\~2 410 USD** | **\~1 710 USD** |
+| so Savings Plan na 1 rok | \~1 570 USD | \~1 150 USD |
+| ročne On-Demand | \~28 900 USD | \~20 500 USD |
 
-V kalkulačke nie je prenos dát von. Pri 50 používateľoch je to \~20 GB mesačne, pod bezplatným limitom 100 GB. Nie je tam ani verejná IPv4 adresa (\~3,60 USD mesačne) a SMTP (napr. Amazon SES, pri tomto objeme pod 1 USD).
+Ceny inštancií za hodinu: c6i.4xlarge 0,776 USD, m6i.2xlarge 0,46 USD, m6i.xlarge 0,23 USD, r6i.large 0,152 USD; gp3 0,0952 USD za GB. Savings Plan je prepočítaný pomerom z kalkulačky pre t3.xlarge (\~63 % On-Demand ceny), presnú cenu treba overiť v kalkulačke.
 
-## Riziká a čo spresniť
+**Prečo B stačí.** 25 miliónov eventov ročne je \~100 000 za pracovný deň, v priemere 3–4 za sekundu, v rannej špičke desiatky. To backend zvládne na pár jadrách. B rastie hlavne v RAM: Elasticsearch drží index všetkých prípadov (\~5 miliónov za 5 rokov) a Mongo replika potrebuje cache. Tri uzly Mongo a Elasticsearch a dva backendy znamenajú, že výpadok jedného servera appku nezastaví.
 
-- **Definícia chargeable eventu v EE.** Najväčšia neistota. Ak sa ráta aj čítanie formulára, čísla stúpnu o tretinu. Ak len založenie case a dokončenie úlohy, klesnú na \~12 000 mesačne.
-- **Podiel skenov.** OCR beží na tom istom serveri. Ak by skeny tvorili väčšinu z 2 000 faktúr a prichádzali v dávkach, treba zvážiť väčšie CPU (m6i.xlarge, \~+40 USD).
-- **Rast príloh.** Počítané s 0,5 MB na faktúru. Pri skenoch po 3–5 MB je to \~100 GB ročne a disk treba zväčšiť skôr, alebo prílohy presunúť do S3.
-- **Dostupnosť.** Jeden server nemá záložný. Výpadok znamená obnovu zo snapshotu, rádovo desiatky minút. Vysoká dostupnosť (dva servery, spravovaná DB, load balancer) by náklady zhruba strojnásobila.
-- **Integrácie z dokumentu kolegov** (IMAP, sieťový priečinok, účtovný systém, archív) zatiaľ nie sú postavené. Každá pridá eventy za automatické založenie case a kroky, ktoré dnes robí človek.
+**B je odhad, nie meranie.** Kým sa nevyskúša záťažový test s 150 appkami, patrí do ponuky A ako strop a B ako cieľ.
+
+## Čo treba rozhodnúť a spresniť
+
+- **Definícia chargeable eventu v EE.** Ak sa ráta čítanie formulára, čísla stúpnu o \~35 %. Ak len založenie prípadu a dokončenie úlohy, klesnú zhruba na štvrtinu (faktúra 7 eventov namiesto 28).
+- **Veľkosť free allowance.** V zadaní zaznel 1 milión aj 100 miliónov. Pri Agel je to rozdiel medzi \~800 € a 0 € ročne.
+- **Eventy ostatných appiek Agel.** Počítané 25 na prípad. Dá sa to zmerať rovnako ako pri faktúrach: appku prejsť akceptačným testom a spočítať `eventLogs`.
+- **Skeny a prílohy.** OCR beží na backende. Ak by väčšina zo 100 000 faktúr boli skeny v dávkach, treba viac CPU alebo samostatný OCR server. Prílohy nad \~0,5 MB zväčšujú disk, pri veľkých objemoch patria do S3.
+- **Integrácie** (IMAP, sieťový priečinok, účtovný systém) zatiaľ nie sú postavené. Automatické založenie prípadu pridá eventy za kroky, ktoré dnes robí človek.

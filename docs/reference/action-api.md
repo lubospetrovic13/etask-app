@@ -55,6 +55,9 @@ Case danej siete, ktory plati - z NAJNOVSEJ verzie siete a z nej ten
 ### `usersWithRole(Object source, String roleImportId, String netIdentifier = null)`
 Prienik: z uzivatelov v `source` vrati tych, ktori drzia rolu `roleImportId`.
 
+### `pozvi(String email)`
+Pozvanka e-mailom: ucet vznikne v stave INVITED a clovek si z odkazu
+
 ### `createNewUser(String name, String surname, String email, String password)`
 
 ### `createNewUser(String name, String surname, String email, String password, List<String> authorities)`
