@@ -194,8 +194,8 @@ if (n) {
 	</data>
 	<transition>
 		<id>t_customer</id>
-		<x>112</x>
-		<y>80</y>
+		<x>180</x>
+		<y>40</y>
 		<label name="t_customer_label">Zákazník</label>
 		<icon>domain</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -419,8 +419,8 @@ if (n) {
 	</transition>
 	<transition>
 		<id>t_customer_read</id>
-		<x>304</x>
-		<y>80</y>
+		<x>180</x>
+		<y>170</y>
 		<label name="t_customer_read_label">Zákazník – prehľad</label>
 		<icon>visibility</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -560,8 +560,8 @@ if (n) {
 	</transition>
 	<place>
 		<id>p_alive</id>
-		<x>32</x>
-		<y>80</y>
+		<x>60</x>
+		<y>40</y>
 		<label>Živý</label>
 		<tokens>1</tokens>
 		<static>false</static>

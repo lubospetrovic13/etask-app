@@ -323,7 +323,7 @@ changeCaseProperty("color").about { "red" }
 	<transition>
 		<id>t_pu_uprava</id>
 		<x>180</x>
-		<y>80</y>
+		<y>86</y>
 		<label name="t_pu_uprava_label">Účet</label>
 		<icon>manage_accounts</icon>
 		<assignPolicy>manual</assignPolicy>
@@ -688,7 +688,7 @@ changeCaseProperty("color").about { zlyhane ? "orange" : stav_farba(potom) }
 	<place>
 		<id>p_ucet</id>
 		<x>60</x>
-		<y>80</y>
+		<y>86</y>
 		<label>Účet</label>
 		<tokens>1</tokens>
 		<static>false</static>
@@ -706,5 +706,13 @@ changeCaseProperty("color").about { zlyhane ? "orange" : stav_farba(potom) }
 		<sourceId>t_pu_uprava</sourceId>
 		<destinationId>p_ucet</destinationId>
 		<multiplicity>1</multiplicity>
+		<breakpoint>
+			<x>180</x>
+			<y>40</y>
+		</breakpoint>
+		<breakpoint>
+			<x>60</x>
+			<y>40</y>
+		</breakpoint>
 	</arc>
 </document>

@@ -237,8 +237,8 @@ changeCaseProperty("title").about { summary }
 	</role>
 	<transition>
 		<id>t_on_menu</id>
-		<x>260</x>
-		<y>140</y>
+		<x>180</x>
+		<y>40</y>
 		<label name="t_on_menu_label">Menu state</label>
 		<icon>menu</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -251,8 +251,8 @@ changeCaseProperty("title").about { summary }
 	</transition>
 	<place>
 		<id>p_alive</id>
-		<x>80</x>
-		<y>140</y>
+		<x>60</x>
+		<y>40</y>
 		<label>Alive</label>
 		<tokens>1</tokens>
 		<static>false</static>

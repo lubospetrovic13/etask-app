@@ -344,8 +344,8 @@ changeCaseProperty("color").about { "blue" }
 	</data>
 	<transition>
 		<id>t_sc_nastavenia</id>
-		<x>140</x>
-		<y>80</y>
+		<x>184</x>
+		<y>40</y>
 		<label name="t_sc_nastavenia_label">Konfigurácia schvaľovania</label>
 		<icon>tune</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -529,8 +529,8 @@ change sc_ulozene_o value { java.time.LocalDateTime.now() }
 	</transition>
 	<place>
 		<id>p_alive</id>
-		<x>40</x>
-		<y>80</y>
+		<x>60</x>
+		<y>40</y>
 		<label>Živé</label>
 		<tokens>1</tokens>
 		<static>false</static>

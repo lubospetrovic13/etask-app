@@ -891,8 +891,8 @@ make ob_kontrola, hidden  on transitions when { !varuj }
 	</data>
 	<transition>
 		<id>t_ob_ziadost</id>
-		<x>140</x>
-		<y>80</y>
+		<x>187</x>
+		<y>164</y>
 		<label name="t_ob_ziadost_label">Požiadať o objednávku</label>
 		<icon>add_shopping_cart</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -1091,8 +1091,8 @@ po_zmene_stavu("na_schvalenie", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_hist
 	</transition>
 	<transition>
 		<id>t_ob_schvalenie</id>
-		<x>332</x>
-		<y>80</y>
+		<x>494</x>
+		<y>164</y>
 		<label name="t_ob_schvalenie_label">Schváliť za stredisko</label>
 		<icon>how_to_reg</icon>
 		<assignPolicy>manual</assignPolicy>
@@ -1287,8 +1287,8 @@ po_zmene_stavu(kod, ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia,
 	</transition>
 	<transition>
 		<id>t_ob_riaditel</id>
-		<x>524</x>
-		<y>80</y>
+		<x>801</x>
+		<y>164</y>
 		<label name="t_ob_riaditel_label">Schválenie riaditeľom</label>
 		<icon>gavel</icon>
 		<assignPolicy>manual</assignPolicy>
@@ -1461,8 +1461,8 @@ po_zmene_stavu(kod, ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia,
 	</transition>
 	<transition>
 		<id>t_ob_objednanie</id>
-		<x>716</x>
-		<y>80</y>
+		<x>1074</x>
+		<y>164</y>
 		<label name="t_ob_objednanie_label">Potvrdiť objednanie</label>
 		<icon>local_shipping</icon>
 		<!--
@@ -1621,8 +1621,8 @@ po_zmene_stavu("objednana", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia
 	</transition>
 	<transition>
 		<id>t_ob_prehlad</id>
-		<x>908</x>
-		<y>250</y>
+		<x>200</x>
+		<y>334</y>
 		<label name="t_ob_prehlad_label">Stav objednávky</label>
 		<icon>fact_check</icon>
 		<!--
@@ -1804,40 +1804,40 @@ po_zmene_stavu("objednana", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia
 	</transition>
 	<place>
 		<id>p_koncept</id>
-		<x>40</x>
-		<y>80</y>
+		<x>60</x>
+		<y>164</y>
 		<label>Rozpísaná</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_na_schvalenie</id>
-		<x>236</x>
-		<y>80</y>
+		<x>340</x>
+		<y>164</y>
 		<label>Čaká na stredisko</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_u_riaditela</id>
-		<x>428</x>
-		<y>80</y>
+		<x>647</x>
+		<y>164</y>
 		<label>Čaká na riaditeľa</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_na_objednanie</id>
-		<x>620</x>
-		<y>80</y>
+		<x>941</x>
+		<y>164</y>
 		<label>Na objednanie</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_info</id>
-		<x>908</x>
-		<y>380</y>
+		<x>60</x>
+		<y>334</y>
 		<label>Objednávka existuje</label>
 		<tokens>1</tokens>
 		<static>false</static>
@@ -1850,8 +1850,8 @@ po_zmene_stavu("objednana", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia
 	</place>
 	<place>
 		<id>p_uzavreta</id>
-		<x>812</x>
-		<y>80</y>
+		<x>1194</x>
+		<y>164</y>
 		<label>Uzavretá</label>
 		<tokens>0</tokens>
 		<static>false</static>
@@ -1897,6 +1897,14 @@ po_zmene_stavu("objednana", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia
 		<destinationId>p_na_objednanie</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>ob_to_objednanie</reference>
+		<breakpoint>
+			<x>494</x>
+			<y>92</y>
+		</breakpoint>
+		<breakpoint>
+			<x>941</x>
+			<y>92</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_ob_schvalenie_koncept</id>
@@ -1905,6 +1913,14 @@ po_zmene_stavu("objednana", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia
 		<destinationId>p_koncept</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>ob_to_koncept</reference>
+		<breakpoint>
+			<x>484</x>
+			<y>118</y>
+		</breakpoint>
+		<breakpoint>
+			<x>55</x>
+			<y>118</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_ob_schvalenie_uzavriet</id>
@@ -1913,6 +1929,14 @@ po_zmene_stavu("objednana", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia
 		<destinationId>p_uzavreta</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>ob_to_uzavreta</reference>
+		<breakpoint>
+			<x>504</x>
+			<y>66</y>
+		</breakpoint>
+		<breakpoint>
+			<x>1189</x>
+			<y>66</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_ob_riaditel_in</id>
@@ -1936,6 +1960,14 @@ po_zmene_stavu("objednana", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia
 		<destinationId>p_koncept</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>ob_to_koncept</reference>
+		<breakpoint>
+			<x>796</x>
+			<y>40</y>
+		</breakpoint>
+		<breakpoint>
+			<x>65</x>
+			<y>40</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_ob_riaditel_uzavriet</id>
@@ -1944,6 +1976,14 @@ po_zmene_stavu("objednana", ob_ceka_na, ob_zadal, ob_schvalovatelia, ob_historia
 		<destinationId>p_uzavreta</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>ob_to_uzavreta</reference>
+		<breakpoint>
+			<x>806</x>
+			<y>118</y>
+		</breakpoint>
+		<breakpoint>
+			<x>1199</x>
+			<y>118</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_ob_objednanie_in</id>

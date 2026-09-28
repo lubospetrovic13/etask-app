@@ -111,7 +111,7 @@ cenovú ponuku pre Hotel Kaskády (Fáza 1 faktúry, Fáza 2 objednávky).
 
 1. **Zadávateľ**: *Faktúry → Došlé faktúry → +*. Vyplní dodávateľa, číslo,
    sumu, splatnosť, stredisko a za čo to je. Ak má súbor (XML e-faktúru, PDF
-   alebo sken), priloží ho a stlačí **Načítať z prílohy** — polia sa vyplnia
+   alebo sken), pretiahne ho do pravej polovice — prázdne polia sa hneď vyplnia
    samy (viď nižšie). **Podať na schválenie**.
 2. **Schvaľovateľ strediska** vidí faktúru v *Faktúry na schválenie*. Úlohu si
    musí **prevziať** (je zdieľaná), potom *Schváliť / Vrátiť na doplnenie /

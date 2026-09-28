@@ -401,7 +401,7 @@ changeCaseProperty("color").about { "blue" }
 	<transition>
 		<id>t_pu_novy</id>
 		<x>180</x>
-		<y>80</y>
+		<y>86</y>
 		<label name="t_pu_novy_label">Založiť používateľa</label>
 		<icon>person_add</icon>
 		<assignPolicy>manual</assignPolicy>
@@ -688,8 +688,8 @@ changeCaseProperty("title").about { "New user" }
 	</transition>
 	<transition>
 		<id>t_pu_pozvi</id>
-		<x>180</x>
-		<y>200</y>
+		<x>197</x>
+		<y>302</y>
 		<label name="t_pu_pozvi_label">Pozvať používateľa</label>
 		<icon>mail</icon>
 		<assignPolicy>manual</assignPolicy>
@@ -970,7 +970,7 @@ change poz_proces options { processOptions() }
 	<place>
 		<id>p_pult</id>
 		<x>60</x>
-		<y>80</y>
+		<y>86</y>
 		<label>Pult</label>
 		<tokens>1</tokens>
 		<static>false</static>
@@ -988,11 +988,19 @@ change poz_proces options { processOptions() }
 		<sourceId>t_pu_novy</sourceId>
 		<destinationId>p_pult</destinationId>
 		<multiplicity>1</multiplicity>
+		<breakpoint>
+			<x>180</x>
+			<y>40</y>
+		</breakpoint>
+		<breakpoint>
+			<x>60</x>
+			<y>40</y>
+		</breakpoint>
 	</arc>
 	<place>
 		<id>p_pozvanka</id>
 		<x>60</x>
-		<y>200</y>
+		<y>302</y>
 		<label>Pozvánkový pult</label>
 		<tokens>1</tokens>
 		<static>false</static>
@@ -1010,5 +1018,13 @@ change poz_proces options { processOptions() }
 		<sourceId>t_pu_pozvi</sourceId>
 		<destinationId>p_pozvanka</destinationId>
 		<multiplicity>1</multiplicity>
+		<breakpoint>
+			<x>197</x>
+			<y>256</y>
+		</breakpoint>
+		<breakpoint>
+			<x>60</x>
+			<y>256</y>
+		</breakpoint>
 	</arc>
 </document>

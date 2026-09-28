@@ -932,8 +932,8 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</data>
 	<transition>
 		<id>t_form</id>
-		<x>112</x>
-		<y>80</y>
+		<x>180</x>
+		<y>300</y>
 		<label name="t_form_label">Podanie požiadavky</label>
 		<icon>support_agent</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -1100,8 +1100,8 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</transition>
 	<transition>
 		<id>t_s_category</id>
-		<x>304</x>
-		<y>80</y>
+		<x>180</x>
+		<y>430</y>
 		<label name="t_s_category_label">Kategória</label>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
@@ -1202,8 +1202,8 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</transition>
 	<transition>
 		<id>t_s_detail</id>
-		<x>304</x>
-		<y>208</y>
+		<x>180</x>
+		<y>170</y>
 		<label name="t_s_detail_label">Popis</label>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
@@ -1362,8 +1362,8 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</transition>
 	<transition>
 		<id>t_s_contact</id>
-		<x>304</x>
-		<y>336</y>
+		<x>180</x>
+		<y>560</y>
 		<label name="t_s_contact_label">Kontakt</label>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
@@ -1450,8 +1450,8 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</transition>
 	<transition>
 		<id>t_s_summary</id>
-		<x>304</x>
-		<y>464</y>
+		<x>180</x>
+		<y>40</y>
 		<label name="t_s_summary_label">Súhrn</label>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
@@ -1482,8 +1482,8 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</transition>
 	<transition>
 		<id>t_s_receipt</id>
-		<x>304</x>
-		<y>592</y>
+		<x>180</x>
+		<y>690</y>
 		<label name="t_s_receipt_label">Potvrdenie</label>
 		<assignPolicy>auto</assignPolicy>
 		<roleRef>
@@ -1542,8 +1542,8 @@ make req_workaround, hidden on transitions when { return !showIt }
 	</transition>
 	<place>
 		<id>p_alive</id>
-		<x>32</x>
-		<y>80</y>
+		<x>60</x>
+		<y>300</y>
 		<label>Otvorené</label>
 		<tokens>1</tokens>
 		<static>false</static>

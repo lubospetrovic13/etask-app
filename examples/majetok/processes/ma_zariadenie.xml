@@ -117,8 +117,8 @@ changeCaseProperty("color").about { "grey" }
 	</data>
 	<transition>
 		<id>t_ma_podanie</id>
-		<x>140</x>
-		<y>80</y>
+		<x>180</x>
+		<y>40</y>
 		<label name="t_ma_podanie_label">Podanie</label>
 		<icon>assignment</icon>
 		<!--
@@ -188,8 +188,8 @@ changeCaseProperty("color").about { "green" }
 	</transition>
 	<transition>
 		<id>t_ma_prehlad</id>
-		<x>332</x>
-		<y>80</y>
+		<x>420</x>
+		<y>40</y>
 		<label name="t_ma_prehlad_label">Podané</label>
 		<icon>fact_check</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -242,16 +242,16 @@ changeCaseProperty("color").about { "green" }
 	</transition>
 	<place>
 		<id>p_novy</id>
-		<x>40</x>
-		<y>80</y>
+		<x>60</x>
+		<y>40</y>
 		<label>Rozpísané</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_hotovy</id>
-		<x>236</x>
-		<y>80</y>
+		<x>300</x>
+		<y>40</y>
 		<label>Podané</label>
 		<tokens>0</tokens>
 		<static>false</static>

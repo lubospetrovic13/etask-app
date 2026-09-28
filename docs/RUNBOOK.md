@@ -719,7 +719,7 @@ Kde to je zapnuté a prečo:
 | pole | dôvod |
 |---|---|
 | `sd_intake.req_description` | verejný formulár, najdlhší text — píše sa doň minútu a dá sa odoslať bez odkliknutia |
-| `fa_faktura.fa_dodavatel`, `fa_cislo` | tlačidlo „Načítať z prílohy" v tom istom formulári tie polia číta (`dopln_ak_prazdne` sa podľa nich rozhoduje) |
+| `fa_faktura.fa_dodavatel`, `fa_cislo` | nahratie prílohy v tom istom formulári tie polia číta (`dopln_ak_prazdne` sa podľa nich rozhoduje) |
 
 **Najdrahšia chyba v histórii tohto frontendu:** `nc-task-list` renderuje
 knižničný panel a teda knižničný resolver — vlastné polia sa nezobrazia
@@ -1136,8 +1136,11 @@ def r = precitajFakturu(fa_skan, useCase.stringId)
 //  r.ico r.dic r.iban r.vs r.chyba r.poznamka r.nedocitane
 ```
 
-Vzor je tlačidlo **Načítať z prílohy** v `processes/fa_faktura.xml`
-(`btn_fa_nacitat`). Logika je v `com.netgrif.etask.doc`:
+Vzor je `set` udalosť poľa `fa_skan` v `processes/fa_faktura.xml`: číta sa
+hneď po nahratí, bez tlačidla. Nahratie aj zmazanie súboru spustí `set` poľa
+(NAE 6.3.1 `DataService.saveFile` / `deleteFile`) a frontend zmenené polia
+prevezme z odpovede uploadu. Po zmazaní je hodnota prázdna - akcia to musí
+ošetriť. Logika je v `com.netgrif.etask.doc`:
 `DocumentTextService` (text z dokumentu) a `InvoiceReaderService` (polia
 z textu alebo z XML). Delegát len presmeruje a vyrieši, kde príloha na disku
 leží.
@@ -1459,6 +1462,25 @@ a prepis siete sa neprejaví ako chyba, ale ako iná appka.
 akcie), `findcase-stringid` (treba istotu, že premenná je id), `option-key-mongo`
 (kľúč sa používa aj inde a v dátach), `data-unused` (nástroj nevie, či pole plní
 iná sieť). Tie ostávajú `pflint`u — a `pfloop`u.
+
+### `pflayout` — rozloženie siete na plátne buildera
+
+Súradnice miest a prechodov vznikajú pri písaní siete odhadom, a v builderi
+potom uzly sedia na sebe a všetky spätné hrany („vrátiť“) idú jednou čiarou
+cez hlavný riadok. `pflayout` sieť rozloží zo štruktúry: stĺpce sú vrstvy
+toku od miesta s tokenom, najdlhšia cesta je hlavný riadok, vetvy pod ním,
+rozostup podľa popiskov. Hrana cez viac stĺpcov ide vlastnou dráhou **nad**
+riadkom (`<breakpoint>`) — pod ním by prečiarkla popisky uzlov, ktoré builder
+kreslí pod uzol. Samostatné časti (prehľad na read arcu) sú v riadku pod
+sieťou. Mení len `<x>`/`<y>` miest a prechodov a `<breakpoint>` hrán.
+
+```bash
+python3 tools/pflayout.py processes/            # prepíše
+python3 tools/pflayout.py --check processes/    # 1, ak by sa niečo zmenilo
+```
+
+Je idempotentný, takže ho `pfnew` spustí na novú sieť a `pfloop --fix` pri
+každom behu. Súradnice sa ručne neupravujú — ďalší beh by ich prepísal.
 
 ### `pfloop` — validuj, oprav, over, zvyšok priprav modelu
 

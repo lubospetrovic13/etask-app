@@ -60,8 +60,8 @@ flowchart LR
     S & R -->|zamietnuť| X[Zamietnutá]
 ```
 
-1. **Zadávateľ** zapíše faktúru v portáli. Ak má prílohu (XML e-faktúru, PDF, sken),
-   *Načítať z prílohy* vyplní polia sám. E-faktúra sa číta presne, PDF podľa popiskov, sken
+1. **Zadávateľ** zapíše faktúru v portáli. Keď nahrá prílohu (XML e-faktúru, PDF, sken),
+   prázdne polia sa hneď vyplnia samy. E-faktúra sa číta presne, PDF podľa popiskov, sken
    cez OCR. Podá na kontrolu.
 2. **Referent** *(nové)* dostane faktúru do fronty *Faktúry na kontrolu*. Vidí **vstupné
    kontroly**: chýbajúca príloha, IČO alebo IBAN, dátum vystavenia v budúcnosti, splatnosť

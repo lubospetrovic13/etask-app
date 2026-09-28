@@ -417,8 +417,8 @@ make dv_kontrola, hidden  on transitions when { !varuj }
 	</data>
 	<transition>
 		<id>t_dv_podanie</id>
-		<x>140</x>
-		<y>80</y>
+		<x>180</x>
+		<y>86</y>
 		<label name="t_dv_podanie_label">Podať žiadosť</label>
 		<icon>edit_calendar</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -607,8 +607,8 @@ changeCaseProperty("title").about {
 	</transition>
 	<transition>
 		<id>t_dv_rozhodnutie</id>
-		<x>332</x>
-		<y>80</y>
+		<x>464</x>
+		<y>86</y>
 		<label name="t_dv_rozhodnutie_label">Rozhodnúť o žiadosti</label>
 		<icon>how_to_reg</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -875,8 +875,8 @@ changeCaseProperty("title").about { nazov(dv_od, dv_do, dv_ziadatel_meno, label)
 	</transition>
 	<transition>
 		<id>t_dv_vysledok</id>
-		<x>524</x>
-		<y>250</y>
+		<x>704</x>
+		<y>86</y>
 		<label name="t_dv_vysledok_label">Výsledok</label>
 		<icon>fact_check</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -1080,24 +1080,24 @@ changeCaseProperty("title").about { nazov(dv_od, dv_do, dv_ziadatel_meno, label)
 	</transition>
 	<place>
 		<id>p_koncept</id>
-		<x>40</x>
-		<y>80</y>
+		<x>60</x>
+		<y>86</y>
 		<label>Rozpísaná</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_na_schvalenie</id>
-		<x>236</x>
-		<y>80</y>
+		<x>310</x>
+		<y>86</y>
 		<label>Čaká na schválenie</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_vybavena</id>
-		<x>428</x>
-		<y>80</y>
+		<x>584</x>
+		<y>86</y>
 		<label>Vybavená</label>
 		<tokens>0</tokens>
 		<static>false</static>
@@ -1147,6 +1147,14 @@ changeCaseProperty("title").about { nazov(dv_od, dv_do, dv_ziadatel_meno, label)
 		<destinationId>p_koncept</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>dv_to_koncept</reference>
+		<breakpoint>
+			<x>464</x>
+			<y>40</y>
+		</breakpoint>
+		<breakpoint>
+			<x>60</x>
+			<y>40</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_vysledok</id>

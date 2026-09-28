@@ -411,8 +411,8 @@ log_entry(on_history, "request created (" + who(u) + ")")
 	</data>
 	<transition>
 		<id>t_on_request</id>
-		<x>300</x>
-		<y>280</y>
+		<x>180</x>
+		<y>86</y>
 		<label name="t_on_request_label">Onboarding request</label>
 		<icon>edit_note</icon>
 		<!--
@@ -575,8 +575,8 @@ log_entry(on_history, (again ? "resubmitted for approval to " : "submitted for a
 	</transition>
 	<transition>
 		<id>t_on_approval</id>
-		<x>740</x>
-		<y>280</y>
+		<x>480</x>
+		<y>86</y>
 		<label name="t_on_approval_label">Approve the onboarding</label>
 		<icon>how_to_reg</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -741,8 +741,8 @@ change on_decision value { null }
 	</transition>
 	<transition>
 		<id>t_on_accounts</id>
-		<x>1180</x>
-		<y>140</y>
+		<x>784</x>
+		<y>86</y>
 		<label name="t_on_accounts_label">Create the accounts</label>
 		<icon>manage_accounts</icon>
 		<!--
@@ -888,8 +888,8 @@ log_entry(on_history,
 	</transition>
 	<transition>
 		<id>t_on_overview</id>
-		<x>1400</x>
-		<y>380</y>
+		<x>1028</x>
+		<y>86</y>
 		<label name="t_on_overview_label">Completed onboarding</label>
 		<icon>fact_check</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -1066,32 +1066,32 @@ log_entry(on_history,
 	</transition>
 	<place>
 		<id>p_draft</id>
-		<x>80</x>
-		<y>280</y>
+		<x>60</x>
+		<y>86</y>
 		<label>Draft</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_awaiting_approval</id>
-		<x>520</x>
-		<y>280</y>
+		<x>324</x>
+		<y>86</y>
 		<label>Awaiting approval</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_accounts</id>
-		<x>960</x>
-		<y>140</y>
+		<x>637</x>
+		<y>86</y>
 		<label>Creating accounts</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_done</id>
-		<x>1400</x>
-		<y>140</y>
+		<x>904</x>
+		<y>86</y>
 		<label>Completed</label>
 		<tokens>0</tokens>
 		<static>false</static>
@@ -1146,17 +1146,17 @@ log_entry(on_history,
 		<!--
 			Bez lomovych bodov vedie spiatocna sipka rovno cez cely hlavny riadok
 			a prekryje tri uzly - v builderi to potom vyzera ako chyba modelu.
-			Tieto dva body ju stiahnu POD riadok, takze cyklus je vidno na prvy
-			pohlad. Su to suradnice platna, nic viac; na behanie procesu nemaju
-			ziadny vplyv.
+			Lomove body ju vedu vlastnou drahou NAD riadkom, takze cyklus je vidno
+			na prvy pohlad. Generuje ich `tools/pflayout.py` - rucne sa neupravuju.
+			Su to suradnice platna, na behanie procesu nemaju ziadny vplyv.
 		-->
 		<breakpoint>
-			<x>740</x>
-			<y>460</y>
+			<x>480</x>
+			<y>40</y>
 		</breakpoint>
 		<breakpoint>
-			<x>80</x>
-			<y>460</y>
+			<x>60</x>
+			<y>40</y>
 		</breakpoint>
 	</arc>
 	<arc>

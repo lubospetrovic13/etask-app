@@ -124,6 +124,7 @@ python3 tools/pflint.py processes/        # 0,3 s
 python3 tools/pfgroovy.py processes/      # 3 s
 python3 tools/pfi18n.py processes/        # každý viditeľný text má preklad
 python3 tools/pfview.py                   # frontend vykreslí, čo sieť pýta
+python3 tools/pflayout.py processes/      # rozloženie na plátne buildera
 python3 tools/pfsync.py --sync            # import + role, len čo sa rozišlo
 ```
 

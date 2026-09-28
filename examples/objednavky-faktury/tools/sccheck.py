@@ -237,7 +237,9 @@ def upload(cl, task_id, field_id, file_name, content):
         URL + f"/api/task/{task_id}/file/{field_id}", data=body, method="POST",
         headers={"X-Auth-Token": cl.token,
                  "Accept": "application/hal+json, application/json;q=0.9, */*;q=0.8",
-                 "Accept-Language": "zz",
+                 # Jazyk klienta ako pri kazdom inom volani: pri nahrati sa uz cita
+                 # priloha (set fa_skan) a jej texty su v jazyku citatela.
+                 "Accept-Language": cl.lang,
                  "Content-Type": f"multipart/form-data; boundary={boundary}"})
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
@@ -1033,7 +1035,7 @@ def main():
         st, r = upload(zad, tx, "fa_skan", "faktura-ubl.xml", fh.read())
     check("XML e-faktura sa nahrala do prilohy", st == 200 and not err_body(r),
           f"HTTP {st} {str(r)[:120]}")
-    set_data(zad, tx, {"btn_fa_nacitat": {"type": "button", "value": 0}})
+    # Cita sa pri nahrati (set udalost fa_skan), bez tlacidla.
     d = fields(zad, tx)
     check("zdroj je oznaceny ako citany, nie hadany",
           "XML" in (d.get("fa_zdroj") or ""), d.get("fa_zdroj"))
@@ -1091,7 +1093,7 @@ def main():
     ])
     st, r = upload(zad, tp, "fa_skan", "faktura.pdf", pdf)
     check("PDF sa nahralo do prilohy", st == 200 and not err_body(r), f"HTTP {st} {str(r)[:120]}")
-    set_data(zad, tp, {"btn_fa_nacitat": {"type": "button", "value": 0}})
+    # Cita sa pri nahrati (set udalost fa_skan), bez tlacidla.
     d = fields(zad, tp)
     check("zdroj je textova vrstva PDF, nie OCR",
           "textová vrstva" in (d.get("fa_zdroj") or ""), d.get("fa_zdroj"))
@@ -1110,9 +1112,9 @@ def main():
     check("IcO je dodavatelovo aj v texte", d.get("fa_ico") == "44556677", d.get("fa_ico"))
     check("IBAN precitany", d.get("fa_iban") == "SK6807200002891987426353", d.get("fa_iban"))
 
-    # Druhe stlacenie uz nesmie nic prepisat - a rozdiel ma ohlasit.
+    # Druhe nahratie uz nesmie nic prepisat - a rozdiel ma ohlasit.
     set_data(zad, tp, {"fa_suma": {"type": "number", "value": 300.0}})
-    set_data(zad, tp, {"btn_fa_nacitat": {"type": "button", "value": 0}})
+    upload(zad, tp, "fa_skan", "faktura.pdf", pdf)
     d = fields(zad, tp)
     check("rucne prepisanu sumu nacitanie NEPREPISE", float(d.get("fa_suma") or 0) == 300.0,
           d.get("fa_suma"))
@@ -1125,7 +1127,7 @@ def main():
     to = tasks_of(zad, fa_o)["t_fa_zapis"]
     st, r = upload(zad, to, "fa_skan", "sken.png", tiny_png())
     check("obrazok sa nahral do prilohy", st == 200 and not err_body(r), f"HTTP {st} {str(r)[:120]}")
-    set_data(zad, to, {"btn_fa_nacitat": {"type": "button", "value": 0}})
+    # Cita sa pri nahrati (set udalost fa_skan), bez tlacidla.
     d = fields(zad, to)
     sprava = d.get("fa_nacitanie") or ""
     if "nie je v PATH" in sprava:

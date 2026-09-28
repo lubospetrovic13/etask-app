@@ -42,10 +42,8 @@
 		<i18nString name="fa_objednavka_title">Order no.</i18nString>
 		<i18nString name="fa_objednavka_desc">Number of the approved order the invoice belongs to, if there is one.</i18nString>
 		<i18nString name="fa_skan_title">Invoice attachment</i18nString>
-		<i18nString name="fa_skan_desc">XML e-invoice, PDF or a scan. "Read from the attachment" fills in what it can find in it.</i18nString>
+		<i18nString name="fa_skan_desc">XML e-invoice, PDF or a scan. Once uploaded, it fills in the empty fields; what you typed is never overwritten, a difference is only reported.</i18nString>
 		<i18nString name="div_fa_priloha_init">Attachment</i18nString>
-		<i18nString name="btn_fa_nacitat_placeholder">Read from the attachment</i18nString>
-		<i18nString name="btn_fa_nacitat_desc">Fills in empty fields from the attachment. It never overwrites what you typed - a difference is reported instead.</i18nString>
 		<i18nString name="fa_nacitanie_title">Reading result</i18nString>
 		<i18nString name="fa_zdroj_title">Data read from</i18nString>
 		<i18nString name="fa_zdroj_desc">XML e-invoice is read; OCR is guessed. It matters when the numbers are checked.</i18nString>
@@ -1020,7 +1018,7 @@ spoj_s_objednavkou(fa_objednavka_vyber, fa_objednavka, fa_dodavatel, fa_suma,
 	<data type="file">
 		<id>fa_skan</id>
 		<title name="fa_skan_title">Faktúra ako súbor</title>
-		<desc name="fa_skan_desc">XML e-faktúra, PDF alebo sken. „Načítať z prílohy“ z neho vyplní, čo nájde.</desc>
+		<desc name="fa_skan_desc">XML e-faktúra, PDF alebo sken. Po nahratí sa z neho vyplnia prázdne polia; čo ste napísali, sa neprepíše, rozdiel sa len ohlási.</desc>
 		<!--
 			`preview` je jediny komponent, ktory `nc-file-field` na tomto type
 			pozna (`component.name === 'preview'`), a zapina nahlad priamo vo
@@ -1030,21 +1028,23 @@ spoj_s_objednavkou(fa_objednavka_vyber, fa_objednavka, fa_dodavatel, fa_suma,
 		<component>
 			<name>preview</name>
 		</component>
-	</data>
-	<data type="button">
-		<id>btn_fa_nacitat</id>
-		<title/>
-		<desc name="btn_fa_nacitat_desc">Vyplní prázdne polia z prílohy. Nikdy neprepíše to, čo ste napísali - rozdiel len ohlási.</desc>
-		<placeholder name="btn_fa_nacitat_placeholder">Načítať z prílohy</placeholder>
-		<init>1</init>
 		<event type="set">
-			<id>btn_fa_nacitat_set</id>
+			<id>fa_skan_set</id>
 			<actions phase="post">
 				<action id="13"><![CDATA[
 fa_skan: f.fa_skan, fa_dodavatel: f.fa_dodavatel, fa_cislo: f.fa_cislo,
 fa_suma: f.fa_suma, fa_datum_splatnosti: f.fa_datum_splatnosti,
 fa_datum_vystavenia: f.fa_datum_vystavenia, fa_ico: f.fa_ico, fa_iban: f.fa_iban,
 fa_zdroj: f.fa_zdroj, fa_nacitanie: f.fa_nacitanie, fa_kontrola: f.fa_kontrola;
+
+// Nahratie aj zmazanie suboru spusti `set` tohto pola (DataService.saveFile /
+// deleteFile v NAE 6.3.1 volaju SET pre aj post) - citanie teda zacne samo, bez
+// tlacidla. Po zmazani uz nie je co citat.
+if (!((fa_skan.value?.name ?: "") as String)) {
+    change fa_nacitanie value { "" }
+    change fa_zdroj value { "" }
+    return
+}
 
 // `precitajFakturu` je primitiv delegata (vrstva 2): XML e-fakturu precita,
 // PDF s textovou vrstvou tiez, sken prezenie OCR. Toto je presne ten typ
@@ -1061,7 +1061,7 @@ if (r.chyba) {
 
     dopln_ak_prazdne(fa_dodavatel, r.dodavatel, tx("dodávateľ", "supplier"), doplnene, rozdiely)
     dopln_ak_prazdne(fa_cislo, r.cislo, tx("číslo faktúry", "invoice number"), doplnene, rozdiely)
-    dopln_ak_prazdne(fa_suma, r.suma, "suma", doplnene, rozdiely)
+    dopln_ak_prazdne(fa_suma, r.suma, tx("suma", "amount"), doplnene, rozdiely)
     dopln_ak_prazdne(fa_datum_splatnosti, r.splatnost, tx("splatnosť", "due date"), doplnene, rozdiely)
     dopln_ak_prazdne(fa_datum_vystavenia, r.vystavenie, tx("dátum vystavenia", "issue date"), doplnene, rozdiely)
     dopln_ak_prazdne(fa_ico, r.ico, tx("IČO", "Reg. no."), doplnene, rozdiely)
@@ -1359,8 +1359,8 @@ if (r.chyba) {
 	</data>
 	<transition>
 		<id>t_fa_zapis</id>
-		<x>140</x>
-		<y>80</y>
+		<x>180</x>
+		<y>346</y>
 		<label name="t_fa_zapis_label">Zapísať faktúru</label>
 		<icon>receipt_long</icon>
 		<!--
@@ -1509,24 +1509,19 @@ if (r.chyba) {
 				<component><name>divider</name></component>
 			</dataRef>
 			<dataRef>
-				<id>btn_fa_nacitat</id>
-				<logic><behavior>editable</behavior></logic>
-				<layout><x>0</x><y>17</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
-			</dataRef>
-			<dataRef>
 				<id>fa_nacitanie</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>18</y><rows>3</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>17</y><rows>3</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_zdroj</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>0</x><y>21</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>0</x><y>20</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_kanal</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>1</x><y>21</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>1</x><y>20</y><rows>1</rows><cols>1</cols><template>material</template><appearance>outline</appearance></layout>
 			</dataRef>
 			<dataRef>
 				<id>fa_skan</id>
@@ -1607,8 +1602,8 @@ objednavky_options(fa_objednavka_vyber)
 	</transition>
 	<transition>
 		<id>t_fa_kontrola</id>
-		<x>236</x>
-		<y>200</y>
+		<x>474</x>
+		<y>346</y>
 		<label name="t_fa_kontrola_label">Skontrolovať a spárovať</label>
 		<icon>fact_check</icon>
 		<!--
@@ -1891,8 +1886,8 @@ vstupne_kontroly(fa_objednavka_vyber, fa_suma, fa_datum_vystavenia,
 	</transition>
 	<transition>
 		<id>t_fa_schvalenie</id>
-		<x>332</x>
-		<y>80</y>
+		<x>787</x>
+		<y>346</y>
 		<label name="t_fa_schvalenie_label">Schváliť za stredisko</label>
 		<icon>how_to_reg</icon>
 		<!--
@@ -2143,8 +2138,8 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 	</transition>
 	<transition>
 		<id>t_fa_riaditel</id>
-		<x>524</x>
-		<y>80</y>
+		<x>1094</x>
+		<y>346</y>
 		<label name="t_fa_riaditel_label">Schválenie riaditeľom</label>
 		<icon>gavel</icon>
 		<assignPolicy>manual</assignPolicy>
@@ -2341,8 +2336,8 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 	</transition>
 	<transition>
 		<id>t_fa_zauctovanie</id>
-		<x>716</x>
-		<y>80</y>
+		<x>1384</x>
+		<y>346</y>
 		<label name="t_fa_zauctovanie_label">Zaúčtovať a exportovať</label>
 		<icon>account_balance</icon>
 		<assignPolicy>manual</assignPolicy>
@@ -2575,8 +2570,8 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 	</transition>
 	<transition>
 		<id>t_fa_prehlad</id>
-		<x>908</x>
-		<y>250</y>
+		<x>180</x>
+		<y>516</y>
 		<label name="t_fa_prehlad_label">Stav faktúry</label>
 		<icon>fact_check</icon>
 		<!--
@@ -2825,48 +2820,48 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 	</transition>
 	<place>
 		<id>p_koncept</id>
-		<x>40</x>
-		<y>80</y>
+		<x>60</x>
+		<y>346</y>
 		<label>Rozpísaná</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_na_kontrolu</id>
-		<x>140</x>
-		<y>200</y>
+		<x>314</x>
+		<y>346</y>
 		<label>Čaká na referenta</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_na_schvalenie</id>
-		<x>236</x>
-		<y>80</y>
+		<x>634</x>
+		<y>346</y>
 		<label>Čaká na stredisko</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_u_riaditela</id>
-		<x>428</x>
-		<y>80</y>
+		<x>940</x>
+		<y>346</y>
 		<label>Čaká na riaditeľa</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_na_zauctovanie</id>
-		<x>620</x>
-		<y>80</y>
+		<x>1237</x>
+		<y>346</y>
 		<label>Na zaúčtovanie</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_info</id>
-		<x>908</x>
-		<y>380</y>
+		<x>60</x>
+		<y>516</y>
 		<label>Faktúra existuje</label>
 		<tokens>1</tokens>
 		<static>false</static>
@@ -2879,8 +2874,8 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 	</place>
 	<place>
 		<id>p_uzavreta</id>
-		<x>812</x>
-		<y>80</y>
+		<x>1511</x>
+		<y>346</y>
 		<label>Uzavretá</label>
 		<tokens>0</tokens>
 		<static>false</static>
@@ -2932,6 +2927,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_na_zauctovanie</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_zauctovanie</reference>
+		<breakpoint>
+			<x>792</x>
+			<y>274</y>
+		</breakpoint>
+		<breakpoint>
+			<x>1242</x>
+			<y>274</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_schvalenie_koncept</id>
@@ -2940,6 +2943,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_koncept</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_koncept</reference>
+		<breakpoint>
+			<x>772</x>
+			<y>170</y>
+		</breakpoint>
+		<breakpoint>
+			<x>55</x>
+			<y>170</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_schvalenie_uzavriet</id>
@@ -2948,6 +2959,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_uzavreta</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_uzavreta</reference>
+		<breakpoint>
+			<x>802</x>
+			<y>196</y>
+		</breakpoint>
+		<breakpoint>
+			<x>1506</x>
+			<y>196</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_riaditel_in</id>
@@ -2971,6 +2990,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_koncept</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_koncept</reference>
+		<breakpoint>
+			<x>1079</x>
+			<y>92</y>
+		</breakpoint>
+		<breakpoint>
+			<x>65</x>
+			<y>92</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_riaditel_uzavriet</id>
@@ -2979,6 +3006,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_uzavreta</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_uzavreta</reference>
+		<breakpoint>
+			<x>1109</x>
+			<y>300</y>
+		</breakpoint>
+		<breakpoint>
+			<x>1516</x>
+			<y>300</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_zauctovanie_in</id>
@@ -3002,6 +3037,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_koncept</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_koncept</reference>
+		<breakpoint>
+			<x>1379</x>
+			<y>40</y>
+		</breakpoint>
+		<breakpoint>
+			<x>75</x>
+			<y>40</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_kontrola_in</id>
@@ -3025,6 +3068,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_na_zauctovanie</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_zauctovanie</reference>
+		<breakpoint>
+			<x>479</x>
+			<y>144</y>
+		</breakpoint>
+		<breakpoint>
+			<x>1232</x>
+			<y>144</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_kontrola_koncept</id>
@@ -3033,6 +3084,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_koncept</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_koncept</reference>
+		<breakpoint>
+			<x>469</x>
+			<y>300</y>
+		</breakpoint>
+		<breakpoint>
+			<x>45</x>
+			<y>300</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_schvalenie_kontrola</id>
@@ -3041,6 +3100,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_na_kontrolu</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_kontrola</reference>
+		<breakpoint>
+			<x>782</x>
+			<y>222</y>
+		</breakpoint>
+		<breakpoint>
+			<x>304</x>
+			<y>222</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_riaditel_kontrola</id>
@@ -3049,6 +3116,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_na_kontrolu</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_kontrola</reference>
+		<breakpoint>
+			<x>1089</x>
+			<y>118</y>
+		</breakpoint>
+		<breakpoint>
+			<x>314</x>
+			<y>118</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_riaditel_stredisko</id>
@@ -3057,6 +3132,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_na_schvalenie</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_schvalenie</reference>
+		<breakpoint>
+			<x>1099</x>
+			<y>248</y>
+		</breakpoint>
+		<breakpoint>
+			<x>634</x>
+			<y>248</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_zauctovanie_kontrola</id>
@@ -3065,6 +3148,14 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 		<destinationId>p_na_kontrolu</destinationId>
 		<multiplicity>0</multiplicity>
 		<reference>fa_to_kontrola</reference>
+		<breakpoint>
+			<x>1389</x>
+			<y>66</y>
+		</breakpoint>
+		<breakpoint>
+			<x>324</x>
+			<y>66</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_fa_prehlad</id>

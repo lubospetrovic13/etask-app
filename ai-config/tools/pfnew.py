@@ -900,6 +900,10 @@ def main(argv=None):
     if not args.dry_run:
         add_translations([t[0] for t in targets])
         print("  + preklady: doplnene `name=` a blok <i18n locale=\"en\">")
+        import pflayout
+        for path, _ in targets:
+            if path.suffix == ".xml":
+                pflayout.process(path, check=False)
     patch_manifest(args.app, prefix, args.entity, args.icon, args.role, args.dry_run)
     patch_seed(args.app, args.dry_run)
 

@@ -905,8 +905,8 @@ if (!title) {
 	</data>
 	<transition>
 		<id>t_detail</id>
-		<x>112</x>
-		<y>240</y>
+		<x>197</x>
+		<y>542</y>
 		<label name="t_detail_label">Prehľad požiadavky</label>
 		<icon>fact_check</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -1266,8 +1266,8 @@ if (!title) {
 	</transition>
 	<transition>
 		<id>t_triage</id>
-		<x>112</x>
-		<y>80</y>
+		<x>180</x>
+		<y>242</y>
 		<label name="t_triage_label">Triáž a prevzatie</label>
 		<icon>rule</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -1588,8 +1588,8 @@ if (mail) {
 	</transition>
 	<transition>
 		<id>t_work</id>
-		<x>304</x>
-		<y>80</y>
+		<x>420</x>
+		<y>372</y>
 		<label name="t_work_label">Zaznamenať postup</label>
 		<icon>build</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -1690,8 +1690,8 @@ change tk_note value { "" }
 	</transition>
 	<transition>
 		<id>t_pending</id>
-		<x>304</x>
-		<y>240</y>
+		<x>420</x>
+		<y>112</y>
 		<label name="t_pending_label">Vyžiadať doplnenie</label>
 		<icon>hourglass_empty</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -1799,8 +1799,8 @@ if (mail) {
 	</transition>
 	<transition>
 		<id>t_resolve</id>
-		<x>496</x>
-		<y>80</y>
+		<x>420</x>
+		<y>242</y>
 		<label name="t_resolve_label">Vyriešiť</label>
 		<icon>task_alt</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -1918,8 +1918,8 @@ if (mail) {
 	</transition>
 	<transition>
 		<id>t_plan</id>
-		<x>496</x>
-		<y>208</y>
+		<x>197</x>
+		<y>672</y>
 		<label name="t_plan_label">Zadanie úloh</label>
 		<icon>assignment_ind</icon>
 		<assignPolicy>auto</assignPolicy>
@@ -2100,32 +2100,32 @@ if (mail) {
 	</transition>
 	<place>
 		<id>p_alive</id>
-		<x>32</x>
-		<y>240</y>
+		<x>60</x>
+		<y>542</y>
 		<label>Trvale otvorené</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_new</id>
-		<x>32</x>
-		<y>80</y>
+		<x>60</x>
+		<y>242</y>
 		<label>Nová</label>
 		<tokens>1</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_open</id>
-		<x>208</x>
-		<y>80</y>
+		<x>300</x>
+		<y>242</y>
 		<label>Otvorená</label>
 		<tokens>0</tokens>
 		<static>false</static>
 	</place>
 	<place>
 		<id>p_closed</id>
-		<x>592</x>
-		<y>80</y>
+		<x>540</x>
+		<y>242</y>
 		<label>Uzavretá</label>
 		<tokens>0</tokens>
 		<static>false</static>
@@ -2164,6 +2164,14 @@ if (mail) {
 		<sourceId>t_work</sourceId>
 		<destinationId>p_open</destinationId>
 		<multiplicity>1</multiplicity>
+		<breakpoint>
+			<x>420</x>
+			<y>40</y>
+		</breakpoint>
+		<breakpoint>
+			<x>305</x>
+			<y>40</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_open_pending</id>
@@ -2178,6 +2186,14 @@ if (mail) {
 		<sourceId>t_pending</sourceId>
 		<destinationId>p_open</destinationId>
 		<multiplicity>1</multiplicity>
+		<breakpoint>
+			<x>420</x>
+			<y>66</y>
+		</breakpoint>
+		<breakpoint>
+			<x>295</x>
+			<y>66</y>
+		</breakpoint>
 	</arc>
 	<arc>
 		<id>a_open_resolve</id>
