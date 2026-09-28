@@ -451,7 +451,7 @@ def main():
           not (isinstance(r, dict) and r.get("error")), str(r)[:160])
     v = values(spravca, pult)
     vysledok = v.get("poz_vysledok") or ""
-    check("pult hlasi odoslanu pozvanku", "Invitation sent to" in vysledok,
+    check("pult hlasi odoslanu pozvanku", "invitation sent to" in vysledok.lower(),
           vysledok.replace("\n", " | ")[:160])
     check("pult hlasi pridelenu rolu", ROLA in vysledok,
           vysledok.replace("\n", " | ")[:160])
