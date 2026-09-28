@@ -1,1 +1,32 @@
-{}
+{
+  "invoices-orders": {
+    "source": "C:\\Users\\petro\\IdeaProjects\\etask-app\\examples\\invoices-orders",
+    "title": "Invoices and orders",
+    "processes": [
+      "fa_faktura.xml",
+      "ob_objednavka.xml",
+      "sc_menu.xml",
+      "sc_nastavenia.xml"
+    ],
+    "tools": [
+      "sccheck.py",
+      "fakcheck.py"
+    ],
+    "docs": [
+      "PRIRUCKA.md"
+    ],
+    "bootstrapCase": [
+      "financie/sc_menu",
+      "admin/nastavenia/sc_nastavenia"
+    ],
+    "uriNodes": [
+      "financie/faktury",
+      "financie/objednavky",
+      "admin/nastavenia"
+    ],
+    "netScope": [
+      "financie/*",
+      "admin/nastavenia/*"
+    ]
+  }
+}

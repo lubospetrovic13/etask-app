@@ -12,28 +12,53 @@
     "sedi na vzor - na dve appky s rovnako pomenovanou rolou a roznych ludi."
   ],
   "netScope": [
-    "admin/pouzivatelia/*"
+    "admin/pouzivatelia/*",
+    "financie/*",
+    "admin/nastavenia/*"
   ],
   "users": [
     {
       "email": "super@netgrif.com",
       "roles": [
-        "spravca"
+        "referent",
+        "riaditel",
+        "schv_hotel",
+        "schv_marketing",
+        "schv_restauracia",
+        "schv_sprava",
+        "schv_udrzba",
+        "schv_wellness",
+        "schvalovatel",
+        "spravca",
+        "uctovnik",
+        "zadavatel"
       ]
     },
     {
       "email": "admin@test.local",
       "roles": [
-        "spravca"
+        "riaditel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schvalovatel",
+        "spravca",
+        "uctovnik"
       ]
     },
     {
       "email": "operator@test.local",
-      "roles": []
+      "roles": [
+        "schv_wellness",
+        "schvalovatel",
+        "uctovnik",
+        "zadavatel"
+      ]
     },
     {
       "email": "druhy@test.local",
-      "roles": []
+      "roles": [
+        "zadavatel"
+      ]
     },
     {
       "email": "viewer@test.local",

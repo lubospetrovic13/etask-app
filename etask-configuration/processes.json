@@ -52,7 +52,11 @@
     "configuration_tiles.xml",
     "pu_pouzivatel.xml",
     "pu_zalozenie.xml",
-    "pu_menu.xml"
+    "pu_menu.xml",
+    "fa_faktura.xml",
+    "ob_objednavka.xml",
+    "sc_menu.xml",
+    "sc_nastavenia.xml"
   ],
   "bootstrapCase": [
     {
@@ -62,6 +66,14 @@
     "admin/pouzivatelia/pu_zalozenie",
     {
       "net": "admin/pouzivatelia/pu_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "financie/sc_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "admin/nastavenia/sc_nastavenia",
       "rebuildOnNewVersion": true
     }
   ],
@@ -86,6 +98,63 @@
       "requiredProcessRoles": [
         "spravca"
       ]
+    },
+    "financie": {
+      "icon": "account_balance",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "referent",
+        "riaditel",
+        "schv_hotel",
+        "schv_marketing",
+        "schv_restauracia",
+        "schv_sprava",
+        "schv_udrzba",
+        "schv_wellness",
+        "schvalovatel",
+        "uctovnik",
+        "zadavatel"
+      ]
+    },
+    "financie/faktury": {
+      "icon": "receipt_long",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "referent",
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "financie/objednavky": {
+      "icon": "shopping_cart",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "admin/nastavenia": {
+      "icon": "tune",
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
     }
   }
 }
