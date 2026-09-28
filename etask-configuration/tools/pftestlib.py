@@ -53,9 +53,11 @@ import base64
 import json
 import os
 import re
+import struct
 import sys
 import urllib.error
 import urllib.request
+import zlib
 
 URL = os.environ.get("PF_URL", "http://127.0.0.1:8080")
 TEST_PASS = os.environ.get("ETASK_TEST_PASSWORD", "test1234")
@@ -217,6 +219,54 @@ def set_data(cl, task_id, vals, timeout=120):
     200 a nezapise nic."""
     assign(cl, task_id)
     return cl.call("POST", f"/api/task/{task_id}/data", {task_id: vals}, timeout=timeout)
+
+
+def upload(cl, task_id, field_id, file_name, content):
+    """Nahra subor do `file` pola. Telo je multipart s dvoma castami: `file`
+    a `data` - presne to, co posiela frontend.
+
+    POZOR na obsah `data`: je to mapa {taskId: fieldId}, nie prazdny objekt.
+    S `{}` engine spadne na NullPointerException v `getMainOutcome`, ale
+    klientovi vrati HTTP 200 s prazdnym telom - subor sa neulozi a nikde sa to
+    nedozvies."""
+    assign(cl, task_id)
+    boundary = "----pftestlib7d91"
+    crlf = b"\r\n"
+    body = b""
+    body += f"--{boundary}".encode() + crlf
+    body += (f'Content-Disposition: form-data; name="file"; filename="{file_name}"'.encode() + crlf
+             + b"Content-Type: application/octet-stream" + crlf + crlf)
+    body += content + crlf
+    body += f"--{boundary}".encode() + crlf
+    body += (b'Content-Disposition: form-data; name="data"' + crlf
+             + b"Content-Type: application/json" + crlf + crlf)
+    body += json.dumps({task_id: field_id}).encode() + crlf
+    body += f"--{boundary}--".encode() + crlf
+    req = urllib.request.Request(
+        URL + f"/api/task/{task_id}/file/{field_id}", data=body, method="POST",
+        headers={"X-Auth-Token": cl.token,
+                 "Accept": "application/hal+json, application/json;q=0.9, */*;q=0.8",
+                 "Accept-Language": cl.lang,
+                 "Content-Type": f"multipart/form-data; boundary={boundary}"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            text = r.read().decode("utf-8")
+            return r.status, (json.loads(text) if text else None)
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", "replace")
+
+
+def tiny_png(width=1, height=1):
+    """Platny PNG danej velkosti (siva plocha) - napr. podpis do `file` pola.
+    Vyraba sa tu, nie ako binarny fixture v gite."""
+    def chunk(kind, data):
+        return (struct.pack(">I", len(data)) + kind + data
+                + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff))
+    raw = b"".join(bytes([0]) + bytes([128]) * width for _ in range(height))
+    return (bytes([137]) + b"PNG" + bytes([13, 10, 26, 10])
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 0, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw))
+            + chunk(b"IEND", b""))
 
 
 # ---------------------------------------------------------------- odpovede

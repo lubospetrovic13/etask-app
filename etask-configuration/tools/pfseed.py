@@ -295,6 +295,7 @@ def main(argv):
 
     # --- importId -> {stringId} cez vsetky verzie ------------------------
     by_import = {}
+    by_net = {}      # (importId, identifikator siete) -> {stringId}, pre `rola@siet`
     warned = set()
     for n in scoped:
         ident, nid = n["identifier"], n["stringId"]
@@ -317,6 +318,7 @@ def main(argv):
                 warned.add((ident, title))
             if ids:
                 by_import.setdefault(import_id, set()).add(ids[0])
+                by_net.setdefault((import_id, ident), set()).add(ids[0])
 
     print(f"pfseed: {len(scoped)} verzii sieti v scope, "
           f"{len(by_import)} rol podla importId"
@@ -349,7 +351,18 @@ def main(argv):
                      if r.get("netImportId") not in scoped_idents}
         desired = set(preserved)
         for import_id in want:
-            desired |= by_import.get(import_id, set())
+            # `veduci@hr/cesty/*` = rola len v sietach, ktorych identifikator
+            # sedi na vzor. Holy `veduci` ju prideli vo VSETKYCH sietach scope,
+            # kde rola s tym importId je - a dve appky s rovnako pomenovanou
+            # rolou (dovolenky aj pracovne cesty maju `veduci`) by inak nesli
+            # nastavit roznym ludom.
+            if "@" in import_id:
+                rid, pat = import_id.split("@", 1)
+                for (i, ident), ids in by_net.items():
+                    if i == rid and fnmatch.fnmatch(ident, pat):
+                        desired |= ids
+            else:
+                desired |= by_import.get(import_id, set())
 
         if desired == current:
             print(f"  {email}: bez zmeny ({len(current)} rol)")

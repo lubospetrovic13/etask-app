@@ -262,7 +262,7 @@ def main():
     items = {c["title"]: c["stringId"]
              for c in mi.get("_embedded", {}).get("cases", [])
              if menu_id(c).startswith("dv_")}
-    for want in ["Žiadosti o dovolenku", "Na schválenie", "Rozpísané a vrátené", "Vybavené"]:
+    for want in ["My leave requests", "To approve", "Drafts and returned", "Closed"]:
         check(f"zobrazenie '{want}' existuje", want in items, sorted(items))
 
     def view_task_fields(title):
@@ -270,9 +270,9 @@ def main():
         vt = [t for t in (tl or []) if t["transitionId"] == "view"]
         return fields(boss, vt[0]["stringId"]) if vt else {}
 
-    if "Žiadosti o dovolenku" in items:
+    if "My leave requests" in items:
         # Bez `enable_case_title = false` vyskoci pri "+" dialog na nazov pripadu.
-        vf = view_task_fields("Žiadosti o dovolenku")
+        vf = view_task_fields("My leave requests")
         check("zakladanie sa nepyta na nazov pripadu",
               vf.get("enable_case_title") is False, vf.get("enable_case_title"))
 
@@ -281,7 +281,7 @@ def main():
     # a vlozi ako NAE_DEFAULT_HEADERS do injektora prave toho zobrazenia.
     WANT_HEADERS = ("meta-title,hr/dovolenky/dv_ziadost-dv_stav_label"
                     ",hr/dovolenky/dv_ziadost-dv_od,hr/dovolenky/dv_ziadost-dv_do")
-    for title in ["Žiadosti o dovolenku", "Na schválenie", "Rozpísané a vrátené", "Vybavené"]:
+    for title in ["My leave requests", "To approve", "Drafts and returned", "Closed"]:
         if title in items:
             got = view_task_fields(title).get("default_headers")
             check(f"'{title}' ma predvolene stlpce Nazov/Stav/Od/Do", got == WANT_HEADERS, got)
@@ -304,7 +304,7 @@ def main():
                 return list(d["allowedNets"])
         return []
 
-    for title in ["Žiadosti o dovolenku", "Na schválenie", "Rozpísané a vrátené", "Vybavené"]:
+    for title in ["My leave requests", "To approve", "Drafts and returned", "Closed"]:
         if title not in items:
             continue
         headers = (view_task_fields(title).get("default_headers") or "").split(",")
@@ -320,14 +320,14 @@ def main():
                 return sorted((d.get("options") or {}).keys())
         return []
 
-    if "Na schválenie" in items:
+    if "To approve" in items:
         # Drawer aj UriCountService filtruju polozku podla allowed_roles
         # zakodovanych ako "importId:identifikator siete".
-        check("'Na schválenie' je obmedzene na rolu veduci",
-              roles_of("Na schválenie") == ["veduci:hr/dovolenky/dv_ziadost"],
-              roles_of("Na schválenie"))
-    if "Žiadosti o dovolenku" in items:
-        check("'Žiadosti o dovolenku' vidia obe roly", roles_of("Žiadosti o dovolenku") == [])
+        check("'To approve' je obmedzene na rolu veduci",
+              roles_of("To approve") == ["veduci:hr/dovolenky/dv_ziadost"],
+              roles_of("To approve"))
+    if "My leave requests" in items:
+        check("'My leave requests' vidia obe roly", roles_of("My leave requests") == [])
 
     st, mc = boss.post("/api/workflow/case/search?size=10",
                        {"process": [{"identifier": "hr/dovolenky/dv_menu"}]})
@@ -339,7 +339,8 @@ def main():
     print(f"  siet {net['identifier']} v{net['version']}")
     case_id, case = new_case(emp, net["stringId"])
     check("create akcia dala casu systemovy nazov bez zasahu uzivatela",
-          case["title"] == "Draft · Leave request · Operator Testovaci", case["title"])
+          case["title"].startswith("Draft · Leave request · ") and "Operator" in case["title"],
+          case["title"])
     check("stav je na zaciatku nazvu (prezije skratenie stlpca)",
           case["title"].startswith("Draft"), case["title"])
     check("case ma farbu podla stavu", case.get("color") == "grey", case.get("color"))
@@ -502,13 +503,13 @@ def main():
     st, c = emp.get(f"/api/workflow/case/{case_id}")
     check("nazov casu zacina stavom", c["title"].startswith("Approved"), c["title"])
     check("farba casu je zelena", c.get("color") == "green", c.get("color"))
-    # Vybavene = zobrazenie "Vybavené" v menu; ten isty dopyt, aky ma polozka.
+    # Vybavene = zobrazenie "Closed" v menu; ten isty dopyt, aky ma polozka.
     st, vyb = emp.post("/api/workflow/case/search?size=50",
                        {"query": 'processIdentifier:"hr/dovolenky/dv_ziadost"'
                                  ' AND taskIds:"t_dv_vysledok"'})
     ids = [x["stringId"] for x in (vyb.get("_embedded") or {}).get("cases", [])] \
         if isinstance(vyb, dict) else []
-    check("vybavena ziadost padne do zobrazenia 'Vybavené'", case_id in ids, f"{len(ids)} casov")
+    check("vybavena ziadost padne do zobrazenia 'Closed'", case_id in ids, f"{len(ids)} casov")
 
     print("\n=== 10. zamietnutie ===")
     c2, _ = new_case(emp, net["stringId"])

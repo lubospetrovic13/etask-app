@@ -6,7 +6,10 @@
     "pfseed pridelí každú uvedenú rolu na VŠETKÝCH verziách sietí v netScope.",
     "",
     "netScope tu mieri len na správu používateľov. Pre vlastnú appku",
-    "ho prepíš (napr. [\"mojaapp/*\"]) alebo pridaj ďalší vzor."
+    "ho prepíš (napr. [\"mojaapp/*\"]) alebo pridaj ďalší vzor.",
+    "",
+    "Rola `veduci@hr/cesty/*` sa prideli len v sietach, ktorych identifikator",
+    "sedi na vzor - na dve appky s rovnako pomenovanou rolou a roznych ludi."
   ],
   "netScope": [
     "admin/pouzivatelia/*"
