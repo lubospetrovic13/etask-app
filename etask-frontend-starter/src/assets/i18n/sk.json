@@ -53,13 +53,21 @@
     }
   },
   "uriNode": {
+    "admin": "Správa",
+    "cesty": "Pracovné cesty",
+    "dovolenky": "Dovolenky",
     "faktury": "Faktúry",
+    "financie": "Financie",
     "general": "Všeobecné",
+    "hr": "Ľudské zdroje",
+    "it": "IT",
+    "majetok": "Majetok",
+    "nastavenia": "Nastavenia",
     "objednavky": "Objednávky",
     "onboarding": "Nástupy zamestnancov",
+    "pouzivatelia": "Používatelia",
     "schvalovanie": "Objednávky a faktúry",
-    "service_desk": "Service Desk",
-    "nastavenia": "Nastavenia"
+    "service_desk": "Service Desk"
   },
   "view": {
     "publicForm": {
