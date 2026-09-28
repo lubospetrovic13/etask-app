@@ -6,6 +6,9 @@
     "one category would otherwise both declare it and `pfapp install` would",
     "refuse the second one.",
     "",
+    "The folder is for the admin only: agents and customers get their views",
+    "as items in the root of the menu (sd_menu), not through a folder.",
+    "",
     "Needs the DocuSeal signing service and the form views that live on the",
     "`service-desk` branch; on `main` the SLA contract signing step fails."
   ],
@@ -26,12 +29,10 @@
   "uriNodes": {
     "it/service_desk": {
       "icon": "support_agent",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "sd_admin",
-        "sd_agent",
-        "sd_customer"
-      ]
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
     }
   },
   "netScope": [
