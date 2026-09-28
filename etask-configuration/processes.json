@@ -97,21 +97,17 @@
     },
     "it": {
       "icon": "dns",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "sd_admin",
-        "sd_agent",
-        "sd_customer"
-      ]
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
     },
     "it/service_desk": {
       "icon": "support_agent",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "sd_admin",
-        "sd_agent",
-        "sd_customer"
-      ]
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
     }
   }
 }
