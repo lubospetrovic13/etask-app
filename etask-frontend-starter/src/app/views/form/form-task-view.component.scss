@@ -1,0 +1,31 @@
+// `nc-single-task` is a virtual scroll viewport: it needs a parent of DEFINITE
+// height, or it renders at 0 px - the task is there, the page looks empty.
+// `height: 100%` is not enough: under the breadcrumbs (a folder was opened
+// first) the portal wraps the outlet in a container of auto height, and 100 %
+// of that is 0. The viewport height minus the portal chrome is definite in
+// every layout.
+:host {
+  display: block;
+}
+
+.form-view {
+  height: calc(100vh - 56px);
+  min-height: 480px;
+}
+
+.form-view-content {
+  height: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.form-button {
+  margin-left: 8px;
+}
+
+.form-empty {
+  padding: 48px 16px;
+  gap: 16px;
+}

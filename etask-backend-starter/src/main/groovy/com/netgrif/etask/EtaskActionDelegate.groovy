@@ -17,6 +17,7 @@ import com.netgrif.application.engine.workflow.domain.Case
 import com.netgrif.etask.ai.AiCallService
 import com.netgrif.etask.doc.InvoiceReaderService
 import com.netgrif.etask.mail.NotifyService
+import com.netgrif.etask.sign.SignService
 import com.netgrif.etask.petrinet.domain.UriNodeData
 import com.netgrif.etask.petrinet.domain.UriNodeDataRepository
 import org.springframework.beans.factory.annotation.Autowired
@@ -41,6 +42,9 @@ class EtaskActionDelegate extends ActionDelegate {
 
     @Autowired
     private NotifyService notifyService
+
+    @Autowired
+    private SignService signService
 
     // Id poli na `preference_filter_item` a prechod na `filter`, kde sa data
     // zapisuju. V engine su to `private static final` na `ActionDelegate`, takze
@@ -709,6 +713,70 @@ class EtaskActionDelegate extends ActionDelegate {
     }
 
     /**
+     * Pozvanka e-mailom: ucet vznikne v stave INVITED a clovek si z odkazu
+     * v maile nastavi meno a heslo sam. Heslo tak nepozna nikto iny.
+     *
+     * Preco primitivum: engine ma `inviteUser(email)`, ale je to obal nad REST
+     * endpointom - vrati `MessageResource("Done")` aj vtedy, ked ucet uz existuje
+     * a nic sa neposlalo, nepovie `userId` (bez neho sa novemu uctu neda
+     * prideliť rola ani ho zapisat do userList pola) a ked SMTP nebezi, hodi
+     * vynimku, ktora zhodi celu akciu. Toto vracia mapu, ktoru siet vie
+     * vypisat cloveku do formulara, a nikdy nehadze.
+     *
+     * Vysledok:
+     *   ok          true = mail odisiel
+     *   userId      id uctu (aj pri `aktivny`, aby ho siet mohla pouzit)
+     *   aktivny     true = ucet uz existuje a je aktivny, pozvanka sa neposlala
+     *   opakovane   true = ucet bol pozvany uz predtym, odkaz sa poslal znova
+     *   sprava      veta pre cloveka
+     *
+     * `registrationService.createNewUser` pri existujucom NEaktivnom ucte vrati
+     * ten isty ucet s novym tokenom - opakovana pozvanka teda nevyrobi druhy
+     * ucet, len znova posle odkaz (typicky ked prvy vyprsal).
+     */
+    Map<String, Object> pozvi(String email) {
+        String mail = (email ?: "").trim()
+        if (!(mail ==~ /^[^@\s]+@[^@\s]+\.[^@\s]+$/)) {
+            return [ok: false, sprava: "\"" + (email ?: "") + "\" is not a valid e-mail address"]
+        }
+        IUser existing = userService.findByEmail(mail, false)
+        if (existing != null && existing.state == UserState.ACTIVE) {
+            return [ok: false, aktivny: true, userId: existing.stringId,
+                    sprava: mail + " already has an active account - no invitation was sent"]
+        }
+        if (!notifyService.available()) {
+            return [ok: false, sprava: "e-mail is not configured on this instance (spring.mail.host) - the invitation cannot be sent"]
+        }
+        if (mailAttemptService.isBlocked(mail)) {
+            return [ok: false, sprava: "too many invitations to " + mail + " in a short time - try again later"]
+        }
+        boolean opakovane = existing != null
+        def user
+        try {
+            def request = new NewUserRequest()
+            request.email = mail
+            user = registrationService.createNewUser(request)
+        } catch (Throwable t) {
+            return [ok: false, sprava: "the account could not be created: " + t.message]
+        }
+        if (user == null) {
+            return [ok: false, sprava: "the account for " + mail + " could not be created"]
+        }
+        try {
+            mailService.sendRegistrationEmail(user)
+            mailAttemptService.mailAttempt(mail)
+        } catch (Throwable t) {
+            // Ucet uz existuje (INVITED), len mail neodisiel. userId sa vracia,
+            // aby siet vedela, o ktory ucet ide; pozvanka sa da poslat znova.
+            return [ok: false, userId: user.stringId,
+                    sprava: "the account was created but the e-mail could not be sent: " + t.message]
+        }
+        return [ok: true, userId: user.stringId, opakovane: opakovane,
+                sprava: opakovane ? ("invitation to " + mail + " sent again")
+                                  : ("invitation sent to " + mail)]
+    }
+
+    /**
      * Roly vsetkych aplikacnych sieti v instancii, ako mapa
      * "importId:identifikatorSiete" -> "Nazov roly (Nazov siete)".
      *
@@ -1181,6 +1249,35 @@ class EtaskActionDelegate extends ActionDelegate {
         } catch (Throwable t) {
             return 0
         }
+    }
+
+    // ---- elektronicky podpis (DocuSeal) -------------------------------------
+    //
+    // Pouzitie v akcii:
+    //     def r = poslatNaPodpis(templateId, email, meno, "Client",
+    //             ["Organization": nazov, "Plan": plan], "Please sign the SLA contract.")
+    //     if (r.ok) change org_sign_submission value { r.submissionId }
+    //     def s = stavPodpisu(org_sign_submission.value)   // s.status == "completed"
+    //
+    // Logika je v com.netgrif.etask.sign.SignService. Nic nevyhadzuje: vysledok
+    // je mapa s `ok` a vetou `sprava` do formulara.
+
+    /** Je podpis nastaveny (DOCUSEAL_API_TOKEN)? */
+    boolean podpisDostupny() {
+        return signService.available()
+    }
+
+    /**
+     * Posle sablonu DocuSealu na podpis. Polia sablony sa predvyplnia z `hodnoty`
+     * len ked ich sablona ma. Vrati [ok, submissionId, status, sprava].
+     */
+    Map poslatNaPodpis(Object sablonaId, String email, String meno, String rola, Map hodnoty = [:], String sprava = null) {
+        return signService.send(sablonaId, email, meno, rola, hodnoty, sprava)
+    }
+
+    /** Stav podpisu: [ok, status (pending/completed/declined/expired), completedAt, documentUrl, sprava]. */
+    Map stavPodpisu(Object submissionId) {
+        return signService.status(submissionId)
     }
 
     /**

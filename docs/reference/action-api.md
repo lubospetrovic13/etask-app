@@ -72,6 +72,9 @@ Varianta podla ID uctu - a je to tá, ktorú treba volať.
 ### `changeUserPassword(String userId, String newPassword)`
 Zmena hesla podla ID uctu.
 
+### `pozvi(String email)`
+Pozvanka e-mailom: ucet vznikne v stave INVITED a clovek si z odkazu
+
 ### `processRoleOptions()`
 Roly vsetkych aplikacnych sieti v instancii, ako mapa
 
@@ -119,6 +122,15 @@ Da sa posielat? Siet sa to pyta, aby o tom vedela napisat do priebehu
 
 ### `notifikuj(Object prijemcovia, String predmet, String telo)`
 Posle notifikacny mail a vrati, kolkym prijemcom sa to podarilo.
+
+### `podpisDostupny()`
+Je podpis nastaveny (DOCUSEAL_API_TOKEN)?
+
+### `poslatNaPodpis(Object sablonaId, String email, String meno, String rola, Map hodnoty = [:], String sprava = null)`
+Posle sablonu DocuSealu na podpis. Polia sablony sa predvyplnia z `hodnoty`
+
+### `stavPodpisu(Object submissionId)`
+Stav podpisu: [ok, status (pending/completed/declined/expired), completedAt, documentUrl, sprava].
 
 ### `emailyOf(Object co)`
 E-mailove adresy z coho sa da: userList pole, jeho hodnota, zoznam id,

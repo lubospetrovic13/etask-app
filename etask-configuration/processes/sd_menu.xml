@@ -1,0 +1,469 @@
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://petriflow.com/petriflow.schema.xsd">
+	<id>it/service_desk/sd_menu</id>
+	<version>7.0.0</version>
+	<initials>SDM</initials>
+	<title name="net_title">Service Desk menu</title>
+
+	<!--
+		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
+		bez oboch polovic sa zobrazi povodna hodnota a nic to nepovie.
+		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
+		a nikdy sa nepouzije (ENGINE_ISSUES E15).
+	-->
+	<i18n locale="sk">
+		<i18nString name="net_title">Menu Service Desku</i18nString>
+		<i18nString name="sd_admin_title">Správca Service Desku</i18nString>
+		<i18nString name="t_menu_label">Stav menu</i18nString>
+		<i18nString name="system_title">Systém</i18nString>
+		<i18nString name="t_janitor_label">Upratanie konceptov</i18nString>
+		<i18nString name="t_janitor_b_label">Upratanie konceptov</i18nString>
+	</i18n>
+	<icon>menu</icon>
+	<defaultRole>false</defaultRole>
+	<anonymousRole>false</anonymousRole>
+	<transitionRole>false</transitionRole>
+	<!--
+		Zobrazenia pod kartou Service Desk. Dve skupiny, kazda vidi len svoje
+		(`allowed_roles` na polozke - poriadok v menu, nie bezpecnostna hranica;
+		tou su opravnenia v sietiach):
+
+		  sd_customer  Create New Ticket, My Tickets, Company Tickets
+		  sd_agent     Triage, SLA at risk, Tickets in progress, All Tickets, My Organizations
+		  sd_admin     Triage, SLA at risk, Tickets in progress, All Tickets, Organizations, SLA Plans
+
+		UPRATOVAC. `t_janitor` je systemovy prechod s casovacom (PT1H) na
+		vlastnom mieste: raz za hodinu zmaze koncepty tiketov starsie nez
+		`sp_draft_hours` planu organizacie autora (inak 24 h). Formular
+		opusteny zatvorenim okna uvolnenie ulohy nestihne - toto je poistka.
+		Kazda verzia tejto siete ma svoj case a svoj upratovac; zmazanie uz
+		zmazaneho je neskodne. Ten isty cyklus dorovnava stav zmluv o SLA
+		cakajucich na podpis v DocuSeale (`check_contracts`). Su to dva striedajuce sa prechody (t_janitor,
+		t_janitor_b): slucka jedneho prechodu do vlastneho miesta vystreli
+		len raz, engine ulohu recykluje bez noveho casovaca (sd_ticket, t_tick).
+
+		Akcia je v udalosti `create` a manifest ma pre tuto siet
+		`rebuildOnNewVersion`, takze bezi raz za kazdu novu verziu tejto siete.
+		Okrem menu tu preto zije aj ZOSULADENIE ROLI: rola ma stringId razene
+		per verziu siete, a clovek, ktoremu ju pridelila sd_organization na
+		starej verzii sd_ticket, ju na novej nema - polozky menu mu zmiznu
+		a "+" vrati 403. Tu sa `sd_customer` a `sd_agent` dorovnaju vsetkym
+		ludom a agentom vsetkych organizacii.
+
+		Vzory nizsie su z pfnew skeletu a kazdy je tam kvoli pasci:
+		  * `createOrUpdateMenuItem` s DEVIATIMI argumentmi (pri osmich vyhra
+		    enginova varianta a padne),
+		  * update cesta nefunguje - polozka sa zahodi a postavi znova, najprv
+		    `deleteMenuItem`, POTOM `deleteFilter`,
+		  * `nets` (allowedNets), inak sa nevykreslia stlpce z datovych poli,
+		  * `pripoj_do_uzla` aj vo vetve "nezmenene" (uzly su v Elasticu).
+	-->
+	<caseEvents>
+		<event type="create">
+			<id>menu_create</id>
+			<actions phase="post">
+				<action id="1"><![CDATA[
+def created = []
+def unchanged = []
+def failed = []
+
+// Polozky visia priamo v KORENI menu (uriPath korena je "root"): zakaznik
+// ma po prihlaseni rovno svoje tri polozky, bez priecinkov It a Service Desk.
+// Tie vznikaju z identifikatorov sieti a manifest ich ukazuje len adminovi.
+def uri = "root"
+def ticket = "it/service_desk/sd_ticket"
+def org = "it/service_desk/sd_organization"
+def plan = "it/service_desk/sd_sla_plan"
+def tickets = "processIdentifier:\"" + ticket + "\""
+def status = { List keys -> tickets + " AND dataSet.tk_status.keyValue:(" + keys.collect { "\"" + it + "\"" }.join(" OR ") + ")" }
+// Task zobrazenie: task dokument nema processIdentifier, a processId sa razi
+// per verziu siete - transitionId je v tejto appke jedinecny (RUNBOOK 11).
+def task = { String transition -> "transitionId:\"" + transition + "\"" }
+def customer = ["sd_customer": ticket]
+def agent = ["sd_agent": ticket]
+def admin = ["sd_admin": ticket]
+def staff = ["sd_agent": ticket, "sd_admin": ticket]
+def c = { String field -> ticket + "-" + field }
+def open = ["new", "in_progress", "waiting", "resolved"]
+
+def views = [
+        // ZAKAZNIK
+        // "+" zalozi tiket a rovno ho otvori. V zozname su len koncepty -
+        // odoslane su v "My Tickets".
+        [id: "sd_new_ticket", name: i18n("Create New Ticket", ["sk": "Nový tiket"]),
+         type: "Case", icon: "add_comment", query: status(["draft"]),
+         nets: [ticket], roles: customer,
+         headers: "meta-title," + c("tk_type") + ",meta-creationDate"],
+        // Len vlastne: ulohu t_my ma iba autor. Case dopyt na prihlaseneho
+        // cloveka sa napisat neda (filter nema <<me>>).
+        [id: "sd_my_tickets", name: i18n("My Tickets", ["sk": "Moje tikety"]),
+         type: "Task", icon: "inbox", query: task("t_my"),
+         nets: [ticket], roles: customer, headers: null],
+        // Svoje AJ firemne: viditelnost dava userRef, stlpec "Reported by" ich odlisi.
+        [id: "sd_company_tickets", name: i18n("Company Tickets", ["sk": "Tikety organizácie"]),
+         type: "Case", icon: "corporate_fare", query: status(open + ["closed", "rejected"]),
+         nets: [ticket], roles: customer,
+         headers: "meta-title," + c("tk_status") + "," + c("tk_reporter_name") + "," + c("tk_submitted_at") + "," + c("tk_responder")],
+
+        // AGENT a ADMIN
+        // Ulohu t_triage vidia len agenti organizacie tiketu (userRef) a admin.
+        [id: "sd_triage", name: i18n("Triage", ["sk": "Nové na prevzatie"]),
+         type: "Task", icon: "move_to_inbox", query: task("t_triage"),
+         nets: [ticket], roles: staff, headers: null],
+        [id: "sd_sla_risk", name: i18n("SLA at risk", ["sk": "SLA v ohrození"]),
+         type: "Case", icon: "running_with_errors",
+         query: status(["new", "in_progress", "waiting"]) + " AND dataSet.tk_sla_state.keyValue:(\"at_risk\" OR \"breached\")",
+         nets: [ticket], roles: staff,
+         headers: "meta-title," + c("tk_sla_state") + "," + c("tk_org_name") + "," + c("sla_response_due") + "," + c("sla_resolution_due") + "," + c("tk_responder")],
+        [id: "sd_in_progress", name: i18n("Tickets in progress", ["sk": "Tikety v riešení"]),
+         type: "Case", icon: "pending_actions", query: status(["in_progress", "waiting"]),
+         nets: [ticket], roles: staff,
+         headers: "meta-title," + c("tk_status") + "," + c("tk_sla_state") + "," + c("tk_org_name") + "," + c("tk_priority") + "," + c("sla_resolution_due") + "," + c("tk_responder")],
+        [id: "sd_all_tickets", name: i18n("All Tickets", ["sk": "Všetky tikety"]),
+         type: "Case", icon: "confirmation_number", query: status(open + ["closed", "rejected"]),
+         nets: [ticket], roles: staff,
+         headers: "meta-title," + c("tk_status") + "," + c("tk_org_name") + "," + c("tk_priority") + "," + c("sla_response_met") + "," + c("sla_resolution_met")],
+        [id: "sd_my_organizations", name: i18n("My Organizations", ["sk": "Moje organizácie"]),
+         type: "Case", icon: "domain", query: "processIdentifier:\"" + org + "\"",
+         nets: [org], roles: agent,
+         headers: "meta-title," + org + "-org_code," + org + "-org_usage"],
+
+        // ADMIN
+        [id: "sd_organizations", name: i18n("Organizations", ["sk": "Organizácie"]),
+         type: "Case", icon: "domain", query: "processIdentifier:\"" + org + "\"",
+         nets: [org], roles: admin,
+         headers: "meta-title," + org + "-org_code," + org + "-org_active," + org + "-org_plan," + org + "-org_usage"],
+        [id: "sd_sla_plans", name: i18n("SLA Plans", ["sk": "SLA plány"]),
+         type: "Case", icon: "timer", query: "processIdentifier:\"" + plan + "\"",
+         nets: [plan], roles: admin,
+         headers: "meta-title," + plan + "-sp_code," + plan + "-sp_active," + plan + "-sp_max_accounts," + plan + "-sp_max_agents"],
+]
+
+// Polozky predoslych verzii Service Desku. Vyhodenie z tejto siete ich
+// NEZMAZE - polozky su pripady `preference_filter_item`.
+def zastarane = ["sd_tickets", "sd_my_work", "sd_customers", "sd_submissions", "sd_new_request",
+                 "sd_podanie", "sd_moje", "sd_na_prevzatie", "sd_v_rieseni", "sd_vsetky", "sd_firmy"]
+def zmazane = []
+zastarane.each { id ->
+    try {
+        def stara = menu_item(id)
+        if (stara == null) return
+        def filter = getFilterFromMenuItem(stara)
+        deleteMenuItem(stara)
+        if (filter != null) deleteFilter(filter)
+        zmazane << id
+    } catch (Exception e) {
+        failed << (id + " (delete: " + e.getClass().simpleName + ": " + e.message + ")")
+    }
+}
+
+views.each { v ->
+    def id = v.id as String
+    try {
+        def existing = menu_item(id)
+        if (existing != null) {
+            def current = getFilterFromMenuItem(existing)
+            def currentQuery = ((current?.dataSet?."filter"?.value ?: "") as String)
+            def currentNets = ((current?.dataSet?."filter"?.allowedNets ?: []) as List)
+                    .collect { it as String } as Set
+            def wantNets = (v.nets as List).collect { it as String } as Set
+            def currentName = current?.dataSet?."i18n_filter_name"?.value
+            def sameName = currentName != null &&
+                    (currentName.defaultValue as String) == (v.name.defaultValue as String) &&
+                    (currentName.translations ?: [:]) == (v.name.translations ?: [:])
+            // Aj ROLY: inak by uz nasadena polozka zostala viditelna vsetkym.
+            def currentRoles = [] as Set
+            (existing.immediateData ?: []).each { d ->
+                if (d.importId == "allowed_roles") {
+                    currentRoles = ((d.options ?: [:]).keySet() as Set)
+                }
+            }
+            def wantRoles = (v.roles ?: [:]).collect { r, n -> (r as String) + ":" + (n as String) } as Set
+            if (currentQuery == (v.query as String) && currentNets == wantNets && sameName
+                    && currentRoles == wantRoles) {
+                nastav_zobrazenie(existing, v.nets as List, v.headers)
+                pripoj_do_uzla(existing, uri)
+                unchanged << id
+                return
+            }
+            deleteMenuItem(existing)
+            if (current != null) {
+                deleteFilter(current)
+            }
+        }
+        def item = createOrUpdateMenuItem(
+                id,                 // menu_item_identifier
+                uri,                // URI cesta - musi sedet s uriNodes
+                v.type as String,
+                v.query as String,
+                v.icon as String,
+                v.name,             // I18nString
+                v.nets as List,     // allowedNets - bez toho ziadne stlpce ani "+"
+                v.roles as Map,     // allowed_roles: kto polozku v menu vidi
+                [:]                 // bannedRoles - dourcuje aritu na projektovu
+        )
+        if (item) { created << id } else { failed << id }
+        nastav_zobrazenie(item, v.nets as List, v.headers)
+    } catch (Exception e) {
+        failed << (id + " (" + e.getClass().simpleName + ": " + e.message + ")")
+    }
+}
+
+// Zosuladenie roli ludi a agentov organizacii - viz komentar v hlavicke.
+int roly = 0
+try {
+    findCases { it.processIdentifier.eq(org) }.each { o ->
+        userIdsOf(o.dataSet["org_members"]?.value).each { uid ->
+            if (setProcessRole(uid as String, "sd_customer", ticket, "", true)) roly++
+        }
+        userIdsOf(o.dataSet["org_agents"]?.value).each { uid ->
+            if (setProcessRole(uid as String, "sd_agent", ticket, "", true)) roly++
+        }
+    }
+} catch (Exception e) {
+    failed << ("roles (" + e.getClass().simpleName + ": " + e.message + ")")
+}
+
+// Vysledok do nazvu casu: po createFilterInMenu sa zapis do vlastneho casu
+// neuchova, changeCaseProperty prezije.
+def summary = "Service Desk menu - " + (created.size() + unchanged.size()) + "/" + views.size() +
+        ", roles: " + roly + (zmazane ? (", old removed: " + zmazane.size()) : "")
+if (failed) {
+    summary = "ERROR Service Desk menu - failed: " + failed.join(", ")
+}
+changeCaseProperty("title").about { summary }
+				]]></action>
+			</actions>
+		</event>
+	</caseEvents>
+	<function scope="process" name="clean_drafts"><![CDATA[
+{ ->
+    // Telo upratovaca - vola ho t_janitor aj t_janitor_b (dve polovice
+    // jedneho cyklu; slucka jedneho prechodu by vystrelila len raz).
+    def ticket = "it/service_desk/sd_ticket"
+    def org = "it/service_desk/sd_organization"
+    def plan = "it/service_desk/sd_sla_plan"
+    def now = java.time.LocalDateTime.now()
+    // Hodiny podla planu organizacie autora; ked plan nie je, 24.
+    def plans = [:]
+    findCases { it.processIdentifier.eq(plan) }.each { p -> plans[p.stringId] = p.dataSet["sp_draft_hours"]?.value }
+    def hoursOf = [:]
+    findCases { it.processIdentifier.eq(org) }.each { o ->
+        def h = plans[(o.dataSet["org_plan"]?.value ?: "") as String]
+        hoursOf[o.stringId] = h == null ? 24 : Math.max(1, (h as Number).intValue())
+    }
+    int deleted = 0
+    findCases { it.processIdentifier.eq(ticket) }.each { c ->
+        if (((c.dataSet["tk_status"]?.value ?: "") as String) != "draft") return
+        int h = (hoursOf[(c.dataSet["tk_org_id"]?.value ?: "") as String] ?: 24) as int
+        def created = c.creationDate
+        if (created != null && created.plusHours(h).isBefore(now)) {
+            try {
+                workflowService.deleteCase(c.stringId)
+                deleted++
+            } catch (Exception e) {
+                // Uz zmazany inym upratovacom - v poriadku.
+            }
+        }
+    }
+}
+	]]></function>
+	<function scope="process" name="check_contracts"><![CDATA[
+{ ->
+    // Zmluvy o SLA, ktore cakaju na podpis: stav z DocuSealu do organizacie.
+    // Bez tokenu nerobi nic - podpis je vypnuty a organizacia to povie sama.
+    if (!podpisDostupny()) return
+    def org = "it/service_desk/sd_organization"
+    findCases { it.processIdentifier.eq(org) }.each { o ->
+        if (((o.dataSet["org_sign_status"]?.value ?: "") as String) != "sent") return
+        def s = stavPodpisu(o.dataSet["org_sign_submission"]?.value)
+        if (!s?.ok) return
+        def mine = ["completed": "signed", "declined": "declined", "expired": "expired"][(s.status ?: "") as String]
+        if (!mine) return
+        def payload = ["org_sign_status": ["value": mine, "type": "enumeration_map"]]
+        if (s.documentUrl) payload["org_sign_document"] = ["value": s.documentUrl as String, "type": "text"]
+        // Datum podpisu nie: setData s dateTime v 6.3.1 pada (ENGINE_ISSUES E24).
+        // Doplni ho tlacidlo "Check signature" v organizacii.
+        try {
+            setData("t_org", o, payload)
+        } catch (Exception e) {
+            // Dalsia hodina to skusi znova.
+        }
+    }
+}
+	]]></function>
+	<function scope="process" name="nastav_zobrazenie"><![CDATA[
+{ def menuItem, def nets, def headers ->
+    // `enable_case_title`  - vypnuty dialog "Vyplnte nazov pripadu" pri "+";
+    //                        nazov si sklada siet sama.
+    // `default_headers`    - predvolene stlpce zoznamu.
+    // Ani jedno nie je argument `createOrUpdateMenuItem`.
+    if (menuItem == null) return
+    def payload = [:]
+    if (nets) {
+        payload.put("enable_case_title", ["value": false, "type": "boolean"])
+        payload.put("case_require_title_in_creation", ["value": false, "type": "boolean"])
+    }
+    if (headers) {
+        payload.put("default_headers", ["value": headers as String, "type": "text"])
+    }
+    if (payload) {
+        setData("view", menuItem, payload)
+    }
+}
+	]]></function>
+	<function scope="process" name="menu_item"><![CDATA[
+{ def identifier ->
+    // `findMenuItem(id)` z ActionDelegate existujucu polozku nenajde (hlada
+    // v inom rozsahu), takze by sa pri kazdom spusteni zalozila druha sada.
+    def id = ((identifier ?: "") as String).trim()
+    if (!id) return null
+    def items = findCases { it.processIdentifier.eq("preference_filter_item") }
+    return items?.find { ((it.dataSet["menu_item_identifier"]?.value ?: "") as String) == id }
+}
+	]]></function>
+	<roleRef>
+		<id>sd_admin</id>
+		<caseLogic>
+			<view>true</view>
+		</caseLogic>
+	</roleRef>
+	<role>
+		<id>sd_admin</id>
+		<title name="sd_admin_title">Service Desk admin</title>
+	</role>
+	<role>
+		<id>system</id>
+		<title name="system_title">System</title>
+	</role>
+	<transition>
+		<id>t_menu</id>
+		<x>180</x>
+		<y>256</y>
+		<label name="t_menu_label">Menu state</label>
+		<icon>menu</icon>
+		<assignPolicy>manual</assignPolicy>
+		<roleRef>
+			<id>sd_admin</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+	</transition>
+	<transition>
+		<id>t_janitor</id>
+		<x>180</x>
+		<y>86</y>
+		<label name="t_janitor_label">Draft cleanup</label>
+		<icon>cleaning_services</icon>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<trigger type="time">
+			<delay>PT1H</delay>
+		</trigger>
+		<event type="finish">
+			<id>t_janitor_finish</id>
+			<actions phase="pre">
+				<action id="2"><![CDATA[
+clean_drafts()
+check_contracts()
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<transition>
+		<id>t_janitor_b</id>
+		<x>460</x>
+		<y>86</y>
+		<label name="t_janitor_b_label">Draft cleanup</label>
+		<icon>cleaning_services</icon>
+		<roleRef>
+			<id>system</id>
+			<logic>
+				<perform>true</perform>
+			</logic>
+		</roleRef>
+		<trigger type="time">
+			<delay>PT1H</delay>
+		</trigger>
+		<event type="finish">
+			<id>t_janitor_b_finish</id>
+			<actions phase="pre">
+				<action id="3"><![CDATA[
+clean_drafts()
+check_contracts()
+				]]></action>
+			</actions>
+		</event>
+	</transition>
+	<place>
+		<id>p_janitor</id>
+		<x>60</x>
+		<y>86</y>
+		<label>Janitor</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_janitor_in</id>
+		<type>regular</type>
+		<sourceId>p_janitor</sourceId>
+		<destinationId>t_janitor</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_janitor_out</id>
+		<type>regular</type>
+		<sourceId>t_janitor</sourceId>
+		<destinationId>p_janitor_b</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<place>
+		<id>p_janitor_b</id>
+		<x>320</x>
+		<y>86</y>
+		<label>Janitor (second half)</label>
+		<tokens>0</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_janitor_b_in</id>
+		<type>regular</type>
+		<sourceId>p_janitor_b</sourceId>
+		<destinationId>t_janitor_b</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+	<arc>
+		<id>a_janitor_b_out</id>
+		<type>regular</type>
+		<sourceId>t_janitor_b</sourceId>
+		<destinationId>p_janitor</destinationId>
+		<multiplicity>1</multiplicity>
+		<breakpoint>
+			<x>460</x>
+			<y>40</y>
+		</breakpoint>
+		<breakpoint>
+			<x>60</x>
+			<y>40</y>
+		</breakpoint>
+	</arc>
+	<place>
+		<id>p_alive</id>
+		<x>60</x>
+		<y>256</y>
+		<label>Alive</label>
+		<tokens>1</tokens>
+		<static>false</static>
+	</place>
+	<arc>
+		<id>a_menu</id>
+		<type>read</type>
+		<sourceId>p_alive</sourceId>
+		<destinationId>t_menu</destinationId>
+		<multiplicity>1</multiplicity>
+	</arc>
+</document>

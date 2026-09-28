@@ -52,7 +52,11 @@
     "configuration_tiles.xml",
     "pu_pouzivatel.xml",
     "pu_zalozenie.xml",
-    "pu_menu.xml"
+    "pu_menu.xml",
+    "sd_sla_plan.xml",
+    "sd_organization.xml",
+    "sd_ticket.xml",
+    "sd_menu.xml"
   ],
   "bootstrapCase": [
     {
@@ -62,6 +66,10 @@
     "admin/pouzivatelia/pu_zalozenie",
     {
       "net": "admin/pouzivatelia/pu_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "it/service_desk/sd_menu",
       "rebuildOnNewVersion": true
     }
   ],
@@ -85,6 +93,24 @@
       "requiredAuthorities": [],
       "requiredProcessRoles": [
         "spravca"
+      ]
+    },
+    "it": {
+      "icon": "dns",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "sd_admin",
+        "sd_agent",
+        "sd_customer"
+      ]
+    },
+    "it/service_desk": {
+      "icon": "support_agent",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "sd_admin",
+        "sd_agent",
+        "sd_customer"
       ]
     }
   }

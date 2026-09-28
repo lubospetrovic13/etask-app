@@ -812,6 +812,29 @@ ako zobrazené a zobrazené ako skryté.
 `/api/task/search` — je to aj ten endpoint, ktorý používa zoznam úloh vo
 frontende, takže sa meria to, čo vidí človek.
 
+## E28. Časovaný prechod v slučke do vlastného miesta vystrelí len raz
+
+**Čo sa deje.** Systémový prechod s `<trigger type="time"><delay>PT5M</delay></trigger>`,
+ktorý berie token z miesta a vracia ho späť do toho istého miesta, sa vykoná
+presne raz — 5 minút po vzniku svojej úlohy. Potom už nikdy. Úloha pritom
+ďalej existuje a prechod je spustiteľný.
+
+**Prečo.** Po výstrele sa prechod ani na okamih nestane nespustiteľným, takže
+engine úlohu nezmaže, ale **recykluje** (to isté `_id`). Časovač sa plánuje len
+pri vzniku úlohy: recyklovaná úloha má po výstrele `triggers: []`. Nič to
+nehlási. (Kolekcia `quartz_triggers` o tom nič nepovie — je prázdna aj pri
+fungujúcich hodinách, plán drží Quartz v pamäti.)
+
+**Overené** na 6.3.1 v `sd_ticket`: úloha `t_tick` vystrelila 12:16:53, 5 min
+po podaní, a zostala s tým istým `_id` a prázdnymi `triggers`. S dvoma
+striedajúcimi sa prechodmi hodiny bežali: `t_tick` → `t_tock` o 12:26 →
+`t_tick` o 12:31.
+
+**Obídenie.** Dva prechody, ktoré si token podávajú (`t_tick`: `p_clock →
+p_clock_b`, `t_tock`: `p_clock_b → p_clock`), s telom v spoločnej funkcii.
+Prechod po výstrele zanikne, jeho úloha pri ďalšom kole vznikne nanovo aj
+s časovačom. Vzor je v `sd_ticket` (`sla_tick`) a v `sd_menu` (`clean_drafts`).
+
 ## Čo s tým
 
 Najviac stojí **E1** — znemožňuje celú jednu operáciu — a **E2**, ktoré robí

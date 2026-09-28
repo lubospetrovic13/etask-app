@@ -2,18 +2,20 @@ import {Component, OnDestroy, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {
   Case,
+  CaseResourceService,
   FILTER_IDENTIFIERS,
   FILTER_VIEW_TASK_TRANSITION_ID,
   FilterExtractionService,
+  FilterType,
   LoadingEmitter,
   TaskResourceService,
   User,
   UserService,
   ViewNavigationItem,
 } from '@netgrif/components-core';
-import {Subscription} from 'rxjs';
-import {map} from 'rxjs/operators';
-import custom_views from '../../../../assets/custom_views.json';
+import {forkJoin, Observable, of, Subscription} from 'rxjs';
+import {catchError, map, switchMap} from 'rxjs/operators';
+import {DASHBOARD_NODES, DASHBOARD_VIEWS, formView, menuItemIdentifier} from '../../form/form-views';
 import {UriNodeTitlePipe} from '../../side-nav/uri-node-title.pipe';
 import icons from '../../../../assets/uriNodeIcons.json';
 import {ETaskUriNodeResource} from '../service/etask-uri-resource.service';
@@ -32,6 +34,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   public customViews: Array<ViewNavigationItem> = [];
   protected _counters: Map<string, number> = new Map<string, number>();
+  protected _counterKinds: Map<string, string> = new Map<string, string>();
+  /** Folder cards only for someone who has no view cards - see ngOnInit. */
+  public showFolders = false;
 
   private _sub: Subscription;
   private _loading: LoadingEmitter;
@@ -40,6 +45,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private _user: UserService,
     private _uri: EtaskUriService,
     private _taskResource: TaskResourceService,
+    private _caseResource: CaseResourceService,
     private _router: Router,
     private _filterExtraction: FilterExtractionService,
     private _nodeTitle: UriNodeTitlePipe,
@@ -67,25 +73,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this._loading.off();
         });
 
-        this._uri.getCasesOfNode(this._uri.root, FILTER_IDENTIFIERS).pipe(
-          map(cases => {
-            // `cases.content` NIE JE `undefined`, ked dopyt nevrati ziadny vysledok -
-            // kniznicny `changeType()` (netgrif-components-core) vtedy vrati CELY
-            // surovy HAL response objekt (HAL odpoved bez `_embedded` je pre 0
-            // zaznamov normalna), nie `[]` ani `undefined`. `?? []` teda nechrani -
-            // `content` je definovany (truthy), len nie je pole, a `.filter` na
-            // objekte padne presne na "content.filter is not a function". Treba
-            // teda overit typ, nie len null/undefined.
-            const filteredViews = (Array.isArray(cases.content) ? cases.content : []).filter(it => custom_views.includes(it.immediateData.find(f => f.stringId === 'menu_item_identifier')?.value))
-              .sort((a, b) => this.getViewOrder(a) - this.getViewOrder(b));
-            return filteredViews.map(it => this._viewResolver.resolve(it)).filter(it => !!it);
-          }),
-        ).subscribe(views => {
+        // Karty zobrazeni: polozky menu z korena a z uzlov v `dashboardNodes`
+        // (custom_views.json), v poradi zo zoznamu `dashboard`. Kto aspon jednu
+        // ma, nevidi karty priecinkov - appka ma byt zoznam toho, co clovek
+        // robi, nie strom. Priecinky zostavaju v bocnom menu.
+        this.loadViewCases().subscribe(cases => {
+          const seen = new Set<string>();
+          const views = cases
+            .filter(c => DASHBOARD_VIEWS.includes(menuItemIdentifier(c)))
+            .filter(c => !seen.has(c.stringId) && !!seen.add(c.stringId))
+            .sort((a, b) => this.getViewOrder(a) - this.getViewOrder(b))
+            .map(c => this._viewResolver.resolve(c))
+            .filter(v => !!v);
           this.customViews = views;
+          this.showFolders = views.length === 0;
           this.getCountForViews(this.customViews);
         });
       }
     });
+  }
+
+  private loadViewCases(): Observable<Array<Case>> {
+    // `cases.content` NIE JE pole, ked dopyt nevrati nic - kniznicny
+    // `changeType()` vtedy vrati cely surovy HAL objekt, preto Array.isArray.
+    const casesOf = node => !node ? of([]) : this._uri.getCasesOfNode(node, FILTER_IDENTIFIERS, 0, 100).pipe(
+      map(page => (Array.isArray(page?.content) ? page.content : []) as Array<Case>),
+      catchError(() => of([] as Array<Case>)),
+    );
+    const nodes$ = DASHBOARD_NODES.map(path => this._uri.getNodeByPath(path).pipe(
+      catchError(() => of(undefined)),
+      switchMap(node => casesOf(node)),
+    ));
+    return forkJoin([casesOf(this._uri.root), ...nodes$]).pipe(
+      map(lists => ([] as Array<Case>).concat(...lists)),
+    );
   }
 
   /* Uri node */
@@ -161,14 +182,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
     customViews.forEach(view => {
+      // Formular nema co pocitat - karta je tlacidlo.
+      if (formView(menuItemIdentifier(view.resource))) {
+        return;
+      }
       const taskId = view.resource.tasks.find(taskPair => taskPair.transition === FILTER_VIEW_TASK_TRANSITION_ID).task;
       this._taskResource.getData(taskId).subscribe(taskData => {
         const filter = this._filterExtraction.extractCompleteFilterFromData(taskData);
-        this._taskResource.count(filter).subscribe(count => {
+        if (!filter) {
+          return;
+        }
+        // Case zobrazenie sa pocita v pripadoch, Task v ulohach. Predtym sa
+        // vsetko pocitalo ako ulohy, co pri case filtri vracia nezmysel.
+        const isCase = filter.type === FilterType.CASE;
+        const count$ = isCase ? this._caseResource.count(filter) : this._taskResource.count(filter);
+        count$.subscribe(count => {
+          this._counterKinds.set(view.id, isCase ? 'dashboard.cases' : 'dashboard.tasks');
           this._counters.set(view.id, count.count);
         });
       });
     });
+  }
+
+  public isForm(view: ViewNavigationItem): boolean {
+    return !!formView(menuItemIdentifier(view.resource));
+  }
+
+  public countLabel(view: ViewNavigationItem): string {
+    return this._counterKinds.get(view.id) ?? 'dashboard.tasks';
   }
 
   public openView(view: ViewNavigationItem) {
@@ -193,7 +234,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /* util */
   private getViewOrder(aCase: Case) {
-    return custom_views.indexOf(aCase.immediateData.find(f => f.stringId === 'menu_item_identifier')?.value);
+    return DASHBOARD_VIEWS.indexOf(menuItemIdentifier(aCase));
   }
 
   ngOnDestroy(): void {

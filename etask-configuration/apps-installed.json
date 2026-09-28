@@ -1,1 +1,26 @@
-{}
+{
+  "service-desk": {
+    "source": "C:\\Users\\petro\\IdeaProjects\\etask-app\\examples\\service-desk",
+    "title": "Service Desk",
+    "processes": [
+      "sd_sla_plan.xml",
+      "sd_organization.xml",
+      "sd_ticket.xml",
+      "sd_menu.xml"
+    ],
+    "tools": [
+      "sdcheck.py",
+      "sddemo.py"
+    ],
+    "docs": [],
+    "bootstrapCase": [
+      "it/service_desk/sd_menu"
+    ],
+    "uriNodes": [
+      "it/service_desk"
+    ],
+    "netScope": [
+      "it/service_desk/*"
+    ]
+  }
+}

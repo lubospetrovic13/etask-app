@@ -28,6 +28,7 @@
 
 
 <div class="cards-container" fxLayout="row wrap" fxLayoutAlign="center center">
+  <ng-container *ngIf="showFolders">
   <div fxLayout="column" fxLayoutAlign="center center" *ngFor="let node of nodes" class="dashboard-card"
        (click)="openNode(node)">
     <mat-card-content fxLayout="column" fxLayoutAlign="center center" class="card-content">
@@ -42,17 +43,21 @@
       </div>
     </mat-card-content>
   </div>
+  </ng-container>
 
   <div fxLayout="column" fxLayoutAlign="center center" *ngFor="let view of customViews" class="dashboard-card"
        (click)="openView(view)">
     <mat-card-content fxLayout="column" fxLayoutAlign="center center" class="card-content">
       <mat-icon class="card-icon">{{ view.navigation.icon }}</mat-icon>
       <div class="card-main-text">{{ view.navigation.title }}</div>
-      <div *ngIf="isCountLoaded(view)" class="card-secondary-text counter"
-           [ngClass]="{'accent-text-color': countView(view) !== 0}">
-        {{ countView(view) }} {{ 'dashboard.tasks' | translate }}
-      </div>
-      <mat-spinner *ngIf="!isCountLoaded(view)" color="accent" diameter="20"></mat-spinner>
+      <mat-icon *ngIf="isForm(view)" class="card-secondary-text counter accent-text-color">add_circle</mat-icon>
+      <ng-container *ngIf="!isForm(view)">
+        <div *ngIf="isCountLoaded(view)" class="card-secondary-text counter"
+             [ngClass]="{'accent-text-color': countView(view) !== 0}">
+          {{ countView(view) }} {{ countLabel(view) | translate }}
+        </div>
+        <mat-spinner *ngIf="!isCountLoaded(view)" color="accent" diameter="20"></mat-spinner>
+      </ng-container>
     </mat-card-content>
   </div>
 </div>
