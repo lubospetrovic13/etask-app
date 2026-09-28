@@ -1531,7 +1531,7 @@ if (r.chyba) {
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>editable</behavior></logic>
-				<layout><x>2</x><y>0</y><rows>22</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>10</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
@@ -1775,7 +1775,7 @@ objednavky_options(fa_objednavka_vyber)
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>0</y><rows>25</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>10</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
@@ -2019,7 +2019,7 @@ vstupne_kontroly(fa_objednavka_vyber, fa_suma, fa_datum_vystavenia,
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>0</y><rows>21</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>10</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
@@ -2241,7 +2241,7 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>0</y><rows>19</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>10</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
@@ -2469,7 +2469,7 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>0</y><rows>20</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>10</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>
@@ -2802,7 +2802,7 @@ po_zmene_stavu(kod, fa_ceka_na, fa_zadal, fa_schvalovatelia, fa_historia,
 			<dataRef>
 				<id>fa_skan</id>
 				<logic><behavior>visible</behavior></logic>
-				<layout><x>2</x><y>0</y><rows>32</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
+				<layout><x>2</x><y>0</y><rows>10</rows><cols>2</cols><template>material</template><appearance>outline</appearance></layout>
 				<component><name>document</name></component>
 			</dataRef>
 		</dataGroup>

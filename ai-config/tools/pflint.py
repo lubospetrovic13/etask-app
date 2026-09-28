@@ -289,6 +289,18 @@ def lint(path):
                                 "prebytok grid utne alebo zabali - skontroluj sirku"))
                     except ValueError:
                         pass
+                # Netgrif Builder drzi pole najviac 10 riadkov vysoke. Vyssie pri
+                # otvoreni formulara prechodu presunie na x=0 pod posledne pole
+                # a pri ulozeni ho tam aj zapise - v portali potom sedi pod
+                # formularom. Namerane: rows 10 zostane na mieste, rows 11 uz nie.
+                if rows > 10:
+                    out.append(Finding(
+                        "warning", "builder-rows", rel,
+                        line_of(raw, f"<id>{fid}</id>"),
+                        f"'{fid}' v '{gid}' ma rows={rows}; builder udrzi najviac 10 "
+                        f"a vyssie pole po ulozeni presunie pod formular",
+                        "rows <= 10; dokument (component document) sa v portali "
+                        "natiahne popri celom formulari sam"))
                 for yy in range(y, y + max(rows, 1)):
                     for xx in range(x, x + max(cols, 1)):
                         other = occupied.get((yy, xx))

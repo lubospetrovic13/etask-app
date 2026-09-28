@@ -60,6 +60,17 @@ else
   ok "pflint chytil bad-grid.xml"
 fi
 
+# pflint: musi upozornit na pole vyssie nez 10 riadkov. Engine aj portal su
+# v poriadku; Netgrif Builder ho pri ulozeni presunie pod formular.
+# Vystup do premennej, nie rurou: pri `pipefail` by nenulovy exit `--strict`
+# prebil uspesny grep.
+rows_out=$($PY tools/pflint.py --strict tools/fixtures/bad-builder-rows.xml 2>&1)
+if [ $? -ne 0 ] && grep -q "builder-rows" <<<"$rows_out"; then
+  ok "pflint upozornil na bad-builder-rows.xml"
+else
+  bad "pflint neupozornil na bad-builder-rows.xml (rows > 10)"
+fi
+
 # pflint: nesmie oznacit platne siete
 if $PY tools/pflint.py processes/ >/dev/null 2>&1; then
   ok "pflint neoznacil platne siete"

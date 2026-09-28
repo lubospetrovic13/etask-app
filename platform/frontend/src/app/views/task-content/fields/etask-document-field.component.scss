@@ -1,8 +1,18 @@
-// Fills its grid cell (height bound from the component); the document sticks to the
-// top while the form next to it is scrolled. Nothing here scrolls except the sheet.
+// Fills its grid cell, which runs down beside the whole form; the document sticks to
+// the top while the form next to it is scrolled. Nothing here scrolls except the sheet.
+//
+// Out of the flow on purpose: the cell's height is the form's, so the viewer must not
+// add to it - in the flow, a viewer sized to its cell would keep the rows from ever
+// shrinking again. The cell is the containing block (_overrides.scss) and holds the
+// minimum height the net gave the field. The library centres a cell's content
+// vertically, which in the flow started the viewer in the middle of the form.
 :host {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  right: 0;
   display: block;
-  width: 100%;
   min-width: 0;
 }
 

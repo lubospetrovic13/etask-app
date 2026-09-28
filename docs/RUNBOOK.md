@@ -599,10 +599,11 @@ s textovou vrstvou a na XML; sken bez textu nemá čo zvýrazniť. Ťahadlo na
 šírka sa pamätá v prehliadači (`etask.documentSplit`). Stĺpce gridu pre to
 prepočíta `EtaskTaskContentComponent.columnsOf`; sieť sa nemení.
 
-Formulár s dokladom je **kompaktný** (`app-compact-form`): popisy polí nie sú
+Každý formulár úlohy je **kompaktný** (`app-compact-form`): popisy polí nie sú
 pod poľami, ale v ikonke ⓘ (tá istá bublinka ako pri orezanom popise), polia
 len na čítanie sú bez rámčeka ako text, a lišta s tlačidlami úlohy je
-pripnutá dole. Ostatné formuláre sa nemenia.
+pripnutá dole. Najprv to platilo len pre formuláre s dokladom; teraz je to
+jeden vzhľad portálu, aby sa faktúra a onboarding správali rovnako.
 
 Text s `<component><name>checks</name>` (`app-etask-text-checks`) sa vykreslí
 ako farebné štítky: riadok `✓ …` zelený, `! …` oranžový, iný sivý. Hodnota
@@ -617,16 +618,28 @@ jeho. Rozloženie „vľavo polia, vpravo doklad" je v sieti, gridom:
 <dataRef>
     <id>fa_skan</id>
     <logic><behavior>visible</behavior></logic>
-    <layout><x>3</x><y>0</y><rows>22</rows><cols>3</cols>...</layout>
+    <layout><x>2</x><y>0</y><rows>10</rows><cols>2</cols>...</layout>
     <component><name>document</name></component>
 </dataRef>
 ```
 
-Výška prehliadača je `rows` × výška riadku gridu, najviac však výška okna,
-a pri posúvaní formulára zostáva hore (bunka s dokladom musí mať
-`overflow: visible`, inak nemá sticky k čomu sa prilepiť). Komponent je na `dataRef`, nie na `<data>`: na
-zápise faktúry je to isté pole obyčajné tlačidlo na nahratie, prehliadač
-dostane len úloha, kde sa porovnáva (`fa_faktura`, `t_fa_kontrola`).
+**`rows` najviac 10.** Netgrif Builder drží pole najviac 10 riadkov vysoké:
+vyššie pri otvorení formulára prechodu presunie na `x=0` pod posledné pole
+a pri uložení ho tam aj zapíše, takže v portáli potom doklad sedí pod
+formulárom (namerané: 10 zostane na mieste, 11 už nie). `pflint` na to
+upozorní (`builder-rows`). `rows` je preto len minimálna výška: portál
+doklad natiahne cez všetky prázdne riadky pod ním, teda popri celom
+formulári (`EtaskTaskContentComponent.layoutOf`), najviac však na výšku
+okna. Pri posúvaní formulára zostáva hore (bunka s dokladom musí mať
+`overflow: visible`, inak nemá sticky k čomu sa prilepiť).
+
+Komponent je na `dataRef`, nie na `<data>`: v každom kroku faktúry
+(`fa_faktura`) je doklad vpravo, ale to isté pole môže byť v inej úlohe
+obyčajné tlačidlo na nahratie.
+
+Builder pri uložení zahodí aj `<properties>` na `<data>` (napr.
+`saveWhileTyping`) - sieť upravenú v builderi treba pred commitom porovnať
+s pôvodnou.
 
 `pfview` kontroluje `<component>` aj na `dataRef` - dlho to nerobil a preklep
 v mene na úlohe prešiel ticho.

@@ -1,5 +1,5 @@
 import {
-  AfterViewInit, Component, ElementRef, HostBinding, HostListener, Input, NgZone, OnDestroy, OnInit, ViewChild,
+  AfterViewInit, Component, ElementRef, HostListener, Input, NgZone, OnDestroy, OnInit, ViewChild,
 } from '@angular/core';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 import {FileField, TaskResourceService} from '@netgrif/components-core';
@@ -31,8 +31,10 @@ const FIELD_HEIGHT = 75;
 const FIELD_PADDING = 16;
 /** Our toolbar above the document. Fixed, so the viewer never overflows its grid cell. */
 const TOOLBAR_HEIGHT = 48;
-/** Room the portal keeps above a task panel (tabs, search, list header). */
+/** Room the portal keeps above a task panel (tabs, search, list header), when it cannot be measured. */
 const PAGE_CHROME = 150;
+/** `top` of the sticky document (scss), kept free below it as well. */
+const STICKY_GAP = 8;
 const PAGE_GAP = 12;
 
 // The worker is copied next to the app by angular.json (assets, pdfjs).
@@ -50,9 +52,13 @@ pdfjs.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.js';
  *
  *     <dataRef>
  *         <id>fa_skan</id>
- *         <layout><x>2</x><y>0</y><rows>20</rows><cols>2</cols>...</layout>
+ *         <layout><x>2</x><y>0</y><rows>10</rows><cols>2</cols>...</layout>
  *         <component><name>document</name></component>
  *     </dataRef>
+ *
+ * `rows` is the minimum height; the viewer runs down beside the whole form on its own
+ * (layoutOf in the task content). Keep it at 10 or less: Netgrif Builder moves a taller
+ * field below the form and saves it there.
  *
  * What it does:
  *
@@ -101,6 +107,9 @@ export class EtaskDocumentFieldComponent implements OnInit, AfterViewInit, OnDes
   public zoom = 1;
   public found = 0;
   public windowHeight = window.innerHeight;
+  public hostHeight = 0;
+  private room = 0;
+  private readonly watched = new Set<Element>();
 
   private objectUrl: string;
   private loadedName: string;
@@ -133,6 +142,12 @@ export class EtaskDocumentFieldComponent implements OnInit, AfterViewInit, OnDes
   ngAfterViewInit(): void {
     // Re-fit when the sheet changes width: window resize, or the boundary handle.
     this.resizeObserver = new ResizeObserver(() => {
+      const h = this.host.nativeElement.clientHeight;
+      const room = this.room;
+      this.measureRoom();
+      if (h !== this.hostHeight || room !== this.room) {
+        this.zone.run(() => this.hostHeight = h);
+      }
       const w = this.sheetRef?.nativeElement?.clientWidth || 0;
       if (Math.abs(w - this.lastWidth) < 4) {
         return;
@@ -141,6 +156,9 @@ export class EtaskDocumentFieldComponent implements OnInit, AfterViewInit, OnDes
       clearTimeout(this.resizeTimer);
       this.resizeTimer = setTimeout(() => this.zone.run(() => this.renderPdf()), 150);
     });
+    // The host is sized by its grid cell (the whole form's height, see layoutOf in the
+    // task content), so it is watched too: the viewer follows the form as it grows.
+    this.resizeObserver.observe(this.host.nativeElement);
     if (this.sheetRef) {
       this.resizeObserver.observe(this.sheetRef.nativeElement);
     }
@@ -155,21 +173,41 @@ export class EtaskDocumentFieldComponent implements OnInit, AfterViewInit, OnDes
     this.revoke();
   }
 
-  /**
-   * The component fills every grid row the net gave it. The library centres a cell's
-   * content vertically, so a component shorter than its cell (the viewer is capped at
-   * the window height) would start in the middle of the form instead of at the top.
-   * Filling the cell also gives the sticky document the room to travel in.
-   */
-  @HostBinding('style.height.px')
-  get hostHeight(): number {
-    const rows = this.dataField?.layout?.rows || 1;
-    return rows * FIELD_HEIGHT - FIELD_PADDING;
-  }
-
   @HostListener('window:resize')
   onResize(): void {
     this.windowHeight = window.innerHeight;
+    this.measureRoom();
+  }
+
+  /**
+   * Height the stuck document has: the list that scrolls the form, less the sticky
+   * offset above and the action row pinned below it. Measured, not guessed - the fixed
+   * `PAGE_CHROME` left the bottom 60 px of the document under the action row (1440×900:
+   * list 700 px from y=200, action row 45 px).
+   */
+  private measureRoom(): void {
+    // From above the grid: the cell itself is `overflow-y: auto` in the library.
+    let el = (this.host.nativeElement.closest('.grid-rows-auto') || this.host.nativeElement).parentElement;
+    while (el && el !== document.body) {
+      // Not "does it overflow": the task list is a cdk-virtual-scroll-viewport, which
+      // reports scrollHeight == clientHeight and still is what scrolls the form.
+      if (/(auto|scroll)/.test(getComputedStyle(el).overflowY)) {
+        break;
+      }
+      el = el.parentElement;
+    }
+    if (!el || el === document.body) {
+      this.room = 0;
+      return;
+    }
+    const actions = this.host.nativeElement.closest('mat-expansion-panel')?.querySelector('.mat-action-row') as HTMLElement;
+    // Both settle only after the panel has expanded, later than the host: watched too,
+    // or the first (wrong) measurement stayed until something else resized.
+    [el, actions].filter(e => e && !this.watched.has(e)).forEach(e => {
+      this.watched.add(e);
+      this.resizeObserver?.observe(e);
+    });
+    this.room = Math.max(0, el.clientHeight - 2 * STICKY_GAP - (actions?.offsetHeight || 0));
   }
 
   get fileName(): string {
@@ -188,11 +226,11 @@ export class EtaskDocumentFieldComponent implements OnInit, AfterViewInit, OnDes
     return this.kind === 'pdf' || this.kind === 'image';
   }
 
-  /** The grid rows the net gave the field, minus the toolbar, never taller than the window. */
+  /** The cell, minus the toolbar, never taller than the room the form scrolls in. */
   get viewerHeight(): number {
-    const rows = this.dataField?.layout?.rows || 1;
-    const fromGrid = rows * FIELD_HEIGHT - FIELD_PADDING - TOOLBAR_HEIGHT;
-    const fromWindow = this.windowHeight - PAGE_CHROME - TOOLBAR_HEIGHT;
+    const cell = this.hostHeight || ((this.dataField?.layout?.rows || 1) * FIELD_HEIGHT - FIELD_PADDING);
+    const fromGrid = cell - TOOLBAR_HEIGHT;
+    const fromWindow = (this.room || this.windowHeight - PAGE_CHROME) - TOOLBAR_HEIGHT;
     return Math.max(Math.min(fromGrid, fromWindow), 240);
   }
 

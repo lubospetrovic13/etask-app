@@ -9,6 +9,7 @@ import {
   PaperViewService,
   TaskContentService,
   TaskDataService,
+  TaskElementType,
   TaskEventService,
   TaskRefField,
 } from '@netgrif/components-core';
@@ -58,6 +59,7 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
   private readonly hideOnScroll = () => this.hide();
 
   private changedFieldsSub: Subscription | null = null;
+  private readonly _layouts = new WeakMap<object, {key: string, source: any, areas: string, content: Array<any>}>();
   private reloading = false;
 
   constructor(fieldConverter: FieldConverterService,
@@ -150,11 +152,6 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
     return (subgrid?.content || []).find(i => i?.item?.component?.name === 'document' && i?.item?.layout);
   }
 
-  /** A form with a document next to it: hints move to the info icon, see _overrides.scss. */
-  isCompact(): boolean {
-    return (this.dataSource || []).some(sg => !!this.documentItem(sg));
-  }
-
   /**
    * Grid columns of one subgrid. Without a document viewer it is the library's
    * `repeat(n, 1fr)`. With one, the columns left of the viewer share the form's part of
@@ -162,6 +159,57 @@ export class EtaskTaskContentComponent extends AbstractTaskContentComponent impl
    * the boundary without the net knowing. `minmax(0, …)` lets a column shrink below its
    * content's minimum - without it a long value would push the document off screen.
    */
+  /**
+   * Grid areas and cells of one subgrid, with the document viewer stretched down over
+   * every empty row below it - so it runs alongside the whole form, however long.
+   *
+   * The net cannot say that itself. Netgrif Builder keeps a field at most 10 rows tall:
+   * a taller one is moved below the form on opening the transition's form and written
+   * back there on save (measured: rows 10 stays at x=2, rows 11 lands at x=0 under the
+   * last field). So the net gives the viewer a builder-safe height (`rows` ≤ 10, which
+   * is also its minimum height here), and the rest of the column is claimed here. The
+   * library fills empty tiles with one blank cell each; those in the viewer's columns
+   * are dropped and their tiles given to the viewer. It stops at the first row where
+   * any of those columns holds a real field.
+   */
+  layoutOf(subgrid: any): {areas: string, content: Array<any>} {
+    const key = subgrid?.gridAreas || '';
+    const cached = this._layouts.get(subgrid);
+    if (cached && cached.key === key && cached.source === subgrid.content) {
+      return cached;
+    }
+    const layout = {key, source: subgrid.content, areas: key, content: subgrid.content || []};
+    const doc = this.documentItem(subgrid);
+    if (doc && key) {
+      const grid: Array<Array<string>> = key.split(' | ').map(row => row.split(' '));
+      const id = doc.gridAreaId;
+      const lastRow = grid.map(row => row.includes(id)).lastIndexOf(true);
+      const cols = lastRow < 0 ? [] : grid[lastRow].map((a, i) => a === id ? i : -1).filter(i => i >= 0);
+      const blanks = new Set(layout.content.filter(i => i?.type === TaskElementType.BLANK).map(i => i.gridAreaId));
+      const taken = new Set<string>();
+      for (let r = lastRow + 1; cols.length && r < grid.length; r++) {
+        if (!cols.every(c => blanks.has(grid[r][c]))) {
+          break;
+        }
+        cols.forEach(c => {
+          taken.add(grid[r][c]);
+          grid[r][c] = id;
+        });
+      }
+      if (taken.size) {
+        layout.areas = grid.map(row => row.join(' ')).join(' | ');
+        layout.content = layout.content.filter(i => !taken.has(i.gridAreaId));
+      }
+    }
+    this._layouts.set(subgrid, layout);
+    return layout;
+  }
+
+  /** Minimum height of the viewer's cell: the rows the net gave it. */
+  documentMinHeight(item: any): number | null {
+    return item?.item?.component?.name === 'document' ? (item.item.layout?.rows || 1) * 75 - 16 : null;
+  }
+
   columnsOf(subgrid: any): string {
     const doc = this.documentItem(subgrid);
     const cols = subgrid?.cols || 1;
