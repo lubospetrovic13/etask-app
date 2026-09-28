@@ -605,8 +605,22 @@ body {
   // The grid cell is `overflow-y: auto` in the library, which makes it a scroll
   // container of its own - one that never scrolls - so the document had nothing to
   // stick to and left with the form. Measured: with this, it stays at the top.
+  //
+  // `clip`, not `hidden`, horizontally: `clip` does not make a scroll container, so
+  // the sticky document keeps working, and the cell still cuts anything wider than it.
   .border:has(app-etask-file-document) {
-    overflow: visible;
+    overflow-x: clip;
+    overflow-y: visible;
+
+    // The document took the width of its rendered page, not of its cell. A flex item
+    // is `min-width: auto` - never narrower than its content - so after the window
+    // got narrower the viewer ran past the panel edge, and after it got wider the
+    // page stayed small: the canvas held the whole chain at its old width and the
+    // viewer never saw a new width to re-render at. Measured at 1300px: cell 408px,
+    // viewer 484px.
+    > app-etask-field-component-resolver {
+      min-width: 0;
+    }
   }
 
   // The decision is always at hand: the panel's action row (Finish, Release...) stays
