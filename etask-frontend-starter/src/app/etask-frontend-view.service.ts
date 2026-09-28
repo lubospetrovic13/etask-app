@@ -12,6 +12,7 @@ import {SideNavCasesCaseViewComponent} from './views/side-nav/cases/side-nav-cas
 import {EmptyViewComponent} from './views/side-nav/emptyView/empty-view.component';
 import {FolderViewComponent} from './views/side-nav/folder/folder-view.component';
 import {RecoverComponent} from './views/auth/recover/recover.component';
+import {SignupComponent} from './views/auth/signup/signup.component';
 import {ResetPasswordComponent} from './views/auth/reset-password/reset-password.component';
 import {SidenavComponent} from './views/side-nav/sidenav.component';
 import {SideNavTasksTaskViewComponent} from './views/side-nav/tasks/side-nav-tasks-task-view.component';
@@ -31,6 +32,7 @@ export class EtaskFrontendViewService extends ViewService {
       {id: 'FolderViewComponent', class: FolderViewComponent},
       {id: 'ResetPasswordComponent', class: ResetPasswordComponent},
       {id: 'RecoverComponent', class: RecoverComponent},
+      {id: 'SignupComponent', class: SignupComponent},
       {id: 'SideNavTasksTaskViewComponent', class: SideNavTasksTaskViewComponent},
       {id: 'SideNavCasesCaseViewComponent', class: SideNavCasesCaseViewComponent},
       {id: 'SidenavComponent', class: SidenavComponent},

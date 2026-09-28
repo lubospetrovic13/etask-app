@@ -13,6 +13,7 @@ import {
   HeaderComponentModule,
   ImportNetComponent,
   LoginFormComponentModule,
+  RegistrationFormComponentModule,
   NavigationComponentModule,
   NewCaseComponent,
   PanelComponentModule,
@@ -75,6 +76,7 @@ import {EmptyViewComponent} from './views/side-nav/emptyView/empty-view.componen
 import {ETaskBreadcrumbsComponent} from './views/side-nav/e-task-breadcrumbs/e-task-breadcrumbs.component';
 import {FolderViewComponent} from './views/side-nav/folder/folder-view.component';
 import {RecoverComponent} from './views/auth/recover/recover.component';
+import {SignupComponent} from './views/auth/signup/signup.component';
 import {ResetPasswordComponent} from './views/auth/reset-password/reset-password.component';
 import {ETaskDoubleDrawerComponent} from './views/side-nav/etask-double-drawer/e-task-double-drawer.component';
 import {EtaskLanguageSelectorComponent} from './views/side-nav/etask-language-selector/etask-language-selector.component';
@@ -111,6 +113,7 @@ import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-vie
     ETaskBreadcrumbsComponent,
     FolderViewComponent,
     RecoverComponent,
+    SignupComponent,
     ResetPasswordComponent,
     EtaskLanguageSelectorComponent,
     UriNodeTitlePipe,
@@ -146,6 +149,7 @@ import {WorkflowViewComponent} from './views/workflow/workflow-view/workflow-vie
     ForgottenPasswordFormComponentModule,
     TranslateLibModule,
     LoginFormComponentModule,
+    RegistrationFormComponentModule,
     ToolbarComponentModule,
     NavigationComponentModule,
     HeaderComponentModule,

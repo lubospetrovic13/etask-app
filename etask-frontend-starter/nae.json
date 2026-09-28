@@ -183,6 +183,28 @@
         "path": "recover/:token"
       }
     },
+    "signup": {
+      "component": {
+        "class": "SignupComponent",
+        "from": "./views/auth/signup/signup.component"
+      },
+      "access": "public",
+      "navigation": false,
+      "routing": {
+        "path": "signup"
+      }
+    },
+    "signup-token": {
+      "component": {
+        "class": "SignupComponent",
+        "from": "./views/auth/signup/signup.component"
+      },
+      "access": "public",
+      "navigation": false,
+      "routing": {
+        "path": "signup/:token"
+      }
+    },
     "dashboard": {
       "component": {
         "class": "DashboardComponent",

@@ -59,10 +59,10 @@ NET = "admin/pouzivatelia/pu_pouzivatel"
 NET_ZAL = "admin/pouzivatelia/pu_zalozenie"
 
 # Rola, ktorou sa overuje, ze pozvanie role naozaj prideluje a ze prezije
-# registraciu. `zamestnanec` na dovolenkach: existuje v kazdej instancii, ktora
-# ma nainstalovanu aspon jednu appku, a viaze sa na kartu, ktoru vidno.
-ROLA = os.environ.get("PF_ROLA", "zamestnanec")
-ROLA_SIET = os.environ.get("PF_ROLA_SIET", "hr/dovolenky/dv_ziadost")
+# registraciu. `spravca` zo spravy pouzivatelov: je v kazdej instancii, aj
+# v main bez appiek, a viaze sa na kartu, ktoru vidno.
+ROLA = os.environ.get("PF_ROLA", "spravca")
+ROLA_SIET = os.environ.get("PF_ROLA_SIET", "admin/pouzivatelia/pu_menu")
 
 OK, FAIL = [], []
 
@@ -616,7 +616,7 @@ def main():
     # Tlacidlo nehadze vynimku - odmietnutie je VETA vo formulari, aby
     # spravca vedel, co ma opravit. Preto sa to tu cita z pola, nie zo stavu.
     check("pozvat aktivny ucet sa NEDA",
-          "already exists and is active" in (v8.get("poz_vysledok") or ""),
+          "already has an active account" in (v8.get("poz_vysledok") or ""),
           (v8.get("poz_vysledok") or "")[:180])
     check("neuspesny pokus je v historii", "NOT SENT" in (v8.get("poz_historia") or ""),
           (v8.get("poz_historia") or "").replace("\n", " | ")[:160])
