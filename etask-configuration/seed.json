@@ -5,79 +5,32 @@
     "per verziu siete, takže po re-importe by zoznam bol okamžite neplatný.",
     "pfseed pridelí každú uvedenú rolu na VŠETKÝCH verziách sietí v netScope.",
     "",
-    "netScope tu mieri na príkladovú aplikáciu Service Desk. Pre vlastnú appku",
+    "netScope tu mieri len na správu používateľov. Pre vlastnú appku",
     "ho prepíš (napr. [\"mojaapp/*\"]) alebo pridaj ďalší vzor."
   ],
   "netScope": [
-    "it/service_desk/*",
-    "admin/pouzivatelia/*",
-    "onboarding/*"
+    "admin/pouzivatelia/*"
   ],
   "users": [
     {
       "email": "super@netgrif.com",
       "roles": [
-        "agent",
-        "approver",
-        "hr",
-        "it_admin",
-        "manager",
-        "riaditel",
-        "schv_hotel",
-        "schv_marketing",
-        "schv_restauracia",
-        "schv_sprava",
-        "schv_udrzba",
-        "schv_wellness",
-        "schvalovatel",
-        "spravca",
-        "uctovnik",
-        "veduci",
-        "zadavatel",
-        "zamestnanec"
+        "spravca"
       ]
     },
     {
       "email": "admin@test.local",
       "roles": [
-        "agent",
-        "approver",
-        "hr",
-        "it_admin",
-        "riaditel",
-        "schv_restauracia",
-        "schv_wellness",
-        "schvalovatel",
-        "spravca",
-        "uctovnik",
-        "veduci",
-        "zamestnanec"
+        "spravca"
       ]
     },
     {
       "email": "operator@test.local",
-      "roles": [
-        "approver",
-        "hr",
-        "schv_wellness",
-        "schvalovatel",
-        "specialist",
-        "uctovnik",
-        "veduci",
-        "zadavatel",
-        "zamestnanec"
-      ]
+      "roles": []
     },
     {
       "email": "druhy@test.local",
-      "roles": [
-        "approver",
-        "it_admin",
-        "specialist",
-        "veduci",
-        "zadavatel",
-        "zamestnanec"
-      ]
+      "roles": []
     },
     {
       "email": "viewer@test.local",

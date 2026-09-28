@@ -1,0 +1,31 @@
+{
+  "name": "onboarding",
+  "title": "Employee onboarding",
+  "import": [
+    "on_request.xml",
+    "on_menu.xml"
+  ],
+  "bootstrapCase": [
+    {
+      "net": "onboarding/on_menu",
+      "rebuildOnNewVersion": true
+    }
+  ],
+  "uriNodes": {
+    "onboarding": {
+      "icon": "how_to_reg",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "hr",
+        "approver",
+        "it_admin"
+      ]
+    }
+  },
+  "netScope": [
+    "onboarding/*"
+  ],
+  "tools": [
+    "oncheck.py"
+  ]
+}

@@ -21,7 +21,7 @@
 #      inak si rozbijes instanciu a nevies o tom.
 #
 # Pouzitie:
-#   tools/pfcheck.sh processes/sd_ticket.xml
+#   tools/pfcheck.sh processes/pu_pouzivatel.xml
 #   tools/pfcheck.sh processes/                    # cely priecinok
 #   tools/pfcheck.sh --url http://host:8080 --user a@b.c --pass x net.xml
 #   tools/pfcheck.sh --log /path/backend.log net.xml       # log ako subor

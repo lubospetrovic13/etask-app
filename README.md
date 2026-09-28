@@ -50,7 +50,7 @@ needs, the way you would tell a colleague:
 > Build it on this platform and prove it runs in the engine before you tell me it is done.
 
 A Word document, an e-mail or a diagram you already have works too. The one from the video
-is [`docs/examples/app-request-onboarding.md`](docs/examples/app-request-onboarding.md).
+is [`examples/onboarding/request.md`](examples/onboarding/request.md).
 
 ## What it is good for
 

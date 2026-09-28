@@ -1,0 +1,45 @@
+{
+  "_comment": [
+    "Manifest of this app, read by `pfapp.py` in the starter.",
+    "The category above the app's own folder (it, hr, financie) is deployment",
+    "taxonomy and belongs to the starter manifest, not here - two apps sharing",
+    "one category would otherwise both declare it and `pfapp install` would",
+    "refuse the second one.",
+    "",
+    "Filling in the travel expense xlsx form needs the `vyplnXlsx` primitive",
+    "(XlsxFillService), which lives on the `apps` branch."
+  ],
+  "name": "work-travel",
+  "title": "Work travel",
+  "import": [
+    "pc_nastavenia.xml",
+    "pc_profil.xml",
+    "pc_vyuctovanie.xml",
+    "pc_menu.xml"
+  ],
+  "bootstrapCase": [
+    "hr/cesty/pc_nastavenia",
+    {
+      "net": "hr/cesty/pc_menu",
+      "rebuildOnNewVersion": true
+    }
+  ],
+  "uriNodes": {
+    "hr/cesty": {
+      "icon": "directions_car",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zamestnanec",
+        "veduci",
+        "mzdy",
+        "spravca"
+      ]
+    }
+  },
+  "netScope": [
+    "hr/cesty/*"
+  ],
+  "tools": [
+    "cestycheck.py"
+  ]
+}

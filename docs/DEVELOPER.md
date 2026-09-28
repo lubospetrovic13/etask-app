@@ -253,12 +253,12 @@ Python scripts.
 Give it a real request rather than a technical instruction. The demo used a Word document
 handed over unedited, typo included:
 
-> Read `docs/examples/app-request-onboarding.md` and build the agenda it describes as
+> Read `examples/onboarding/request.md` and build the agenda it describes as
 > Petriflow nets. Follow `CLAUDE.md` and use the `petriflow` skill. Verify with `pflint`
 > and `pfcheck` against the running engine before you tell me it works.
 
 That file is the demo input, kept in the repository so the run can be replayed. What came
-out of it the first time is described in `docs/ONBOARDING.md`, so you can compare. Start the
+out of it the first time is in [`examples/onboarding/`](../examples/onboarding/), so you can compare. Start the
 stack first: without a running engine the agent can write a net but cannot prove it imports.
 
 **The documentation is largely in Slovak.** `CLAUDE.md`, the runbook and the Petriflow skill
@@ -329,9 +329,10 @@ deploy/                 docker compose and the VPS pipeline
 docs/                   the long form documentation (Slovak)
 ```
 
-**Service Desk (`processes/sd_*.xml`) is an example application, not part of the
-framework.** The runtime does not know it by name. Delete those nets and their lines in
-`processes.json` and it is gone.
+**`main` starts empty on purpose:** only user management is imported. The example apps
+live in [`examples/`](../examples/) and are not installed; each has a branch where it is
+(`onboarding`, `service-desk`, `invoices-orders`, and `apps` with several at once), or you
+install one yourself with `python3 tools/pfapp.py install ../examples/<name>`.
 
 ---
 

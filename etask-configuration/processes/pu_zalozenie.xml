@@ -2,7 +2,7 @@
 	<id>admin/pouzivatelia/pu_zalozenie</id>
 	<version>1.0.0</version>
 	<initials>PUN</initials>
-	<title name="net_title">Nový používateľ</title>
+	<title name="net_title">New user</title>
 
 	<!--
 		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
@@ -10,53 +10,53 @@
 		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
 		a nikdy sa nepouzije (ENGINE_ISSUES E15).
 	-->
-	<i18n locale="en">
-		<i18nString name="net_title">New user</i18nString>
-		<i18nString name="spravca_title">User administrator</i18nString>
-		<i18nString name="div_ucet_init">New account</i18nString>
-		<i18nString name="div_pristup_init">System access</i18nString>
-		<i18nString name="div_roly_init">Process roles</i18nString>
-		<i18nString name="div_sprava_init">Message</i18nString>
-		<i18nString name="zl_meno_title">First name</i18nString>
-		<i18nString name="zl_priezvisko_title">Surname</i18nString>
-		<i18nString name="zl_email_title">E-mail</i18nString>
-		<i18nString name="zl_email_desc">The login name. Must be unique in this instance.</i18nString>
-		<i18nString name="zl_heslo_title">Initial password</i18nString>
-		<i18nString name="zl_heslo_desc">Erased from the case once the account exists. Hand it over in person.</i18nString>
-		<i18nString name="zl_authority_title">System authorities</i18nString>
-		<i18nString name="zl_authority_desc">Without ROLE_USER the person can log in but will see no views at all.</i18nString>
-		<i18nString name="zl_proces_title">Process</i18nString>
-		<i18nString name="zl_proces_desc">Pick one process, then its roles. Type to search.</i18nString>
-		<i18nString name="zl_verzia_title">Process version</i18nString>
-		<i18nString name="zl_verzia_desc">"All versions" is what you want almost every time.</i18nString>
-		<i18nString name="zl_roly_title">Roles of the selected process</i18nString>
-		<i18nString name="zl_roly_desc">Filled in once a process is picked. Type to search.</i18nString>
-		<i18nString name="zl_pridaj_placeholder">Add</i18nString>
-		<i18nString name="zl_vycisti_placeholder">Clear</i18nString>
-		<i18nString name="zl_zoznam_title">Role list (internal)</i18nString>
-		<i18nString name="zl_pridelene_title">Roles they will hold</i18nString>
-		<i18nString name="zl_sync_placeholder">Reconcile accounts with no case</i18nString>
-		<i18nString name="zl_vysledok_title">What happened</i18nString>
-		<i18nString name="t_pu_novy_label">Create the user</i18nString>
-		<i18nString name="t_pu_pozvi_label">Invite a user</i18nString>
-		<i18nString name="div_pozvanka_init">Invitation</i18nString>
-		<i18nString name="poz_email_title">E-mail</i18nString>
-		<i18nString name="poz_email_desc">The invitation goes here. It also becomes the login name.</i18nString>
-		<i18nString name="poz_proces_title">Process</i18nString>
-		<i18nString name="poz_proces_desc">Optional. Roles picked here are already in place when the person first signs in.</i18nString>
-		<i18nString name="poz_verzia_title">Process version</i18nString>
-		<i18nString name="poz_verzia_desc">"All versions" is what you want almost every time.</i18nString>
-		<i18nString name="poz_roly_title">Roles of the selected process</i18nString>
-		<i18nString name="poz_roly_desc">Filled in once a process is picked. Type to search.</i18nString>
-		<i18nString name="poz_pridaj_placeholder">Add</i18nString>
-		<i18nString name="poz_vycisti_placeholder">Clear</i18nString>
-		<i18nString name="poz_zoznam_title">Role list (internal)</i18nString>
-		<i18nString name="poz_pridelene_title">Roles they will hold</i18nString>
-		<i18nString name="poz_vysledok_title">What happened</i18nString>
-		<i18nString name="poz_odoslat_placeholder">Send the invitation</i18nString>
-		<i18nString name="poz_historia_title">Invitations sent (newest first)</i18nString>
-		<i18nString name="poz_historia_desc">A log of this counter. Who is still waiting for their invitation is on the Users card, in state "Invited".</i18nString>
+	<i18n locale="sk">
 		<i18nString name="empty_button"></i18nString>
+		<i18nString name="net_title">Nový používateľ</i18nString>
+		<i18nString name="spravca_title">Správca používateľov</i18nString>
+		<i18nString name="div_ucet_init">Nový účet</i18nString>
+		<i18nString name="div_pristup_init">Systémový prístup</i18nString>
+		<i18nString name="div_roly_init">Procesné role</i18nString>
+		<i18nString name="div_sprava_init">Správa</i18nString>
+		<i18nString name="zl_meno_title">Meno</i18nString>
+		<i18nString name="zl_priezvisko_title">Priezvisko</i18nString>
+		<i18nString name="zl_email_title">E-mail</i18nString>
+		<i18nString name="zl_email_desc">Prihlasovacie meno. Musí byť v instancii jedinečný.</i18nString>
+		<i18nString name="zl_heslo_title">Počiatočné heslo</i18nString>
+		<i18nString name="zl_heslo_desc">Po vytvorení sa z prípadu zmaže. Odovzdajte ho osobne.</i18nString>
+		<i18nString name="zl_authority_title">Systémové oprávnenia</i18nString>
+		<i18nString name="zl_authority_desc">Bez ROLE_USER sa používateľ prihlási, ale neuvidí žiadne zobrazenie.</i18nString>
+		<i18nString name="zl_proces_title">Proces</i18nString>
+		<i18nString name="zl_proces_desc">Vyberte jeden proces, potom z neho role. Píšte pre vyhľadanie.</i18nString>
+		<i18nString name="zl_verzia_title">Verzia procesu</i18nString>
+		<i18nString name="zl_verzia_desc">„Všetky verzie" je to, čo chcete skoro vždy.</i18nString>
+		<i18nString name="zl_roly_title">Role vybraného procesu</i18nString>
+		<i18nString name="zl_roly_desc">Naplní sa po výbere procesu. Píšte pre vyhľadanie.</i18nString>
+		<i18nString name="zl_pridaj_placeholder">Pridať</i18nString>
+		<i18nString name="zl_vycisti_placeholder">Vyprázdniť</i18nString>
+		<i18nString name="zl_zoznam_title">Zoznam rolí (interné)</i18nString>
+		<i18nString name="zl_pridelene_title">Role, ktoré bude mať</i18nString>
+		<i18nString name="zl_sync_placeholder">Zosúladiť účty bez prípadu</i18nString>
+		<i18nString name="zl_vysledok_title">Čo sa stalo</i18nString>
+		<i18nString name="t_pu_novy_label">Založiť používateľa</i18nString>
+		<i18nString name="t_pu_pozvi_label">Pozvať používateľa</i18nString>
+		<i18nString name="div_pozvanka_init">Pozvánka</i18nString>
+		<i18nString name="poz_email_title">E-mail</i18nString>
+		<i18nString name="poz_email_desc">Adresa, na ktorú pôjde pozvánka. Je zároveň prihlasovacím menom.</i18nString>
+		<i18nString name="poz_proces_title">Proces</i18nString>
+		<i18nString name="poz_proces_desc">Nepovinné. Role vybrané tu bude mať človek hneď pri prvom prihlásení.</i18nString>
+		<i18nString name="poz_verzia_title">Verzia procesu</i18nString>
+		<i18nString name="poz_verzia_desc">„Všetky verzie" je to, čo chcete skoro vždy.</i18nString>
+		<i18nString name="poz_roly_title">Role vybraného procesu</i18nString>
+		<i18nString name="poz_roly_desc">Naplní sa po výbere procesu. Píšte pre vyhľadanie.</i18nString>
+		<i18nString name="poz_pridaj_placeholder">Pridať</i18nString>
+		<i18nString name="poz_vycisti_placeholder">Vyprázdniť</i18nString>
+		<i18nString name="poz_zoznam_title">Zoznam rolí (interné)</i18nString>
+		<i18nString name="poz_pridelene_title">Role, ktoré bude mať</i18nString>
+		<i18nString name="poz_vysledok_title">Čo sa stalo</i18nString>
+		<i18nString name="poz_odoslat_placeholder">Odoslať pozvánku</i18nString>
+		<i18nString name="poz_historia_title">Odoslané pozvánky (od najnovšej)</i18nString>
+		<i18nString name="poz_historia_desc">Záznam tohto pultu. Kto ešte čaká na pozvánku, je na karte Používatelia v stave „Pozvaný“.</i18nString>
 	</i18n>
 	<icon>person_add</icon>
 	<defaultCaseName>Nový používateľ</defaultCaseName>
@@ -215,74 +215,74 @@ changeCaseProperty("color").about { "blue" }
 	</roleRef>
 	<role>
 		<id>spravca</id>
-		<title name="spravca_title">Správca používateľov</title>
+		<title name="spravca_title">User administrator</title>
 	</role>
 	<data type="i18n">
 		<id>div_ucet</id>
 		<title/>
-		<init name="div_ucet_init">Nový účet</init>
+		<init name="div_ucet_init">New account</init>
 	</data>
 	<data type="i18n">
 		<id>div_pristup</id>
 		<title/>
-		<init name="div_pristup_init">Systémový prístup</init>
+		<init name="div_pristup_init">System access</init>
 	</data>
 	<data type="i18n">
 		<id>div_roly</id>
 		<title/>
-		<init name="div_roly_init">Procesné role</init>
+		<init name="div_roly_init">Process roles</init>
 	</data>
 	<data type="i18n">
 		<id>div_sprava</id>
 		<title/>
-		<init name="div_sprava_init">Správa</init>
+		<init name="div_sprava_init">Message</init>
 	</data>
 	<data type="text">
 		<id>zl_meno</id>
-		<title name="zl_meno_title">Meno</title>
+		<title name="zl_meno_title">First name</title>
 	</data>
 	<data type="text">
 		<id>zl_priezvisko</id>
-		<title name="zl_priezvisko_title">Priezvisko</title>
+		<title name="zl_priezvisko_title">Surname</title>
 	</data>
 	<data type="text">
 		<id>zl_email</id>
 		<title name="zl_email_title">E-mail</title>
-		<desc name="zl_email_desc">Prihlasovacie meno. Musí byť v instancii jedinečný.</desc>
+		<desc name="zl_email_desc">The login name. Must be unique in this instance.</desc>
 	</data>
 	<data type="text">
 		<id>zl_heslo</id>
-		<title name="zl_heslo_title">Počiatočné heslo</title>
-		<desc name="zl_heslo_desc">Po vytvorení sa z prípadu zmaže. Odovzdajte ho osobne.</desc>
+		<title name="zl_heslo_title">Initial password</title>
+		<desc name="zl_heslo_desc">Erased from the case once the account exists. Hand it over in person.</desc>
 		<component>
 			<name>password</name>
 		</component>
 	</data>
 	<data type="multichoice_map">
 		<id>zl_authority</id>
-		<title name="zl_authority_title">Systémové oprávnenia</title>
-		<desc name="zl_authority_desc">Bez ROLE_USER sa používateľ prihlási, ale neuvidí žiadne zobrazenie.</desc>
+		<title name="zl_authority_title">System authorities</title>
+		<desc name="zl_authority_desc">Without ROLE_USER the person can log in but will see no views at all.</desc>
 		<component>
 			<name>autocomplete</name>
 		</component>
 	</data>
 	<data type="enumeration_map">
 		<id>zl_proces</id>
-		<title name="zl_proces_title">Proces</title>
-		<desc name="zl_proces_desc">Vyberte jeden proces, potom z neho role. Píšte pre vyhľadanie.</desc>
+		<title name="zl_proces_title">Process</title>
+		<desc name="zl_proces_desc">Pick one process, then its roles. Type to search.</desc>
 		<component>
 			<name>autocomplete</name>
 		</component>
 	</data>
 	<data type="enumeration_map">
 		<id>zl_verzia</id>
-		<title name="zl_verzia_title">Verzia procesu</title>
-		<desc name="zl_verzia_desc">„Všetky verzie" je to, čo chcete skoro vždy.</desc>
+		<title name="zl_verzia_title">Process version</title>
+		<desc name="zl_verzia_desc">"All versions" is what you want almost every time.</desc>
 	</data>
 	<data type="multichoice_map">
 		<id>zl_roly</id>
-		<title name="zl_roly_title">Role vybraného procesu</title>
-		<desc name="zl_roly_desc">Naplní sa po výbere procesu. Píšte pre vyhľadanie.</desc>
+		<title name="zl_roly_title">Roles of the selected process</title>
+		<desc name="zl_roly_desc">Filled in once a process is picked. Type to search.</desc>
 		<component>
 			<name>autocomplete</name>
 		</component>
@@ -290,22 +290,22 @@ changeCaseProperty("color").about { "blue" }
 	<data type="button">
 		<id>zl_pridaj</id>
 		<title/>
-		<placeholder name="zl_pridaj_placeholder">Pridať</placeholder>
+		<placeholder name="zl_pridaj_placeholder">Add</placeholder>
 		<init>1</init>
 	</data>
 	<data type="button">
 		<id>zl_vycisti</id>
 		<title/>
-		<placeholder name="zl_vycisti_placeholder">Vyprázdniť</placeholder>
+		<placeholder name="zl_vycisti_placeholder">Clear</placeholder>
 		<init>1</init>
 	</data>
 	<data type="text">
 		<id>zl_zoznam</id>
-		<title name="zl_zoznam_title">Zoznam rolí (interné)</title>
+		<title name="zl_zoznam_title">Role list (internal)</title>
 	</data>
 	<data type="text">
 		<id>zl_pridelene</id>
-		<title name="zl_pridelene_title">Role, ktoré bude mať</title>
+		<title name="zl_pridelene_title">Roles they will hold</title>
 		<component>
 			<name>textarea</name>
 		</component>
@@ -313,36 +313,36 @@ changeCaseProperty("color").about { "blue" }
 	<data type="button">
 		<id>zl_sync</id>
 		<title/>
-		<placeholder name="zl_sync_placeholder">Zosúladiť účty bez prípadu</placeholder>
+		<placeholder name="zl_sync_placeholder">Reconcile accounts with no case</placeholder>
 		<init>1</init>
 	</data>
 	<data type="i18n">
 		<id>div_pozvanka</id>
 		<title/>
-		<init name="div_pozvanka_init">Pozvánka</init>
+		<init name="div_pozvanka_init">Invitation</init>
 	</data>
 	<data type="text">
 		<id>poz_email</id>
 		<title name="poz_email_title">E-mail</title>
-		<desc name="poz_email_desc">Adresa, na ktorú pôjde pozvánka. Je zároveň prihlasovacím menom.</desc>
+		<desc name="poz_email_desc">The invitation goes here. It also becomes the login name.</desc>
 	</data>
 	<data type="enumeration_map">
 		<id>poz_proces</id>
-		<title name="poz_proces_title">Proces</title>
-		<desc name="poz_proces_desc">Nepovinné. Role vybrané tu bude mať človek hneď pri prvom prihlásení.</desc>
+		<title name="poz_proces_title">Process</title>
+		<desc name="poz_proces_desc">Optional. Roles picked here are already in place when the person first signs in.</desc>
 		<component>
 			<name>autocomplete</name>
 		</component>
 	</data>
 	<data type="enumeration_map">
 		<id>poz_verzia</id>
-		<title name="poz_verzia_title">Verzia procesu</title>
-		<desc name="poz_verzia_desc">„Všetky verzie" je to, čo chcete skoro vždy.</desc>
+		<title name="poz_verzia_title">Process version</title>
+		<desc name="poz_verzia_desc">"All versions" is what you want almost every time.</desc>
 	</data>
 	<data type="multichoice_map">
 		<id>poz_roly</id>
-		<title name="poz_roly_title">Role vybraného procesu</title>
-		<desc name="poz_roly_desc">Naplní sa po výbere procesu. Píšte pre vyhľadanie.</desc>
+		<title name="poz_roly_title">Roles of the selected process</title>
+		<desc name="poz_roly_desc">Filled in once a process is picked. Type to search.</desc>
 		<component>
 			<name>autocomplete</name>
 		</component>
@@ -350,22 +350,22 @@ changeCaseProperty("color").about { "blue" }
 	<data type="button">
 		<id>poz_pridaj</id>
 		<title/>
-		<placeholder name="poz_pridaj_placeholder">Pridať</placeholder>
+		<placeholder name="poz_pridaj_placeholder">Add</placeholder>
 		<init>1</init>
 	</data>
 	<data type="button">
 		<id>poz_vycisti</id>
 		<title/>
-		<placeholder name="poz_vycisti_placeholder">Vyprázdniť</placeholder>
+		<placeholder name="poz_vycisti_placeholder">Clear</placeholder>
 		<init>1</init>
 	</data>
 	<data type="text">
 		<id>poz_zoznam</id>
-		<title name="poz_zoznam_title">Zoznam rolí (interné)</title>
+		<title name="poz_zoznam_title">Role list (internal)</title>
 	</data>
 	<data type="text">
 		<id>poz_pridelene</id>
-		<title name="poz_pridelene_title">Role, ktoré bude mať</title>
+		<title name="poz_pridelene_title">Roles they will hold</title>
 		<component>
 			<name>textarea</name>
 		</component>
@@ -373,27 +373,27 @@ changeCaseProperty("color").about { "blue" }
 	<data type="button">
 		<id>poz_odoslat</id>
 		<title/>
-		<placeholder name="poz_odoslat_placeholder">Odoslať pozvánku</placeholder>
+		<placeholder name="poz_odoslat_placeholder">Send the invitation</placeholder>
 		<init>1</init>
 	</data>
 	<data type="text">
 		<id>poz_vysledok</id>
-		<title name="poz_vysledok_title">Čo sa stalo</title>
+		<title name="poz_vysledok_title">What happened</title>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>poz_historia</id>
-		<title name="poz_historia_title">Odoslané pozvánky (od najnovšej)</title>
-		<desc name="poz_historia_desc">Záznam tohto pultu. Kto ešte čaká na pozvánku, je na karte Používatelia v stave „Pozvaný“.</desc>
+		<title name="poz_historia_title">Invitations sent (newest first)</title>
+		<desc name="poz_historia_desc">A log of this counter. Who is still waiting for their invitation is on the Users card, in state "Invited".</desc>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>zl_vysledok</id>
-		<title name="zl_vysledok_title">Čo sa stalo</title>
+		<title name="zl_vysledok_title">What happened</title>
 		<component>
 			<name>textarea</name>
 		</component>
@@ -402,7 +402,7 @@ changeCaseProperty("color").about { "blue" }
 		<id>t_pu_novy</id>
 		<x>180</x>
 		<y>86</y>
-		<label name="t_pu_novy_label">Založiť používateľa</label>
+		<label name="t_pu_novy_label">Create the user</label>
 		<icon>person_add</icon>
 		<assignPolicy>manual</assignPolicy>
 		<!--
@@ -688,9 +688,9 @@ changeCaseProperty("title").about { "New user" }
 	</transition>
 	<transition>
 		<id>t_pu_pozvi</id>
-		<x>197</x>
+		<x>180</x>
 		<y>302</y>
-		<label name="t_pu_pozvi_label">Pozvať používateľa</label>
+		<label name="t_pu_pozvi_label">Invite a user</label>
 		<icon>mail</icon>
 		<assignPolicy>manual</assignPolicy>
 		<!--
@@ -1019,7 +1019,7 @@ change poz_proces options { processOptions() }
 		<destinationId>p_pozvanka</destinationId>
 		<multiplicity>1</multiplicity>
 		<breakpoint>
-			<x>197</x>
+			<x>180</x>
 			<y>256</y>
 		</breakpoint>
 		<breakpoint>

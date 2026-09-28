@@ -46,16 +46,20 @@ nezobrazí vlastné polia a build o tom mlčí.
 
 ## Šablóna, nie nasadenie
 
-Repozitár drží framework, infraštruktúru, správu používateľov a **jednu**
-príkladovú appku (Service Desk) — jej kartu vidí len admin, aby sa príklad
-nedal zameniť za skutočnú appku. Klientske appky žijú vo vlastných repách
-a do checkoutu sa dostanú `pfapp install`:
+`main` drží framework, infraštruktúru a správu používateľov — **pri štarte sa
+neimportuje žiadna appka**. Príklady sú hotové appky v `examples/<appka>/`
+(`app.json`, siete, akceptačný test), mimo manifestu, a do checkoutu sa dostanú
+`pfapp install ../examples/<appka>`. Vetvy s nainštalovanými príkladmi:
 
-| appka | repozitár |
+| vetva | appky |
 |---|---|
-| Dovolenky | `../etask-app-dovolenky` |
-| Objednávky a faktúry | `../etask-app-objednavky-faktury` |
-| Majetok | `../etask-app-majetok` |
+| `onboarding` | onboarding |
+| `service-desk` | service desk (+ DocuSeal, formulárové zobrazenia) |
+| `invoices-orders` | faktúry a objednávky |
+| `apps` | onboarding, dovolenky, pracovné cesty, faktúry a objednávky |
+
+Predvolený jazyk sietí aj portálu je angličtina, slovenčina je preklad.
+Vetvy `deprecated/*` sú staré pokusy, nestavia sa na nich.
 
 `pfapp list` povie, čo je nainštalované, `pfapp status` či sa nasadená kópia
 nerozišla so zdrojom. Inštalácia mení `processes.json` a `seed.json` — to je

@@ -1,0 +1,44 @@
+{
+  "_comment": [
+    "Manifest of this app, read by `pfapp.py` in the starter.",
+    "The category above the app's own folder (it, hr, financie) is deployment",
+    "taxonomy and belongs to the starter manifest, not here - two apps sharing",
+    "one category would otherwise both declare it and `pfapp install` would",
+    "refuse the second one.",
+    "",
+    "Needs the DocuSeal signing service and the form views that live on the",
+    "`service-desk` branch; on `main` the SLA contract signing step fails."
+  ],
+  "name": "service-desk",
+  "title": "Service Desk",
+  "import": [
+    "sd_sla_plan.xml",
+    "sd_organization.xml",
+    "sd_ticket.xml",
+    "sd_menu.xml"
+  ],
+  "bootstrapCase": [
+    {
+      "net": "it/service_desk/sd_menu",
+      "rebuildOnNewVersion": true
+    }
+  ],
+  "uriNodes": {
+    "it/service_desk": {
+      "icon": "support_agent",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "sd_admin",
+        "sd_agent",
+        "sd_customer"
+      ]
+    }
+  },
+  "netScope": [
+    "it/service_desk/*"
+  ],
+  "tools": [
+    "sdcheck.py",
+    "sddemo.py"
+  ]
+}

@@ -48,7 +48,7 @@ COPY etask-configuration/processes /etask-configuration/processes
 COPY etask-configuration/processes.json /etask-configuration/processes.json
 
 RUN mvn -B -DskipTests=true -f /app/pom.xml clean package \
- && test -f /app/target/classes/petriNets/sd_ticket.xml \
+ && test -f /app/target/classes/petriNets/pu_menu.xml \
  && test -f /app/target/classes/petriNets/processes.json \
  || { echo "CHYBA: siete alebo manifest sa nedostali do buildu"; exit 1; }
 

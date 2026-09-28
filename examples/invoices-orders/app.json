@@ -1,0 +1,82 @@
+{
+  "_comment": [
+    "Manifest tejto aplikácie. Číta ho `pfapp.py` v starteri.",
+    "",
+    "Kategóriu `financie` tu zámerne NEDEKLARUJEME. Kategórie (hr, financie, it,",
+    "admin) sú taxonómia nasadenia a patria do manifestu starteru - aplikácia",
+    "deklaruje len svoje vlastné priečinky. Inak by tú istú kategóriu deklarovali",
+    "dve aplikácie naraz a `pfapp install` tú druhú odmietne hláškou",
+    "'uzol URI uz v manifeste je'."
+  ],
+  "name": "invoices-orders",
+  "title": "Invoices and orders",
+  "import": [
+    "fa_faktura.xml",
+    "ob_objednavka.xml",
+    "sc_menu.xml",
+    "sc_nastavenia.xml"
+  ],
+  "bootstrapCase": [
+    {
+      "net": "financie/sc_menu",
+      "rebuildOnNewVersion": true
+    },
+    {
+      "net": "admin/nastavenia/sc_nastavenia",
+      "rebuildOnNewVersion": true
+    }
+  ],
+  "uriNodes": {
+    "financie/faktury": {
+      "icon": "receipt_long",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "referent",
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "financie/objednavky": {
+      "icon": "shopping_cart",
+      "requiredAuthorities": [],
+      "requiredProcessRoles": [
+        "zadavatel",
+        "schvalovatel",
+        "riaditel",
+        "uctovnik",
+        "schv_hotel",
+        "schv_restauracia",
+        "schv_wellness",
+        "schv_udrzba",
+        "schv_marketing",
+        "schv_sprava"
+      ]
+    },
+    "admin/nastavenia": {
+      "icon": "tune",
+      "requiredAuthorities": [
+        "ROLE_ADMIN"
+      ],
+      "requiredProcessRoles": []
+    }
+  },
+  "netScope": [
+    "financie/*",
+    "admin/nastavenia/*"
+  ],
+  "tools": [
+    "sccheck.py",
+    "fakcheck.py"
+  ],
+  "docs": [
+    "PRIRUCKA.md"
+  ]
+}

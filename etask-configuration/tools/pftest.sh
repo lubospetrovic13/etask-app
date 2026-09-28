@@ -125,12 +125,10 @@ fi
 
 # a naopak: na sietach repozitara musi byt ticho. Toto je test na FALSE
 # POSITIVES - linter, ktory oznacuje funkcny kod, naucí agenta ignorovat vystup.
-if $PY tools/pfi18n.py processes/sd_customer.xml processes/sd_intake.xml \
-        processes/sd_menu.xml processes/sd_ticket.xml processes/sd_work_item.xml \
-        >/dev/null 2>&1; then
+if $PY tools/pfi18n.py processes/pu_menu.xml processes/pu_pouzivatel.xml processes/pu_zalozenie.xml >/dev/null 2>&1; then
   ok "pfi18n neoznacil prelozene siete"
 else
-  bad "pfi18n oznacil prelozene siete Service Desku"
+  bad "pfi18n oznacil prelozene siete spravy pouzivatelov"
 fi
 
 # pfgroovy: musi chytit rozbite Groovy

@@ -1,4 +1,57 @@
-# Nástup nového zamestnanca
+# Example: employee onboarding
+
+This is the app from the demo video. The input was [`request.md`](request.md), a Word
+document from HR handed to the AI assistant unedited. What came out are the two Petriflow
+nets in `processes/` and the acceptance test in `tools/oncheck.py`.
+
+Use it as a reference: ask your assistant to build the request yourself and compare.
+
+**Where it is installed.** On the `onboarding` and `apps` branches it appears in the portal
+as *Employee onboarding* right after `docker compose up`, with its roles already in
+`etask-configuration/seed.json`. Sign in as `operator@test.local` (HR) or `druhy@test.local`
+(manager and IT) with the test password to walk through it, and prove it works from
+`etask-configuration/`:
+
+```bash
+python3 tools/oncheck.py
+```
+
+## Installing it elsewhere
+
+On `main`, in another checkout, or after `python3 tools/pfapp.py remove onboarding`:
+
+```bash
+cd etask-configuration
+python3 tools/pfapp.py install ../examples/onboarding
+```
+
+Then give the test users the three roles of the app in `etask-configuration/seed.json`:
+
+| user | roles |
+|---|---|
+| `super@netgrif.com`, `admin@test.local` | `hr`, `approver`, `it_admin` |
+| `operator@test.local` | `hr`, `approver` |
+| `druhy@test.local` | `approver`, `it_admin` |
+
+Then rebuild and restart from the repository root. The rebuild is not optional: the menu card
+and the views of the app come from the manifest, and the manifest is packed into the backend
+image. With only the nets imported, the process works but has no card in the portal.
+
+```bash
+docker compose up -d --build
+```
+
+The `setup` service imports the nets and assigns the roles. Sign out and back in, because a
+running session keeps the old roles. Prove it works, from `etask-configuration/`:
+
+```bash
+python3 tools/oncheck.py
+```
+
+---
+
+## Design notes (Slovak)
+
 
 Appka k zadaniu *Application request: Onboarding a new employee*. Jedna
 žiadosť, jedno schválenie a jedno miesto, kde vidno, kde to viazne — namiesto

@@ -143,9 +143,12 @@ def main():
         pf.check(f"{nazov} {'vidi' if ocakavane else 'nevidi'} kartu '{CARD}'",
                  (CARD in paths) == ocakavane, paths)
         if not ocakavane:
-            # Bez tejto kontroly by test presiel aj vtedy, keby ucet nevidel
-            # ziadnu kartu - a nedokazoval by nic.
-            pf.check("ucet bez roli pritom ine karty vidi", len(paths) > 0, paths)
+            # Bez tejto kontroly by test presiel aj vtedy, keby volanie menu
+            # zlyhalo - prazdny zoznam by vyzeral ako "kartu nevidi". Kedysi sa
+            # to overovalo tym, ze ucet vidi INE karty; v cistej instancii ale
+            # ucet bez roli nevidi ziadnu, a to je spravne.
+            st, _ = nikto.get("/api/v2/uri/root")
+            pf.check("menu pre ucet bez roli naozaj odpovedalo", st == 200, st)
 
     print("\n=== 2. zobrazenia a stlpce ===")
     items = pockaj(lambda: pf.menu_items(boss, prefix="on_"),

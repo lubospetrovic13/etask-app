@@ -2,7 +2,7 @@
 	<id>admin/pouzivatelia/pu_pouzivatel</id>
 	<version>1.0.0</version>
 	<initials>PUZ</initials>
-	<title name="net_title">Používateľ</title>
+	<title name="net_title">User</title>
 
 	<!--
 		Preklady. Kluc je atribut `name` na prelozitelnom elemente;
@@ -10,38 +10,38 @@
 		Kod jazyka musi byt DVOJPISMENOVY - `en-US` sa naimportuje
 		a nikdy sa nepouzije (ENGINE_ISSUES E15).
 	-->
-	<i18n locale="en">
-		<i18nString name="net_title">User</i18nString>
-		<i18nString name="spravca_title">User administrator</i18nString>
-		<i18nString name="div_ucet_init">Account</i18nString>
-		<i18nString name="div_pristup_init">System access</i18nString>
-		<i18nString name="div_roly_init">Process roles</i18nString>
-		<i18nString name="div_vysledok_init">Result</i18nString>
-		<i18nString name="pu_userid_title">Account id</i18nString>
-		<i18nString name="pu_userid_desc">Binds the case to the account. Set when the case is created.</i18nString>
+	<i18n locale="sk">
+		<i18nString name="net_title">Používateľ</i18nString>
+		<i18nString name="spravca_title">Správca používateľov</i18nString>
+		<i18nString name="div_ucet_init">Účet</i18nString>
+		<i18nString name="div_pristup_init">Systémový prístup</i18nString>
+		<i18nString name="div_roly_init">Procesné role</i18nString>
+		<i18nString name="div_vysledok_init">Výsledok</i18nString>
+		<i18nString name="pu_userid_title">Id účtu</i18nString>
+		<i18nString name="pu_userid_desc">Zviazanie prípadu s účtom. Nastavuje sa pri zakladaní.</i18nString>
 		<i18nString name="pu_email_title">E-mail</i18nString>
-		<i18nString name="pu_email_desc">The login name. It cannot be changed - it is the key for seed.json and for the tests as well.</i18nString>
-		<i18nString name="pu_meno_title">First name</i18nString>
-		<i18nString name="pu_priezvisko_title">Surname</i18nString>
-		<i18nString name="pu_heslo_title">New password</i18nString>
-		<i18nString name="pu_heslo_desc">Leave empty if the password is not to change.</i18nString>
-		<i18nString name="pu_authority_title">System authorities</i18nString>
-		<i18nString name="pu_authority_desc">Without ROLE_USER the person can log in but will see no views at all.</i18nString>
-		<i18nString name="pu_proces_title">Process</i18nString>
-		<i18nString name="pu_proces_desc">Pick one process, then its roles. Type to search.</i18nString>
-		<i18nString name="pu_verzia_title">Process version</i18nString>
-		<i18nString name="pu_verzia_desc">A role is minted per net version. "All versions" is what you want almost every time.</i18nString>
-		<i18nString name="pu_roly_title">Roles of the selected process</i18nString>
-		<i18nString name="pu_roly_desc">Filled in once a process is picked. Type to search.</i18nString>
-		<i18nString name="pu_pridaj_placeholder">Add</i18nString>
-		<i18nString name="pu_vycisti_placeholder">Clear</i18nString>
-		<i18nString name="pu_zoznam_title">Role list (internal)</i18nString>
-		<i18nString name="pu_pridelene_title">Roles they will hold</i18nString>
-		<i18nString name="pu_stav_label_title">Status</i18nString>
-		<i18nString name="pu_vysledok_title">What happened</i18nString>
-		<i18nString name="pu_zmenil_title">Last changed by</i18nString>
-		<i18nString name="pu_zmenene_o_title">Last changed</i18nString>
-		<i18nString name="t_pu_uprava_label">Account</i18nString>
+		<i18nString name="pu_email_desc">Prihlasovacie meno. Zmeniť sa nedá — je to kľúč aj pre seed.json a testy.</i18nString>
+		<i18nString name="pu_meno_title">Meno</i18nString>
+		<i18nString name="pu_priezvisko_title">Priezvisko</i18nString>
+		<i18nString name="pu_heslo_title">Nové heslo</i18nString>
+		<i18nString name="pu_heslo_desc">Nechajte prázdne, ak sa heslo meniť nemá.</i18nString>
+		<i18nString name="pu_authority_title">Systémové oprávnenia</i18nString>
+		<i18nString name="pu_authority_desc">Bez ROLE_USER sa používateľ prihlási, ale neuvidí žiadne zobrazenie.</i18nString>
+		<i18nString name="pu_proces_title">Proces</i18nString>
+		<i18nString name="pu_proces_desc">Vyberte jeden proces, potom z neho role. Píšte pre vyhľadanie.</i18nString>
+		<i18nString name="pu_verzia_title">Verzia procesu</i18nString>
+		<i18nString name="pu_verzia_desc">Rola sa razí per verziu siete. „Všetky verzie" je to, čo chcete skoro vždy.</i18nString>
+		<i18nString name="pu_roly_title">Role vybraného procesu</i18nString>
+		<i18nString name="pu_roly_desc">Naplní sa po výbere procesu. Píšte pre vyhľadanie.</i18nString>
+		<i18nString name="pu_pridaj_placeholder">Pridať</i18nString>
+		<i18nString name="pu_vycisti_placeholder">Vyprázdniť</i18nString>
+		<i18nString name="pu_zoznam_title">Zoznam rolí (interné)</i18nString>
+		<i18nString name="pu_pridelene_title">Role, ktoré bude mať</i18nString>
+		<i18nString name="pu_stav_label_title">Stav</i18nString>
+		<i18nString name="pu_vysledok_title">Čo sa stalo</i18nString>
+		<i18nString name="pu_zmenil_title">Naposledy zmenil</i18nString>
+		<i18nString name="pu_zmenene_o_title">Naposledy zmenené</i18nString>
+		<i18nString name="t_pu_uprava_label">Účet</i18nString>
 	</i18n>
 	<icon>manage_accounts</icon>
 	<defaultCaseName>Nezviazaný prípad</defaultCaseName>
@@ -201,79 +201,79 @@ changeCaseProperty("color").about { "red" }
 	</roleRef>
 	<role>
 		<id>spravca</id>
-		<title name="spravca_title">Správca používateľov</title>
+		<title name="spravca_title">User administrator</title>
 	</role>
 	<data type="i18n">
 		<id>div_ucet</id>
 		<title/>
-		<init name="div_ucet_init">Účet</init>
+		<init name="div_ucet_init">Account</init>
 	</data>
 	<data type="i18n">
 		<id>div_pristup</id>
 		<title/>
-		<init name="div_pristup_init">Systémový prístup</init>
+		<init name="div_pristup_init">System access</init>
 	</data>
 	<data type="i18n">
 		<id>div_roly</id>
 		<title/>
-		<init name="div_roly_init">Procesné role</init>
+		<init name="div_roly_init">Process roles</init>
 	</data>
 	<data type="i18n">
 		<id>div_vysledok</id>
 		<title/>
-		<init name="div_vysledok_init">Výsledok</init>
+		<init name="div_vysledok_init">Result</init>
 	</data>
 	<data type="text" immediate="true">
 		<id>pu_userid</id>
-		<title name="pu_userid_title">Id účtu</title>
-		<desc name="pu_userid_desc">Zviazanie prípadu s účtom. Nastavuje sa pri zakladaní.</desc>
+		<title name="pu_userid_title">Account id</title>
+		<desc name="pu_userid_desc">Binds the case to the account. Set when the case is created.</desc>
 	</data>
 	<data type="text" immediate="true">
 		<id>pu_email</id>
 		<title name="pu_email_title">E-mail</title>
-		<desc name="pu_email_desc">Prihlasovacie meno. Zmeniť sa nedá — je to kľúč aj pre seed.json a testy.</desc>
+		<desc name="pu_email_desc">The login name. It cannot be changed - it is the key for seed.json and for the tests as well.</desc>
 	</data>
 	<data type="text" immediate="true">
 		<id>pu_meno</id>
-		<title name="pu_meno_title">Meno</title>
+		<title name="pu_meno_title">First name</title>
 	</data>
 	<data type="text" immediate="true">
 		<id>pu_priezvisko</id>
-		<title name="pu_priezvisko_title">Priezvisko</title>
+		<title name="pu_priezvisko_title">Surname</title>
 	</data>
 	<data type="text">
 		<id>pu_heslo</id>
-		<title name="pu_heslo_title">Nové heslo</title>
-		<desc name="pu_heslo_desc">Nechajte prázdne, ak sa heslo meniť nemá.</desc>
+		<title name="pu_heslo_title">New password</title>
+		<desc name="pu_heslo_desc">Leave empty if the password is not to change.</desc>
 		<component>
 			<name>password</name>
 		</component>
 	</data>
 	<data type="multichoice_map">
 		<id>pu_authority</id>
-		<title name="pu_authority_title">Systémové oprávnenia</title>
-		<desc name="pu_authority_desc">Bez ROLE_USER sa používateľ prihlási, ale neuvidí žiadne zobrazenie.</desc>
+		<title name="pu_authority_title">System authorities</title>
+		<desc name="pu_authority_desc">Without ROLE_USER the person can log in but will see no views at all.</desc>
 		<component>
 			<name>autocomplete</name>
 		</component>
 	</data>
 	<data type="enumeration_map">
 		<id>pu_proces</id>
-		<title name="pu_proces_title">Proces</title>
-		<desc name="pu_proces_desc">Vyberte jeden proces, potom z neho role. Píšte pre vyhľadanie.</desc>
+		<title name="pu_proces_title">Process</title>
+		<desc name="pu_proces_desc">Pick one process, then its roles. Type to search.</desc>
 		<component>
 			<name>autocomplete</name>
 		</component>
 	</data>
 	<data type="enumeration_map">
 		<id>pu_verzia</id>
-		<title name="pu_verzia_title">Verzia procesu</title>
-		<desc name="pu_verzia_desc">Rola sa razí per verziu siete. „Všetky verzie" je to, čo chcete skoro vždy.</desc>
+		<title name="pu_verzia_title">Process version</title>
+		<desc name="pu_verzia_desc">A role is minted per net version. "All versions" is what you want almost every time.</desc>
 	</data>
 	<data type="multichoice_map">
 		<id>pu_roly</id>
-		<title name="pu_roly_title">Role vybraného procesu</title>
-		<desc name="pu_roly_desc">Naplní sa po výbere procesu. Píšte pre vyhľadanie.</desc>
+		<title name="pu_roly_title">Roles of the selected process</title>
+		<desc name="pu_roly_desc">Filled in once a process is picked. Type to search.</desc>
 		<component>
 			<name>autocomplete</name>
 		</component>
@@ -281,50 +281,50 @@ changeCaseProperty("color").about { "red" }
 	<data type="button">
 		<id>pu_pridaj</id>
 		<title/>
-		<placeholder name="pu_pridaj_placeholder">Pridať</placeholder>
+		<placeholder name="pu_pridaj_placeholder">Add</placeholder>
 		<init>1</init>
 	</data>
 	<data type="button">
 		<id>pu_vycisti</id>
 		<title/>
-		<placeholder name="pu_vycisti_placeholder">Vyprázdniť</placeholder>
+		<placeholder name="pu_vycisti_placeholder">Clear</placeholder>
 		<init>1</init>
 	</data>
 	<data type="text">
 		<id>pu_zoznam</id>
-		<title name="pu_zoznam_title">Zoznam rolí (interné)</title>
+		<title name="pu_zoznam_title">Role list (internal)</title>
 	</data>
 	<data type="text">
 		<id>pu_pridelene</id>
-		<title name="pu_pridelene_title">Role, ktoré bude mať</title>
+		<title name="pu_pridelene_title">Roles they will hold</title>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text" immediate="true">
 		<id>pu_stav_label</id>
-		<title name="pu_stav_label_title">Stav</title>
+		<title name="pu_stav_label_title">Status</title>
 	</data>
 	<data type="text">
 		<id>pu_vysledok</id>
-		<title name="pu_vysledok_title">Čo sa stalo</title>
+		<title name="pu_vysledok_title">What happened</title>
 		<component>
 			<name>textarea</name>
 		</component>
 	</data>
 	<data type="text">
 		<id>pu_zmenil</id>
-		<title name="pu_zmenil_title">Naposledy zmenil</title>
+		<title name="pu_zmenil_title">Last changed by</title>
 	</data>
 	<data type="dateTime">
 		<id>pu_zmenene_o</id>
-		<title name="pu_zmenene_o_title">Naposledy zmenené</title>
+		<title name="pu_zmenene_o_title">Last changed</title>
 	</data>
 	<transition>
 		<id>t_pu_uprava</id>
 		<x>180</x>
 		<y>86</y>
-		<label name="t_pu_uprava_label">Účet</label>
+		<label name="t_pu_uprava_label">Account</label>
 		<icon>manage_accounts</icon>
 		<assignPolicy>manual</assignPolicy>
 		<!--

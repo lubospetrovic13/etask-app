@@ -31,20 +31,12 @@
     "je to, čo potrebuje každá inštancia, a bez nej sa nový používateľ zakladá",
     "cez API. Jej kartu vidí rola spravca.",
     "",
-    "Service Desk (sd_*) je príkladová aplikácia, nie časť frameworku.",
-    "Odstránenie: zmaž processes/sd_*.xml, ich riadky v \"import\", položku",
-    "\"it/service_desk\" nižšie a netScope v seed.json.",
-    "",
-    "Jeho kartu vidí LEN admin (requiredAuthorities ROLE_ADMIN). Je to príklad,",
-    "nie appka, ktorú niekto v tejto instancii používa - a karta príkladu v menu",
-    "bežného používateľa je šum, ktorý sa nedá odlíšiť od skutočnej aplikácie.",
-    "Kto ho chce dať do prevádzky, vymení to za requiredProcessRoles",
-    "[\"agent\", \"specialist\", \"manager\"].",
-    "",
-    "Pozor: uzol URI riadi len VIDITEĽNOSŤ KARTY. Zobrazenia pod ňou stavia",
-    "sd_menu s visibility \"public\", takže kto pozná URL, otvorí ich aj tak;",
-    "čo v nich uvidí, riadia oprávnenia v sietiach. Skrytie karty nie je",
-    "prístupové opatrenie.",
+    "Príklady (onboarding, service desk, dovolenky, pracovné cesty, faktúry",
+    "a objednávky) NIE SÚ v tomto zozname a pri štarte sa neimportujú. Žijú",
+    "v examples/<appka>/ v koreni repozitára a inštalujú sa jedným príkazom:",
+    "  python3 tools/pfapp.py install ../examples/<appka>",
+    "Hotové inštalácie sú vo vetvách onboarding, service-desk,",
+    "invoices-orders a apps.",
     "",
     "Čo je v processes/ a NIE je v tomto zozname:",
     "  single_settings.xml   systémová sieť enginu. Na classpath sa dostane cez",
@@ -53,38 +45,23 @@
     "Čo je v tomto zozname a NIE je v processes/:",
     "  configuration_tiles.xml   žije v etask-backend-starter/src/main/resources/",
     "                        petriNets/. NetRunner číta z classpath, nie z disku.",
-    "Príkladové siete, ktoré sa neimportujú, sú v examples/ (ai_config,",
-    "sd_request) - v processes/ patrí len to, čo je nasadené."
+    "Voľné vzorové siete (ai_config, sd_request, skeleton pre pfnew) sú",
+    "v etask-configuration/examples/ - v processes/ patrí len to, čo je nasadené."
   ],
   "import": [
     "configuration_tiles.xml",
-    "sd_customer.xml",
-    "sd_work_item.xml",
-    "sd_ticket.xml",
-    "sd_intake.xml",
-    "sd_menu.xml",
     "pu_pouzivatel.xml",
     "pu_zalozenie.xml",
-    "pu_menu.xml",
-    "on_request.xml",
-    "on_menu.xml"
+    "pu_menu.xml"
   ],
   "bootstrapCase": [
     {
       "net": "configuration_tiles",
       "rebuildOnProcessChange": true
     },
-    {
-      "net": "it/service_desk/sd_menu",
-      "rebuildOnNewVersion": true
-    },
     "admin/pouzivatelia/pu_zalozenie",
     {
       "net": "admin/pouzivatelia/pu_menu",
-      "rebuildOnNewVersion": true
-    },
-    {
-      "net": "onboarding/on_menu",
       "rebuildOnNewVersion": true
     }
   ],
@@ -94,16 +71,6 @@
       "requiredAuthorities": [
         "ROLE_ADMIN"
       ],
-      "requiredProcessRoles": []
-    },
-    "it": {
-      "icon": "dns",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": []
-    },
-    "it/service_desk": {
-      "icon": "support_agent",
-      "requiredAuthorities": [],
       "requiredProcessRoles": []
     },
     "admin": {
@@ -118,15 +85,6 @@
       "requiredAuthorities": [],
       "requiredProcessRoles": [
         "spravca"
-      ]
-    },
-    "onboarding": {
-      "icon": "how_to_reg",
-      "requiredAuthorities": [],
-      "requiredProcessRoles": [
-        "hr",
-        "approver",
-        "it_admin"
       ]
     }
   }
