@@ -256,6 +256,20 @@ def upload(cl, task_id, field_id, file_name, content):
         return e.code, e.read().decode("utf-8", "replace")
 
 
+def download(cl, task_id, field_id):
+    """Stiahne prilohu ako BAJTY. `Client.call` by ju dekodoval ako utf-8,
+    takze binarny subor (xlsx, PNG) sa cez neho vziat neda."""
+    req = urllib.request.Request(
+        URL + f"/api/task/{task_id}/file/{field_id}", method="GET",
+        headers={"X-Auth-Token": cl.token,
+                 "Accept": "application/octet-stream",
+                 "Accept-Language": cl.lang})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+
 def tiny_png(width=1, height=1):
     """Platny PNG danej velkosti (siva plocha) - napr. podpis do `file` pola.
     Vyraba sa tu, nie ako binarny fixture v gite."""
