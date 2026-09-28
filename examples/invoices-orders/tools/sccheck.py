@@ -62,9 +62,9 @@ NASTAVENIA = "admin/nastavenia/sc_nastavenia"
 # Zobrazenia, ktore ma `sc_menu` postavit. Nazvy su tie, ktore vidi clovek -
 # ked sa v sieti prepisu, prepisu sa aj tu, a to je zamer: nazov zobrazenia je
 # sucast appky, nie detail.
-VIEWS_FA = ["Došlé faktúry", "Rozpísané faktúry", "Faktúry na kontrolu", "Faktúry na schválenie",
-            "Na zaúčtovanie", "Uzavreté faktúry"]
-VIEWS_OB = ["Objednávky", "Objednávky na schválenie", "Schválené na objednanie"]
+VIEWS_FA = ["Incoming invoices", "Draft invoices", "Invoices to check", "Invoices to approve",
+            "To post", "Closed invoices"]
+VIEWS_OB = ["Purchase orders", "Orders to approve", "Approved to order"]
 
 HEADERS_FA = ("meta-title,financie/faktury/fa_faktura-fa_stav_label"
               ",financie/faktury/fa_faktura-fa_ceka_na"
@@ -563,10 +563,10 @@ def main():
         vt = [t for t in (tl or []) if t["transitionId"] == "view"]
         return fields(su, vt[0]["stringId"]) if vt else {}
 
-    if "Došlé faktúry" in items:
+    if "Incoming invoices" in items:
         # Bez `enable_case_title = false` vyskoci pri "+" dialog na nazov pripadu
         # a nazov si vymysla clovek - hoci ho sklada `create` akcia siete.
-        vf = view_task_fields("Došlé faktúry")
+        vf = view_task_fields("Incoming invoices")
         check("zakladanie faktury sa nepyta na nazov pripadu",
               vf.get("enable_case_title") is False, vf.get("enable_case_title"))
 
@@ -612,19 +612,19 @@ def main():
                 return sorted((d.get("options") or {}).keys())
         return []
 
-    if "Faktúry na schválenie" in items:
+    if "Invoices to approve" in items:
         # Case zoznam sa filtruje `view` na case, a zadavatel `view` na svoju
         # fakturu ma - bez allowed_roles by si vlastnu videl aj v tejto fronte.
-        check("'Faktúry na schválenie' je obmedzene na schvalovatela a riaditela",
-              roles_of("Faktúry na schválenie") ==
+        check("'Invoices to approve' je obmedzene na schvalovatela a riaditela",
+              roles_of("Invoices to approve") ==
               [f"riaditel:{FAKTURA}", f"schvalovatel:{FAKTURA}"],
-              roles_of("Faktúry na schválenie"))
-    if "Na zaúčtovanie" in items:
-        check("'Na zaúčtovanie' je obmedzene na uctovnika",
-              roles_of("Na zaúčtovanie") == [f"uctovnik:{FAKTURA}"],
-              roles_of("Na zaúčtovanie"))
-    if "Došlé faktúry" in items:
-        check("'Došlé faktúry' nie su obmedzene na rolu", roles_of("Došlé faktúry") == [])
+              roles_of("Invoices to approve"))
+    if "To post" in items:
+        check("'To post' je obmedzene na uctovnika",
+              roles_of("To post") == [f"uctovnik:{FAKTURA}"],
+              roles_of("To post"))
+    if "Incoming invoices" in items:
+        check("'Incoming invoices' nie su obmedzene na rolu", roles_of("Incoming invoices") == [])
 
     st, mc = su.post("/api/workflow/case/search?size=10", {"process": [{"identifier": MENU}]})
     mt = [c["title"] for c in mc.get("_embedded", {}).get("cases", [])]
@@ -1005,7 +1005,7 @@ def main():
     # zapisane akciou preklad nemaju.
     dovod = str(r).lower()
     check("odmietnutie povie preco",
-          "order number" in dovod or "číslo objednávky" in dovod, str(r)[:200])
+          "order no." in dovod or "order number" in dovod or "číslo objednávky" in dovod, str(r)[:200])
     set_data(zad2, too["t_ob_objednanie"], {"ob_cislo": {"type": "text", "value": "OBJ-2026-119"}})
     st, r = finish(zad2, too["t_ob_objednanie"])
     check("objednanie potvrdene", ok_body(r), str(r)[:140])
@@ -1324,8 +1324,8 @@ def main():
     st, mi = riad.post("/api/workflow/case/search?size=300",
                        {"process": [{"identifier": "preference_filter_item"}]})
     items = {c["title"]: c["stringId"] for c in mi.get("_embedded", {}).get("cases", [])}
-    check("zobrazenie 'Schvaľovanie vo financiách' existuje",
-          "Schvaľovanie vo financiách" in items, sorted(items)[:6])
+    check("zobrazenie 'Approval across finance' existuje",
+          "Approval across finance" in items, sorted(items)[:6])
 
     # Case musi existovat pre NAJNOVSIU verziu siete, nie "nejaky".
     #
@@ -1350,8 +1350,8 @@ def main():
     # polozka menu existovala, ale jej dopyt bol postaveny na `processIdentifier`,
     # ktore task dokument v indexe NEMA (nesie `processId`) - takze obrazovka
     # nastaveni bola prazdna, hoci case aj uloha existovali.
-    if "Schvaľovanie vo financiách" in items:
-        st, tl = riad.get(f"/api/task/case/{items['Schvaľovanie vo financiách']}")
+    if "Approval across finance" in items:
+        st, tl = riad.get(f"/api/task/case/{items['Approval across finance']}")
         vt = [t["stringId"] for t in (tl or []) if t["transitionId"] == "view"]
         vf = fields(riad, vt[0]) if vt else {}
         fcid = vf.get("filter_case_id")
